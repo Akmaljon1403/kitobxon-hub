@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     admin_books,
     admin_events,
     admin_faculties,
+    admin_quizzes,
     admin_scores,
     admin_system,
     admin_users,
@@ -16,6 +17,7 @@ from app.api.v1.endpoints import (
     faculties,
     me,
     meta,
+    quizzes,
     scores,
 )
 
@@ -27,12 +29,14 @@ for module in (
     faculties,
     books,
     events,
+    quizzes,
     scores,
     admin_access,
     admin_users,
     admin_books,
     admin_events,
     admin_faculties,
+    admin_quizzes,
     admin_scores,
     admin_system,
 ):

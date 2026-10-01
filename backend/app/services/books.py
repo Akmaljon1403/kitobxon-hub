@@ -158,7 +158,7 @@ async def list_readers(session: AsyncSession, book_id: uuid.UUID) -> list[tuple[
     return [(read, user, faculty) for read, user, faculty in rows]
 
 
-async def _award_completion(session: AsyncSession, read: BookRead, created_by: uuid.UUID | None) -> None:
+async def award_book_completion(session: AsyncSession, read: BookRead, created_by: uuid.UUID | None) -> None:
     points = await get_setting(session, "score.book_completion_points")
     await award_points(
         session,
@@ -180,7 +180,7 @@ async def verify_reading(
     member = await session.get(User, user_id)
     if member is None or member.deleted_at is not None:
         raise NotFoundError("USER_NOT_FOUND", "Foydalanuvchi topilmadi.")
-    read = await _get_or_create_read(session, book_id, user_id)
+    read = await get_or_create_read(session, book_id, user_id)
     now = datetime.now(UTC)
     if read.status != ReadingStatus.COMPLETED:
         read.status = ReadingStatus.COMPLETED
@@ -197,7 +197,7 @@ async def verify_reading(
             entity_id=read.id,
             after={"book_id": str(book_id), "user_id": str(user_id)},
         )
-    await _award_completion(session, read, actor_id)
+    await award_book_completion(session, read, actor_id)
     await session.commit()
     return read
 
@@ -205,7 +205,7 @@ async def verify_reading(
 # ---------------------------------------------------------------------------- members
 
 
-async def _get_or_create_read(session: AsyncSession, book_id: uuid.UUID, user_id: uuid.UUID) -> BookRead:
+async def get_or_create_read(session: AsyncSession, book_id: uuid.UUID, user_id: uuid.UUID) -> BookRead:
     read = await session.scalar(
         select(BookRead).where(BookRead.book_id == book_id, BookRead.user_id == user_id).with_for_update()
     )
@@ -264,12 +264,12 @@ async def set_reading_status(session: AsyncSession, *, user_id: uuid.UUID, book_
     book = await get_book(session, book_id)
     if book.status not in MEMBER_VISIBLE_STATUSES:
         raise BadRequestError("BOOK_NOT_AVAILABLE", "Bu kitob hozir o'qish uchun ochiq emas.")
-    read = await _get_or_create_read(session, book_id, user_id)
+    read = await get_or_create_read(session, book_id, user_id)
     if action == "complete" and read.status != ReadingStatus.COMPLETED:
         read.status = ReadingStatus.COMPLETED
         read.completed_at = datetime.now(UTC)
         if not await get_setting(session, "score.book_completion_requires_verification"):
-            await _award_completion(session, read, None)
+            await award_book_completion(session, read, None)
     await session.commit()
     return read
 
