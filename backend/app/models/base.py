@@ -23,6 +23,9 @@ NAMING_CONVENTION = {
 
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    # Fetch server-generated values (updated_at, defaults) with RETURNING right after INSERT/UPDATE,
+    # so objects stay usable after a commit without lazy loads (required with asyncio).
+    __mapper_args__: ClassVar[dict[str, Any]] = {"eager_defaults": True}
     type_annotation_map: ClassVar[dict[Any, Any]] = {
         datetime: DateTime(timezone=True),
         date: Date,

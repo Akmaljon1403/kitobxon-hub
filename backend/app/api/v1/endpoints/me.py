@@ -5,14 +5,15 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUserDep, DbSession
-from app.models import Faculty
-from app.schemas.user import FacultyOut, MeOut
+from app.models import Faculty, UserNotificationSettings
+from app.schemas.user import FacultyOut, MeOut, MeUpdateIn, NotificationSettingsIn, NotificationSettingsOut
+from app.services import users as user_service
+from app.services.settings import get_setting
 
 router = APIRouter(prefix="/me", tags=["me"])
 
 
-@router.get("", response_model=MeOut, summary="My profile")
-async def get_me(current: CurrentUserDep, db: DbSession) -> MeOut:
+async def _me(current, db) -> MeOut:
     user = current.user
     faculty = await db.get(Faculty, user.faculty_id) if user.faculty_id else None
     return MeOut(
@@ -29,4 +30,35 @@ async def get_me(current: CurrentUserDep, db: DbSession) -> MeOut:
         registered_at=user.registered_at,
         is_admin=current.is_admin,
         roles=sorted(current.roles),
+        max_course=await get_setting(db, "registration.max_course"),
     )
+
+
+@router.get("", response_model=MeOut, summary="My profile")
+async def get_me(current: CurrentUserDep, db: DbSession) -> MeOut:
+    return await _me(current, db)
+
+
+@router.patch("", response_model=MeOut, summary="Correct my faculty, course or group")
+async def update_me(payload: MeUpdateIn, current: CurrentUserDep, db: DbSession) -> MeOut:
+    await user_service.update_my_profile(db, current.user, payload.model_dump(exclude_unset=True))
+    return await _me(current, db)
+
+
+def _settings_out(settings: UserNotificationSettings) -> NotificationSettingsOut:
+    return NotificationSettingsOut(**{field: getattr(settings, field) for field in user_service.NOTIFICATION_FIELDS})
+
+
+@router.get("/notification-settings", response_model=NotificationSettingsOut, summary="My reminder preferences")
+async def get_notification_settings(current: CurrentUserDep, db: DbSession) -> NotificationSettingsOut:
+    return _settings_out(await user_service.get_notification_settings(db, current.user.id))
+
+
+@router.put("/notification-settings", response_model=NotificationSettingsOut, summary="Change reminder preferences")
+async def update_notification_settings(
+    payload: NotificationSettingsIn, current: CurrentUserDep, db: DbSession
+) -> NotificationSettingsOut:
+    settings = await user_service.update_notification_settings(
+        db, current.user.id, payload.model_dump(exclude_unset=True)
+    )
+    return _settings_out(settings)

@@ -7,15 +7,18 @@ value is validated against the declared type before it is stored.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
 
 from pydantic import Field, StringConstraints, TypeAdapter, ValidationError
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError, ValidationFailedError
 from app.models import SystemSetting
+from app.services.audit import record_audit
 
 Points = Annotated[int, Field(ge=0, le=1000)]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)]
@@ -28,10 +31,26 @@ class SettingDefinition:
     default: Any
     type_: Any
     description: str
+    choices: tuple[str, ...] = ()
 
     @property
     def group(self) -> str:
         return self.key.split(".", 1)[0]
+
+    @property
+    def kind(self) -> str:
+        """Input type hint for the Admin Panel: bool, int, int_list, time, choice or text."""
+        if self.choices:
+            return "choice"
+        if isinstance(self.default, bool):
+            return "bool"
+        if isinstance(self.default, int):
+            return "int"
+        if isinstance(self.default, list):
+            return "int_list"
+        if self.key.endswith("_time"):
+            return "time"
+        return "text"
 
     def validate(self, value: Any) -> Any:
         try:
@@ -100,7 +119,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition("notifications.quote_of_day_time", "09:00", ClockTime, "Kun iqtibosi yuboriladigan vaqt"),
     # ---- Organisation (used in official reports) ----
-    SettingDefinition("org.organization_name", "", ShortText, "Tashkilot (universitet) nomi"),
+    SettingDefinition(
+        "org.organization_name",
+        "Farg'ona jamoat salomatligi tibbiyot instituti",
+        ShortText,
+        "Tashkilot (universitet) nomi",
+    ),
     SettingDefinition("org.club_name", "Kitobxon Hub", ShortText, "Klub nomi"),
     # ---- Privacy ----
     SettingDefinition(
@@ -108,6 +132,7 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "SHORT",
         Literal["FULL", "SHORT"],
         "Umumiy reytingda ism ko'rinishi: FULL = to'liq, SHORT = ism va familiyaning bosh harfi",
+        choices=("FULL", "SHORT"),
     ),
 )
 
@@ -145,3 +170,29 @@ async def get_all_settings(session: AsyncSession) -> dict[str, Any]:
         except ValidationFailedError:
             result[definition.key] = definition.default
     return result
+
+
+async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_id: uuid.UUID) -> Any:
+    """Validate and store a new value; the change is written to the audit log."""
+    definition = get_definition(key)
+    validated = definition.validate(value)
+    before = await get_setting(session, key)
+    statement = insert(SystemSetting).values(
+        key=key, value=validated, description=definition.description, updated_by=actor_id
+    )
+    await session.execute(
+        statement.on_conflict_do_update(
+            index_elements=[SystemSetting.key], set_={"value": validated, "updated_by": actor_id}
+        )
+    )
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="SETTING_CHANGE",
+        entity_type="setting",
+        entity_id=key,
+        before={"value": before},
+        after={"value": validated},
+    )
+    await session.commit()
+    return validated

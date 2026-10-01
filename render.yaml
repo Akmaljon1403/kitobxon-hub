@@ -23,7 +23,5 @@ services:
         sync: false
       - key: BOT_TOKEN
         sync: false
-      - key: BOT_USERNAME
-        sync: false
       - key: SUPER_ADMIN_TELEGRAM_IDS
         sync: false

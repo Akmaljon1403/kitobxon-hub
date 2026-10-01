@@ -13,6 +13,7 @@ from aiogram.fsm.storage.base import BaseEventIsolation
 from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
 
+from app.bot import texts
 from app.bot.errors import on_error
 from app.bot.handlers import common, fallback, menu, registration
 from app.bot.middlewares import DbSessionMiddleware, FloodMiddleware, MemberMiddleware
@@ -68,6 +69,7 @@ def create_bot(token: str) -> Bot:
 class BotRuntime:
     bot: Bot
     dispatcher: Dispatcher
+    username: str | None = None  # detected from Telegram (getMe) on start-up
 
 
 _runtime: BotRuntime | None = None
@@ -95,7 +97,11 @@ async def configure_telegram(runtime: BotRuntime, *, with_webhook: bool) -> None
     """Register commands, the Mini App menu button and (in webhook mode) the webhook URL."""
     settings = get_settings()
     bot = runtime.bot
+    me = await bot.me()
+    runtime.username = me.username
     await bot.set_my_commands(COMMANDS)
+    await bot.set_my_short_description(short_description=texts.BOT_SHORT_DESCRIPTION)
+    await bot.set_my_description(description=texts.BOT_DESCRIPTION)
     if settings.webapp_url:
         await bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(text="📚 Kitobxon Hub", web_app=WebAppInfo(url=settings.webapp_url))
@@ -111,3 +117,11 @@ async def configure_telegram(runtime: BotRuntime, *, with_webhook: bool) -> None
             drop_pending_updates=False,
         )
         logger.info("Telegram webhook registered")
+
+
+def bot_username() -> str | None:
+    """BOT_USERNAME if configured, otherwise the username detected from Telegram on start-up."""
+    configured = get_settings().bot_username
+    if configured:
+        return configured
+    return _runtime.username if _runtime is not None else None

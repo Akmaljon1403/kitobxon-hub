@@ -121,3 +121,14 @@ NOTHING_TO_CANCEL = "Bekor qilinadigan amal yo'q."
 UNKNOWN_MESSAGE = "Tushunmadim 🤔 Menyudagi tugmalardan foydalaning yoki /help buyrug'ini yuboring."
 UNEXPECTED_ERROR = "Kechirasiz, kutilmagan xatolik yuz berdi. Birozdan so'ng qayta urinib ko'ring."
 TOO_MANY_REQUESTS = "Juda tez xabar yuboryapsiz. Biroz kuting."
+
+# ---- Bot profile (shown by Telegram before the user presses Start) ----
+BOT_SHORT_DESCRIPTION = "Kitobxonlar klubi: kitoblar, tadbirlar, testlar va reyting 📚"
+BOT_DESCRIPTION = (
+    "📚 Kitobxon Hub — Farg'ona jamoat salomatligi tibbiyot instituti kitobxonlar klubining rasmiy boti.\n\n"
+    "• Klub kitoblari va o'qish muddatlari\n"
+    "• Tadbirlar va QR kod orqali davomat\n"
+    "• Kitoblar bo'yicha testlar\n"
+    "• Ballar, reyting va yutuqlar\n\n"
+    "Boshlash uchun «Start» tugmasini bosing."
+)

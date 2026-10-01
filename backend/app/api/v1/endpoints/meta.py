@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.bot.setup import bot_username
 from app.core.config import get_settings
 
 router = APIRouter(prefix="/meta", tags=["meta"])
@@ -23,6 +24,6 @@ async def public_meta() -> PublicMeta:
     return PublicMeta(
         app_name=settings.app_name,
         version=settings.app_version,
-        bot_username=settings.bot_username,
+        bot_username=bot_username(),
         timezone=settings.timezone,
     )

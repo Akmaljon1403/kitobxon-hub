@@ -250,3 +250,21 @@ async def test_audit_log_is_append_only(db: AsyncSession, statement: str) -> Non
         await db.execute(text(statement))
     await db.rollback()
     assert await db.scalar(select(func.count()).select_from(AuditLog)) == 1
+
+
+async def test_institute_faculties_seeded_by_migration(db: AsyncSession) -> None:
+    from app.models import Faculty
+
+    config = alembic_config()
+    await asyncio.to_thread(command.downgrade, config, "0002")
+    await asyncio.to_thread(command.upgrade, config, "head")
+    names = list(await db.scalars(select(Faculty.name).order_by(Faculty.sort_order)))
+    assert names == ["Davolash ishi", "Pediatriya", "Tibbiy profilaktika va jamoat salomatligi"]
+    # Re-running is harmless (no duplicates).
+    await asyncio.to_thread(command.downgrade, config, "0002")
+    await asyncio.to_thread(command.upgrade, config, "head")
+    assert await db.scalar(select(func.count()).select_from(Faculty)) == 3
+
+
+async def test_organization_name_default(db: AsyncSession) -> None:
+    assert await get_setting(db, "org.organization_name") == "Farg'ona jamoat salomatligi tibbiyot instituti"
