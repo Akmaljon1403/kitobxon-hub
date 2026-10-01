@@ -132,3 +132,9 @@ BOT_DESCRIPTION = (
     "• Ballar, reyting va yutuqlar\n\n"
     "Boshlash uchun «Start» tugmasini bosing."
 )
+
+# ---- Attendance via QR deep link ----
+ATTENDANCE_OK = "✅ Davomatingiz qayd etildi!\n\n📅 «{title}»\n🏆 +{points} ball"
+ATTENDANCE_REGISTER_FIRST = (
+    "Davomat qilish uchun avval ro'yxatdan o'ting. Ro'yxatdan o'tgach, ekrandagi QR kodni qayta skanerlang."
+)

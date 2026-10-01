@@ -10,7 +10,7 @@ import html
 import uuid
 
 from aiogram import F, Router
-from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.filters import Command, CommandObject, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,7 @@ from app.bot.states import Registration
 from app.core.errors import ConflictError
 from app.models import User
 from app.models.enums import UserStatus
+from app.services import attendance as attendance_service
 from app.services.members import (
     RegistrationData,
     get_active_faculty,
@@ -69,12 +70,36 @@ async def _begin(message: Message, state: FSMContext, db: AsyncSession) -> None:
 
 
 @router.message(CommandStart())
-async def start(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+async def start(
+    message: Message, state: FSMContext, db: AsyncSession, member: User | None, command: CommandObject
+) -> None:
+    payload = command.args or ""
+    if payload.startswith(attendance_service.QR_PREFIX):
+        await _check_in_from_qr(message, state, db, member, payload)
+        return
     if member is not None:
         await state.clear()
         await send_member_home(message, member)
         return
     await _begin(message, state, db)
+
+
+async def _check_in_from_qr(
+    message: Message, state: FSMContext, db: AsyncSession, member: User | None, payload: str
+) -> None:
+    """The member scanned the event QR code with the phone camera: Telegram opened the bot with it."""
+    if member is None:
+        await message.answer(texts.ATTENDANCE_REGISTER_FIRST)
+        await _begin(message, state, db)
+        return
+    if member.status != UserStatus.ACTIVE:
+        await send_member_home(message, member)
+        return
+    result = await attendance_service.check_in(db, user=member, token=payload)
+    await message.answer(
+        texts.ATTENDANCE_OK.format(title=html.escape(result.event.title), points=result.points),
+        reply_markup=keyboards.main_menu(),
+    )
 
 
 @router.message(Command("cancel"), StateFilter(Registration))
