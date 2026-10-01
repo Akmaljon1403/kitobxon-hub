@@ -139,3 +139,60 @@ export interface Statistics {
   books: { total: number; active: number; draft: number; readers: number; completions: number }
   faculties: { name: string; members: number }[]
 }
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED'
+export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED'
+
+export interface AdminEvent {
+  id: string
+  title: string
+  description: string | null
+  book_id: string | null
+  book_title: string | null
+  location: string | null
+  starts_at: string
+  ends_at: string
+  attendance_opens_at: string
+  attendance_closes_at: string
+  attendance_points: number
+  attendance_points_override: number | null
+  capacity: number | null
+  status: EventStatus
+  registered_count: number
+  attended_count: number
+  attendance_open: boolean
+  created_at: string
+}
+
+export interface AttendanceRecord {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  faculty_name: string | null
+  course: number | null
+  group_name: string | null
+  method: 'QR' | 'CODE' | 'MANUAL'
+  status: AttendanceStatus
+  checked_in_at: string
+  suspicious_reason: string | null
+  note: string | null
+}
+
+export interface AttendanceOverview {
+  event_id: string
+  is_open: boolean
+  closes_at: string | null
+  registered_count: number
+  attended_count: number
+  records: AttendanceRecord[]
+}
+
+export interface AttendanceToken {
+  qr_payload: string
+  token: string
+  code: string
+  expires_at: string
+  rotates_at: string
+  session_closes_at: string
+}

@@ -59,7 +59,6 @@ export function StartupErrorPage({ message }: { message: string }) {
 }
 
 const UPCOMING: Record<string, { icon: string; title: string; text: string }> = {
-  events: { icon: '📅', title: 'Tadbirlar', text: "Tadbirlar ro'yxati, ro'yxatdan o'tish va QR davomat shu yerda bo'ladi." },
   ranking: { icon: '🏆', title: 'Reyting', text: 'Haftalik, oylik va umumiy reyting shu yerda bo\'ladi.' },
   tests: { icon: '📝', title: 'Testlar', text: 'Kitoblar bo\'yicha testlar shu yerda bo\'ladi.' },
   results: { icon: '📊', title: 'Natijalarim', text: 'Ballaringiz tarixi va test natijalari shu yerda bo\'ladi.' },

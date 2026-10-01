@@ -4,7 +4,8 @@ import { ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
-import type { Book, Page } from '../types/api'
+import type { Book, ClubEvent, Page } from '../types/api'
+import { EventCard } from './EventsPage'
 import { daysUntil, formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
 
@@ -28,6 +29,7 @@ function deadlineText(deadline: string | null): string | null {
 export function HomePage() {
   const { me, api } = useAuth()
   const { state, reload } = useAsync((signal) => api<Page<Book>>('/api/v1/books?limit=3', { signal }))
+  const events = useAsync((signal) => api<Page<ClubEvent>>('/api/v1/events?scope=upcoming&limit=1', { signal }))
   if (!me) return null
 
   const current = state.status === 'success' ? state.data.items.find((book) => book.status === 'ACTIVE') : undefined
@@ -72,6 +74,13 @@ export function HomePage() {
             </div>
           </Card>
         </button>
+      )}
+
+      {events.state.status === 'success' && events.state.data.items[0] && (
+        <>
+          <SectionTitle>Yaqin tadbir</SectionTitle>
+          <EventCard event={events.state.data.items[0]} />
+        </>
       )}
 
       <SectionTitle>Bo'limlar</SectionTitle>

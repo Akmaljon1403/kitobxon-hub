@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'members', icon: '👥', label: "A'zolar", visible: (can) => can('USER_VIEW') },
   { route: 'books', icon: '📚', label: 'Kitoblar', visible: (can) => can('BOOK_VIEW') },
   { route: 'quotes', icon: '💬', label: 'Iqtiboslar', visible: (can) => can('BOOK_VIEW') },
+  { route: 'events', icon: '📅', label: 'Tadbirlar va davomat', visible: (can) => can('EVENT_VIEW') },
   { route: 'faculties', icon: '🏛', label: 'Fakultetlar', visible: () => true },
   { route: 'settings', icon: '⚙️', label: 'Sozlamalar', visible: () => true },
   { route: 'admins', icon: '🛡', label: 'Adminlar', visible: (_, isSuper) => isSuper },

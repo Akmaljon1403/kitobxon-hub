@@ -2,9 +2,11 @@ import { LoadingState } from './components/StateViews'
 import { Card } from './components/ui'
 import { AdminLayout, NAV_ITEMS } from './layouts/AdminLayout'
 import { AdminsPage } from './pages/AdminsPage'
+import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
 import { BooksPage } from './pages/BooksPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { EventsPage } from './pages/EventsPage'
 import { FacultiesPage } from './pages/FacultiesPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
@@ -18,6 +20,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   members: MembersPage,
   books: BooksPage,
   quotes: QuotesPage,
+  events: EventsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
   admins: AdminsPage,
@@ -40,6 +43,19 @@ function Router() {
     )
   }
   if (state.kind === 'signed_out') return <LoginPage linkToken={null} notice={state.message} />
+
+  const [, entityId, subPage] = route.segments
+  if (section === 'events' && entityId && subPage === 'attendance') {
+    return (
+      <AdminLayout section="events">
+        {can('ATTENDANCE_VIEW') ? (
+          <AttendancePage eventId={entityId} />
+        ) : (
+          <Card className="p-6 text-sm text-app-hint">Davomatni ko'rish uchun ruxsatingiz yo'q.</Card>
+        )}
+      </AdminLayout>
+    )
+  }
 
   const item = NAV_ITEMS.find((nav) => nav.route === section)
   const Page = PAGES[section]

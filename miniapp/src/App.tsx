@@ -2,6 +2,8 @@ import { AppLayout } from './layouts/AppLayout'
 import { LoadingState } from './components/StateViews'
 import { BookDetailPage } from './pages/BookDetailPage'
 import { BooksPage } from './pages/BooksPage'
+import { EventDetailPage } from './pages/EventDetailPage'
+import { EventsPage } from './pages/EventsPage'
 import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
 import {
@@ -21,6 +23,8 @@ function Routes() {
   if (section === '') page = <HomePage />
   else if (section === 'books' && id) page = <BookDetailPage bookId={id} />
   else if (section === 'books') page = <BooksPage />
+  else if (section === 'events' && id) page = <EventDetailPage eventId={id} />
+  else if (section === 'events') page = <EventsPage />
   else if (section === 'profile') page = <ProfilePage />
   else page = <UpcomingPage section={section} />
   return <AppLayout section={section}>{page}</AppLayout>

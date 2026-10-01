@@ -91,3 +91,33 @@ export interface Quote {
 export interface BookDetail extends Book {
   quotes: Quote[]
 }
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED'
+export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED'
+
+export interface ClubEvent {
+  id: string
+  title: string
+  description: string | null
+  book_id: string | null
+  book_title: string | null
+  location: string | null
+  starts_at: string
+  ends_at: string
+  attendance_opens_at: string
+  attendance_closes_at: string
+  attendance_points: number
+  capacity: number | null
+  status: EventStatus
+  registered_count: number
+  attended_count: number
+  is_registered: boolean
+  my_attendance: AttendanceStatus | null
+}
+
+export interface CheckInResult {
+  event_id: string
+  event_title: string
+  points: number
+  checked_in_at: string
+}
