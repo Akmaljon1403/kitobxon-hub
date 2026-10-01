@@ -37,8 +37,8 @@ Barcha qismlar **bitta server** va **bitta ma'lumotlar bazasi** bilan ishlaydi.
 | 19. Sovg'alar va promo-kodlar | ✅ Tayyor |
 | 20. Tahlillar (statistika) | ✅ Tayyor |
 | 21. Xavfsizlikni kuchaytirish | ✅ Tayyor |
-| 22. Yakuniy avtomatik sinovlar | ⏳ Keyingi |
-| 23. Ishga tushirishga tayyorgarlik | ⏳ Navbatda |
+| 22. Yakuniy avtomatik sinovlar | ✅ Tayyor |
+| 23. Ishga tushirishga tayyorgarlik | ⏳ Keyingi |
 
 🚀 **Botni bepul serverda sinab ko'rish:** [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — qadam-baqadam qo'llanma.
 

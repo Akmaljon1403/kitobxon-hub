@@ -6,15 +6,48 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 
 | Job | Checks |
 |---|---|
-| Backend | `ruff check`, `ruff format --check`, full `pytest` suite against PostgreSQL 16 (including migrations) |
+| Backend | `ruff check`, `ruff format --check`, full `pytest` suite against PostgreSQL 16 (including migrations), **coverage at least 90 %** of `app/` (currently ~94 %) |
 | Frontend (miniapp, admin) | `npm ci`, TypeScript type check, production build |
+| Browser journeys | the built Mini App and Admin Panel served by a real backend and PostgreSQL, driven by Chromium (Playwright): see below |
 | Docker | the production image (root `Dockerfile`) builds |
 
-A green check mark on a commit means all of the above passed.
+A green check mark on a commit means all of the above passed. A separate weekly workflow,
+*Security audit* (`.github/workflows/security.yml`), checks third-party libraries for published
+vulnerabilities.
 
-The Mini App and the Admin Panel are additionally checked by hand in headless Chromium at
-phone and desktop sizes against a seeded local server (Telegram is simulated with correctly
-signed `initData`) before each release.
+## Browser journeys (end-to-end)
+
+`e2e/tests/journeys.spec.ts` runs in order, against the real application:
+
+1. An admin signs in with a one-time link (API) and creates a book, a published event and a
+   published two-question test through the admin API.
+2. A registered member opens the Mini App (Telegram is replaced by a stand-in that hands over
+   correctly signed launch data): home screen, current book, books list.
+3. The admin opens attendance; the member types the short code and is checked in.
+4. The member takes the test (questions are shuffled; answers are chosen by question text), gets
+   2/2 and sees the results page.
+5. The server-side totals add up (test 20 points, attendance points, total = sum of categories).
+6. The admin signs in to the Admin Panel with another one-time link, sees the attendance list,
+   the test results and the analytics page; the used link is refused a second time.
+7. A stranger is sent to the bot to register; outside Telegram the Mini App says so.
+
+Every page also fails the run on any browser error (including Content-Security-Policy
+violations). On failure, CI keeps the Playwright report and traces as a downloadable artifact
+for 7 days (*Actions* → the run → *Artifacts*).
+
+Run locally (after building both apps and copying `dist/` into `backend/static/miniapp` and
+`backend/static/admin`):
+
+```bash
+createdb kitobxon_e2e
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kitobxon_e2e \
+  SECRET_KEY=e2e-only-secret-key-that-is-long-enough-0123456789 \
+  BOT_TOKEN=123456789:E2E-fake-bot-token-AAAAAAAAAAAAAAAAAAAAAAAAAA BOT_MODE=disabled WORKER_ENABLED=false
+cd backend && alembic upgrade head && PYTHONPATH=. python ../e2e/seed.py
+cd ../e2e && npm ci && npx playwright install chromium && npx playwright test
+```
+
+The seed uses one-time admin links, so recreate the database before running again.
 
 ## Running the backend tests locally
 
@@ -25,6 +58,7 @@ triggers are part of the behaviour under test (e.g. duplicate attendance protect
 cd backend
 export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kitobxon_test
 pytest -q
+pytest -q --cov --cov-report=term   # with coverage (as in CI)
 ```
 
 The test database is wiped and rebuilt by the suite — never point `TEST_DATABASE_URL` at real data.
@@ -48,9 +82,23 @@ upgrade), and before every test all tables are truncated and reference data is r
 | `tests/test_phase19_rewards.py` | AES-GCM roundtrip and tamper detection, permission, codes stored encrypted / shown masked / deduplicated, assignment picks a valid unexpired code, duplicate and empty-pool errors, codes never in notifications or lists, only the recipient can reveal, delivered/redeemed tracking, revoked codes never reused, rewards without codes, idempotency key, inactive reward/member, **parallel assignments → one reward** |
 | `tests/test_phase20_analytics.py` | Month windows across year boundaries in the club time zone, per-month series, headline numbers, points distribution, faculty averages, small groups hidden (privacy), test and book campaign rates, no names in aggregates; inactive list needs `USER_VIEW`, skips newcomers and active members, picks up members whose last activity is old |
 | `tests/test_phase21_security.py` | Security headers on API and error responses, per-area header policy (admin not frameable, Mini App frameable for Telegram Web, HSTS only in production), oversized bodies rejected with 413 (declared and streamed), per-member API budget, CSV formula injection, broadcast escaping without a template, image bombs refused before decoding, phone numbers and constraint values redacted from logs, API docs off in production by default |
+| `tests/test_phase22_consistency.py` | **all-or-nothing writes**: if awarding points fails, neither the attendance record nor the graded test is saved, the client gets a plain 500 without internals, and a retry succeeds |
+| `tests/test_phase22_integrations.py` | AI service failures (bad key, rate limit, server error, no connection) become clear Uzbek messages, refusal / empty / cut-off answers, prompt contains only facts and admin notes; S3-compatible storage round trip; both web apps served with their security policies |
 | `tests/test_phase16_achievements.py` | first attendance → achievement + message, idempotent unlocking with bonus points, book achievements only for verified reading, test master, longest weekly streak, monthly top three (first week only, once), inactive definitions, admin create / grant / revoke with permissions and audit, editing thresholds |
 | `tests/test_phase15_notifications.py` | sender: delivery with Mini App buttons, inactive members and opt-outs skipped, critical messages always sent, blocked bot / network error / rate limit handling, max attempts, **parallel senders never send twice**, outdated reminders skipped; announcements on publishing events and books, attendance opening, test results with places; event reminder offsets with dedup, test started/ending, reading reminders only in daytime, quote of the day once, switched-off templates, scheduler, broadcast with filters, preview and audit, worker loop |
 
-The critical cases listed in the specification (expired QR, wrong-event QR, duplicate attendance,
-expired test submission, wrong/correct answers, manipulated scores, duplicate transactions, 401/403
-checks, manual correction permission, audit logging) each have a dedicated test.
+The critical cases listed in the specification each have a dedicated test:
+
+| Case | Test |
+|---|---|
+| Expired QR → rejected | `test_phase10_11…::test_expired_qr_rejected` |
+| Wrong event QR → rejected | `test_phase10_11…::test_wrong_event_qr_rejected` |
+| Duplicate attendance → rejected | `test_phase10_11…::test_duplicate_check_in_rejected`, `test_phase2_database::test_duplicate_attendance_rejected_by_database` |
+| Unauthenticated / invalid token → rejected | `test_phase10_11…::test_unauthenticated_check_in_rejected`, `::test_invalid_token_rejected` |
+| Expired test → submission rejected | `test_phase12_tests::test_expired_attempt_rejects_answers_but_keeps_earlier_ones` |
+| Wrong answer → zero, correct → points | `test_phase12_tests::test_correct_answers_earn_points_and_wrong_earn_zero` |
+| Frontend-manipulated score → ignored | `test_phase12_tests::test_client_supplied_score_is_ignored` |
+| Unauthorized admin endpoint → 403, unauthenticated → 401 | `test_phase4_rbac` (every admin route, automatically) |
+| Duplicate transaction prevention | `test_phase2_database::test_score_idempotency_key_prevents_double_award`, `test_phase12_tests::test_submit_is_idempotent`, `::test_best_attempt_counts_once`, reward and achievement idempotency tests |
+| Manual correction requires permission, audit record | `test_phase13_14…::test_manual_adjustment_requires_permission_reason_and_is_audited` |
+| Attendance and points are atomic | `test_phase22_consistency::test_attendance_is_not_saved_when_points_fail` |
