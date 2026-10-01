@@ -58,20 +58,14 @@ export function StartupErrorPage({ message }: { message: string }) {
   )
 }
 
-const UPCOMING: Record<string, { icon: string; title: string; text: string }> = {}
-
-export function UpcomingPage({ section }: { section: string }) {
-  const info = UPCOMING[section] ?? { icon: '🧭', title: 'Sahifa topilmadi', text: 'Pastdagi menyudan bo\'lim tanlang.' }
+export function NotFoundPage() {
   return (
     <Card className="flex flex-col items-center gap-2 py-10 text-center">
       <span aria-hidden className="text-5xl">
-        {info.icon}
+        🧭
       </span>
-      <h1 className="text-lg font-semibold">{info.title}</h1>
-      <p className="text-sm text-app-hint">{info.text}</p>
-      {UPCOMING[section] && (
-        <p className="mt-2 rounded-full bg-app-surface px-3 py-1 text-xs text-app-hint">Bu bo'lim tez orada ishga tushadi</p>
-      )}
+      <h1 className="text-lg font-semibold">Sahifa topilmadi</h1>
+      <p className="text-sm text-app-hint">Pastdagi menyudan bo'lim tanlang.</p>
     </Card>
   )
 }

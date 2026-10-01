@@ -115,7 +115,9 @@ Images may come from any `https:` address (book covers are external links). Book
 3. API documentation (`/api/docs`) is off in production unless `API_DOCS_ENABLED=true` is set.
 4. `TELEGRAM_WEBHOOK_SECRET` set, or left empty to derive it from `SECRET_KEY` (webhook calls
    without the right secret header are rejected).
-5. Database user with access only to the Kitobxon Hub database; automatic backups enabled.
+5. Database user with access only to the Kitobxon Hub database; automatic backups enabled. Our own
+   backups are encrypted (GnuPG AES-256) before they leave the runner; keep `BACKUP_PASSPHRASE`
+   outside GitHub too.
 6. Object storage bucket private (report files are only served through the authenticated API).
 7. Restrict who can read production logs and database dumps.
 8. Keep the *Security audit* workflow green; update a library when it turns red.

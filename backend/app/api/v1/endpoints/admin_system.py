@@ -1,4 +1,4 @@
-"""Admin Panel: system settings (score rules etc.) and dashboard statistics."""
+"""Admin Panel: system settings (score rules etc.), dashboard statistics and system status."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from app.api.deps import CurrentAdminDep, CurrentUser, DbSession, require_permis
 from app.schemas.settings import SettingOut, SettingUpdateIn
 from app.security.permissions import Perm
 from app.services import settings as settings_service
+from app.services import system_status
 from app.services.statistics import dashboard
 
 router = APIRouter(prefix="/admin", tags=["admin: system"])
@@ -57,3 +58,10 @@ async def statistics(
     _: Annotated[CurrentUser, Depends(require_permissions(Perm.ANALYTICS_VIEW))], db: DbSession
 ) -> dict[str, Any]:
     return await dashboard(db)
+
+
+@router.get("/system/status", summary="Production readiness checks (database, bot, storage, worker, owners)")
+async def system_status_view(
+    _: Annotated[CurrentUser, Depends(require_permissions(Perm.SETTINGS_MANAGE))], db: DbSession
+) -> dict[str, Any]:
+    return await system_status.collect(db)

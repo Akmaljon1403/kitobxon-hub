@@ -1,0 +1,56 @@
+# Daily encrypted copy of the production database, kept for 30 days as a private download:
+# GitHub → Actions → "Database backup" → a run → Artifacts.
+#
+# Setup (once): GitHub → Settings → Secrets and variables → Actions → New repository secret
+#   BACKUP_DATABASE_URL  the same address as DATABASE_URL on the server (Neon)
+#   BACKUP_PASSPHRASE    a long password. Keep it somewhere safe (not only here):
+#                        without it a backup can never be opened.
+# Until both secrets exist, the workflow only prints a reminder and stays green.
+# Scheduled runs happen on the repository's default branch.
+name: Database backup
+
+on:
+  schedule:
+    - cron: "13 21 * * *"  # every night at 02:13 Tashkent time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::notice title=Backups are not set up yet::Add the BACKUP_DATABASE_URL and BACKUP_PASSPHRASE repository secrets (docs/DEPLOYMENT.md, section Backups)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.ready == 'true'
+      - name: Dump, encrypt and verify
+        id: dump
+        if: steps.config.outputs.ready == 'true'
+        run: |
+          scripts/backup.sh backup | tee backup.log
+          echo "name=$(basename "$(sed -n 's/^file=//p' backup.log)" .dump.gpg)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.config.outputs.ready == 'true'
+        with:
+          name: ${{ steps.dump.outputs.name }}
+          path: backup/*.dump.gpg
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error

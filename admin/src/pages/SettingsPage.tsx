@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
+import { SystemStatusCard } from '../components/SystemStatus'
 import { Button, Card, InlineError, Input, PageHeader, Select } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
@@ -144,6 +145,7 @@ export function SettingsPage() {
             : "Sozlamalarni o'zgartirish uchun «SETTINGS_MANAGE» ruxsati kerak."
         }
       />
+      {canEdit && <SystemStatusCard />}
       {groups.map((group) => (
         <Card key={group}>
           <h2 className="border-b border-app-border px-4 py-3 font-semibold">{GROUP_TITLES[group] ?? group}</h2>

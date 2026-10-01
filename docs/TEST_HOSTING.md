@@ -154,6 +154,13 @@ yozuvini ko'rasiz.
 
 ---
 
+## Keyingi qadam: doimiy ishga tushirish
+
+Sinov muvaffaqiyatli o'tgach, a'zolarga tarqatishdan oldin [ISHGA_TUSHIRISH.md](ISHGA_TUSHIRISH.md)
+dagi qadamlarni bajaring: fayllar uchun doimiy ombor, har kungi zaxira nusxa, kuzatuv va yakuniy sinov.
+
+---
+
 ## Muammolar va yechimlar
 
 | Belgisi | Sababi | Nima qilish kerak |

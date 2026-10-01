@@ -38,15 +38,21 @@ Barcha qismlar **bitta server** va **bitta ma'lumotlar bazasi** bilan ishlaydi.
 | 20. Tahlillar (statistika) | ✅ Tayyor |
 | 21. Xavfsizlikni kuchaytirish | ✅ Tayyor |
 | 22. Yakuniy avtomatik sinovlar | ✅ Tayyor |
-| 23. Ishga tushirishga tayyorgarlik | ⏳ Keyingi |
+| 23. Ishga tushirishga tayyorgarlik (zaxira nusxa, tizim holati) | ✅ Tayyor |
 
-🚀 **Botni bepul serverda sinab ko'rish:** [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — qadam-baqadam qo'llanma.
+Barcha 23 bosqich tayyor. Keyingi qadamlar:
 
-Har bir yangi kod GitHub'da avtomatik tekshiriladi (**Actions** bo'limi). Yashil ✅ belgisi — hamma testlar o'tdi degani.
+1. 🚀 **Bepul serverda sinab ko'rish:** [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md)
+2. ✅ **Doimiy (24/7) ishga tushirish:** [docs/ISHGA_TUSHIRISH.md](docs/ISHGA_TUSHIRISH.md) — fayllar ombori,
+   har kungi zaxira nusxa, kuzatuv, ikkinchi bosh administrator, yakuniy sinov.
+
+Har bir yangi kod GitHub'da avtomatik tekshiriladi (**Actions** bo'limi): 280 dan ortiq test, haqiqiy
+brauzerda a'zo va admin yo'llari, zaxira nusxadan tiklash sinovi. Yashil ✅ belgisi — hammasi o'tdi degani.
 
 ## Hujjatlar
 
 * [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — botni bepul serverga joylab sinash (egasi uchun)
+* [docs/ISHGA_TUSHIRISH.md](docs/ISHGA_TUSHIRISH.md) — doimiy ishga tushirish: zaxira, fayllar, kuzatuv (egasi uchun)
 * [docs/SETUP.md](docs/SETUP.md) — loyihani ishga tushirish (egasi va dasturchilar uchun)
 * [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — doimiy serverga joylash (dasturchilar uchun)
 * [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — muammolar va yechimlar

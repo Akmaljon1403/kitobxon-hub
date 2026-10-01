@@ -14,10 +14,10 @@ import { TestDetailPage } from './pages/TestDetailPage'
 import { TestsPage } from './pages/TestsPage'
 import {
   AccountProblemPage,
+  NotFoundPage,
   NotRegisteredPage,
   OutsideTelegramPage,
   StartupErrorPage,
-  UpcomingPage,
 } from './pages/StatusPages'
 import { AuthProvider, useAuth } from './store/auth'
 import { useRoute } from './utils/router'
@@ -38,7 +38,7 @@ function Routes() {
   else if (section === 'rewards') page = <RewardsPage />
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
-  else page = <UpcomingPage section={section} />
+  else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>
 }
 

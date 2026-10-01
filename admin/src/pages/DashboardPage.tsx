@@ -1,4 +1,5 @@
 import { ErrorState, LoadingState } from '../components/StateViews'
+import { SystemStatusBanner } from '../components/SystemStatus'
 import { Card, PageHeader } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useSession } from '../store/session'
@@ -57,6 +58,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title={`Assalomu alaykum, ${admin?.first_name ?? ''}!`} subtitle="Klub faoliyatining qisqacha ko'rinishi" />
+      {can('SETTINGS_MANAGE') && <SystemStatusBanner />}
       {!allowed && (
         <Card className="p-4 text-sm text-app-hint">Statistikani ko'rish uchun «ANALYTICS_VIEW» ruxsati kerak.</Card>
       )}

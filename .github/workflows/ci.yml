@@ -138,6 +138,20 @@ jobs:
       - name: Run browser journeys
         working-directory: e2e
         run: npx playwright test
+      - name: Backup round trip (dump, encrypt, verify, restore, compare)
+        env:
+          PASSPHRASE: ci-only-backup-passphrase
+          TARGET_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kitobxon_restore
+          CONFIRM: "yes"
+        run: |
+          OUT_DIR=/tmp/backups scripts/backup.sh backup
+          docker run --rm --network host postgres:18 psql "$DATABASE_URL" -c "CREATE DATABASE kitobxon_restore"
+          scripts/backup.sh restore /tmp/backups/*.dump.gpg
+          count='select (select count(*) from users), (select count(*) from score_transactions), (select count(*) from test_attempts)'
+          before=$(docker run --rm --network host -e Q="$count" postgres:18 sh -c 'psql -tA "$0" -c "$Q"' "$DATABASE_URL")
+          after=$(docker run --rm --network host -e Q="$count" postgres:18 sh -c 'psql -tA "$0" -c "$Q"' "$TARGET_DATABASE_URL")
+          echo "original: $before | restored: $after"
+          [ "$before" = "$after" ]
       - name: Keep the report when something fails
         if: failure()
         uses: actions/upload-artifact@v4

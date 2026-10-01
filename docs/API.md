@@ -259,6 +259,7 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/admin/settings` | any admin — values, defaults, input kind |
 | PUT | `/api/v1/admin/settings/{key}` | `SETTINGS_MANAGE` — validated, audited |
 | GET | `/api/v1/admin/statistics` | `ANALYTICS_VIEW` |
+| GET | `/api/v1/admin/system/status` | `SETTINGS_MANAGE` — readiness checks `{summary, checked_at, checks: [{key, status: ok\|info\|warning\|error, title, detail}]}` (environment, public URL, migrations, database size, Telegram webhook, storage probe, delayed messages, super admins, AI). Never contains secrets |
 
 ### Admin: analytics
 

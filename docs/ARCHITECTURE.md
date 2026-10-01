@@ -63,7 +63,7 @@ the same database.** There is no second database and no business logic in the fr
 | PDF | HTML + CSS → PDF with WeasyPrint | Typographically clean official documents, templates are plain HTML. |
 | AI drafting | Anthropic Claude API (optional, `AI_API_KEY`) | Only writes wording around facts supplied by the database. |
 | Packaging | Docker image; `docker-compose.yml` for developers | Deployable to any VPS or PaaS. |
-| CI | GitHub Actions | Lint + migrations + tests + frontend builds on every push. |
+| CI | GitHub Actions | Lint, migrations, tests with a coverage gate, frontend builds, browser journeys, backup round trip and image build on every push; nightly backups; weekly dependency audit. |
 
 ## 4. Repository structure
 
@@ -79,7 +79,6 @@ kitobxon-hub/
 │   │   ├── models/              SQLAlchemy models (one module per domain)
 │   │   ├── schemas/             Pydantic request/response models
 │   │   ├── services/            business logic (the only place that changes data)
-│   │   ├── repositories/        reusable query helpers (rankings, statistics)
 │   │   ├── security/            Telegram initData validation, JWT, permissions, rate limiting
 │   │   ├── bot/                 Telegram bot: handlers, keyboards, middlewares, states, texts
 │   │   ├── workers/             notification queue consumer and scheduled jobs
@@ -95,8 +94,9 @@ kitobxon-hub/
 │   └── src/{components,pages,layouts,hooks,services,store,types,utils}
 ├── docs/                        ARCHITECTURE, DATABASE, API, SECURITY, TESTING, DEPLOYMENT, ...
 ├── infra/                       nginx and deployment templates
-├── scripts/                     maintenance scripts (backup, seed)
-├── .github/workflows/ci.yml     continuous integration
+├── e2e/                         browser journeys (Playwright) run in CI
+├── scripts/backup.sh            encrypted database backup / verify / restore
+├── .github/workflows/           ci.yml (every push), backup.yml (nightly), security.yml (weekly)
 ├── docker-compose.yml           developer stack (PostgreSQL, Redis, backend)
 └── .env.example                 every configuration variable, documented
 ```

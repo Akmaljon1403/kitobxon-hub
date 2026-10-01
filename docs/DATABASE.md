@@ -173,4 +173,5 @@ pg_dump --format=custom --no-owner "$DATABASE_URL" > kitobxon-$(date +%F).dump
 pg_restore --no-owner --dbname "$TARGET_DATABASE_URL" kitobxon-YYYY-MM-DD.dump
 ```
 
-The full backup and restore procedure is documented in DEPLOYMENT.md (phase 23).
+Automatic encrypted daily backups (GitHub Actions or cron) and the restore procedure are described
+in [DEPLOYMENT.md](DEPLOYMENT.md#5-backups-and-restore); the tool is `scripts/backup.sh`.

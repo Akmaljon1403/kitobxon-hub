@@ -8,7 +8,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 |---|---|
 | Backend | `ruff check`, `ruff format --check`, full `pytest` suite against PostgreSQL 16 (including migrations), **coverage at least 90 %** of `app/` (currently ~94 %) |
 | Frontend (miniapp, admin) | `npm ci`, TypeScript type check, production build |
-| Browser journeys | the built Mini App and Admin Panel served by a real backend and PostgreSQL, driven by Chromium (Playwright): see below |
+| Browser journeys | the built Mini App and Admin Panel served by a real backend and PostgreSQL, driven by Chromium (Playwright): see below; afterwards the database is backed up with `scripts/backup.sh`, restored into a new database and row counts are compared |
 | Docker | the production image (root `Dockerfile`) builds |
 
 A green check mark on a commit means all of the above passed. A separate weekly workflow,
@@ -84,6 +84,7 @@ upgrade), and before every test all tables are truncated and reference data is r
 | `tests/test_phase21_security.py` | Security headers on API and error responses, per-area header policy (admin not frameable, Mini App frameable for Telegram Web, HSTS only in production), oversized bodies rejected with 413 (declared and streamed), per-member API budget, CSV formula injection, broadcast escaping without a template, image bombs refused before decoding, phone numbers and constraint values redacted from logs, API docs off in production by default |
 | `tests/test_phase22_consistency.py` | **all-or-nothing writes**: if awarding points fails, neither the attendance record nor the graded test is saved, the client gets a plain 500 without internals, and a retry succeeds |
 | `tests/test_phase22_integrations.py` | AI service failures (bad key, rate limit, server error, no connection) become clear Uzbek messages, refusal / empty / cut-off answers, prompt contains only facts and admin notes; S3-compatible storage round trip; both web apps served with their security policies |
+| `tests/test_phase23_system_status.py` | readiness checks: permission and no secrets in the output, a healthy production setup (local file storage flagged), missing public URL / unregistered webhook / no super admin / delayed messages explained, Telegram delivery errors and outages, CLI output and exit code |
 | `tests/test_phase16_achievements.py` | first attendance → achievement + message, idempotent unlocking with bonus points, book achievements only for verified reading, test master, longest weekly streak, monthly top three (first week only, once), inactive definitions, admin create / grant / revoke with permissions and audit, editing thresholds |
 | `tests/test_phase15_notifications.py` | sender: delivery with Mini App buttons, inactive members and opt-outs skipped, critical messages always sent, blocked bot / network error / rate limit handling, max attempts, **parallel senders never send twice**, outdated reminders skipped; announcements on publishing events and books, attendance opening, test results with places; event reminder offsets with dedup, test started/ending, reading reminders only in daytime, quote of the day once, switched-off templates, scheduler, broadcast with filters, preview and audit, worker loop |
 
