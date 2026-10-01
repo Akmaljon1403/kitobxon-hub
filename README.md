@@ -18,7 +18,7 @@ Barcha qismlar **bitta server** va **bitta ma'lumotlar bazasi** bilan ishlaydi.
 | Bosqich | Holat |
 |---|---|
 | 1. Loyiha skeleti | ✅ Tayyor |
-| 2. Ma'lumotlar bazasi | ⏳ Navbatda |
+| 2. Ma'lumotlar bazasi | ✅ Tayyor |
 | 3–23. Qolgan bosqichlar | ⏳ Navbatda |
 
 Har bir yangi kod GitHub'da avtomatik tekshiriladi (**Actions** bo'limi). Yashil ✅ belgisi — hamma testlar o'tdi degani.
@@ -27,6 +27,7 @@ Har bir yangi kod GitHub'da avtomatik tekshiriladi (**Actions** bo'limi). Yashil
 
 * [docs/SETUP.md](docs/SETUP.md) — loyihani ishga tushirish (egasi va dasturchilar uchun)
 * [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — texnik arxitektura (dasturchilar uchun, ingliz tilida)
+* [docs/DATABASE.md](docs/DATABASE.md) — ma'lumotlar bazasi tuzilishi va ER-diagramma
 * [docs/TESTING.md](docs/TESTING.md) — avtomatik testlar
 
 ---

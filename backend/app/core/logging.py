@@ -54,7 +54,7 @@ class RedactingFilter(logging.Filter):
 
 class RequestIdFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        record.request_id = request_id_ctx.get()
+        record.request_id = request_id_ctx.get() or "-"
         return True
 
 
@@ -67,7 +67,7 @@ class JsonFormatter(logging.Formatter):
             "msg": record.getMessage(),
         }
         request_id = getattr(record, "request_id", None)
-        if request_id:
+        if request_id and request_id != "-":
             payload["request_id"] = request_id
         for key, value in record.__dict__.items():
             if key not in _STANDARD_ATTRS and key not in {"request_id", "color_message"} and not key.startswith("_"):

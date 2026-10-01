@@ -23,12 +23,15 @@ pytest -q
 ```
 
 The test database is wiped and rebuilt by the suite — never point `TEST_DATABASE_URL` at real data.
+At the start of a run the schema is built by the real Alembic migrations (upgrade → downgrade →
+upgrade), and before every test all tables are truncated and reference data is re-seeded.
 
 ## Test organisation
 
 | File | Covers |
 |---|---|
 | `tests/test_phase1_foundation.py` | health checks, error format, request ids, log redaction, configuration parsing |
+| `tests/test_phase2_database.py` | migrations up/down and drift check, reference data, unique constraints (Telegram ID, phone, attendance), concurrent check-ins, append-only ledger and audit log |
 
 New test modules are added with every phase (authentication, RBAC, attendance, tests, scoring, ...).
 The critical cases listed in the specification (expired QR, wrong-event QR, duplicate attendance,

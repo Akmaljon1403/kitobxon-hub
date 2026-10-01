@@ -17,11 +17,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.v1.router import api_router
 from app.core.config import Settings, get_settings
-from app.core.database import dispose_engine
+from app.core.database import dispose_engine, get_session_factory
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.redis import close_redis
+from app.services.bootstrap import sync_reference_data
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +31,23 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings: Settings = app.state.settings
     logger.info("Starting %s %s (%s)", settings.app_name, settings.app_version, settings.environment)
+    await _bootstrap_reference_data()
     try:
         yield
     finally:
         await close_redis()
         await dispose_engine()
         logger.info("Shutdown complete")
+
+
+async def _bootstrap_reference_data() -> None:
+    """Make sure permissions, roles and default settings exist. Never prevents start-up:
+    if the database is unreachable the problem is reported by /health/db instead."""
+    try:
+        async with get_session_factory()() as session:
+            await sync_reference_data(session)
+    except Exception:
+        logger.exception("Reference data bootstrap failed (are migrations applied? run: alembic upgrade head)")
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
