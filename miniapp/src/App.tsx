@@ -1,40 +1,57 @@
-import { ErrorState, LoadingState } from './components/StateViews'
-import { useAsync } from './hooks/useAsync'
-import { apiRequest } from './services/api'
-import { getWebApp } from './utils/telegram'
+import { AppLayout } from './layouts/AppLayout'
+import { LoadingState } from './components/StateViews'
+import { BookDetailPage } from './pages/BookDetailPage'
+import { BooksPage } from './pages/BooksPage'
+import { HomePage } from './pages/HomePage'
+import { ProfilePage } from './pages/ProfilePage'
+import {
+  AccountProblemPage,
+  NotRegisteredPage,
+  OutsideTelegramPage,
+  StartupErrorPage,
+  UpcomingPage,
+} from './pages/StatusPages'
+import { AuthProvider, useAuth } from './store/auth'
+import { useRoute } from './utils/router'
 
-interface PublicMeta {
-  app_name: string
-  version: string
-  bot_username: string | null
+function Routes() {
+  const segments = useRoute()
+  const [section = '', id] = segments
+  let page
+  if (section === '') page = <HomePage />
+  else if (section === 'books' && id) page = <BookDetailPage bookId={id} />
+  else if (section === 'books') page = <BooksPage />
+  else if (section === 'profile') page = <ProfilePage />
+  else page = <UpcomingPage section={section} />
+  return <AppLayout section={section}>{page}</AppLayout>
 }
 
-// Phase 1 shell: proves the Mini App can reach the backend. Navigation, authentication
-// and the real screens are added in the following phases.
+function Gate() {
+  const { status } = useAuth()
+  switch (status.kind) {
+    case 'loading':
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <LoadingState label="Kitobxon Hub yuklanmoqda…" />
+        </div>
+      )
+    case 'outside_telegram':
+      return <OutsideTelegramPage />
+    case 'not_registered':
+      return <NotRegisteredPage />
+    case 'blocked':
+      return <AccountProblemPage message={status.message} />
+    case 'error':
+      return <StartupErrorPage message={status.message} />
+    case 'ready':
+      return <Routes />
+  }
+}
+
 export default function App() {
-  const { state, reload } = useAsync((signal) => apiRequest<PublicMeta>('/api/v1/meta', { signal }))
-  const insideTelegram = getWebApp() !== null
-
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-4 p-4">
-      <header className="rounded-2xl bg-app-bg p-5 shadow-sm">
-        <h1 className="text-xl font-semibold">📚 Kitobxon Hub</h1>
-        <p className="mt-1 text-sm text-app-hint">Kitobxonlar klubining raqamli platformasi</p>
-      </header>
-
-      <section className="rounded-2xl bg-app-bg p-5 shadow-sm">
-        {state.status === 'loading' && <LoadingState label="Server bilan aloqa tekshirilmoqda…" />}
-        {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
-        {state.status === 'success' && (
-          <div className="space-y-1 text-sm">
-            <p>✅ Server bilan aloqa bor.</p>
-            <p className="text-app-hint">Versiya: {state.data.version}</p>
-            {!insideTelegram && (
-              <p className="text-app-hint">Ilovani to'liq ishlatish uchun uni Telegram bot orqali oching.</p>
-            )}
-          </div>
-        )}
-      </section>
-    </main>
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
   )
 }

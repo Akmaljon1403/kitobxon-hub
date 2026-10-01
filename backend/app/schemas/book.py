@@ -78,6 +78,8 @@ class MyReading(BaseModel):
     started_at: datetime
     completed_at: datetime | None
     verified: bool
+    # True when book points are only awarded after verification (setting).
+    verification_required: bool = True
 
 
 class BookOut(BookBaseOut):
