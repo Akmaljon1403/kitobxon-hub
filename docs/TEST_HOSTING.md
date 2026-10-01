@@ -59,9 +59,7 @@ Telegram orqali qilinadi. Taxminan **30–40 daqiqa** vaqt oladi.
    Render GitHub'ga kirish ruxsatini so'raydi — `kitobxon-hub` repository'siga ruxsat bering.
 2. Yuqoridagi **New +** tugmasini bosing → **Blueprint** ni tanlang.
 3. Ro'yxatdan **kitobxon-hub** repository'sini tanlang (**Connect**).
-4. **Branch** maydonida kod turgan shoxni tanlang:
-   * agar kod `main` shoxiga birlashtirilgan bo'lsa — `main`;
-   * aks holda — `claude/amazing-noether-vlg12l`.
+4. **Branch** maydonida `main` ni tanlang.
 5. Render loyihadagi `render.yaml` faylini o'qiydi va bir nechta qiymatni so'raydi. Ularni kiriting:
 
    | Maydon | Nima yoziladi |

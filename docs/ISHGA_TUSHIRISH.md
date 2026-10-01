@@ -10,18 +10,17 @@ kompyuteringizga hech narsa o'rnatish shart emas — hammasi brauzerda.
 
 ---
 
-## 1-qadam. Kodni asosiy shoxga (`main`) o'tkazish
+## 1-qadam. Render asosiy shoxdan (`main`) yangilansin
 
-Hozir kod GitHub'da `claude/amazing-noether-vlg12l` shoxida turibdi. **Har kungi avtomatik zaxira**
-va **haftalik xavfsizlik tekshiruvi** faqat asosiy shox — `main` da ishlaydi.
+Barcha kod GitHub'da asosiy shox — `main` ga o'tkazilgan. **Har kungi avtomatik zaxira** va
+**haftalik xavfsizlik tekshiruvi** faqat shu shoxda ishlaydi, server ham undan yangilanishi kerak.
 
-1. GitHub'da `kitobxon-hub` sahifasini oching → **Pull requests** → **New pull request**.
-2. **base:** `main` ← **compare:** `claude/amazing-noether-vlg12l` → **Create pull request** →
-   yana **Create pull request**.
-3. Pastdagi tekshiruvlar yashil ✅ bo'lishini kuting → **Merge pull request** → **Confirm merge**.
-4. Render → xizmatingiz → **Settings** → **Build & Deploy** → **Branch** ni `main` qiling → **Save**.
+1. Render → xizmatingiz (`kitobxon-hub`) → chapda **Settings** → **Build & Deploy** bo'limi.
+2. **Branch** qatorida `main` turganini tekshiring. Boshqa nom (`claude/...`) bo'lsa — **Edit** →
+   `main` ni tanlang → **Save Changes**.
 
-(Xohlasangiz, buni men o'zim tayyorlab beraman — "main ga o'tkaz" deb yozing kifoya.)
+(Agar serverni hali yaratmagan bo'lsangiz, [TEST_HOSTING.md](TEST_HOSTING.md) dagi 3-qadamda
+**Branch** sifatida darhol `main` ni tanlang.)
 
 ---
 
