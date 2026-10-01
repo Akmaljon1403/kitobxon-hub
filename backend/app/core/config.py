@@ -7,6 +7,7 @@ and the application refuses to start in production with insecure values.
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -18,6 +19,18 @@ _DEV_SECRET = "dev-only-insecure-secret-key-change-me-0123456789"  # noqa: S105
 
 # libpq-style query parameters that asyncpg does not understand.
 _LIBPQ_ONLY_PARAMS = {"sslmode", "channel_binding", "gssencmode", "target_session_attrs"}
+
+
+# Values are often pasted together with surrounding text: BotFather's sentence around the token,
+# Neon's ``psql '...'`` snippet or quotes around the address. Only the meaningful part is kept.
+_BOT_TOKEN_RE = re.compile(r"\d{5,}:[A-Za-z0-9_-]{30,}")
+_DATABASE_URL_RE = re.compile(r"postgres(?:ql)?(?:\+\w+)?://[^\s'\"<>]+")
+
+
+def clean_database_url(raw: str) -> str:
+    text = raw.strip()
+    match = _DATABASE_URL_RE.search(text)
+    return match.group(0) if match else text
 
 
 def normalize_database_url(raw_url: str) -> tuple[str, dict[str, Any]]:
@@ -126,16 +139,33 @@ class Settings(BaseSettings):
     @field_validator("super_admin_telegram_ids", mode="before")
     @classmethod
     def _split_ids(cls, value: Any) -> Any:
+        """Numbers separated by commas or spaces; anything else (``0``, ``@name``) is ignored."""
         if isinstance(value, int):
-            return [value]
+            return [value] if value > 0 else []
         if isinstance(value, str):
-            return [int(item.strip()) for item in value.split(",") if item.strip()]
+            return [int(item) for item in re.split(r"[\s,;]+", value) if item.isdigit() and int(item) > 0]
+        return value
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _clean_database_url(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            if not value.strip():
+                raise ValueError("DATABASE_URL is empty")
+            return clean_database_url(value)
+        return value
+
+    @field_validator("bot_token", mode="before")
+    @classmethod
+    def _clean_bot_token(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            match = _BOT_TOKEN_RE.search(value)
+            return match.group(0) if match else (value.strip() or None)
         return value
 
     @field_validator(
         "public_base_url",
         "telegram_webapp_url",
-        "bot_token",
         "bot_username",
         "telegram_webhook_secret",
         "redis_url",
@@ -157,17 +187,26 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_production_safety(self) -> Settings:
-        normalize_database_url(self.database_url)  # raises early on a malformed URL
+        # All problems are reported together, so they can be fixed in one go.
+        problems: list[str] = []
+        try:
+            normalize_database_url(self.database_url)
+        except ValueError as exc:
+            problems.append(str(exc))
         if self.environment == "production":
+            if "database_url" not in self.model_fields_set:
+                problems.append("DATABASE_URL is not set")
             if "api_docs_enabled" not in self.model_fields_set:
                 self.api_docs_enabled = False  # the API description is only needed by developers
             secret = self.secret_key.get_secret_value()
             if secret == _DEV_SECRET or len(secret) < 32:
-                raise ValueError("SECRET_KEY must be set to a random value of at least 32 characters in production")
+                problems.append("SECRET_KEY must be set to a random value of at least 32 characters in production")
             if self.storage_backend == "s3" and not (
                 self.storage_endpoint and self.storage_bucket and self.storage_access_key and self.storage_secret_key
             ):
-                raise ValueError("STORAGE_* variables are required when STORAGE_BACKEND=s3")
+                problems.append("STORAGE_* variables are required when STORAGE_BACKEND=s3")
+        if problems:
+            raise ValueError("; ".join(problems))
         return self
 
     @property
