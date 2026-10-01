@@ -1,0 +1,29 @@
+# Render Blueprint: one free web service running the whole Kitobxon Hub.
+# The database is NOT created here on purpose: Render's free PostgreSQL is deleted after
+# 30 days, so a permanent free database from Neon (https://neon.tech) is used instead.
+# See docs/TEST_HOSTING.md for the step-by-step guide.
+services:
+  - type: web
+    name: kitobxon-hub
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: BOT_USERNAME
+        sync: false
+      - key: SUPER_ADMIN_TELEGRAM_IDS
+        sync: false

@@ -8,6 +8,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull request:
 |---|---|
 | Backend | `ruff check`, `ruff format --check`, full `pytest` suite against PostgreSQL 16 (including migrations) |
 | Frontend (miniapp, admin) | `npm ci`, TypeScript type check, production build |
+| Docker | the production image (root `Dockerfile`) builds |
 
 A green check mark on a commit means all of the above passed.
 
@@ -34,6 +35,7 @@ upgrade), and before every test all tables are truncated and reference data is r
 | `tests/test_phase2_database.py` | migrations up/down and drift check, reference data, unique constraints (Telegram ID, phone, attendance), concurrent check-ins, append-only ledger and audit log |
 | `tests/test_phase3_auth.py` | initData signature/expiry/tampering, JWT forgery/expiry/`alg=none`, blocked users, logout, admin login links (one-time, expiry), super-admin bootstrap, login rate limit |
 | `tests/test_phase4_rbac.py` | every admin route → 401 anonymous / 403 member, permission checks, admin appointment/dismissal with audit records, last super admin protection, custom roles, audit log filters |
+| `tests/test_phase5_bot.py` | the real bot dispatcher driven through a fake Telegram connection: full registration, skipped faculty step, state surviving restarts, someone else's contact, typed phone, invalid names, duplicate phone, approval mode, owner bootstrap, main menu, profile, notification toggles, blocked users, `/admin` login link, webhook secret, faculty admin API |
 
 New test modules are added with every phase (authentication, RBAC, attendance, tests, scoring, ...).
 The critical cases listed in the specification (expired QR, wrong-event QR, duplicate attendance,

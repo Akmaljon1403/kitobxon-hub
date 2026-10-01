@@ -11,7 +11,7 @@ from functools import lru_cache
 from typing import Annotated, Any, Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _DEV_SECRET = "dev-only-insecure-secret-key-change-me-0123456789"  # noqa: S105
@@ -65,9 +65,13 @@ class Settings(BaseSettings):
     log_json: bool = True
     api_docs_enabled: bool = True
     timezone: str = "Asia/Tashkent"
+    # Render sets RENDER_EXTERNAL_URL automatically, so the variable is optional there.
     public_base_url: str | None = Field(
-        default=None, description="Public HTTPS address of the backend, e.g. https://kitobxon.example.uz"
+        default=None,
+        validation_alias=AliasChoices("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"),
+        description="Public HTTPS address of the backend, e.g. https://kitobxon.example.uz",
     )
+    static_dir: str = Field(default="static", description="Directory with the built Mini App and Admin Panel")
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     # ---- Database / cache ----
@@ -87,6 +91,9 @@ class Settings(BaseSettings):
     # ---- Telegram ----
     bot_token: SecretStr | None = None
     bot_username: str | None = None
+    # webhook: Telegram calls PUBLIC_BASE_URL/telegram/webhook (production);
+    # polling: run `python -m app.bot.polling` separately (local development); disabled: no bot.
+    bot_mode: Literal["webhook", "polling", "disabled"] = "webhook"
     telegram_webapp_url: str | None = None
     telegram_webhook_secret: SecretStr | None = None
     init_data_max_age_seconds: int = Field(default=60 * 60 * 24, ge=60)
@@ -120,6 +127,24 @@ class Settings(BaseSettings):
             return [int(item.strip()) for item in value.split(",") if item.strip()]
         return value
 
+    @field_validator(
+        "public_base_url",
+        "telegram_webapp_url",
+        "bot_token",
+        "bot_username",
+        "telegram_webhook_secret",
+        "redis_url",
+        "storage_endpoint",
+        "storage_access_key",
+        "storage_secret_key",
+        "storage_bucket",
+        "ai_api_key",
+        mode="before",
+    )
+    @classmethod
+    def _empty_to_none(cls, value: Any) -> Any:
+        return None if isinstance(value, str) and not value.strip() else value
+
     @field_validator("bot_username")
     @classmethod
     def _strip_at(cls, value: str | None) -> str | None:
@@ -141,6 +166,21 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def base_url(self) -> str | None:
+        return self.public_base_url.rstrip("/") if self.public_base_url else None
+
+    @property
+    def webapp_url(self) -> str | None:
+        """Mini App address; defaults to the copy served by this backend under /app/."""
+        if self.telegram_webapp_url:
+            return self.telegram_webapp_url
+        return f"{self.base_url}/app/" if self.base_url else None
+
+    @property
+    def bot_enabled(self) -> bool:
+        return self.bot_token is not None and self.bot_mode != "disabled"
 
     @property
     def sqlalchemy_database(self) -> tuple[str, dict[str, Any]]:

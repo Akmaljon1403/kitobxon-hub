@@ -53,7 +53,7 @@ the same database.** There is no second database and no business logic in the fr
 | ORM / migrations | SQLAlchemy 2.0 (async) + Alembic | Mature, explicit transactions and locking. |
 | DB driver | asyncpg | Fast async driver. Provider URLs (`postgres://…?sslmode=require`) are normalised automatically. |
 | Database | PostgreSQL 16 | Constraints, partial indexes, `SKIP LOCKED` queues, triggers. |
-| Telegram bot | aiogram 3, **webhook mode inside the backend process** | No separate server to pay for; handlers call the same services as the API. Polling mode exists for local development. |
+| Telegram bot | aiogram 3, **webhook mode inside the backend process**, conversation (FSM) state in PostgreSQL | No separate server to pay for; handlers call the same services as the API; a half-finished registration survives restarts without Redis. Polling mode exists for local development. |
 | Background jobs | PostgreSQL-backed queue (`SELECT … FOR UPDATE SKIP LOCKED`) + in-process scheduler protected by a PostgreSQL advisory lock | Reliable, survives restarts, safe with several instances, no Celery/RabbitMQ to operate. |
 | Cache / rate limit | In-memory by default, Redis when `REDIS_URL` is set | Single instance needs nothing extra; multi-instance deployments share limits through Redis. |
 | Authentication | Telegram Mini App `initData` HMAC validation → short-lived JWT; Admin Panel login by one-time link sent by the bot | No passwords to leak; identity is always the verified Telegram account. |
@@ -138,7 +138,7 @@ By default one container runs everything, which is the cheapest setup:
 | Component | Default | Can be split out by |
 |---|---|---|
 | REST API | on | — |
-| Bot webhook endpoint | on when `BOT_TOKEN` and `PUBLIC_BASE_URL` are set | — |
+| Bot webhook endpoint (`/telegram/webhook`, secret-header protected) | on when `BOT_TOKEN` and `PUBLIC_BASE_URL` are set | `BOT_MODE=polling` + `python -m app.bot.polling` |
 | Background worker (notification queue, reminders, quote of the day, test-ranking bonuses) | on | running a second container with the worker flag and disabling it in web containers |
 | Static Mini App (`/app/`) and Admin Panel (`/admin/`) | served by the backend | a CDN or nginx |
 
@@ -199,7 +199,7 @@ from the approved text.
 
 ## 9. Development phases
 
-1. Project skeleton ✅ — 2. Database ✅ — 3. Authentication ✅ — 4. RBAC ✅ — 5. Telegram bot —
+1. Project skeleton ✅ — 2. Database ✅ — 3. Authentication ✅ — 4. RBAC ✅ — 5. Telegram bot ✅ —
 6. Mini App foundation — 7. Admin Panel foundation — 8. Users and profiles — 9. Books —
 10. Events — 11. Attendance — 12. Tests — 13. Scoring — 14. Rankings — 15. Notifications —
 16. Achievements — 17. Reports — 18. AI report drafting — 19. Rewards — 20. Analytics —

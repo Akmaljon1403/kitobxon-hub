@@ -9,8 +9,8 @@ Siz hech qanday dastur o'rnatmaysiz. Kod yozish, tekshirish va saqlash bulutda b
   Tekshirish uchun: repository sahifasida **Actions** bo'limini oching.
   * ✅ yashil belgi — hammasi joyida;
   * ❌ qizil belgi — xatolik bor (buni dasturchi/AI tuzatadi).
-* **Botni sinab ko'rish** uchun bepul serverga joylashtirish qo'llanmasi bot tayyor bo'lganda
-  (5-bosqich) shu yerga qo'shiladi: [DEPLOYMENT.md](DEPLOYMENT.md).
+* **Botni sinab ko'rish** uchun bepul serverga joylashtirish qo'llanmasi:
+  [TEST_HOSTING.md](TEST_HOSTING.md) (30–40 daqiqa, hammasi brauzerda).
 
 Sizdan faqat quyidagilar so'raladi (vaqti kelganda, oddiy savol shaklida):
 
@@ -40,7 +40,10 @@ python -m venv .venv
 . .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
 cp ../.env.example ../.env       # set DATABASE_URL and SECRET_KEY
+alembic upgrade head
 uvicorn app.main:app --reload
+# The bot without a public HTTPS address (set BOT_TOKEN first):
+BOT_MODE=polling python -m app.bot.polling
 ```
 
 Useful URLs:

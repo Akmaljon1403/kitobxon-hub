@@ -5,6 +5,7 @@ from app.models.attendance import AttendanceRecord, AttendanceSession, Attendanc
 from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.book import Book, BookQuote, BookRead
+from app.models.bot import BotFsmState
 from app.models.event import Event, EventRegistration
 from app.models.notification import Notification, NotificationTemplate
 from app.models.rbac import LoginToken, Permission, Role, RolePermission, UserPermission, UserRole
@@ -26,6 +27,7 @@ __all__ = [
     "Book",
     "BookQuote",
     "BookRead",
+    "BotFsmState",
     "Campaign",
     "CampaignBook",
     "Event",

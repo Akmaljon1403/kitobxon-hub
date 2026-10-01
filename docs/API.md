@@ -116,5 +116,26 @@ Blocking a user or removing admin rights has the same effect immediately.
 | PATCH / DELETE | `/api/v1/admin/roles/{role_id}` | SUPER_ADMIN — update / delete custom roles |
 | GET | `/api/v1/admin/audit-logs` | `AUDIT_LOG_VIEW` — filters: `action`, `entity_type`, `entity_id`, `actor_id`, `since`, `until` |
 
+### Admin: faculties
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/faculties` | any admin |
+| POST | `/api/v1/admin/faculties` | `SETTINGS_MANAGE` |
+| PATCH | `/api/v1/admin/faculties/{faculty_id}` | `SETTINGS_MANAGE` — rename, reorder, deactivate (no hard delete) |
+
+### Telegram
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/telegram/webhook` | Called by Telegram only; requires the `X-Telegram-Bot-Api-Secret-Token` header. Not part of the public API schema. |
+
+### Static apps
+
+| Path | Content |
+|---|---|
+| `/app/` | Telegram Mini App |
+| `/admin/` | Admin Panel |
+
 More endpoints (books, events, attendance, tests, scores, rankings, notifications, reports,
 rewards, analytics) are added in the following phases.

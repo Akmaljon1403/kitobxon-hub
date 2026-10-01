@@ -10,12 +10,16 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.health import router as health_router
 from app.api.v1.router import api_router
+from app.bot.setup import close_bot_runtime, configure_telegram, get_bot_runtime
+from app.bot.webhook import router as telegram_router
 from app.core.config import Settings, get_settings
 from app.core.database import dispose_engine, get_session_factory
 from app.core.errors import register_error_handlers
@@ -32,9 +36,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings: Settings = app.state.settings
     logger.info("Starting %s %s (%s)", settings.app_name, settings.app_version, settings.environment)
     await _bootstrap_reference_data()
+    await _configure_bot(settings)
     try:
         yield
     finally:
+        await close_bot_runtime()
         await close_redis()
         await dispose_engine()
         logger.info("Shutdown complete")
@@ -48,6 +54,29 @@ async def _bootstrap_reference_data() -> None:
             await sync_reference_data(session)
     except Exception:
         logger.exception("Reference data bootstrap failed (are migrations applied? run: alembic upgrade head)")
+
+
+async def _configure_bot(settings: Settings) -> None:
+    """Register the webhook, commands and menu button with Telegram (webhook mode only)."""
+    if settings.bot_mode != "webhook":
+        return
+    runtime = get_bot_runtime()
+    if runtime is None:
+        logger.info("Telegram bot disabled (BOT_TOKEN is not set)")
+        return
+    try:
+        await configure_telegram(runtime, with_webhook=True)
+    except Exception:
+        logger.exception("Could not configure the Telegram bot; the API keeps running")
+
+
+def _mount_frontends(app: FastAPI, settings: Settings) -> None:
+    """Serve the built Mini App (/app/) and Admin Panel (/admin/) when they are present."""
+    static_root = Path(settings.static_dir)
+    for prefix, folder in (("/app", "miniapp"), ("/admin", "admin")):
+        directory = static_root / folder
+        if (directory / "index.html").is_file():
+            app.mount(prefix, StaticFiles(directory=directory, html=True), name=folder)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -82,6 +111,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(api_router)
+    app.include_router(telegram_router)
+    _mount_frontends(app, settings)
     return app
 
 
