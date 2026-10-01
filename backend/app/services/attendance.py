@@ -49,6 +49,7 @@ from app.models.enums import (
     ScoreCategory,
 )
 from app.security.crypto import derive_key, keyed_hash
+from app.services import announcements
 from app.services.audit import record_audit
 from app.services.events import effective_points, get_event
 from app.services.scoring import award_points, reverse_latest_award
@@ -168,6 +169,7 @@ async def open_session(
         entity_id=event.id,
         after={"closes_at": closes_at.isoformat()},
     )
+    await announcements.attendance_opened(session, event)
     await session.commit()
     return attendance_session
 

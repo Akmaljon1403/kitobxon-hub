@@ -51,6 +51,7 @@ from app.models.enums import (
     TestActivityType,
     TestStatus,
 )
+from app.services import announcements
 from app.services.audit import record_audit
 from app.services.books import award_book_completion, get_or_create_read
 from app.services.scoring import award_points, current_season_id
@@ -383,7 +384,10 @@ async def close_test(session: AsyncSession, *, actor_id: uuid.UUID | None, test_
             test.ends_at = max(now, test.starts_at + timedelta(seconds=1))
         record_audit(session, actor_id=actor_id, action="TEST_CLOSE", entity_type="test", entity_id=test.id)
     await finalize_overdue_attempts(session, test_id=test.id, force=True)
+    first_close = test.rank_bonus_awarded_at is None
     await award_rank_bonuses(session, test)
+    if first_close:
+        await announcements.test_results(session, test, await test_standings(session, test))
     await session.commit()
     return test
 

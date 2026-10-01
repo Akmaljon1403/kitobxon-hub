@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     admin_books,
     admin_events,
     admin_faculties,
+    admin_notifications,
     admin_quizzes,
     admin_scores,
     admin_system,
@@ -38,6 +39,7 @@ for module in (
     admin_faculties,
     admin_quizzes,
     admin_scores,
+    admin_notifications,
     admin_system,
 ):
     api_router.include_router(module.router)

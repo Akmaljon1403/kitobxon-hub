@@ -27,6 +27,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.redis import close_redis
 from app.services.bootstrap import sync_reference_data
+from app.workers.runner import WorkerHandle
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +38,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Starting %s %s (%s)", settings.app_name, settings.app_version, settings.environment)
     await _bootstrap_reference_data()
     await _configure_bot(settings)
+    worker = WorkerHandle() if settings.worker_enabled else None
+    if worker is not None:
+        worker.start()
     try:
         yield
     finally:
+        if worker is not None:
+            await worker.stop()
         await close_bot_runtime()
         await close_redis()
         await dispose_engine()

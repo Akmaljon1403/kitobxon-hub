@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import BadRequestError, ConflictError, NotFoundError
 from app.models import AttendanceRecord, Book, Event, EventRegistration, User
 from app.models.enums import AttendanceStatus, EventStatus, RegistrationStatus
+from app.services import announcements
 from app.services.audit import record_audit
 from app.services.settings import get_setting
 
@@ -147,6 +148,7 @@ async def create_event(session: AsyncSession, *, actor_id: uuid.UUID, data: dict
         entity_id=event.id,
         after=_snapshot(event),
     )
+    await announcements.event_published(session, event)
     await session.commit()
     return event
 
@@ -179,6 +181,8 @@ async def update_event(
             before=before,
             after=after,
         )
+    if before["status"] != EventStatus.PUBLISHED and event.status == EventStatus.PUBLISHED:
+        await announcements.event_published(session, event)
     await session.commit()
     return event
 

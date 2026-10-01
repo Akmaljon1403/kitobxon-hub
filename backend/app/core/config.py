@@ -94,6 +94,11 @@ class Settings(BaseSettings):
     # webhook: Telegram calls PUBLIC_BASE_URL/telegram/webhook (production);
     # polling: run `python -m app.bot.polling` separately (local development); disabled: no bot.
     bot_mode: Literal["webhook", "polling", "disabled"] = "webhook"
+    # Background worker (notification sender + scheduled reminders). On by default inside the
+    # web process; set to false when the worker runs in its own container (python -m app.workers).
+    worker_enabled: bool = True
+    # How often scheduled checks run. A longer interval lets a free serverless database sleep.
+    worker_interval_seconds: int = Field(default=60, ge=10, le=3600)
     telegram_webapp_url: str | None = None
     telegram_webhook_secret: SecretStr | None = None
     init_data_max_age_seconds: int = Field(default=60 * 60 * 24, ge=60)

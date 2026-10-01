@@ -23,6 +23,7 @@ from app.models.enums import (
     ReadingVerification,
     ScoreCategory,
 )
+from app.services import announcements
 from app.services.audit import record_audit
 from app.services.scoring import award_points
 from app.services.settings import get_setting
@@ -105,6 +106,7 @@ async def create_book(session: AsyncSession, *, actor_id: uuid.UUID, data: dict[
     record_audit(
         session, actor_id=actor_id, action="BOOK_CREATE", entity_type="book", entity_id=book.id, after=_snapshot(book)
     )
+    await announcements.book_published(session, book)
     await session.commit()
     return book
 
@@ -129,6 +131,8 @@ async def update_book(
             before=before,
             after=after,
         )
+    if before["status"] != BookStatus.ACTIVE and book.status == BookStatus.ACTIVE:
+        await announcements.book_published(session, book)
     await session.commit()
     return book
 

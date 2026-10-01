@@ -20,6 +20,7 @@ os.environ["BOT_TOKEN"] = "123456789:TEST-bot-token-AAAAAAAAAAAAAAAAAAAAAAAAAAAA
 os.environ["BOT_USERNAME"] = "kitobxon_test_bot"
 os.environ["SUPER_ADMIN_TELEGRAM_IDS"] = "900000001"
 os.environ.pop("REDIS_URL", None)
+os.environ["WORKER_ENABLED"] = "false"
 
 import asyncio
 from collections.abc import AsyncIterator
