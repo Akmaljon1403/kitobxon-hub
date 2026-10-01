@@ -33,3 +33,26 @@ def random_token(num_bytes: int = 32) -> str:
 
 def constant_time_equals(a: str, b: str) -> bool:
     return hmac.compare_digest(a.encode(), b.encode())
+
+
+def encrypt_secret(purpose: str, plaintext: str) -> str:
+    """AES-256-GCM encryption for small secrets stored in the database (e.g. promo codes).
+
+    The key is derived from SECRET_KEY: changing SECRET_KEY makes stored secrets unreadable.
+    """
+    import base64
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce = secrets.token_bytes(12)
+    ciphertext = AESGCM(derive_key(f"encrypt:{purpose}")).encrypt(nonce, plaintext.encode(), purpose.encode())
+    return base64.urlsafe_b64encode(nonce + ciphertext).decode()
+
+
+def decrypt_secret(purpose: str, token: str) -> str:
+    import base64
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    raw = base64.urlsafe_b64decode(token.encode())
+    return AESGCM(derive_key(f"encrypt:{purpose}")).decrypt(raw[:12], raw[12:], purpose.encode()).decode()

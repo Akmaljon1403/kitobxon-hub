@@ -14,6 +14,7 @@ import { MembersPage } from './pages/MembersPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { QuotesPage } from './pages/QuotesPage'
 import { ReportEditorPage, ReportsPage } from './pages/ReportsPage'
+import { RewardsPage } from './pages/RewardsPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TestEditorPage } from './pages/TestEditorPage'
@@ -33,6 +34,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   notifications: NotificationsPage,
   achievements: AchievementsPage,
   reports: ReportsPage,
+  rewards: RewardsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
   admins: AdminsPage,

@@ -20,6 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'scores', icon: '🏆', label: 'Ballar va reyting', visible: (can) => can('SCORE_VIEW') },
   { route: 'reports', icon: '📄', label: 'Hisobotlar', visible: (can) => can('REPORT_VIEW') },
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', visible: () => true },
+  { route: 'rewards', icon: '🎁', label: "Sovg'alar", visible: (can) => can('REWARD_MANAGE') },
   { route: 'notifications', icon: '📢', label: 'Xabarlar', visible: (can) => can('NOTIFICATION_SEND') },
   { route: 'faculties', icon: '🏛', label: 'Fakultetlar', visible: () => true },
   { route: 'settings', icon: '⚙️', label: 'Sozlamalar', visible: () => true },

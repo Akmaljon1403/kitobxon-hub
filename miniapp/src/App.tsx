@@ -9,6 +9,7 @@ import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RankingPage } from './pages/RankingPage'
 import { ResultsPage } from './pages/ResultsPage'
+import { RewardsPage } from './pages/RewardsPage'
 import { TestDetailPage } from './pages/TestDetailPage'
 import { TestsPage } from './pages/TestsPage'
 import {
@@ -34,6 +35,7 @@ function Routes() {
   else if (section === 'ranking') page = <RankingPage />
   else if (section === 'results') page = <ResultsPage />
   else if (section === 'achievements') page = <AchievementsPage />
+  else if (section === 'rewards') page = <RewardsPage />
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
   else page = <UpcomingPage section={section} />

@@ -74,3 +74,11 @@ Attendance verification, test submission and notification sending get their own 
 ## Reporting a vulnerability
 
 Contact the project owner privately; do not open a public GitHub issue for security problems.
+
+## Promo codes
+
+Codes are entered by administrators only (the system never generates "working" codes). They are
+stored encrypted with AES-256-GCM using a key derived from `SECRET_KEY`, admins see them masked,
+and a code is decrypted only for the member it was assigned to. A revoked assignment burns its
+code. Note: changing `SECRET_KEY` makes stored codes unreadable — re-enter unused codes after a
+key rotation.

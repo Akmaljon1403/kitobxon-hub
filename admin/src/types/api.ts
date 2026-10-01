@@ -415,3 +415,42 @@ export interface ReportDetail {
   pdf_ready: boolean
   created_at: string
 }
+
+export type RewardType = 'BOOK' | 'CERTIFICATE' | 'SUBSCRIPTION_CODE' | 'PARTNER_DISCOUNT' | 'OTHER'
+
+export interface AdminReward {
+  id: string
+  title: string
+  description: string | null
+  type: RewardType
+  value: string | null
+  expires_at: string | null
+  status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
+  codes_total: number
+  codes_available: number
+  recipients: number
+  created_at: string
+}
+
+export interface RewardCodeRow {
+  id: string
+  masked: string
+  status: 'AVAILABLE' | 'ASSIGNED' | 'REDEEMED' | 'EXPIRED' | 'REVOKED'
+  expires_at: string | null
+  assigned_to: string | null
+  created_at: string
+}
+
+export interface RewardRecipient {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  group_name: string | null
+  status: 'ASSIGNED' | 'DELIVERED' | 'REDEEMED' | 'REVOKED'
+  has_code: boolean
+  note: string | null
+  assigned_at: string
+  delivered_at: string | null
+  redeemed_at: string | null
+}

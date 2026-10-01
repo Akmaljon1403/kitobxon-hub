@@ -34,8 +34,9 @@ Barcha qismlar **bitta server** va **bitta ma'lumotlar bazasi** bilan ishlaydi.
 | 15. Bildirishnomalar va eslatmalar | ✅ Tayyor |
 | 16. Yutuqlar | ✅ Tayyor |
 | 17–18. Rasmiy hisobotlar (PDF) va AI yordamchi | ✅ Tayyor |
-| 19. Sovg'alar | ⏳ Keyingi |
-| 20–23. Tahlillar, xavfsizlik, yakuniy sinov va tayyorgarlik | ⏳ Navbatda |
+| 19. Sovg'alar va promo-kodlar | ✅ Tayyor |
+| 20. Tahlillar (statistika) | ⏳ Keyingi |
+| 21–23. Xavfsizlik, yakuniy sinov va tayyorgarlik | ⏳ Navbatda |
 
 🚀 **Botni bepul serverda sinab ko'rish:** [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — qadam-baqadam qo'llanma.
 

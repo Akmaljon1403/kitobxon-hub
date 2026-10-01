@@ -275,3 +275,16 @@ export interface MemberAchievement {
   progress: number | null
   unlocked_at: string | null
 }
+
+export interface MemberReward {
+  id: string
+  title: string
+  description: string | null
+  type: 'BOOK' | 'CERTIFICATE' | 'SUBSCRIPTION_CODE' | 'PARTNER_DISCOUNT' | 'OTHER'
+  value: string | null
+  expires_at: string | null
+  status: 'ASSIGNED' | 'DELIVERED' | 'REDEEMED' | 'REVOKED'
+  has_code: boolean
+  assigned_at: string
+  redeemed_at: string | null
+}

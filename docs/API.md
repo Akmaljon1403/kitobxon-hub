@@ -122,6 +122,9 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/rankings?period=week\|month\|season\|all&scope=all\|faculty\|group` | Leaderboard (deterministic tie-breaks, see ARCHITECTURE §8) |
 | GET | `/api/v1/rankings/faculties?period=...` | Faculties ranked by average points per member |
 | GET | `/api/v1/me/achievements` | All active achievements with my progress and unlock dates |
+| GET | `/api/v1/me/rewards` | My rewards (codes are never included in the list) |
+| POST | `/api/v1/me/rewards/{id}/code` | Reveal my promo code (only the recipient; marks it delivered) |
+| POST | `/api/v1/me/rewards/{id}/redeemed` | "I have used it" |
 
 ### Admin: access control
 
@@ -227,6 +230,19 @@ Blocking a user or removing admin rights has the same effect immediately.
 | POST | `/api/v1/admin/reports/{id}/photos` | `REPORT_CREATE` — multipart `file` (JPG/PNG/WEBP ≤ 8 MB, max 8) + `caption` |
 | GET / DELETE | `/api/v1/admin/reports/{id}/photos/{photo_id}` | `REPORT_VIEW` / `REPORT_CREATE` |
 
+### Admin: rewards (`REWARD_MANAGE`)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET / POST | `/api/v1/admin/rewards` | list with code and recipient counts / create (`title`, `type`, `value`, `description`, `expires_at`, `status`) |
+| PATCH | `/api/v1/admin/rewards/{id}` | edit |
+| POST | `/api/v1/admin/rewards/{id}/codes` | `{"codes": [...], "expires_at"?}` — up to 500 admin-provided codes, encrypted (AES-GCM), duplicates skipped |
+| GET | `/api/v1/admin/rewards/{id}/codes` | masked codes (`KI••••••CD`), status, recipient |
+| POST | `/api/v1/admin/rewards/{id}/codes/{code_id}/revoke` | withdraw an unused code |
+| POST | `/api/v1/admin/rewards/{id}/assign` | `{"user_id", "note"?, "idempotency_key"?}` — gives the next unused code; one active assignment per member and reward; audited; member notified |
+| GET | `/api/v1/admin/rewards/{id}/recipients` | |
+| POST | `/api/v1/admin/user-rewards/{id}/status` | `DELIVERED` / `REDEEMED` / `REVOKED` (a revoked code is never handed out again) |
+
 ### Admin: notifications
 
 | Method | Path | Required |
@@ -263,4 +279,4 @@ Blocking a user or removing admin rights has the same effect immediately.
 | `/app/` | Telegram Mini App |
 | `/admin/` | Admin Panel |
 
-More endpoints (rewards, analytics) are added in the following phases.
+More endpoints (analytics) are added in the following phase.
