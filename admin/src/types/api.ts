@@ -236,3 +236,85 @@ export interface RankingRow {
   tests: number
   is_me: boolean
 }
+
+export type TestStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED'
+export type TestState = 'DRAFT' | 'UPCOMING' | 'OPEN' | 'CLOSED'
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
+
+export interface AdminTest {
+  id: string
+  title: string
+  description: string | null
+  book_id: string | null
+  book_title: string | null
+  starts_at: string
+  ends_at: string
+  duration_minutes: number
+  max_score: number
+  passing_score: number
+  attempts_allowed: number
+  shuffle_questions: boolean
+  shuffle_options: boolean
+  status: TestStatus
+  state: TestState
+  question_count: number
+  participant_count: number
+  published_at: string | null
+  rank_bonus_awarded: boolean
+  created_at: string
+}
+
+export interface AdminQuestion {
+  id?: string
+  type: QuestionType
+  text: string
+  points: number
+  explanation: string | null
+  options: { id?: string; text: string; is_correct: boolean }[]
+}
+
+export interface AdminTestDetail extends AdminTest {
+  questions: AdminQuestion[]
+}
+
+export interface TestResultRow {
+  attempt_id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  faculty: string | null
+  course: number | null
+  group_name: string | null
+  attempt_number: number
+  status: AttemptStatus
+  score: number | null
+  correct_count: number | null
+  question_count: number
+  passed: boolean | null
+  started_at: string
+  submitted_at: string | null
+  duration_seconds: number | null
+  signals: number
+  place: number | null
+}
+
+export interface TestResults {
+  test: AdminTest
+  participants: number
+  passed: number
+  average_score: number | null
+  items: TestResultRow[]
+}
+
+export interface AttemptDetail {
+  attempt_id: string
+  member: string
+  status: AttemptStatus
+  score: number | null
+  started_at: string
+  deadline_at: string
+  submitted_at: string | null
+  answers: { question: string; selected: string[]; correct: string[]; is_correct: boolean | null; answered_at: string | null }[]
+  activity: { type: string; at: string; details: Record<string, unknown> | null }[]
+}

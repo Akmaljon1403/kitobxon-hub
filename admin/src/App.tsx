@@ -13,6 +13,9 @@ import { MembersPage } from './pages/MembersPage'
 import { QuotesPage } from './pages/QuotesPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { TestEditorPage } from './pages/TestEditorPage'
+import { TestResultsPage } from './pages/TestResultsPage'
+import { TestsPage } from './pages/TestsPage'
 import { SessionProvider, useSession } from './store/session'
 import { useRoute } from './utils/router'
 
@@ -22,6 +25,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   books: BooksPage,
   quotes: QuotesPage,
   events: EventsPage,
+  tests: TestsPage,
   scores: ScoresPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
@@ -54,6 +58,20 @@ function Router() {
           <AttendancePage eventId={entityId} />
         ) : (
           <Card className="p-6 text-sm text-app-hint">Davomatni ko'rish uchun ruxsatingiz yo'q.</Card>
+        )}
+      </AdminLayout>
+    )
+  }
+
+  if (section === 'tests' && entityId) {
+    return (
+      <AdminLayout section="tests">
+        {!can('TEST_VIEW') ? (
+          <Card className="p-6 text-sm text-app-hint">Testlarni ko'rish uchun ruxsatingiz yo'q.</Card>
+        ) : subPage === 'results' ? (
+          <TestResultsPage testId={entityId} />
+        ) : (
+          <TestEditorPage testId={entityId} />
         )}
       </AdminLayout>
     )

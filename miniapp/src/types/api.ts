@@ -173,3 +173,93 @@ export interface MyRanking {
   month: RankingRow | null
   all: RankingRow | null
 }
+
+export type TestState = 'DRAFT' | 'UPCOMING' | 'OPEN' | 'CLOSED'
+export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+
+export interface MyAttempt {
+  attempt_number: number
+  status: AttemptStatus
+  score: number | null
+  correct_count: number | null
+  question_count: number
+  submitted_at: string | null
+}
+
+export interface ClubTest {
+  id: string
+  title: string
+  description: string | null
+  book_id: string | null
+  book_title: string | null
+  starts_at: string
+  ends_at: string
+  duration_minutes: number
+  max_score: number
+  passing_score: number
+  attempts_allowed: number
+  question_count: number
+  state: TestState
+  attempts: MyAttempt[]
+  best_score: number | null
+  in_progress: boolean
+  can_start: boolean
+  review_available: boolean
+}
+
+export interface AttemptQuestion {
+  id: string
+  type: QuestionType
+  text: string
+  points: number
+  options: { id: string; text: string }[]
+}
+
+export interface RunningAttempt {
+  attempt_id: string
+  test_id: string
+  title: string
+  attempt_number: number
+  started_at: string
+  deadline_at: string
+  server_now: string
+  questions: AttemptQuestion[]
+  answers: Record<string, string[]>
+}
+
+export interface AttemptResult {
+  attempt_id: string
+  status: AttemptStatus
+  score: number
+  max_score: number
+  passing_score: number
+  passed: boolean
+  correct_count: number
+  question_count: number
+  points_awarded: number
+  submitted_at: string | null
+  attempts_left: number
+  review_available_at: string
+}
+
+export interface TestReview {
+  test_id: string
+  title: string
+  score: number
+  max_score: number
+  correct_count: number
+  question_count: number
+  place: number | null
+  participants: number
+  questions: {
+    id: string
+    type: QuestionType
+    text: string
+    points: number
+    explanation: string | null
+    is_correct: boolean
+    points_awarded: number
+    options: { id: string; text: string; is_correct: boolean; selected: boolean }[]
+  }[]
+}

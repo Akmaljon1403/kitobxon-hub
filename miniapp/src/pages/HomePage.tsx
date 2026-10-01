@@ -4,9 +4,9 @@ import { ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
-import type { Book, ClubEvent, MyRanking, Page } from '../types/api'
+import type { Book, ClubEvent, ClubTest, MyRanking, Page } from '../types/api'
 import { EventCard } from './EventsPage'
-import { daysUntil, formatDate } from '../utils/format'
+import { daysUntil, formatDate, formatEventDate } from '../utils/format'
 import { navigate } from '../utils/router'
 
 const SHORTCUTS = [
@@ -31,6 +31,11 @@ export function HomePage() {
   const { state, reload } = useAsync((signal) => api<Page<Book>>('/api/v1/books?limit=3', { signal }))
   const events = useAsync((signal) => api<Page<ClubEvent>>('/api/v1/events?scope=upcoming&limit=1', { signal }))
   const ranking = useAsync((signal) => api<MyRanking>('/api/v1/me/ranking', { signal }))
+  const tests = useAsync((signal) => api<ClubTest[]>('/api/v1/tests', { signal }))
+  const openTest =
+    tests.state.status === 'success'
+      ? tests.state.data.find((test) => test.state === 'OPEN' && (test.in_progress || test.attempts.length === 0))
+      : undefined
   if (!me) return null
 
   const current = state.status === 'success' ? state.data.items.find((book) => book.status === 'ACTIVE') : undefined
@@ -89,6 +94,27 @@ export function HomePage() {
         <>
           <SectionTitle>Yaqin tadbir</SectionTitle>
           <EventCard event={events.state.data.items[0]} />
+        </>
+      )}
+
+      {openTest && (
+        <>
+          <SectionTitle>Ochiq test</SectionTitle>
+          <button type="button" className="text-left" onClick={() => navigate(`/tests/${openTest.id}`)}>
+            <Card className="flex items-center gap-3 border-2 border-app-button/40">
+              <span aria-hidden className="text-3xl">
+                📝
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{openTest.title}</p>
+                <p className="text-sm text-app-hint">
+                  {openTest.in_progress ? '⏳ Davom ettiring' : `${openTest.max_score} ballgacha`} · yopiladi{' '}
+                  {formatEventDate(openTest.ends_at)}
+                </p>
+              </div>
+              <span className="text-app-link">→</span>
+            </Card>
+          </button>
         </>
       )}
 

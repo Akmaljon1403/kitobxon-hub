@@ -59,7 +59,6 @@ export function StartupErrorPage({ message }: { message: string }) {
 }
 
 const UPCOMING: Record<string, { icon: string; title: string; text: string }> = {
-  tests: { icon: '📝', title: 'Testlar', text: 'Kitoblar bo\'yicha testlar shu yerda bo\'ladi.' },
   achievements: { icon: '🏅', title: 'Yutuqlar', text: 'Qo\'lga kiritgan yutuqlaringiz shu yerda bo\'ladi.' },
 }
 
