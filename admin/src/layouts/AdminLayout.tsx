@@ -12,6 +12,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { route: '', icon: '📊', label: 'Bosh sahifa', visible: () => true },
+  { route: 'analytics', icon: '📈', label: 'Tahlillar', visible: (can) => can('ANALYTICS_VIEW') },
   { route: 'members', icon: '👥', label: "A'zolar", visible: (can) => can('USER_VIEW') },
   { route: 'books', icon: '📚', label: 'Kitoblar', visible: (can) => can('BOOK_VIEW') },
   { route: 'quotes', icon: '💬', label: 'Iqtiboslar', visible: (can) => can('BOOK_VIEW') },

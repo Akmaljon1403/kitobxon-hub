@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     achievements,
     admin_access,
     admin_achievements,
+    admin_analytics,
     admin_books,
     admin_events,
     admin_faculties,
@@ -50,6 +51,7 @@ for module in (
     admin_achievements,
     admin_reports,
     admin_rewards,
+    admin_analytics,
     admin_system,
 ):
     api_router.include_router(module.router)

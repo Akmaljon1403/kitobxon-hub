@@ -210,6 +210,16 @@ numbers are listed. Approval renders an A4 PDF from an HTML/CSS template with We
 and locks the report; corrections are new versions. Photos are verified, stripped of metadata
 (e.g. GPS) and resized before storage.
 
+### 7.7 Rewards and analytics
+Promo codes are stored encrypted (AES-256-GCM, key derived from `SECRET_KEY`, purpose bound as
+associated data). Admins see masked codes only; the plain code is decrypted only for the member
+it was assigned to. Assignment takes a transaction-level advisory lock per (reward, member), so
+parallel clicks give one reward; a revoked code is never handed out again.
+
+Analytics are computed on request with SQL aggregates (no extra tables). Monthly series use the
+`Asia/Tashkent` calendar. Group statistics hide groups with fewer than three members, and the
+only list with names (inactive members) needs `USER_VIEW` in addition to `ANALYTICS_VIEW`.
+
 ## 8. Decisions on gaps and contradictions in the specification
 
 | Topic | Decision |

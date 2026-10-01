@@ -10,6 +10,11 @@
   --app-button-text: #ffffff;
   --app-danger: #dc2626;
   --app-border: #e5e7eb;
+  /* Charts (validated against the card surface: see docs/ARCHITECTURE.md) */
+  --viz-series: #2a78d6;
+  --viz-track: #cde2fb;
+  --viz-grid: #ececea;
+  --viz-axis: #c3c2b7;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +26,10 @@
     --app-link: #60a5fa;
     --app-button: #3f9d6e;
     --app-border: #2d333b;
+    --viz-series: #3987e5;
+    --viz-track: #184f95;
+    --viz-grid: #2c2f33;
+    --viz-axis: #3a3f45;
   }
 }
 

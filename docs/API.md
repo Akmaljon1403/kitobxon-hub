@@ -258,6 +258,15 @@ Blocking a user or removing admin rights has the same effect immediately.
 | PUT | `/api/v1/admin/settings/{key}` | `SETTINGS_MANAGE` — validated, audited |
 | GET | `/api/v1/admin/statistics` | `ANALYTICS_VIEW` |
 
+### Admin: analytics
+
+Aggregates only. Groups with fewer than 3 members are left out of group statistics.
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/analytics?months=6` | `ANALYTICS_VIEW` — `months` 3–24 (club time zone). Returns headline numbers (members, active / inactive in 30 days, test participants and average result), per-month series (new members, active members, verified attendance, events, completed books), points distribution, per-faculty averages, top groups, latest tests (participants, average %, pass rate) and reading campaigns (readers, completed, verified) |
+| GET | `/api/v1/admin/analytics/inactive?days=30` | `ANALYTICS_VIEW` + `USER_VIEW` — active members with no attendance, test or book points for `days` (7–365) days; members who registered within that window are not listed. Max 200 rows |
+
 ### Admin: faculties
 
 | Method | Path | Required |
@@ -279,4 +288,3 @@ Blocking a user or removing admin rights has the same effect immediately.
 | `/app/` | Telegram Mini App |
 | `/admin/` | Admin Panel |
 
-More endpoints (analytics) are added in the following phase.

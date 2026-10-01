@@ -3,6 +3,7 @@ import { Card } from './components/ui'
 import { AdminLayout, NAV_ITEMS } from './layouts/AdminLayout'
 import { AchievementsPage } from './pages/AchievementsPage'
 import { AdminsPage } from './pages/AdminsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
 import { BooksPage } from './pages/BooksPage'
@@ -35,6 +36,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   achievements: AchievementsPage,
   reports: ReportsPage,
   rewards: RewardsPage,
+  analytics: AnalyticsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
   admins: AdminsPage,
