@@ -24,6 +24,10 @@ _REDACTIONS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(?i)((?:^|[&?\s])(?:hash|signature)=)[A-Za-z0-9_-]+"), r"\1[REDACTED]"),
     # Generic key=value secrets.
     (re.compile(r"(?i)((?:password|secret|api_key|token)\s*[=:]\s*)[^\s,;&]+"), r"\1[REDACTED]"),
+    # Values in PostgreSQL constraint errors, e.g. "Key (phone)=(+998901234567) already exists".
+    (re.compile(r"(Key \([^)]*\)=\()[^)]*(\))"), r"\1[REDACTED]\2"),
+    # Uzbek phone numbers anywhere else.
+    (re.compile(r"(?<![\w])\+?998[\s-]?\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}(?!\d)"), "[REDACTED_PHONE]"),
 ]
 
 _STANDARD_ATTRS = set(logging.LogRecord("", 0, "", 0, "", None, None).__dict__.keys()) | {

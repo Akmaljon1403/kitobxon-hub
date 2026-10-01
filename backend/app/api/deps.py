@@ -14,6 +14,7 @@ from app.core.database import get_db
 from app.core.errors import ForbiddenError, UnauthorizedError
 from app.models import User
 from app.security.permissions import Perm
+from app.security.rate_limit import USER_API_LIMIT, enforce
 from app.security.tokens import TokenInvalidError, TokenScope, decode_access_token
 from app.services.auth import NotAdminError, ensure_user_can_sign_in
 from app.services.rbac import get_effective_permissions, get_role_codes, is_admin_role_set
@@ -50,6 +51,7 @@ async def get_current_user(
     if credentials is None or credentials.scheme.lower() != "bearer" or not credentials.credentials:
         raise UnauthorizedError()
     claims = decode_access_token(credentials.credentials)
+    await enforce(USER_API_LIMIT, str(claims.user_id))
     user = await db.get(User, claims.user_id)
     if user is None or user.token_version != claims.token_version:
         raise TokenInvalidError()

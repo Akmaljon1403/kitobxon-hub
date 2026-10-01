@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import AuditLog, LoginToken, UserRole
 from app.models.enums import UserStatus
 from app.security.crypto import derive_key
+from app.security.rate_limit import AUTH_LIMIT
 from app.security.telegram import InitDataError, InitDataExpiredError, validate_init_data
 from app.services.auth import create_admin_login_link
 from tests.factories import create_user
@@ -334,10 +335,10 @@ async def test_admin_token_still_requires_admin_role(client: httpx.AsyncClient, 
 
 async def test_login_is_rate_limited(client: httpx.AsyncClient) -> None:
     statuses = []
-    for _ in range(25):
+    for _ in range(AUTH_LIMIT.limit + 1):
         response = await client.post("/api/v1/auth/telegram", json={"init_data": "hash=bad&user=x"})
         statuses.append(response.status_code)
-    assert statuses[:20] == [401] * 20
+    assert statuses[:-1] == [401] * AUTH_LIMIT.limit
     assert statuses[-1] == 429
     last = response
     assert last.json()["error"]["code"] == "RATE_LIMITED"

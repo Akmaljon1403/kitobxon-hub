@@ -98,5 +98,11 @@ def reset_in_memory_limits() -> None:
 
 
 # Rules used across the API.
-AUTH_LIMIT = RateLimit("auth", limit=20, window_seconds=60)
-ADMIN_LOGIN_LIMIT = RateLimit("admin-login", limit=10, window_seconds=300)
+# Per IP. Generous on purpose: a whole lecture hall on the campus Wi-Fi, or many phones behind
+# a mobile operator's shared address, open the Mini App at the same moment. Guessing is
+# useless anyway (signed launch data, one-time links); the limit only stops floods.
+AUTH_LIMIT = RateLimit("auth", limit=300, window_seconds=60)
+ADMIN_LOGIN_LIMIT = RateLimit("admin-login", limit=30, window_seconds=300)
+# Per signed-in member, across the whole API: far above what the apps send, low enough to stop
+# a stolen or scripted token from hammering expensive endpoints.
+USER_API_LIMIT = RateLimit("api-user", limit=300, window_seconds=60)

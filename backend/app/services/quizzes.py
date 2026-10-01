@@ -15,7 +15,6 @@ Rules (docs/ARCHITECTURE.md §7.3 and §8):
 
 from __future__ import annotations
 
-import csv
 import io
 import random
 import uuid
@@ -56,6 +55,7 @@ from app.services.audit import record_audit
 from app.services.books import award_book_completion, get_or_create_read
 from app.services.scoring import award_points, current_season_id
 from app.services.settings import get_setting
+from app.utils.spreadsheet import excel_writer
 from app.utils.timezone import format_datetime
 
 MEMBER_VISIBLE = (TestStatus.PUBLISHED, TestStatus.CLOSED)
@@ -1040,7 +1040,7 @@ async def export_csv(session: AsyncSession, test_id: uuid.UUID) -> tuple[str, st
     """(file name, CSV text with BOM so that Excel opens Uzbek letters correctly)."""
     test, items = await results(session, test_id)
     buffer = io.StringIO()
-    writer = csv.writer(buffer, delimiter=";")
+    writer = excel_writer(buffer)
     writer.writerow(
         [
             "O'rin",

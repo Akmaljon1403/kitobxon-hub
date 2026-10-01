@@ -36,7 +36,8 @@ All configuration is environment variables; the full, commented list is in
 
 Optional: `TELEGRAM_WEBHOOK_SECRET` (derived from `SECRET_KEY` when unset), `TELEGRAM_WEBAPP_URL`
 (defaults to `PUBLIC_BASE_URL/app/`), `REDIS_URL`, `BOT_MODE` (`webhook` | `polling` | `disabled`),
-`API_DOCS_ENABLED`, `LOG_LEVEL`, `STORAGE_*`, `AI_*`, `WORKER_ENABLED` (default `true`),
+`API_DOCS_ENABLED` (off in production unless set to `true`), `FORWARDED_ALLOW_IPS` (default `*`, right
+for Render/Railway; on your own server set it to the reverse proxy's address, e.g. `127.0.0.1`), `LOG_LEVEL`, `STORAGE_*`, `AI_*`, `WORKER_ENABLED` (default `true`),
 `WORKER_INTERVAL_SECONDS` (default `60`; how often reminders and test closing are checked),
 `STORAGE_BACKEND` (`local` | `s3`) with `STORAGE_*` for report photos and PDFs — use `s3`
 (e.g. Cloudflare R2) in production, because local files disappear when a container is rebuilt;

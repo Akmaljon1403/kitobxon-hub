@@ -17,7 +17,6 @@ How the codes work (see docs/ARCHITECTURE.md §7.2):
 from __future__ import annotations
 
 import base64
-import csv
 import hashlib
 import hmac
 import io
@@ -54,6 +53,7 @@ from app.services.audit import record_audit
 from app.services.events import effective_points, get_event
 from app.services.scoring import award_points, reverse_latest_award
 from app.services.settings import get_setting
+from app.utils.spreadsheet import excel_writer
 from app.utils.timezone import format_datetime
 
 CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # 32 symbols, no 0/O/1/I confusion
@@ -458,7 +458,7 @@ async def export_csv(session: AsyncSession, event_id: uuid.UUID) -> tuple[str, s
         )
     )
     buffer = io.StringIO()
-    writer = csv.writer(buffer, delimiter=";")
+    writer = excel_writer(buffer)
     writer.writerow(["№", "Familiya", "Ism", "Fakultet", "Kurs", "Guruh", "Usul", "Holat", "Vaqt", "Ro'yxatdan o'tgan"])
     for index, (record, user, faculty) in enumerate(reversed(records), start=1):
         writer.writerow(

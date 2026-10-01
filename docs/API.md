@@ -18,7 +18,9 @@ This page explains the conventions and lists the endpoints implemented so far.
 | Success | The resource itself (no envelope). Lists use `{"items": [...], "total", "limit", "offset"}`. |
 | Errors | Always the envelope below, with a stable machine-readable `code` and a user-facing Uzbek `message`. |
 | Request id | Every response has an `X-Request-ID` header; error bodies repeat it as `request_id`. |
-| Rate limits | `429 RATE_LIMITED` with a `Retry-After` header (seconds). |
+| Rate limits | `429 RATE_LIMITED` with a `Retry-After` header (seconds). Limits are listed in [SECURITY.md](SECURITY.md#abuse-protection). |
+| Body size | JSON bodies up to 4 MB, file uploads up to 10 MB; larger requests get `413 PAYLOAD_TOO_LARGE`. |
+| Caching | API responses carry `Cache-Control: no-store`. |
 
 ```json
 {

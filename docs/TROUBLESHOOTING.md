@@ -17,5 +17,8 @@ Every API error contains a `request_id`; search the logs for it to find the full
 | Admin Panel: `ADMIN_SESSION_REQUIRED` | A member token is used on admin endpoints | Log in through `/admin` in the bot |
 | `/admin` in the bot: "Admin panel manzili sozlanmagan" | `PUBLIC_BASE_URL` missing | Set it (Render sets `RENDER_EXTERNAL_URL` automatically) |
 | 429 `RATE_LIMITED` | Too many attempts | Wait for the `Retry-After` seconds |
+| 413 `PAYLOAD_TOO_LARGE` | Upload above 10 MB or request body above 4 MB | Use a smaller photo (reports accept up to 8 MB) |
+| `/api/docs` returns 404 in production | API documentation is off in production by default | Set `API_DOCS_ENABLED=true` if you need it |
+| *Security audit* workflow is red | A library has a published vulnerability | Update the library named in the log, run CI, deploy |
 | `alembic check` fails in CI | Models changed without a migration | `alembic revision --autogenerate -m "..."`, review, commit |
 | Tests fail with `DROP SCHEMA` permission error | `TEST_DATABASE_URL` user is not the schema owner | Use a dedicated, disposable database owned by the test user |

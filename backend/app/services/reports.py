@@ -43,6 +43,7 @@ FINAL_STATUSES = (ReportStatus.APPROVED, ReportStatus.PDF_GENERATED, ReportStatu
 ADMIN_FIELDS = ("title", "objective", "activity_description", "results", "conclusion", "recommendations")
 MAX_PHOTOS = 8
 MAX_PHOTO_BYTES = 8 * 1024 * 1024
+MAX_PHOTO_PIXELS = 40_000_000
 PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
@@ -461,9 +462,12 @@ def _process_photo(data: bytes) -> bytes:
 
     try:
         image = Image.open(io.BytesIO(data))
+        # Opening reads only the header: refuse tiny files that would unpack into huge images.
+        if image.width * image.height > MAX_PHOTO_PIXELS:
+            raise BadRequestError("PHOTO_TOO_LARGE", "Rasm o'lchami juda katta (ko'pi bilan 40 megapiksel).")
         image.verify()
         image = Image.open(io.BytesIO(data))
-    except (UnidentifiedImageError, OSError) as exc:
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
         raise BadRequestError("PHOTO_INVALID", "Fayl rasm emas yoki buzilgan.") from exc
     image = ImageOps.exif_transpose(image).convert("RGB")
     image.thumbnail((1600, 1600))

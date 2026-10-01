@@ -159,6 +159,8 @@ class Settings(BaseSettings):
     def _check_production_safety(self) -> Settings:
         normalize_database_url(self.database_url)  # raises early on a malformed URL
         if self.environment == "production":
+            if "api_docs_enabled" not in self.model_fields_set:
+                self.api_docs_enabled = False  # the API description is only needed by developers
             secret = self.secret_key.get_secret_value()
             if secret == _DEV_SECRET or len(secret) < 32:
                 raise ValueError("SECRET_KEY must be set to a random value of at least 32 characters in production")

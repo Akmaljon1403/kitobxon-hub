@@ -1,4 +1,4 @@
-"""ASGI middleware: request correlation id, access log, safety headers, last-resort error handling."""
+"""ASGI middleware: request correlation id, access log, last-resort error handling."""
 
 from __future__ import annotations
 
@@ -57,8 +57,6 @@ class RequestContextMiddleware:
                 state["status"] = message["status"]
                 headers = MutableHeaders(scope=message)
                 headers["X-Request-ID"] = request_id
-                headers.setdefault("X-Content-Type-Options", "nosniff")
-                headers.setdefault("Referrer-Policy", "no-referrer")
             await send(message)
 
         try:

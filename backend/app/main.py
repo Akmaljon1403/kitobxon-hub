@@ -26,6 +26,7 @@ from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.redis import close_redis
+from app.core.security_headers import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from app.services.bootstrap import sync_reference_data
 from app.workers.runner import WorkerHandle
 
@@ -112,8 +113,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             expose_headers=["X-Request-ID", "Retry-After"],
             max_age=600,
         )
-    # Added last so it is the outermost middleware and sees every request.
+    app.add_middleware(BodySizeLimitMiddleware)
+    # Starlette runs the middleware added last first: security headers wrap everything (also
+    # last-resort error responses), then the request context sees every request.
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware, production=settings.is_production)
 
     app.include_router(health_router)
     app.include_router(api_router)

@@ -36,13 +36,47 @@ the backend verifies everything.**
 
 ## Abuse protection
 
-| Endpoint group | Limit |
+| What | Limit |
 |---|---|
-| `POST /auth/telegram` | 20 requests / minute / IP |
-| `POST /auth/admin/exchange` | 10 requests / 5 minutes / IP |
+| `POST /auth/telegram` | 300 requests / minute / IP |
+| `POST /auth/admin/exchange` | 30 requests / 5 minutes / IP |
+| Every authenticated API call | 300 requests / minute / member |
+| QR / code check-in | 10 requests / minute / member |
+| Test answers and submission | 120 requests / minute / member |
+| Test activity signals | 30 requests / minute / member |
+| Telegram bot updates | 40 updates / minute / Telegram user |
+| Request body | 4 MB (JSON), 10 MB (file uploads); larger requests get `413` |
 
+Per-IP limits are deliberately generous: a whole lecture hall on the campus Wi-Fi, or many phones
+behind a mobile operator's shared address, open the Mini App at the same moment. Guessing does not
+help an attacker anyway (signed launch data, one-time admin links); the limits stop floods.
 Limits are shared across instances when `REDIS_URL` is set; otherwise they apply per process.
-Attendance verification, test submission and notification sending get their own limits in their phases.
+
+The client IP comes from the platform's proxy (`X-Forwarded-For`, uvicorn `--proxy-headers`).
+On a server where clients can reach uvicorn directly, set `FORWARDED_ALLOW_IPS` to the address of
+your own reverse proxy (e.g. `127.0.0.1`) so that clients cannot fake their IP.
+
+## HTTP security headers
+
+| Area | Headers |
+|---|---|
+| Everything | `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` (camera, microphone, geolocation, payment, USB off); `Strict-Transport-Security` in production |
+| API (`/api`, `/telegram`, `/health`) | `Cache-Control: no-store` (personal data never cached), `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` |
+| Admin Panel (`/admin`) | Content-Security-Policy: scripts only from the same origin, API calls only to the same origin, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`; `X-Frame-Options: DENY` (no clickjacking) |
+| Mini App (`/app`) | Same policy, plus Telegram's `telegram-web-app.js`. It may be framed, because Telegram Web shows Mini Apps in an iframe; a framed copy is useless to an attacker since signing in needs launch data signed by Telegram |
+
+Images may come from any `https:` address (book covers are external links). Book links accept only
+`http(s)` URLs, so a `javascript:` link cannot be stored.
+
+## Files, exports and messages
+
+* Report photos: only JPG/PNG/WEBP, at most 8 MB and 40 megapixels (checked from the header
+  before decoding, so a small "image bomb" cannot exhaust memory), re-encoded, metadata (GPS)
+  removed.
+* CSV exports (attendance, test results) prefix cells that start with `=`, `+`, `-` or `@` with an
+  apostrophe, so Excel never runs member-provided text as a formula.
+* Every value placed into a Telegram message is HTML-escaped; an admin broadcast is escaped too.
+* Promo codes never travel in messages; see *Promo codes* below.
 
 ## Secrets
 
@@ -56,20 +90,36 @@ Attendance verification, test submission and notification sending get their own 
 ## Logging and privacy
 
 * Logs are structured JSON with a request id. Query strings are never logged.
-* A redaction filter removes bot tokens, bearer/JWT tokens, initData signatures and `password=`/
-  `secret=`/`token=` values from every log line and stack trace.
+* A redaction filter removes bot tokens, bearer/JWT tokens, initData signatures, `password=`/
+  `secret=`/`token=` values, the values inside PostgreSQL constraint errors
+  (`Key (phone)=(...)`) and Uzbek phone numbers from every log line and stack trace.
 * Error responses never contain stack traces, SQL or internal paths.
 * Public rankings show a shortened name by default (`ranking.public_name_format = SHORT`);
   phone numbers and Telegram IDs are never public.
+* Analytics show aggregates only; groups with fewer than three members are hidden, and the
+  only list with names (inactive members) needs `USER_VIEW`.
+
+## Dependencies
+
+* Versions are pinned (`requirements.txt`, `package-lock.json`); the Docker image installs exactly
+  those versions.
+* `.github/workflows/security.yml` checks every library against public vulnerability databases
+  each Monday (and when a dependency file changes in a pull request). Run it any time from the
+  **Actions** tab → *Security audit* → *Run workflow*. Locally:
+  `pip-audit -r backend/requirements.txt` and `npm audit --omit=dev` in `miniapp/` and `admin/`.
 
 ## Operator checklist (production)
 
-1. `ENVIRONMENT=production`, strong `SECRET_KEY`, `API_DOCS_ENABLED` as desired.
-2. HTTPS only (TLS terminated by the platform or nginx).
-3. `TELEGRAM_WEBHOOK_SECRET` set (verifies that webhook calls come from Telegram).
-4. Database user with access only to the Kitobxon Hub database; automatic backups enabled.
-5. Object storage bucket private (files are served through short-lived signed URLs).
-6. Restrict who can read production logs and database dumps.
+1. `ENVIRONMENT=production`, strong `SECRET_KEY` (the app refuses to start otherwise).
+2. HTTPS only (TLS terminated by the platform or nginx); HSTS is sent automatically.
+3. API documentation (`/api/docs`) is off in production unless `API_DOCS_ENABLED=true` is set.
+4. `TELEGRAM_WEBHOOK_SECRET` set, or left empty to derive it from `SECRET_KEY` (webhook calls
+   without the right secret header are rejected).
+5. Database user with access only to the Kitobxon Hub database; automatic backups enabled.
+6. Object storage bucket private (report files are only served through the authenticated API).
+7. Restrict who can read production logs and database dumps.
+8. Keep the *Security audit* workflow green; update a library when it turns red.
+9. Give admins only the permissions they need (Admin Panel → Adminlar); review the audit log.
 
 ## Reporting a vulnerability
 

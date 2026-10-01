@@ -11,6 +11,7 @@ Texts come from the admin-editable notification templates.
 
 from __future__ import annotations
 
+import html
 import uuid
 from datetime import UTC, datetime, time, timedelta
 from typing import Any
@@ -387,8 +388,8 @@ async def broadcast(
     if dry_run:
         return int(await session.scalar(select(func.count()).select_from(members.subquery())) or 0)
     text = await render(session, NotificationType.ADMIN_MESSAGE, message=message.strip())
-    if text is None:
-        text = message.strip()
+    if text is None:  # template switched off: send the admin's words as plain text
+        text = html.escape(message.strip(), quote=False)
     broadcast_id = uuid.uuid4()
     count = await enqueue_for_members(
         session,
