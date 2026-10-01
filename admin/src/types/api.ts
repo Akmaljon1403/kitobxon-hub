@@ -1,0 +1,456 @@
+// Response types of the Kitobxon Hub admin API (see /api/docs on the server).
+
+export type UserStatus = 'PENDING' | 'ACTIVE' | 'BLOCKED' | 'INACTIVE'
+export type BookStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
+export type QuoteStatus = 'DRAFT' | 'SCHEDULED' | 'SENT' | 'ARCHIVED'
+
+export interface Page<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface TokenResponse {
+  access_token: string
+  expires_at: string
+  scope: 'member' | 'admin'
+}
+
+export interface AdminSelf {
+  id: string
+  first_name: string
+  last_name: string
+  roles: string[]
+  permissions: string[]
+  is_super_admin: boolean
+}
+
+export interface Faculty {
+  id: string
+  name: string
+  short_name: string | null
+  is_active: boolean
+  sort_order: number
+}
+
+export interface AdminUser {
+  id: string
+  first_name: string
+  last_name: string
+  telegram_username: string | null
+  phone: string | null
+  faculty_id: string | null
+  faculty_name: string | null
+  course: number | null
+  group_name: string | null
+  status: UserStatus
+  registered_at: string | null
+  last_seen_at: string | null
+  roles?: string[]
+}
+
+export interface Book {
+  id: string
+  title: string
+  author: string
+  description: string | null
+  cover_url: string | null
+  source_url: string | null
+  language: string
+  pages: number | null
+  start_date: string | null
+  deadline: string | null
+  status: BookStatus
+  readers_count: number
+  completed_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Reader {
+  user_id: string
+  first_name: string
+  last_name: string
+  faculty_name: string | null
+  course: number | null
+  group_name: string | null
+  status: 'READING' | 'COMPLETED'
+  started_at: string
+  completed_at: string | null
+  verified_at: string | null
+}
+
+export interface Quote {
+  id: string
+  book_id: string | null
+  book_title: string | null
+  text: string
+  author: string | null
+  source: string | null
+  scheduled_date: string | null
+  status: QuoteStatus
+  sent_at: string | null
+  created_at: string
+}
+
+export interface Setting {
+  key: string
+  group: string
+  kind: 'int' | 'bool' | 'int_list' | 'time' | 'choice' | 'text'
+  value: unknown
+  default: unknown
+  description: string
+  choices: string[]
+}
+
+export interface Permission {
+  code: string
+  group: string
+  description: string
+}
+
+export interface AdminAccount {
+  user_id: string
+  first_name: string
+  last_name: string
+  telegram_username: string | null
+  roles: string[]
+  direct_permissions: string[]
+  effective_permissions: string[]
+}
+
+export interface AuditEntry {
+  id: string
+  actor_user_id: string | null
+  actor_name: string | null
+  action: string
+  entity_type: string
+  entity_id: string | null
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  reason: string | null
+  request_id: string | null
+  created_at: string
+}
+
+export interface Statistics {
+  users: { total: number; active: number; pending: number; blocked: number; inactive: number; new_last_7_days: number }
+  books: { total: number; active: number; draft: number; readers: number; completions: number }
+  faculties: { name: string; members: number }[]
+}
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED'
+export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED'
+
+export interface AdminEvent {
+  id: string
+  title: string
+  description: string | null
+  book_id: string | null
+  book_title: string | null
+  location: string | null
+  starts_at: string
+  ends_at: string
+  attendance_opens_at: string
+  attendance_closes_at: string
+  attendance_points: number
+  attendance_points_override: number | null
+  capacity: number | null
+  status: EventStatus
+  registered_count: number
+  attended_count: number
+  attendance_open: boolean
+  created_at: string
+}
+
+export interface AttendanceRecord {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  faculty_name: string | null
+  course: number | null
+  group_name: string | null
+  method: 'QR' | 'CODE' | 'MANUAL'
+  status: AttendanceStatus
+  checked_in_at: string
+  suspicious_reason: string | null
+  note: string | null
+}
+
+export interface AttendanceOverview {
+  event_id: string
+  is_open: boolean
+  closes_at: string | null
+  registered_count: number
+  attended_count: number
+  records: AttendanceRecord[]
+}
+
+export interface AttendanceToken {
+  qr_payload: string
+  token: string
+  code: string
+  expires_at: string
+  rotates_at: string
+  session_closes_at: string
+}
+
+export interface ScoreEntry {
+  id: string
+  user_id: string
+  user_name: string
+  amount: number
+  category: string
+  effective_category: string
+  source_type: string | null
+  source_title: string | null
+  reason: string | null
+  is_reversed: boolean
+  created_at: string
+}
+
+export interface ScoreSummary {
+  total: number
+  breakdown: Record<string, number>
+  season: { name: string | null; total: number } | null
+}
+
+export interface Season {
+  id: string
+  name: string
+  starts_on: string
+  ends_on: string
+  status: string
+  is_current: boolean
+}
+
+export interface RankingRow {
+  rank: number
+  name: string
+  faculty: string | null
+  group_name: string | null
+  total: number
+  attendance: number
+  tests: number
+  is_me: boolean
+}
+
+export type TestStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | 'ARCHIVED'
+export type TestState = 'DRAFT' | 'UPCOMING' | 'OPEN' | 'CLOSED'
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
+export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
+
+export interface AdminTest {
+  id: string
+  title: string
+  description: string | null
+  book_id: string | null
+  book_title: string | null
+  starts_at: string
+  ends_at: string
+  duration_minutes: number
+  max_score: number
+  passing_score: number
+  attempts_allowed: number
+  shuffle_questions: boolean
+  shuffle_options: boolean
+  status: TestStatus
+  state: TestState
+  question_count: number
+  participant_count: number
+  published_at: string | null
+  rank_bonus_awarded: boolean
+  created_at: string
+}
+
+export interface AdminQuestion {
+  id?: string
+  type: QuestionType
+  text: string
+  points: number
+  explanation: string | null
+  options: { id?: string; text: string; is_correct: boolean }[]
+}
+
+export interface AdminTestDetail extends AdminTest {
+  questions: AdminQuestion[]
+}
+
+export interface TestResultRow {
+  attempt_id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  faculty: string | null
+  course: number | null
+  group_name: string | null
+  attempt_number: number
+  status: AttemptStatus
+  score: number | null
+  correct_count: number | null
+  question_count: number
+  passed: boolean | null
+  started_at: string
+  submitted_at: string | null
+  duration_seconds: number | null
+  signals: number
+  place: number | null
+}
+
+export interface TestResults {
+  test: AdminTest
+  participants: number
+  passed: number
+  average_score: number | null
+  items: TestResultRow[]
+}
+
+export interface AttemptDetail {
+  attempt_id: string
+  member: string
+  status: AttemptStatus
+  score: number | null
+  started_at: string
+  deadline_at: string
+  submitted_at: string | null
+  answers: { question: string; selected: string[]; correct: string[]; is_correct: boolean | null; answered_at: string | null }[]
+  activity: { type: string; at: string; details: Record<string, unknown> | null }[]
+}
+
+export interface NotificationSummary {
+  pending: number
+  sent_24h: number
+  failed_24h: number
+  skipped_24h: number
+  worker_enabled: boolean
+  bot_configured: boolean
+  recent_broadcasts: { at: string; actor: string | null; message: string; recipients: number; filters: Record<string, unknown> }[]
+}
+
+export interface AdminAchievement {
+  id: string
+  code: string
+  title: string
+  description: string
+  icon: string
+  criteria: string
+  threshold: number
+  points: number
+  is_active: boolean
+  sort_order: number
+  holders: number
+}
+
+export interface AchievementHolder {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  group_name: string | null
+  unlocked_at: string
+  granted: boolean
+}
+
+export type ReportStatus = 'DRAFT' | 'AI_GENERATED' | 'REVIEW' | 'APPROVED' | 'PDF_GENERATED' | 'ARCHIVED'
+
+export interface ReportListItem {
+  id: string
+  event_id: string
+  event_title: string
+  version: number
+  status: ReportStatus
+  title: string
+  created_at: string
+  approved_at: string | null
+  pdf_ready: boolean
+}
+
+export interface ReportFacts {
+  organization: string
+  club: string
+  event: {
+    title: string
+    date: string
+    time: string
+    location: string | null
+    book_title: string | null
+    book_author: string | null
+    responsible: string | null
+  }
+  attendance: {
+    registered: number
+    attended: number
+    attended_registered: number
+    walk_ins: number
+    rate_percent: number | null
+    suspicious: number
+  }
+  faculties: { name: string; attended: number }[]
+  tests: { title: string; participants: number; average_score: number; max_score: number; passed: number }[]
+  prepared_at: string
+}
+
+export interface ReportDetail {
+  id: string
+  event_id: string
+  version: number
+  status: ReportStatus
+  title: string
+  objective: string | null
+  activity_description: string | null
+  results: string | null
+  conclusion: string | null
+  recommendations: string | null
+  body_text: string | null
+  facts: ReportFacts
+  photos: { id: string; caption: string | null; size_bytes: number }[]
+  number_issues: string[]
+  ai_available: boolean
+  ai_model: string | null
+  ai_generated_at: string | null
+  approved_by: string | null
+  approved_at: string | null
+  pdf_ready: boolean
+  created_at: string
+}
+
+export type RewardType = 'BOOK' | 'CERTIFICATE' | 'SUBSCRIPTION_CODE' | 'PARTNER_DISCOUNT' | 'OTHER'
+
+export interface AdminReward {
+  id: string
+  title: string
+  description: string | null
+  type: RewardType
+  value: string | null
+  expires_at: string | null
+  status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'
+  codes_total: number
+  codes_available: number
+  recipients: number
+  created_at: string
+}
+
+export interface RewardCodeRow {
+  id: string
+  masked: string
+  status: 'AVAILABLE' | 'ASSIGNED' | 'REDEEMED' | 'EXPIRED' | 'REVOKED'
+  expires_at: string | null
+  assigned_to: string | null
+  created_at: string
+}
+
+export interface RewardRecipient {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  group_name: string | null
+  status: 'ASSIGNED' | 'DELIVERED' | 'REDEEMED' | 'REVOKED'
+  has_code: boolean
+  note: string | null
+  assigned_at: string
+  delivered_at: string | null
+  redeemed_at: string | null
+}

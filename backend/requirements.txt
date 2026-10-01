@@ -1,0 +1,22 @@
+# Runtime dependencies of the Kitobxon Hub backend (API + Telegram bot + background worker).
+# Versions are pinned so that every environment (CI, test hosting, production) runs the same code.
+fastapi==0.142.2
+starlette==1.7.0
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+SQLAlchemy[asyncio]==2.0.54
+asyncpg==0.31.0
+alembic==1.20.0
+redis==8.1.0
+PyJWT==2.15.1
+python-multipart==0.0.32
+aiogram==3.31.0
+# Official reports: HTML/CSS -> PDF, templates, photo processing, S3-compatible storage, AI drafting.
+weasyprint==70.0
+Jinja2==3.1.6
+pillow==12.3.0
+boto3==1.43.106
+anthropic==1.11.0
+# Encrypts promo codes at rest (AES-GCM).
+cryptography==50.0.2

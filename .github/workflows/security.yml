@@ -1,0 +1,42 @@
+# Weekly check of all third-party libraries against public vulnerability databases.
+# A red mark here means: a library we use has a published security problem and should be
+# updated (GitHub e-mails the repository owner). It does not mean the code itself broke.
+name: Security audit
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"  # every Monday, 08:17 Tashkent time
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "backend/requirements.txt"
+      - "miniapp/package-lock.json"
+      - "admin/package-lock.json"
+
+jobs:
+  python:
+    name: Python libraries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit
+      - run: pip-audit -r backend/requirements.txt --progress-spinner off
+
+  javascript:
+    name: Web app libraries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [miniapp, admin]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm audit --omit=dev --audit-level=high

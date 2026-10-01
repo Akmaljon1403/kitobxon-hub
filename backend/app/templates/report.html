@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>{{ report.title }}</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 22mm 25mm;
+    @bottom-left { content: "{{ footer_left }}"; font-size: 8pt; color: #666; }
+    @bottom-right { content: "Sahifa " counter(page) " / " counter(pages); font-size: 8pt; color: #666; }
+    {% if draft %}
+    @top-center { content: "QORALAMA — tasdiqlanmagan"; font-size: 9pt; color: #b45309; }
+    {% endif %}
+  }
+  html { font-family: "Liberation Serif", "Times New Roman", "DejaVu Serif", serif; font-size: 12pt; color: #111; }
+  body { margin: 0; line-height: 1.45; }
+  {% if draft %}
+  body::before {
+    content: "QORALAMA"; position: fixed; top: 40%; left: 8%; font-size: 90pt; color: rgba(180, 83, 9, 0.08);
+    transform: rotate(-30deg); font-weight: bold; letter-spacing: 8pt;
+  }
+  {% endif %}
+  .org { text-align: center; text-transform: uppercase; font-weight: bold; font-size: 11.5pt; letter-spacing: 0.3pt; }
+  .club { text-align: center; font-size: 11pt; margin-top: 2pt; }
+  hr.top { border: 0; border-top: 2px solid #1f4e3d; margin: 8pt 0 2pt; }
+  hr.thin { border: 0; border-top: 0.5px solid #1f4e3d; margin: 0 0 14pt; }
+  h1 { text-align: center; font-size: 15pt; margin: 6pt 0 2pt; letter-spacing: 2pt; }
+  .subtitle { text-align: center; font-size: 12.5pt; font-weight: bold; margin-bottom: 12pt; }
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 12pt; font-size: 11pt; }
+  table.meta td { padding: 2.5pt 4pt; vertical-align: top; }
+  table.meta td.k { width: 32%; color: #333; font-weight: bold; }
+  h2 { font-size: 12.5pt; margin: 14pt 0 5pt; color: #1f4e3d; page-break-after: avoid; }
+  p { margin: 0 0 6pt; text-align: justify; text-indent: 1.25cm; }
+  table.stats { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 11pt; page-break-inside: avoid; }
+  table.stats th, table.stats td { border: 0.6pt solid #888; padding: 3.5pt 6pt; }
+  table.stats th { background: #eef4f1; text-align: left; }
+  table.stats td.n { text-align: right; width: 22%; font-variant-numeric: tabular-nums; }
+  .photos { margin-top: 6pt; overflow: hidden; }
+  .photo { float: left; width: 48%; margin: 0 1% 10pt; page-break-inside: avoid; }
+  .photos::after { content: ""; display: block; clear: both; }
+  .photo img { width: 100%; max-height: 62mm; object-fit: cover; border: 0.5pt solid #999; }
+  .photo .cap { font-size: 9.5pt; color: #444; text-align: center; margin-top: 2pt; }
+  .sign { margin-top: 26pt; font-size: 11.5pt; page-break-inside: avoid; }
+  .sign table { width: 100%; border-collapse: collapse; }
+  .sign td { padding: 10pt 8pt 2pt 0; vertical-align: bottom; white-space: nowrap; }
+  .sign td:last-child { width: 100%; }
+  .sign .line { border-bottom: 0.6pt solid #333; width: 38mm; display: inline-block; height: 12pt; }
+  .muted { color: #555; font-size: 10pt; }
+</style>
+</head>
+<body>
+  <div class="org">{{ facts.organization }}</div>
+  <div class="club">{{ facts.club }}</div>
+  <hr class="top"><hr class="thin">
+
+  <h1>HISOBOT</h1>
+  <div class="subtitle">{{ report.title }}</div>
+
+  <table class="meta">
+    <tr><td class="k">Tadbir:</td><td>{{ facts.event.title }}</td></tr>
+    <tr><td class="k">Sana va vaqt:</td><td>{{ facts.event.date }}, {{ facts.event.time }}</td></tr>
+    {% if facts.event.location %}<tr><td class="k">O'tkazilgan joy:</td><td>{{ facts.event.location }}</td></tr>{% endif %}
+    {% if facts.event.book_title %}<tr><td class="k">Kitob:</td><td>{{ facts.event.book_author }}. «{{ facts.event.book_title }}»</td></tr>{% endif %}
+    {% if facts.event.responsible %}<tr><td class="k">Mas'ul shaxs:</td><td>{{ facts.event.responsible }}</td></tr>{% endif %}
+  </table>
+
+  {% for block in body %}
+    {% if block.kind == "heading" %}<h2>{{ block.text }}</h2>{% else %}<p>{{ block.text }}</p>{% endif %}
+  {% endfor %}
+
+  <h2>Davomat statistikasi</h2>
+  <table class="stats">
+    <tr><th>Ko'rsatkich</th><th style="text-align:right">Qiymat</th></tr>
+    <tr><td>Oldindan ro'yxatdan o'tganlar</td><td class="n">{{ facts.attendance.registered }}</td></tr>
+    <tr><td>Tasdiqlangan qatnashuvchilar (QR/kod yoki admin)</td><td class="n">{{ facts.attendance.attended }}</td></tr>
+    <tr><td>Ro'yxatdan o'tganlardan qatnashganlar</td><td class="n">{{ facts.attendance.attended_registered }}</td></tr>
+    <tr><td>Ro'yxatdan o'tmasdan kelganlar</td><td class="n">{{ facts.attendance.walk_ins }}</td></tr>
+    <tr><td>Davomat foizi (ro'yxatdagilarga nisbatan)</td><td class="n">{% if facts.attendance.rate_percent is not none %}{{ facts.attendance.rate_percent }}%{% else %}—{% endif %}</td></tr>
+  </table>
+  {% if facts.faculties %}
+  <table class="stats">
+    <tr><th>Fakultet</th><th style="text-align:right">Qatnashdi</th></tr>
+    {% for row in facts.faculties %}<tr><td>{{ row.name }}</td><td class="n">{{ row.attended }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+  {% if facts.tests %}
+  <h2>Test natijalari</h2>
+  <table class="stats">
+    <tr><th>Test</th><th style="text-align:right">Ishtirokchi</th><th style="text-align:right">O'rtacha ball</th><th style="text-align:right">O'tganlar</th></tr>
+    {% for t in facts.tests %}<tr><td>{{ t.title }}</td><td class="n">{{ t.participants }}</td><td class="n">{{ t.average_score }} / {{ t.max_score }}</td><td class="n">{{ t.passed }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+
+  {% if photos %}
+  <h2>Fotosuratlar</h2>
+  <div class="photos">
+    {% for photo in photos %}
+    <div class="photo"><img src="{{ photo.src }}" alt="">{% if photo.caption %}<div class="cap">{{ photo.caption }}</div>{% endif %}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="sign">
+    <table>
+      <tr><td>Mas'ul shaxs:</td><td><span class="line"></span></td><td>{{ facts.event.responsible or "" }}</td></tr>
+      {% if approved_by %}<tr><td>Tasdiqladi:</td><td><span class="line"></span></td><td>{{ approved_by }}{% if approved_at %} ({{ approved_at }}){% endif %}</td></tr>{% endif %}
+    </table>
+    <p class="muted" style="text-indent:0; margin-top:14pt">
+      Hisobotdagi raqamlar Kitobxon Hub tizimining ma'lumotlar bazasidan olingan (holat: {{ prepared_at }}).
+    </p>
+  </div>
+</body>
+</html>
