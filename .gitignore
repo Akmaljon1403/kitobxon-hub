@@ -1,0 +1,35 @@
+# ---- Secrets (never commit real values) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# ---- Node / frontends ----
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# ---- Local runtime data ----
+backend/storage/
+storage/
+*.log
+
+# ---- Editors / OS ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

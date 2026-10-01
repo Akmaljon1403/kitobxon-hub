@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --app-bg: #ffffff;
+  --app-bg-secondary: #f4f5f7;
+  --app-text: #111827;
+  --app-hint: #6b7280;
+  --app-link: #2563eb;
+  --app-button: #2f6f4f;
+  --app-button-text: #ffffff;
+  --app-danger: #dc2626;
+  --app-border: #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: #1b1f24;
+    --app-bg-secondary: #111418;
+    --app-text: #f3f4f6;
+    --app-hint: #9ca3af;
+    --app-link: #60a5fa;
+    --app-button: #3f9d6e;
+    --app-border: #2d333b;
+  }
+}
+
+@theme inline {
+  --color-app-bg: var(--app-bg);
+  --color-app-surface: var(--app-bg-secondary);
+  --color-app-text: var(--app-text);
+  --color-app-hint: var(--app-hint);
+  --color-app-link: var(--app-link);
+  --color-app-button: var(--app-button);
+  --color-app-button-text: var(--app-button-text);
+  --color-app-danger: var(--app-danger);
+  --color-app-border: var(--app-border);
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--app-bg-secondary);
+  color: var(--app-text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
