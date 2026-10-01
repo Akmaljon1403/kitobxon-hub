@@ -187,7 +187,17 @@ drops time-sensitive reminders that became outdated during an outage, and record
 SKIPPED with the reason. Messages queued by a request wake the in-process sender immediately;
 scheduled checks run every `WORKER_INTERVAL_SECONDS`.
 
-### 7.5 Reports
+### 7.5 Achievements
+Definitions live in the `achievements` table (title, icon, criteria, threshold, bonus points,
+active flag), so admins can change them without a deployment. Automatic criteria are measured
+only from verified facts: verified attendance, passed or perfect tests, verified book
+completions, the longest run of active weeks, and the finished month's ranking (checked by the
+scheduler in the first week of the next month). Unlocking happens in the same transaction as
+the fact that caused it (check-in, test grading, reading verification), plus a daily safety-net
+job. A unique `(user, achievement)` row makes unlocking idempotent; bonus points go through the
+ledger and are reversed if an admin revokes the achievement.
+
+### 7.6 Reports
 Facts (dates, counts, names, percentages) are loaded by SQL into a snapshot stored with the report.
 The AI only receives that snapshot plus the admin's own text and returns wording; numbers in the
 draft are cross-checked against the snapshot before an admin can approve it. The PDF is rendered

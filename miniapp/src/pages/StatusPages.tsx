@@ -58,9 +58,7 @@ export function StartupErrorPage({ message }: { message: string }) {
   )
 }
 
-const UPCOMING: Record<string, { icon: string; title: string; text: string }> = {
-  achievements: { icon: '🏅', title: 'Yutuqlar', text: 'Qo\'lga kiritgan yutuqlaringiz shu yerda bo\'ladi.' },
-}
+const UPCOMING: Record<string, { icon: string; title: string; text: string }> = {}
 
 export function UpcomingPage({ section }: { section: string }) {
   const info = UPCOMING[section] ?? { icon: '🧭', title: 'Sahifa topilmadi', text: 'Pastdagi menyudan bo\'lim tanlang.' }

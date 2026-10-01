@@ -32,8 +32,9 @@ Barcha qismlar **bitta server** va **bitta ma'lumotlar bazasi** bilan ishlaydi.
 | 13. Ballar tizimi | ✅ Tayyor |
 | 14. Reyting va mavsumlar | ✅ Tayyor |
 | 15. Bildirishnomalar va eslatmalar | ✅ Tayyor |
-| 16. Yutuqlar | ⏳ Keyingi |
-| 17–23. Hisobotlar (PDF), AI yordamchi, sovg'alar, tahlillar, xavfsizlik, yakuniy tayyorgarlik | ⏳ Navbatda |
+| 16. Yutuqlar | ✅ Tayyor |
+| 17–18. Rasmiy hisobotlar (PDF) va AI yordamchi | ⏳ Keyingi |
+| 19–23. Sovg'alar, tahlillar, xavfsizlik, yakuniy sinov va tayyorgarlik | ⏳ Navbatda |
 
 🚀 **Botni bepul serverda sinab ko'rish:** [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — qadam-baqadam qo'llanma.
 

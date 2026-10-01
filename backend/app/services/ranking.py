@@ -56,10 +56,12 @@ def display_name(first_name: str, last_name: str, name_format: str) -> str:
     return f"{first_name} {last_name[:1]}." if last_name else first_name
 
 
-async def _aggregate(session: AsyncSession, period: Period) -> Select:
+async def _aggregate(session: AsyncSession, period: Period, between: tuple[datetime, datetime] | None = None) -> Select:
     conditions: list[Any] = []
     start = period_start(period)
-    if start is not None:
+    if between is not None:
+        conditions.extend([EFFECTIVE_TIME >= between[0], EFFECTIVE_TIME < between[1]])
+    elif start is not None:
         conditions.append(EFFECTIVE_TIME >= start)
     if period == "season":
         season_id = await current_season_id(session)
@@ -110,8 +112,10 @@ async def ranking(
     scope: Scope,
     viewer: User | None,
     limit: int = 50,
+    between: tuple[datetime, datetime] | None = None,
 ) -> Ranking:
-    aggregate = (await _aggregate(session, period)).subquery()
+    """``between`` ranks an explicit time window instead of the current period (e.g. last month)."""
+    aggregate = (await _aggregate(session, period, between)).subquery()
     conditions = [User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), aggregate.c.total > 0]
     if scope == "faculty" and viewer is not None:
         conditions.append(User.faculty_id == viewer.faculty_id)

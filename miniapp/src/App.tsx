@@ -1,4 +1,5 @@
 import { AppLayout } from './layouts/AppLayout'
+import { AchievementsPage } from './pages/AchievementsPage'
 import { LoadingState } from './components/StateViews'
 import { BookDetailPage } from './pages/BookDetailPage'
 import { BooksPage } from './pages/BooksPage'
@@ -32,6 +33,7 @@ function Routes() {
   else if (section === 'profile') page = <ProfilePage />
   else if (section === 'ranking') page = <RankingPage />
   else if (section === 'results') page = <ResultsPage />
+  else if (section === 'achievements') page = <AchievementsPage />
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
   else page = <UpcomingPage section={section} />

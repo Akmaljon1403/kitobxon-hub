@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.services import announcements
+from app.services import achievements, announcements
 from app.services import quizzes as quiz_service
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,8 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("test_ending", announcements.test_ending),
     ("reading_reminders", announcements.reading_reminders),
     ("quote_of_day", announcements.quote_of_day),
+    ("achievements_safety_net", achievements.evaluate_recently_active),
+    ("monthly_top_ranks", achievements.monthly_top_ranks),
 )
 
 

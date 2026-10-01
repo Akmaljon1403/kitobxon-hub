@@ -3,7 +3,9 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    achievements,
     admin_access,
+    admin_achievements,
     admin_books,
     admin_events,
     admin_faculties,
@@ -32,6 +34,7 @@ for module in (
     events,
     quizzes,
     scores,
+    achievements,
     admin_access,
     admin_users,
     admin_books,
@@ -40,6 +43,7 @@ for module in (
     admin_quizzes,
     admin_scores,
     admin_notifications,
+    admin_achievements,
     admin_system,
 ):
     api_router.include_router(module.router)

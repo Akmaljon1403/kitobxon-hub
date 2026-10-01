@@ -121,6 +121,7 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/me/ranking` | My place this week, month and overall |
 | GET | `/api/v1/rankings?period=week\|month\|season\|all&scope=all\|faculty\|group` | Leaderboard (deterministic tie-breaks, see ARCHITECTURE §8) |
 | GET | `/api/v1/rankings/faculties?period=...` | Faculties ranked by average points per member |
+| GET | `/api/v1/me/achievements` | All active achievements with my progress and unlock dates |
 
 ### Admin: access control
 
@@ -199,6 +200,17 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET / POST | `/api/v1/admin/seasons` | `SCORE_VIEW` / `SEASON_MANAGE` |
 | POST | `/api/v1/admin/seasons/{season_id}/activate` | `SEASON_MANAGE` |
 
+### Admin: achievements
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/achievements` | any admin — definitions with holder counts |
+| POST | `/api/v1/admin/achievements` | `SETTINGS_MANAGE` — new achievement (`code`, `criteria`, `threshold`, `points`, ...) |
+| PATCH | `/api/v1/admin/achievements/{id}` | `SETTINGS_MANAGE` — title, description, icon, threshold, points, active, order (code and criteria are fixed) |
+| GET | `/api/v1/admin/achievements/{id}/holders` | any admin |
+| POST | `/api/v1/admin/achievements/{id}/grant` | `SCORE_VIEW` + `SCORE_MANAGE` — `{"user_id", "reason"}`, audited |
+| POST | `/api/v1/admin/user-achievements/{id}/revoke` | `SCORE_VIEW` + `SCORE_MANAGE` — reason required; bonus points are reversed |
+
 ### Admin: notifications
 
 | Method | Path | Required |
@@ -235,4 +247,4 @@ Blocking a user or removing admin rights has the same effect immediately.
 | `/app/` | Telegram Mini App |
 | `/admin/` | Admin Panel |
 
-More endpoints (achievements, reports, rewards, analytics) are added in the following phases.
+More endpoints (reports, rewards, analytics) are added in the following phases.

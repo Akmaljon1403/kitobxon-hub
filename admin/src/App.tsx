@@ -1,6 +1,7 @@
 import { LoadingState } from './components/StateViews'
 import { Card } from './components/ui'
 import { AdminLayout, NAV_ITEMS } from './layouts/AdminLayout'
+import { AchievementsPage } from './pages/AchievementsPage'
 import { AdminsPage } from './pages/AdminsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
@@ -29,6 +30,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   tests: TestsPage,
   scores: ScoresPage,
   notifications: NotificationsPage,
+  achievements: AchievementsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
   admins: AdminsPage,

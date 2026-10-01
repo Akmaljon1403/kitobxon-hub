@@ -23,7 +23,7 @@ from app.models.enums import (
     ReadingVerification,
     ScoreCategory,
 )
-from app.services import announcements
+from app.services import achievements, announcements
 from app.services.audit import record_audit
 from app.services.scoring import award_points
 from app.services.settings import get_setting
@@ -202,6 +202,8 @@ async def verify_reading(
             after={"book_id": str(book_id), "user_id": str(user_id)},
         )
     await award_book_completion(session, read, actor_id)
+    await session.flush()
+    await achievements.evaluate(session, user_id)
     await session.commit()
     return read
 
@@ -274,6 +276,8 @@ async def set_reading_status(session: AsyncSession, *, user_id: uuid.UUID, book_
         read.completed_at = datetime.now(UTC)
         if not await get_setting(session, "score.book_completion_requires_verification"):
             await award_book_completion(session, read, None)
+            await session.flush()
+            await achievements.evaluate(session, user_id)
     await session.commit()
     return read
 

@@ -263,3 +263,15 @@ export interface TestReview {
     options: { id: string; text: string; is_correct: boolean; selected: boolean }[]
   }[]
 }
+
+export interface MemberAchievement {
+  code: string
+  title: string
+  description: string
+  icon: string
+  criteria: string
+  threshold: number
+  points: number
+  progress: number | null
+  unlocked_at: string | null
+}

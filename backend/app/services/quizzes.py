@@ -51,7 +51,7 @@ from app.models.enums import (
     TestActivityType,
     TestStatus,
 )
-from app.services import announcements
+from app.services import achievements, announcements
 from app.services.audit import record_audit
 from app.services.books import award_book_completion, get_or_create_read
 from app.services.scoring import award_points, current_season_id
@@ -483,6 +483,8 @@ async def _grade(session: AsyncSession, test: Test, attempt: TestAttempt, status
     awarded = await _award_best_attempt_delta(session, test, attempt)
     if test.book_id and passed(test, attempt.score):
         await _verify_book(session, test, attempt.user_id)
+        await session.flush()
+    await achievements.evaluate(session, attempt.user_id)
     return GradeResult(attempt=attempt, points_awarded=awarded)
 
 

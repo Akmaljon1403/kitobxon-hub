@@ -328,3 +328,27 @@ export interface NotificationSummary {
   bot_configured: boolean
   recent_broadcasts: { at: string; actor: string | null; message: string; recipients: number; filters: Record<string, unknown> }[]
 }
+
+export interface AdminAchievement {
+  id: string
+  code: string
+  title: string
+  description: string
+  icon: string
+  criteria: string
+  threshold: number
+  points: number
+  is_active: boolean
+  sort_order: number
+  holders: number
+}
+
+export interface AchievementHolder {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  group_name: string | null
+  unlocked_at: string
+  granted: boolean
+}

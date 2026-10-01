@@ -20,7 +20,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   REVERSAL: 'Bekor qilish',
 }
 
-function MemberPicker({ value, onChange }: { value: AdminUser | null; onChange: (member: AdminUser | null) => void }) {
+export function MemberPicker({ value, onChange }: { value: AdminUser | null; onChange: (member: AdminUser | null) => void }) {
   const { api } = useSession()
   const [search, setSearch] = useState('')
   const [results, setResults] = useState<AdminUser[]>([])
