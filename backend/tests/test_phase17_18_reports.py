@@ -174,22 +174,25 @@ async def test_template_draft_approval_and_official_pdf(client: httpx.AsyncClien
 
 async def test_unknown_numbers_block_approval(client: httpx.AsyncClient, db: AsyncSession) -> None:
     admin = await _admin(db, *REPORT_PERMS)
+    # The facts contain the responsible person's name and clock times, so the number under test
+    # must not be a possible minute/hour/day and the name must not contain digits.
+    admin.first_name, admin.last_name = "Sardor", "Aliyev"
     event_id = await _event_with_activity(db, admin)
     report_id = (await _create(client, admin, event_id))["id"]
     headers = admin_headers(admin)
-    body = "## Kirish\n\nTadbirda 45 nafar kitobxon qatnashdi, ulardan 3 nafari faol bo'ldi."
+    body = "## Kirish\n\nTadbirda 347 nafar kitobxon qatnashdi, ulardan 3 nafari faol bo'ldi."
     edited = (
         await client.patch(f"/api/v1/admin/reports/{report_id}", json={"body_text": body}, headers=headers)
     ).json()
     assert edited["status"] == "REVIEW"
-    assert edited["number_issues"] == ["45"]
+    assert edited["number_issues"] == ["347"]
     blocked = await client.post(f"/api/v1/admin/reports/{report_id}/approve", headers=headers)
     assert blocked.status_code == 400
     assert blocked.json()["error"]["code"] == "REPORT_UNVERIFIED_NUMBERS"
-    assert blocked.json()["error"]["details"] == {"numbers": ["45"]}
+    assert blocked.json()["error"]["details"] == {"numbers": ["347"]}
     # A number the admin typed into their own fields counts as confirmed by the admin.
     confirmed = await client.patch(
-        f"/api/v1/admin/reports/{report_id}", json={"results": "Ko'rgazmaga 45 nafar mehmon keldi."}, headers=headers
+        f"/api/v1/admin/reports/{report_id}", json={"results": "Ko'rgazmaga 347 nafar mehmon keldi."}, headers=headers
     )
     assert confirmed.json()["number_issues"] == []
 
