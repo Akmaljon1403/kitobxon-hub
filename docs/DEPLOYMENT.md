@@ -36,7 +36,8 @@ All configuration is environment variables; the full, commented list is in
 
 Optional: `TELEGRAM_WEBHOOK_SECRET` (derived from `SECRET_KEY` when unset), `TELEGRAM_WEBAPP_URL`
 (defaults to `PUBLIC_BASE_URL/app/`), `REDIS_URL`, `BOT_MODE` (`webhook` | `polling` | `disabled`),
-`API_DOCS_ENABLED`, `LOG_LEVEL`, `STORAGE_*`, `AI_*`.
+`API_DOCS_ENABLED`, `LOG_LEVEL`, `STORAGE_*`, `AI_*`, `WORKER_ENABLED` (default `true`),
+`WORKER_INTERVAL_SECONDS` (default `60`; how often reminders and test closing are checked).
 
 ## 3. Deploying on a VPS with Docker
 
@@ -57,7 +58,17 @@ certificate with certbot. On start-up the container:
    starts safe);
 2. synchronises reference data (permissions, roles, default settings);
 3. registers the Telegram webhook `PUBLIC_BASE_URL/telegram/webhook`, the bot commands and the
-   Mini App menu button.
+   Mini App menu button;
+4. starts the background worker (unless `WORKER_ENABLED=false`): it sends queued Telegram
+   messages (≤ 25/s, retries with backoff, honours Telegram's `retry_after`) and, every
+   `WORKER_INTERVAL_SECONDS`, runs the scheduled checks — closing ended tests and awarding place
+   bonuses, event reminders (`notifications.event_reminder_minutes`), "test started / closing
+   soon", reading-deadline reminders (08:00–21:30 only) and the quote of the day.
+
+On an always-on database keep the interval at 60 s. On a serverless database that bills compute
+time (e.g. Neon's free plan) use a longer interval (the Render blueprint uses 1800 s) so the
+database can scale to zero between checks; messages triggered by admins (attendance opened,
+broadcasts, test results after a manual close) are still sent immediately.
 
 ### Updating
 
@@ -102,8 +113,10 @@ pg_restore --no-owner --clean --if-exists --dbname "$TARGET_DATABASE_URL" kitobx
 
 * Set `REDIS_URL` so rate limits are shared between instances.
 * Bot conversation state is stored in PostgreSQL, so any instance can handle any update.
-* Background jobs (later phases) use `FOR UPDATE SKIP LOCKED` and advisory locks, so running the
-  worker in several containers never duplicates work; for clarity run it in a dedicated container.
+* The worker claims messages with `FOR UPDATE SKIP LOCKED` (plus a 5-minute lease) and runs each
+  scheduled job under a transaction-level advisory lock (safe behind PgBouncer), so running it
+  in several containers never duplicates work. For clarity you can run it in one dedicated
+  container with `python -m app.workers` and set `WORKER_ENABLED=false` on the web containers.
 * Put a connection pooler (PgBouncer, or the provider's pooled endpoint) in front of PostgreSQL;
   the app already disables prepared-statement caching for this.
 

@@ -139,7 +139,7 @@ By default one container runs everything, which is the cheapest setup:
 |---|---|---|
 | REST API | on | — |
 | Bot webhook endpoint (`/telegram/webhook`, secret-header protected) | on when `BOT_TOKEN` and `PUBLIC_BASE_URL` are set | `BOT_MODE=polling` + `python -m app.bot.polling` |
-| Background worker (notification queue, reminders, quote of the day, test-ranking bonuses) | on | running a second container with the worker flag and disabling it in web containers |
+| Background worker (notification queue, reminders, quote of the day, closing tests and place bonuses) | on (`WORKER_ENABLED`) | `python -m app.workers` in its own container + `WORKER_ENABLED=false` in web containers |
 | Static Mini App (`/app/`) and Admin Panel (`/admin/`) | served by the backend | a CDN or nginx |
 
 Scheduled jobs take a PostgreSQL advisory lock, so even if several containers run the worker,
@@ -176,7 +176,18 @@ Answers after the deadline are rejected regardless of the client timer. Scores a
 on the server. Focus/visibility events are stored in `test_activity_logs` as *signals*, never
 treated as proof.
 
-### 7.4 Reports
+### 7.4 Notifications
+Business code never calls Telegram directly. It inserts rows into `notifications` (the outbox) in
+the same transaction as the change that caused them, each with a deduplication key such as
+`event_reminder:<event>:60:<user>`, so a retried request or a repeated scheduler run cannot send a
+message twice. Texts come from admin-editable `notification_templates` (HTML-escaped values; a
+template switched off sends nothing). The sender claims due rows with `FOR UPDATE SKIP LOCKED`
+and a short lease, checks the member's status and opt-outs (critical messages ignore opt-outs),
+drops time-sensitive reminders that became outdated during an outage, and records SENT / FAILED /
+SKIPPED with the reason. Messages queued by a request wake the in-process sender immediately;
+scheduled checks run every `WORKER_INTERVAL_SECONDS`.
+
+### 7.5 Reports
 Facts (dates, counts, names, percentages) are loaded by SQL into a snapshot stored with the report.
 The AI only receives that snapshot plus the admin's own text and returns wording; numbers in the
 draft are cross-checked against the snapshot before an admin can approve it. The PDF is rendered

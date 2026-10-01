@@ -105,6 +105,22 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/books` | Active and completed books with my reading status |
 | GET | `/api/v1/books/{book_id}` | Book details with quotes |
 | POST | `/api/v1/books/{book_id}/reading` | `{"action": "start" \| "complete"}` — self-reported reading status |
+| GET | `/api/v1/events?scope=upcoming\|past` | Published, completed and cancelled events with my registration / attendance |
+| GET | `/api/v1/events/{event_id}` | Event details |
+| POST / DELETE | `/api/v1/events/{event_id}/register` | Register ("I intend to come") / cancel before the start |
+| POST | `/api/v1/attendance/verify` | `{"token"}` (QR) or `{"code"}` (6 characters), optional `event_id`. Atomic with the points; 10 tries/min per member |
+| GET | `/api/v1/tests` | Open, upcoming and closed tests with my attempts (never correct answers) |
+| GET | `/api/v1/tests/{test_id}` | One test with my attempts |
+| POST | `/api/v1/tests/{test_id}/start` | Start or resume: server fixes start, deadline = min(start + duration, test end) and the random order |
+| GET | `/api/v1/tests/{test_id}/attempt` | My running attempt (after a reload) |
+| POST | `/api/v1/tests/{test_id}/answer` | `{"question_id", "option_ids"}` — saved immediately; rejected after the deadline (+5 s network grace) |
+| POST | `/api/v1/tests/{test_id}/submit` | Optional final `answers`; the server grades. Idempotent. A client-sent score is ignored |
+| POST | `/api/v1/tests/{test_id}/activity` | Up to 30 focus/visibility signals (`VISIBILITY_HIDDEN`, `FOCUS_LOST`, ...) — hints, not proof |
+| GET | `/api/v1/tests/{test_id}/review` | Correct answers and explanations — only after the test has closed (403 before) |
+| GET | `/api/v1/me/scores` | Total, season total, breakdown by category and ledger history |
+| GET | `/api/v1/me/ranking` | My place this week, month and overall |
+| GET | `/api/v1/rankings?period=week\|month\|season\|all&scope=all\|faculty\|group` | Leaderboard (deterministic tie-breaks, see ARCHITECTURE §8) |
+| GET | `/api/v1/rankings/faculties?period=...` | Faculties ranked by average points per member |
 
 ### Admin: access control
 
@@ -144,6 +160,52 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET / POST | `/api/v1/admin/quotes` | `BOOK_VIEW` / `BOOK_CREATE` |
 | PATCH / DELETE | `/api/v1/admin/quotes/{quote_id}` | `BOOK_EDIT` / `BOOK_DELETE` |
 
+### Admin: events and attendance
+
+| Method | Path | Required |
+|---|---|---|
+| GET / POST | `/api/v1/admin/events` | `EVENT_VIEW` / `EVENT_CREATE` |
+| GET / PATCH | `/api/v1/admin/events/{event_id}` | `EVENT_VIEW` / `EVENT_EDIT` — publishing queues an announcement |
+| DELETE | `/api/v1/admin/events/{event_id}` | `EVENT_DELETE` — only without attendance |
+| GET | `/api/v1/admin/events/{event_id}/registrations` | `EVENT_VIEW` |
+| GET | `/api/v1/admin/events/{event_id}/attendance` | `ATTENDANCE_VIEW` — live list and counts |
+| POST | `/api/v1/admin/events/{event_id}/attendance/open` / `close` | `ATTENDANCE_MANAGE` — opening notifies registered members |
+| GET | `/api/v1/admin/events/{event_id}/attendance/token` | `ATTENDANCE_MANAGE` — rotating QR payload and 6-character code for the projector |
+| POST | `/api/v1/admin/events/{event_id}/attendance/manual` | `ATTENDANCE_MANAGE` — add a member (reason required) |
+| PATCH | `/api/v1/admin/attendance/{record_id}` | `ATTENDANCE_MANAGE` — suspicious / revoke (points reversed) / restore |
+| GET | `/api/v1/admin/events/{event_id}/attendance.csv` | `ATTENDANCE_VIEW` — Excel-friendly CSV |
+
+### Admin: tests
+
+| Method | Path | Required |
+|---|---|---|
+| GET / POST | `/api/v1/admin/tests` | `TEST_VIEW` / `TEST_CREATE` |
+| GET / PATCH | `/api/v1/admin/tests/{test_id}` | `TEST_VIEW` (includes correct answers) / `TEST_EDIT` — max and passing score are locked once someone started |
+| PUT | `/api/v1/admin/tests/{test_id}/questions` | `TEST_EDIT` — replace all questions; locked once someone started |
+| POST | `/api/v1/admin/tests/{test_id}/publish` / `unpublish` | `TEST_PUBLISH` — publish validates every question; unpublish only before any attempt |
+| POST | `/api/v1/admin/tests/{test_id}/close` | `TEST_PUBLISH` — grades unfinished attempts, awards place bonuses once, queues results |
+| DELETE | `/api/v1/admin/tests/{test_id}` | `TEST_DELETE` — only without attempts |
+| GET | `/api/v1/admin/tests/{test_id}/results` (`.csv`) | `TEST_VIEW` — places, scores, durations, signal counts |
+| GET | `/api/v1/admin/test-attempts/{attempt_id}` | `TEST_VIEW` — answers and activity timeline |
+
+### Admin: scores and seasons
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/scores?user_id=` | `SCORE_VIEW` — ledger (all members or one) |
+| GET | `/api/v1/admin/scores/summary?user_id=` | `SCORE_VIEW` |
+| POST | `/api/v1/admin/scores/adjust` | `SCORE_VIEW` + `SCORE_MANAGE` — `{"user_id", "amount", "reason"}`, audited with totals before/after |
+| POST | `/api/v1/admin/scores/{transaction_id}/reverse` | `SCORE_VIEW` + `SCORE_MANAGE` — adds a REVERSAL entry (the ledger is append-only) |
+| GET / POST | `/api/v1/admin/seasons` | `SCORE_VIEW` / `SEASON_MANAGE` |
+| POST | `/api/v1/admin/seasons/{season_id}/activate` | `SEASON_MANAGE` |
+
+### Admin: notifications
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/notifications/summary` | `NOTIFICATION_SEND` — queue state (pending, sent/failed/skipped in 24 h) and recent broadcasts |
+| POST | `/api/v1/admin/notifications/broadcast` | `NOTIFICATION_SEND` — `{"message", "faculty_id"?, "course"?, "group_name"?, "with_app_button", "dry_run"}`; `dry_run` only counts recipients. Audited |
+
 ### Admin: system
 
 | Method | Path | Required |
@@ -173,5 +235,4 @@ Blocking a user or removing admin rights has the same effect immediately.
 | `/app/` | Telegram Mini App |
 | `/admin/` | Admin Panel |
 
-More endpoints (events, attendance, tests, scores, rankings, notifications, reports, rewards,
-analytics) are added in the following phases.
+More endpoints (achievements, reports, rewards, analytics) are added in the following phases.

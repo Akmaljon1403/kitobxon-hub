@@ -130,10 +130,19 @@ Keyin Telegram'da botingizni oching va **/start** ni bosing:
 
 ## Ixtiyoriy: serverni "uyg'oq" saqlash
 
-Bot har doim tez javob berishi uchun bepul **UptimeRobot** (uptimerobot.com) xizmatida monitor
-yarating: turi **HTTP(s)**, manzili `https://SIZNING-MANZIL.onrender.com/health`, oraliq **5 daqiqa**.
+Bepul Render serveri 15 daqiqa hech kim murojaat qilmasa "uxlab qoladi". Shunda bot birinchi
+xabarga ~1 daqiqada javob beradi va **eslatmalar (tadbir, test, kun iqtibosi) yuborilmaydi**.
+
+Buni oldini olish uchun bepul **UptimeRobot** (uptimerobot.com) xizmatida monitor yarating:
+turi **HTTP(s)**, manzili `https://SIZNING-MANZIL.onrender.com/health`, oraliq **5 daqiqa**.
 U har 5 daqiqada serverga murojaat qiladi va server uxlamaydi (Render'ning oylik 750 soatlik bepul
 limiti bitta server uchun yetarli). Bundan tashqari, server ishlamay qolsa sizga email yuboradi.
+
+ℹ️ Neon bazasining bepul tarifida oyiga cheklangan "ishlash vaqti" bor, baza esa 5 daqiqa ishlatilmasa
+o'zi uxlaydi. Shuning uchun sinov serverida eslatmalar **har 30 daqiqada** tekshiriladi — bu
+sozlama (`WORKER_INTERVAL_SECONDS=1800`) avtomatik qo'yilgan, siz hech narsa qilishingiz shart emas.
+Ya'ni eslatma bir necha daqiqa kechikishi mumkin. Davomat ochilgani, sizning e'lonlaringiz va test
+natijalari esa darhol yuboriladi.
 
 ---
 

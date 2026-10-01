@@ -26,8 +26,14 @@ Barcha qismlar **bitta server** va **bitta ma'lumotlar bazasi** bilan ishlaydi.
 | 7. Admin panel | ✅ Tayyor |
 | 8. A'zolar va profillar | ✅ Tayyor |
 | 9. Kitoblar va iqtiboslar | ✅ Tayyor |
-| 10. Tadbirlar | ⏳ Keyingi |
-| 11–23. Davomat, testlar, ballar, reyting, bildirishnomalar, hisobotlar ... | ⏳ Navbatda |
+| 10. Tadbirlar | ✅ Tayyor |
+| 11. QR davomat | ✅ Tayyor |
+| 12. Testlar (taymer, avtomatik baholash) | ✅ Tayyor |
+| 13. Ballar tizimi | ✅ Tayyor |
+| 14. Reyting va mavsumlar | ✅ Tayyor |
+| 15. Bildirishnomalar va eslatmalar | ✅ Tayyor |
+| 16. Yutuqlar | ⏳ Keyingi |
+| 17–23. Hisobotlar (PDF), AI yordamchi, sovg'alar, tahlillar, xavfsizlik, yakuniy tayyorgarlik | ⏳ Navbatda |
 
 🚀 **Botni bepul serverda sinab ko'rish:** [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — qadam-baqadam qo'llanma.
 
