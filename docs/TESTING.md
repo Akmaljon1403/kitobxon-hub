@@ -32,6 +32,8 @@ upgrade), and before every test all tables are truncated and reference data is r
 |---|---|
 | `tests/test_phase1_foundation.py` | health checks, error format, request ids, log redaction, configuration parsing |
 | `tests/test_phase2_database.py` | migrations up/down and drift check, reference data, unique constraints (Telegram ID, phone, attendance), concurrent check-ins, append-only ledger and audit log |
+| `tests/test_phase3_auth.py` | initData signature/expiry/tampering, JWT forgery/expiry/`alg=none`, blocked users, logout, admin login links (one-time, expiry), super-admin bootstrap, login rate limit |
+| `tests/test_phase4_rbac.py` | every admin route → 401 anonymous / 403 member, permission checks, admin appointment/dismissal with audit records, last super admin protection, custom roles, audit log filters |
 
 New test modules are added with every phase (authentication, RBAC, attendance, tests, scoring, ...).
 The critical cases listed in the specification (expired QR, wrong-event QR, duplicate attendance,

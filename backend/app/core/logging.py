@@ -10,6 +10,8 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
+# Client address of the current HTTP request (used for audit records, never for logs).
+client_ip_ctx: ContextVar[str | None] = ContextVar("client_ip", default=None)
 
 # Patterns that must never reach log storage.
 _REDACTIONS: list[tuple[re.Pattern[str], str]] = [

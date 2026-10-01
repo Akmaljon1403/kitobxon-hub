@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import dispose_engine, get_engine, get_session_factory
 from app.models import Base
+from app.security.rate_limit import reset_in_memory_limits
 from app.services.bootstrap import sync_reference_data
 
 get_settings.cache_clear()
@@ -84,6 +85,7 @@ def app() -> FastAPI:
 
 @pytest.fixture
 async def client(app: FastAPI, db: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
+    reset_in_memory_limits()
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as http_client:
         yield http_client

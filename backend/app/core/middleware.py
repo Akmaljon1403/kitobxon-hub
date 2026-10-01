@@ -12,7 +12,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.errors import error_body
-from app.core.logging import request_id_ctx
+from app.core.logging import client_ip_ctx, request_id_ctx
 
 logger = logging.getLogger("app.access")
 error_logger = logging.getLogger("app.errors")
@@ -46,6 +46,8 @@ class RequestContextMiddleware:
 
         request_id = _incoming_request_id(scope) or uuid.uuid4().hex
         token = request_id_ctx.set(request_id)
+        client = scope.get("client")
+        ip_token = client_ip_ctx.set(client[0] if client else None)
         started_at = time.perf_counter()
         state = {"status": 500, "started": False}
 
@@ -85,3 +87,4 @@ class RequestContextMiddleware:
                 extra={"status": state["status"], "duration_ms": duration_ms},
             )
             request_id_ctx.reset(token)
+            client_ip_ctx.reset(ip_token)
