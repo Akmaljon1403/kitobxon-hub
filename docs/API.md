@@ -99,6 +99,12 @@ Blocking a user or removing admin rights has the same effect immediately.
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/v1/me` | Own profile |
+| PATCH | `/api/v1/me` | Correct own faculty, course, group (names are changed by admins) |
+| GET / PUT | `/api/v1/me/notification-settings` | Reminder preferences |
+| GET | `/api/v1/faculties` | Active faculties (public) |
+| GET | `/api/v1/books` | Active and completed books with my reading status |
+| GET | `/api/v1/books/{book_id}` | Book details with quotes |
+| POST | `/api/v1/books/{book_id}/reading` | `{"action": "start" \| "complete"}` — self-reported reading status |
 
 ### Admin: access control
 
@@ -115,6 +121,36 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET / POST | `/api/v1/admin/roles` | SUPER_ADMIN — list / create custom roles |
 | PATCH / DELETE | `/api/v1/admin/roles/{role_id}` | SUPER_ADMIN — update / delete custom roles |
 | GET | `/api/v1/admin/audit-logs` | `AUDIT_LOG_VIEW` — filters: `action`, `entity_type`, `entity_id`, `actor_id`, `since`, `until` |
+
+### Admin: members
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/users` | `USER_VIEW` — filters `search`, `status`, `faculty_id`, `course`, `group_name`; phone only with `USER_CONTACT_VIEW` |
+| GET | `/api/v1/admin/users/{user_id}` | `USER_VIEW` |
+| PATCH | `/api/v1/admin/users/{user_id}` | `USER_VIEW` + `USER_MANAGE` — correct names / study details (audited) |
+| POST | `/api/v1/admin/users/{user_id}/status` | `USER_VIEW` + `USER_MANAGE` — `{"status", "reason"}`: approve, block, deactivate (audited) |
+
+### Admin: books and quotes
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/books` | `BOOK_VIEW` |
+| POST | `/api/v1/admin/books` | `BOOK_CREATE` |
+| GET / PATCH | `/api/v1/admin/books/{book_id}` | `BOOK_VIEW` / `BOOK_EDIT` (status changes publish or archive) |
+| DELETE | `/api/v1/admin/books/{book_id}` | `BOOK_DELETE` (soft delete) |
+| GET | `/api/v1/admin/books/{book_id}/readers` | `BOOK_VIEW` |
+| POST | `/api/v1/admin/books/{book_id}/readers/{user_id}/verify` | `BOOK_EDIT` — confirms reading, awards book points once |
+| GET / POST | `/api/v1/admin/quotes` | `BOOK_VIEW` / `BOOK_CREATE` |
+| PATCH / DELETE | `/api/v1/admin/quotes/{quote_id}` | `BOOK_EDIT` / `BOOK_DELETE` |
+
+### Admin: system
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/settings` | any admin — values, defaults, input kind |
+| PUT | `/api/v1/admin/settings/{key}` | `SETTINGS_MANAGE` — validated, audited |
+| GET | `/api/v1/admin/statistics` | `ANALYTICS_VIEW` |
 
 ### Admin: faculties
 
@@ -137,5 +173,5 @@ Blocking a user or removing admin rights has the same effect immediately.
 | `/app/` | Telegram Mini App |
 | `/admin/` | Admin Panel |
 
-More endpoints (books, events, attendance, tests, scores, rankings, notifications, reports,
-rewards, analytics) are added in the following phases.
+More endpoints (events, attendance, tests, scores, rankings, notifications, reports, rewards,
+analytics) are added in the following phases.

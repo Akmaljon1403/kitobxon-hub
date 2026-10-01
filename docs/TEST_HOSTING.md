@@ -28,7 +28,9 @@ Telegram orqali qilinadi. Taxminan **30–40 daqiqa** vaqt oladi.
    Agar band bo'lsa, boshqasini o'ylab toping (masalan `kitobxonhub_tdtu_bot`).
 5. BotFather sizga shunga o'xshash **token** yuboradi:
    `7123456789:AAH...uzun...harflar`
-6. Tokenni va bot manzilini (`@` belgisisiz) eslatmalar ilovasiga vaqtincha saqlab qo'ying.
+6. Tokenni eslatmalar ilovasiga vaqtincha saqlab qo'ying.
+
+> ✅ Agar botni allaqachon yaratgan bo'lsangiz va tokeningiz bo'lsa — bu qadamni o'tkazib yuboring.
 
 > 🔒 **Token — bu botning paroli.** Uni hech kimga yubormang, GitHub'ga yozmang, skrinshot
 > qilmang. Agar tasodifan oshkor bo'lsa: @BotFather → `/revoke` → yangi token oling va Render'da
@@ -65,11 +67,10 @@ Telegram orqali qilinadi. Taxminan **30–40 daqiqa** vaqt oladi.
    | Maydon | Nima yoziladi |
    |---|---|
    | `DATABASE_URL` | 2-qadamda Neon'dan nusxa olgan manzil |
-   | `BOT_TOKEN` | 1-qadamdagi token |
-   | `BOT_USERNAME` | bot manzili `@` belgisisiz, masalan `kitobxon_hub_bot` |
+   | `BOT_TOKEN` | 1-qadamdagi token (BotFather bergan) |
    | `SUPER_ADMIN_TELEGRAM_IDS` | hozircha `0` yozing (5-qadamda o'zgartiramiz) |
 
-   `SECRET_KEY` ni Render o'zi avtomatik yaratadi — unga tegmang.
+   `SECRET_KEY` ni Render o'zi avtomatik yaratadi — unga tegmang. Bot nomini server o'zi aniqlaydi.
 6. **Apply** (yoki **Deploy Blueprint**) tugmasini bosing.
 7. Kuting: birinchi marta yig'ish (**build**) **5–10 daqiqa** davom etadi. Holat **Live** bo'lishi kerak.
 8. Xizmat sahifasining yuqorisida manzil paydo bo'ladi, masalan:
@@ -85,17 +86,20 @@ Brauzerda quyidagilarni oching (`kitobxon-hub.onrender.com` o'rniga o'z manzilin
 |---|---|
 | `https://kitobxon-hub.onrender.com/health` | `{"status":"ok", ...}` |
 | `https://kitobxon-hub.onrender.com/health/db` | `{"status":"ok","service":"database"}` |
-| `https://kitobxon-hub.onrender.com/app/` | "Kitobxon Hub" sahifasi va "✅ Server bilan aloqa bor" |
+| `https://kitobxon-hub.onrender.com/app/` | "Ilovani Telegram orqali oching" sahifasi (bu to'g'ri — ilova faqat Telegram ichida ishlaydi) |
 
 Keyin Telegram'da botingizni oching va **/start** ni bosing:
 
 - [ ] Bot salomlashib, ismingizni so'radi
 - [ ] Ism → familiya → telefon (tugma orqali) → kurs → guruh so'raldi
+- [ ] Fakultet tugmalari chiqdi: Davolash ishi, Pediatriya, Tibbiy profilaktika va jamoat salomatligi
 - [ ] Ma'lumotlar ko'rsatildi va **✅ Tasdiqlash** dan keyin "Tabriklaymiz" xabari keldi
 - [ ] Pastda 9 ta tugmali menyu paydo bo'ldi (📚 Kitoblar, 👤 Profilim, ...)
 - [ ] **👤 Profilim** ma'lumotlaringizni ko'rsatdi
 - [ ] **🔔 Bildirishnomalar** da tugmalar ✅/❌ ga almashadi
-- [ ] Yozish maydoni yonidagi **📚 Kitobxon Hub** tugmasi Mini App'ni ochadi
+- [ ] Yozish maydoni yonidagi **📚 Kitobxon Hub** tugmasi Mini App'ni ochadi: salomlashish, "Joriy kitob",
+      pastda menyu (Asosiy, Kitoblar, Tadbirlar, Reyting, Profil)
+- [ ] Mini App → **Profil**: fakultet/kurs/guruhni o'zgartirib saqlash ishlaydi
 
 > Agar bot javob bermasa — 1 daqiqa kuting (server uyg'onyapti) va yana yozing.
 
@@ -109,7 +113,18 @@ Keyin Telegram'da botingizni oching va **/start** ni bosing:
    Bir nechta odam bo'lsa — vergul bilan: `123456789,987654321`
 4. **Save Changes** ni bosing. Server avtomatik qayta ishga tushadi (1–3 daqiqa).
 5. Botga **/admin** yuboring → "🔐 Admin panelga kirish" tugmasi keladi. Bosing — admin panel ochiladi.
-   (Admin panelning sahifalari keyingi bosqichlarda to'ldiriladi; hozircha tizim holatini ko'rsatadi.)
+   Uni kompyuterda ochish qulayroq: havolani nusxalab kompyuter brauzeriga qo'ying (5 daqiqa ichida).
+
+### Admin panelda birinchi ishlar
+
+- [ ] **Kitoblar** → **+ Yangi kitob**: nomi, muallifi, muqova rasmi havolasi, kitob havolasi, muddat.
+      **Holat: Faol** ni tanlang → Saqlash. Kitob darhol Mini App'da paydo bo'ladi.
+- [ ] **Iqtiboslar** → kitobdan aynan olingan iqtibos qo'shing (o'ylab topmang).
+- [ ] **Sozlamalar** → ball qoidalarini ko'rib chiqing (davomat 30, test 20, kitob 10 ...).
+- [ ] **Adminlar** → yordamchilaringizni tayinlang (ular avval botda ro'yxatdan o'tgan bo'lishi kerak)
+      va har biriga faqat kerakli ruxsatlarni belgilang.
+- [ ] Mini App'da kitobni oching → **O'qishni boshladim** → **O'qib tugatdim**. Keyin admin panel →
+      Kitoblar → **O'quvchilar** → **Tasdiqlash** (kitob uchun ball shunda beriladi).
 
 ---
 

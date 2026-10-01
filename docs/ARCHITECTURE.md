@@ -200,7 +200,7 @@ from the approved text.
 ## 9. Development phases
 
 1. Project skeleton ✅ — 2. Database ✅ — 3. Authentication ✅ — 4. RBAC ✅ — 5. Telegram bot ✅ —
-6. Mini App foundation — 7. Admin Panel foundation — 8. Users and profiles — 9. Books —
+6. Mini App foundation ✅ — 7. Admin Panel foundation ✅ — 8. Users and profiles ✅ — 9. Books ✅ —
 10. Events — 11. Attendance — 12. Tests — 13. Scoring — 14. Rankings — 15. Notifications —
 16. Achievements — 17. Reports — 18. AI report drafting — 19. Rewards — 20. Analytics —
 21. Security hardening — 22. Automated testing — 23. Deployment preparation.
