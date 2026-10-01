@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
-import { ApiError, apiRequest, type RequestOptions } from '../services/api'
+import { ApiError, apiRequest, fetchBlob, type RequestOptions } from '../services/api'
 import type { AdminSelf, TokenResponse } from '../types/api'
 
 const TOKEN_KEY = 'kitobxon.admin.token'
@@ -15,6 +15,8 @@ interface SessionValue {
   admin: AdminSelf | null
   can: (permission: string) => boolean
   api: <T>(path: string, options?: Omit<RequestOptions, 'token'>) => Promise<T>
+  /** Protected file (PDF, image, CSV) as a Blob. */
+  download: (path: string) => Promise<Blob>
   loginWithLink: (token: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -98,6 +100,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     signOut('Tizimdan chiqdingiz.')
   }, [token, signOut])
 
+  const download = useCallback((path: string) => fetchBlob(path, token), [token])
+
   const admin = state.kind === 'signed_in' ? state.admin : null
   const value = useMemo<SessionValue>(
     () => ({
@@ -105,10 +109,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       admin,
       can: (permission: string) => Boolean(admin?.permissions.includes(permission)),
       api,
+      download,
       loginWithLink,
       logout,
     }),
-    [state, admin, api, loginWithLink, logout],
+    [state, admin, api, download, loginWithLink, logout],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

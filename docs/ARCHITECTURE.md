@@ -198,10 +198,17 @@ job. A unique `(user, achievement)` row makes unlocking idempotent; bonus points
 ledger and are reversed if an admin revokes the achievement.
 
 ### 7.6 Reports
-Facts (dates, counts, names, percentages) are loaded by SQL into a snapshot stored with the report.
-The AI only receives that snapshot plus the admin's own text and returns wording; numbers in the
-draft are cross-checked against the snapshot before an admin can approve it. The PDF is rendered
-from the approved text.
+Facts (organization, event, book, responsible person, registrations, verified attendance,
+walk-ins, attendance rate, faculty breakdown, test statistics) are loaded by SQL into
+`reports.facts_snapshot`. The admin adds objective, description, results, conclusion and
+recommendations. The draft text is written either by the built-in template or — when
+`AI_API_KEY` is set — by Claude (default `claude-opus-5-5`, effort `medium`, server-side refusal
+fallback), which receives only the snapshot and the admin's notes. Every number in the draft must
+appear in the snapshot or in the admin's own fields; otherwise approval is refused and the
+numbers are listed. Approval renders an A4 PDF from an HTML/CSS template with WeasyPrint
+(statistics tables always come from the snapshot), stores it in local or S3-compatible storage,
+and locks the report; corrections are new versions. Photos are verified, stripped of metadata
+(e.g. GPS) and resized before storage.
 
 ## 8. Decisions on gaps and contradictions in the specification
 

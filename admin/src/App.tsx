@@ -13,6 +13,7 @@ import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { QuotesPage } from './pages/QuotesPage'
+import { ReportEditorPage, ReportsPage } from './pages/ReportsPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TestEditorPage } from './pages/TestEditorPage'
@@ -31,6 +32,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   scores: ScoresPage,
   notifications: NotificationsPage,
   achievements: AchievementsPage,
+  reports: ReportsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
   admins: AdminsPage,
@@ -62,6 +64,18 @@ function Router() {
           <AttendancePage eventId={entityId} />
         ) : (
           <Card className="p-6 text-sm text-app-hint">Davomatni ko'rish uchun ruxsatingiz yo'q.</Card>
+        )}
+      </AdminLayout>
+    )
+  }
+
+  if (section === 'reports' && entityId) {
+    return (
+      <AdminLayout section="reports">
+        {can('REPORT_VIEW') ? (
+          <ReportEditorPage reportId={entityId} />
+        ) : (
+          <Card className="p-6 text-sm text-app-hint">Hisobotlarni ko'rish uchun ruxsatingiz yo'q.</Card>
         )}
       </AdminLayout>
     )

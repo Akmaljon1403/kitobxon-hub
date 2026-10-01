@@ -211,6 +211,22 @@ Blocking a user or removing admin rights has the same effect immediately.
 | POST | `/api/v1/admin/achievements/{id}/grant` | `SCORE_VIEW` + `SCORE_MANAGE` — `{"user_id", "reason"}`, audited |
 | POST | `/api/v1/admin/user-achievements/{id}/revoke` | `SCORE_VIEW` + `SCORE_MANAGE` — reason required; bonus points are reversed |
 
+### Admin: reports
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/reports` | `REPORT_VIEW` |
+| POST | `/api/v1/admin/reports` | `REPORT_VIEW` + `REPORT_CREATE` — `{"event_id"}`; loads the facts snapshot (next version for that event) |
+| GET / PATCH | `/api/v1/admin/reports/{id}` | `REPORT_VIEW` / `REPORT_CREATE` — admin fields and `body_text`; detail includes `facts`, `photos`, `number_issues`, `ai_available` |
+| POST | `/api/v1/admin/reports/{id}/refresh-facts` | `REPORT_CREATE` — reload facts (before approval) |
+| POST | `/api/v1/admin/reports/{id}/generate` | `REPORT_CREATE` — `{"use_ai": true}` Claude draft (503 `AI_NOT_CONFIGURED` without `AI_API_KEY`), `false` template draft |
+| POST | `/api/v1/admin/reports/{id}/approve` | `REPORT_APPROVE` — refused with `REPORT_UNVERIFIED_NUMBERS` while the text has numbers not in the facts or admin fields; renders and stores the PDF |
+| GET | `/api/v1/admin/reports/{id}/pdf` | `REPORT_VIEW` — official PDF (rebuilt if the stored file is missing) |
+| GET | `/api/v1/admin/reports/{id}/preview.pdf` | `REPORT_VIEW` — draft preview with a QORALAMA mark, not stored |
+| POST | `/api/v1/admin/reports/{id}/new-version` / `archive` | `REPORT_CREATE` / `REPORT_APPROVE` |
+| POST | `/api/v1/admin/reports/{id}/photos` | `REPORT_CREATE` — multipart `file` (JPG/PNG/WEBP ≤ 8 MB, max 8) + `caption` |
+| GET / DELETE | `/api/v1/admin/reports/{id}/photos/{photo_id}` | `REPORT_VIEW` / `REPORT_CREATE` |
+
 ### Admin: notifications
 
 | Method | Path | Required |
@@ -247,4 +263,4 @@ Blocking a user or removing admin rights has the same effect immediately.
 | `/app/` | Telegram Mini App |
 | `/admin/` | Admin Panel |
 
-More endpoints (reports, rewards, analytics) are added in the following phases.
+More endpoints (rewards, analytics) are added in the following phases.

@@ -32,7 +32,8 @@ export interface RequestOptions {
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+  const isForm = options.body instanceof FormData
+  if (options.body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
   if (options.token) headers.Authorization = `Bearer ${options.token}`
   if (options.idempotencyKey) headers['Idempotency-Key'] = options.idempotencyKey
 
@@ -41,7 +42,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetch(`${API_BASE}${path}`, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
       signal: options.signal,
     })
   } catch (error) {
@@ -73,4 +74,28 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     )
   }
   return payload as T
+}
+
+/** Downloads a protected file (PDF, CSV, image) with the admin token. */
+export async function fetchBlob(path: string, token: string | null): Promise<Blob> {
+  const response = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  if (!response.ok) {
+    let message = "Faylni yuklab bo'lmadi."
+    try {
+      const body = (await response.json()) as ApiErrorBody
+      message = body.error?.message ?? message
+    } catch {
+      // not JSON
+    }
+    throw new ApiError('DOWNLOAD_FAILED', message, response.status)
+  }
+  return response.blob()
+}
+
+export function saveBlob(blob: Blob, filename: string): void {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000)
 }

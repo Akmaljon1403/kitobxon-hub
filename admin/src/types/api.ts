@@ -352,3 +352,66 @@ export interface AchievementHolder {
   unlocked_at: string
   granted: boolean
 }
+
+export type ReportStatus = 'DRAFT' | 'AI_GENERATED' | 'REVIEW' | 'APPROVED' | 'PDF_GENERATED' | 'ARCHIVED'
+
+export interface ReportListItem {
+  id: string
+  event_id: string
+  event_title: string
+  version: number
+  status: ReportStatus
+  title: string
+  created_at: string
+  approved_at: string | null
+  pdf_ready: boolean
+}
+
+export interface ReportFacts {
+  organization: string
+  club: string
+  event: {
+    title: string
+    date: string
+    time: string
+    location: string | null
+    book_title: string | null
+    book_author: string | null
+    responsible: string | null
+  }
+  attendance: {
+    registered: number
+    attended: number
+    attended_registered: number
+    walk_ins: number
+    rate_percent: number | null
+    suspicious: number
+  }
+  faculties: { name: string; attended: number }[]
+  tests: { title: string; participants: number; average_score: number; max_score: number; passed: number }[]
+  prepared_at: string
+}
+
+export interface ReportDetail {
+  id: string
+  event_id: string
+  version: number
+  status: ReportStatus
+  title: string
+  objective: string | null
+  activity_description: string | null
+  results: string | null
+  conclusion: string | null
+  recommendations: string | null
+  body_text: string | null
+  facts: ReportFacts
+  photos: { id: string; caption: string | null; size_bytes: number }[]
+  number_issues: string[]
+  ai_available: boolean
+  ai_model: string | null
+  ai_generated_at: string | null
+  approved_by: string | null
+  approved_at: string | null
+  pdf_ready: boolean
+  created_at: string
+}
