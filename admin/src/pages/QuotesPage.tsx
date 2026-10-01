@@ -1,0 +1,183 @@
+import { useState } from 'react'
+
+import { ErrorState, LoadingState } from '../components/StateViews'
+import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHeader, Pagination, Select, Table, Textarea } from '../components/ui'
+import { useAsync } from '../hooks/useAsync'
+import { ApiError } from '../services/api'
+import { useSession } from '../store/session'
+import type { Book, Page, Quote, QuoteStatus } from '../types/api'
+import { QUOTE_STATUS_LABELS, formatDate } from '../utils/format'
+
+const LIMIT = 50
+
+export function QuotesPage() {
+  const { api, can } = useSession()
+  const [offset, setOffset] = useState(0)
+  const [editing, setEditing] = useState<Quote | 'new' | null>(null)
+  const { state, reload } = useAsync(
+    (signal) => api<Page<Quote>>(`/api/v1/admin/quotes?limit=${LIMIT}&offset=${offset}`, { signal }),
+    [offset],
+  )
+
+  async function remove(quote: Quote) {
+    if (!window.confirm("Iqtibosni o'chirasizmi?")) return
+    try {
+      await api(`/api/v1/admin/quotes/${quote.id}`, { method: 'DELETE' })
+      reload()
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : "O'chirib bo'lmadi.")
+    }
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Iqtiboslar"
+        subtitle="«Rejalashtirilgan» iqtibos belgilangan kuni «Kun iqtibosi» sifatida yuboriladi. Iqtiboslarni o'ylab topmang — faqat kitobdan aynan oling."
+        actions={can('BOOK_CREATE') && <Button onClick={() => setEditing('new')}>+ Yangi iqtibos</Button>}
+      />
+      <Card>
+        {state.status === 'loading' && <LoadingState />}
+        {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
+        {state.status === 'success' && (
+          <>
+            <Table head={['Iqtibos', 'Kitob', 'Sana', 'Holat', '']}>
+              {state.data.items.length === 0 && <EmptyRow colSpan={5} text="Iqtiboslar hali qo'shilmagan" />}
+              {state.data.items.map((quote) => (
+                <tr key={quote.id}>
+                  <td className="max-w-md px-4 py-2.5">
+                    <p className="line-clamp-2">«{quote.text}»</p>
+                    <p className="text-xs text-app-hint">
+                      {quote.author ?? ''} {quote.source ? `· ${quote.source}` : ''}
+                    </p>
+                  </td>
+                  <td className="px-4 py-2.5">{quote.book_title ?? '—'}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5">{formatDate(quote.scheduled_date)}</td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={quote.status === 'SCHEDULED' ? 'info' : quote.status === 'SENT' ? 'success' : 'neutral'}>
+                      {QUOTE_STATUS_LABELS[quote.status]}
+                    </Badge>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
+                    {can('BOOK_EDIT') && (
+                      <Button variant="ghost" onClick={() => setEditing(quote)}>
+                        Tahrirlash
+                      </Button>
+                    )}
+                    {can('BOOK_DELETE') && (
+                      <Button variant="ghost" className="text-app-danger" onClick={() => void remove(quote)}>
+                        O'chirish
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </Table>
+            <Pagination total={state.data.total} limit={LIMIT} offset={offset} onChange={setOffset} />
+          </>
+        )}
+      </Card>
+      {editing && (
+        <QuoteModal
+          quote={editing === 'new' ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null)
+            reload()
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+function QuoteModal({ quote, onClose, onSaved }: { quote: Quote | null; onClose: () => void; onSaved: () => void }) {
+  const { api } = useSession()
+  const books = useAsync((signal) => api<Page<Book>>('/api/v1/admin/books?limit=200', { signal }))
+  const [form, setForm] = useState({
+    book_id: quote?.book_id ?? '',
+    text: quote?.text ?? '',
+    author: quote?.author ?? '',
+    source: quote?.source ?? '',
+    scheduled_date: quote?.scheduled_date ?? '',
+    status: (quote?.status ?? 'DRAFT') as QuoteStatus,
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function save() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api(quote ? `/api/v1/admin/quotes/${quote.id}` : '/api/v1/admin/quotes', {
+        method: quote ? 'PATCH' : 'POST',
+        body: {
+          book_id: form.book_id || null,
+          text: form.text.trim(),
+          author: form.author.trim() || null,
+          source: form.source.trim() || null,
+          scheduled_date: form.scheduled_date || null,
+          status: form.status,
+        },
+      })
+      onSaved()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      title={quote ? 'Iqtibosni tahrirlash' : 'Yangi iqtibos'}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Bekor qilish
+          </Button>
+          <Button onClick={save} loading={busy} disabled={form.text.trim().length < 3}>
+            Saqlash
+          </Button>
+        </>
+      }
+    >
+      <Field label="Iqtibos matni *">
+        <Textarea value={form.text} maxLength={2000} onChange={(e) => setForm({ ...form, text: e.target.value })} />
+      </Field>
+      <Field label="Kitob">
+        <Select value={form.book_id} onChange={(e) => setForm({ ...form, book_id: e.target.value })}>
+          <option value="">— Kitobga bog'lanmagan —</option>
+          {books.state.status === 'success' &&
+            books.state.data.items.map((book) => (
+              <option key={book.id} value={book.id}>
+                {book.title} — {book.author}
+              </option>
+            ))}
+        </Select>
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Muallif">
+          <Input value={form.author} maxLength={255} onChange={(e) => setForm({ ...form, author: e.target.value })} />
+        </Field>
+        <Field label="Manba / bet" hint="Masalan: 45-bet">
+          <Input value={form.source} maxLength={255} onChange={(e) => setForm({ ...form, source: e.target.value })} />
+        </Field>
+        <Field label="Yuboriladigan sana">
+          <Input type="date" value={form.scheduled_date} onChange={(e) => setForm({ ...form, scheduled_date: e.target.value })} />
+        </Field>
+        <Field label="Holat">
+          <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as QuoteStatus })}>
+            {Object.entries(QUOTE_STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
+      <InlineError message={error} />
+    </Modal>
+  )
+}

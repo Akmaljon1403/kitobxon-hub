@@ -1,55 +1,66 @@
-import { ErrorState, LoadingState } from './components/StateViews'
-import { useAsync } from './hooks/useAsync'
-import { apiRequest } from './services/api'
+import { LoadingState } from './components/StateViews'
+import { Card } from './components/ui'
+import { AdminLayout, NAV_ITEMS } from './layouts/AdminLayout'
+import { AdminsPage } from './pages/AdminsPage'
+import { AuditPage } from './pages/AuditPage'
+import { BooksPage } from './pages/BooksPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { FacultiesPage } from './pages/FacultiesPage'
+import { LoginPage } from './pages/LoginPage'
+import { MembersPage } from './pages/MembersPage'
+import { QuotesPage } from './pages/QuotesPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { SessionProvider, useSession } from './store/session'
+import { useRoute } from './utils/router'
 
-interface HealthStatus {
-  status: string
-  service: string
+const PAGES: Partial<Record<string, () => React.ReactElement>> = {
+  '': DashboardPage,
+  members: MembersPage,
+  books: BooksPage,
+  quotes: QuotesPage,
+  faculties: FacultiesPage,
+  settings: SettingsPage,
+  admins: AdminsPage,
+  audit: AuditPage,
 }
 
-const CHECKS: { path: string; label: string }[] = [
-  { path: '/health', label: 'API' },
-  { path: '/health/db', label: "Ma'lumotlar bazasi" },
-  { path: '/health/redis', label: 'Redis (ixtiyoriy)' },
-]
+function Router() {
+  const { state, admin, can } = useSession()
+  const route = useRoute()
+  const [section = ''] = route.segments
 
-// Phase 1 shell: shows system health. Login, navigation and management pages follow in later phases.
-export default function App() {
-  const { state, reload } = useAsync(async (signal) =>
-    Promise.all(
-      CHECKS.map(async (check) => {
-        try {
-          const result = await apiRequest<HealthStatus>(check.path, { signal })
-          return { ...check, ok: true, detail: result.status }
-        } catch (error) {
-          return { ...check, ok: false, detail: error instanceof Error ? error.message : 'xatolik' }
-        }
-      }),
-    ),
-  )
+  if (section === 'login' && route.query.get('token')) {
+    return <LoginPage linkToken={route.query.get('token')} />
+  }
+  if (state.kind === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <LoadingState />
+      </div>
+    )
+  }
+  if (state.kind === 'signed_out') return <LoginPage linkToken={null} notice={state.message} />
 
+  const item = NAV_ITEMS.find((nav) => nav.route === section)
+  const Page = PAGES[section]
+  const allowed = item?.visible(can, Boolean(admin?.is_super_admin)) ?? false
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-6 p-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Kitobxon Hub — Admin panel</h1>
-        <p className="text-sm text-app-hint">Tizim holati</p>
-      </header>
-      <section className="rounded-2xl border border-app-border bg-app-bg p-6">
-        {state.status === 'loading' && <LoadingState />}
-        {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
-        {state.status === 'success' && (
-          <ul className="divide-y divide-app-border">
-            {state.data.map((item) => (
-              <li key={item.path} className="flex items-center justify-between py-3 text-sm">
-                <span>{item.label}</span>
-                <span className={item.ok ? 'text-green-600' : 'text-app-danger'}>
-                  {item.ok ? `✅ ${item.detail}` : `❌ ${item.detail}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
+    <AdminLayout section={section === 'login' ? '' : section}>
+      {section === 'login' ? (
+        <DashboardPage />
+      ) : Page && allowed ? (
+        <Page />
+      ) : (
+        <Card className="p-6 text-sm text-app-hint">Bu sahifa mavjud emas yoki uni ko'rish uchun ruxsatingiz yo'q.</Card>
+      )}
+    </AdminLayout>
+  )
+}
+
+export default function App() {
+  return (
+    <SessionProvider>
+      <Router />
+    </SessionProvider>
   )
 }
