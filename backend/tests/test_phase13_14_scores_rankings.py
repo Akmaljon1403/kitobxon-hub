@@ -128,6 +128,13 @@ async def test_manual_adjustment_requires_permission_reason_and_is_audited(
 
     ledger = await client.get(f"/api/v1/admin/scores?user_id={member.id}", headers=admin_headers(viewer))
     assert ledger.json()["total"] == 2
+    summary = await client.get(f"/api/v1/admin/scores/summary?user_id={member.id}", headers=admin_headers(viewer))
+    assert summary.json()["total"] == 35
+    assert summary.json()["breakdown"] == {"ATTENDANCE": 30, "MANUAL": 5}
+    # The admin dashboard reads the public leaderboard with its admin token.
+    board = await client.get("/api/v1/rankings?limit=5", headers=admin_headers(viewer))
+    assert board.status_code == 200
+    assert board.json()["items"][0]["total"] == 35
 
 
 async def test_member_cannot_submit_own_score(client: httpx.AsyncClient, db: AsyncSession) -> None:

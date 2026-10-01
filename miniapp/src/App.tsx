@@ -6,6 +6,8 @@ import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
+import { RankingPage } from './pages/RankingPage'
+import { ResultsPage } from './pages/ResultsPage'
 import {
   AccountProblemPage,
   NotRegisteredPage,
@@ -26,6 +28,8 @@ function Routes() {
   else if (section === 'events' && id) page = <EventDetailPage eventId={id} />
   else if (section === 'events') page = <EventsPage />
   else if (section === 'profile') page = <ProfilePage />
+  else if (section === 'ranking') page = <RankingPage />
+  else if (section === 'results') page = <ResultsPage />
   else page = <UpcomingPage section={section} />
   return <AppLayout section={section}>{page}</AppLayout>
 }

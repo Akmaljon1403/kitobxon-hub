@@ -1,0 +1,167 @@
+import { useState } from 'react'
+
+import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
+import { Card } from '../components/ui'
+import { useAsync } from '../hooks/useAsync'
+import { useAuth } from '../store/auth'
+import type { FacultyRanking, Ranking, RankingRow } from '../types/api'
+
+type Period = 'week' | 'month' | 'all'
+type Scope = 'all' | 'faculty' | 'group' | 'faculties'
+
+const PERIODS: { value: Period; label: string }[] = [
+  { value: 'week', label: 'Hafta' },
+  { value: 'month', label: 'Oy' },
+  { value: 'all', label: 'Umumiy' },
+]
+const SCOPES: { value: Scope; label: string }[] = [
+  { value: 'all', label: 'Hammasi' },
+  { value: 'faculty', label: 'Fakultetim' },
+  { value: 'group', label: 'Guruhim' },
+  { value: 'faculties', label: 'Fakultetlar' },
+]
+const MEDALS = ['🥇', '🥈', '🥉']
+
+function Place({ rank }: { rank: number }) {
+  return (
+    <span className="w-8 shrink-0 text-center text-lg font-semibold tabular-nums">
+      {rank <= 3 ? MEDALS[rank - 1] : rank}
+    </span>
+  )
+}
+
+function Row({ row }: { row: RankingRow }) {
+  return (
+    <li className={`flex items-center gap-3 px-3 py-2.5 ${row.is_me ? 'rounded-xl bg-app-button/10' : ''}`}>
+      <Place rank={row.rank} />
+      <div className="min-w-0 flex-1">
+        <p className={`truncate ${row.is_me ? 'font-semibold' : 'font-medium'}`}>
+          {row.name}
+          {row.is_me && ' (siz)'}
+        </p>
+        <p className="truncate text-xs text-app-hint">
+          {[row.faculty, row.group_name].filter(Boolean).join(' · ')}
+        </p>
+      </div>
+      <span className="font-semibold tabular-nums">{row.total}</span>
+    </li>
+  )
+}
+
+function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
+}) {
+  return (
+    <div className="grid gap-1 rounded-xl bg-app-bg p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="tablist">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          onClick={() => onChange(option.value)}
+          className={`truncate rounded-lg px-1 py-2 text-[13px] font-medium ${value === option.value ? 'bg-app-button text-app-button-text' : 'text-app-hint'}`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Leaderboard({ period, scope }: { period: Period; scope: Exclude<Scope, 'faculties'> }) {
+  const { api } = useAuth()
+  const { state, reload } = useAsync(
+    (signal) => api<Ranking>(`/api/v1/rankings?period=${period}&scope=${scope}&limit=50`, { signal }),
+    [period, scope],
+  )
+  if (state.status === 'loading') return <LoadingState />
+  if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
+  const { items, me } = state.data
+  const meVisible = items.some((row) => row.is_me)
+  return (
+    <>
+      <Card className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-app-hint">Sizning o'rningiz</p>
+          <p className="text-2xl font-semibold">{me ? `${me.rank}-o'rin` : '—'}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-app-hint">Ballaringiz</p>
+          <p className="text-2xl font-semibold tabular-nums">{me?.total ?? 0}</p>
+        </div>
+      </Card>
+      {items.length === 0 ? (
+        <EmptyState icon="🏆" title="Hali ball to'plaganlar yo'q">
+          Tadbirlarda qatnashing va testlarni ishlang — ismingiz shu yerda chiqadi.
+        </EmptyState>
+      ) : (
+        <Card className="p-1">
+          <ol>
+            {items.map((row) => (
+              <Row key={`${row.rank}-${row.name}`} row={row} />
+            ))}
+          </ol>
+          {me && !meVisible && (
+            <ol className="mt-1 border-t border-app-hint/15 pt-1">
+              <Row row={me} />
+            </ol>
+          )}
+        </Card>
+      )}
+    </>
+  )
+}
+
+function FacultyBoard({ period }: { period: Period }) {
+  const { api } = useAuth()
+  const { state, reload } = useAsync(
+    (signal) => api<FacultyRanking[]>(`/api/v1/rankings/faculties?period=${period}`, { signal }),
+    [period],
+  )
+  if (state.status === 'loading') return <LoadingState />
+  if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
+  return (
+    <Card className="p-1">
+      <ol>
+        {state.data.map((row) => (
+          <li key={row.faculty} className="flex items-center gap-3 px-3 py-2.5">
+            <Place rank={row.rank} />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{row.faculty}</p>
+              <p className="text-xs text-app-hint">
+                {row.members} a'zo · jami {row.total} ball
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-semibold tabular-nums">{row.average}</p>
+              <p className="text-[10px] text-app-hint">o'rtacha</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  )
+}
+
+export function RankingPage() {
+  const [period, setPeriod] = useState<Period>('week')
+  const [scope, setScope] = useState<Scope>('all')
+  return (
+    <>
+      <h1 className="px-1 pt-1 text-xl font-semibold">🏆 Reyting</h1>
+      <Segmented options={PERIODS} value={period} onChange={setPeriod} />
+      <Segmented options={SCOPES} value={scope} onChange={setScope} />
+      {scope === 'faculties' ? <FacultyBoard period={period} /> : <Leaderboard period={period} scope={scope} />}
+      <p className="px-2 text-center text-xs text-app-hint">
+        Teng ballarda: davomat bali, keyin test bali, keyin ballni avvalroq to'plagan yuqorida turadi.
+      </p>
+    </>
+  )
+}

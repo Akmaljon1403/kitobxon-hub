@@ -36,6 +36,11 @@ async def list_scores(
     )
 
 
+@router.get("/scores/summary", summary="A member's total and breakdown")
+async def score_summary(user_id: uuid.UUID, _: ScoreViewer, db: DbSession) -> dict:
+    return await ranking_service.score_summary(db, user_id)
+
+
 @router.post("/scores/adjust", status_code=status.HTTP_201_CREATED, summary="Add or remove points (reason required)")
 async def adjust(payload: ScoreAdjustIn, current: ScoreManager, db: DbSession) -> dict[str, uuid.UUID]:
     transaction_id = await scoring.manual_adjustment(

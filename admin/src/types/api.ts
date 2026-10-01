@@ -196,3 +196,43 @@ export interface AttendanceToken {
   rotates_at: string
   session_closes_at: string
 }
+
+export interface ScoreEntry {
+  id: string
+  user_id: string
+  user_name: string
+  amount: number
+  category: string
+  effective_category: string
+  source_type: string | null
+  source_title: string | null
+  reason: string | null
+  is_reversed: boolean
+  created_at: string
+}
+
+export interface ScoreSummary {
+  total: number
+  breakdown: Record<string, number>
+  season: { name: string | null; total: number } | null
+}
+
+export interface Season {
+  id: string
+  name: string
+  starts_on: string
+  ends_on: string
+  status: string
+  is_current: boolean
+}
+
+export interface RankingRow {
+  rank: number
+  name: string
+  faculty: string | null
+  group_name: string | null
+  total: number
+  attendance: number
+  tests: number
+  is_me: boolean
+}

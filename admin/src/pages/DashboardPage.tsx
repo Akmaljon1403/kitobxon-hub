@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useSession } from '../store/session'
 import type { Statistics } from '../types/api'
 import { navigate } from '../utils/router'
+import { TopMembers } from './ScoresPage'
 
 function StatTile({ label, value, hint, onClick }: { label: string; value: number; hint?: string; onClick?: () => void }) {
   const content = (
@@ -78,7 +79,10 @@ export function DashboardPage() {
             <StatTile label="Kitob o'qiyotganlar" value={state.data.books.readers} />
             <StatTile label="O'qib tugatilgan kitoblar" value={state.data.books.completions} />
           </div>
-          <FacultyBars rows={state.data.faculties} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <FacultyBars rows={state.data.faculties} />
+            {can('SCORE_VIEW') && <TopMembers limit={5} />}
+          </div>
         </>
       )}
     </>

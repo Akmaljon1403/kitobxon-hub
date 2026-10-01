@@ -121,3 +121,55 @@ export interface CheckInResult {
   points: number
   checked_in_at: string
 }
+
+export interface ScoreEntry {
+  id: string
+  amount: number
+  category: string
+  effective_category: string
+  source_type: string | null
+  source_title: string | null
+  reason: string | null
+  is_reversed: boolean
+  created_at: string
+}
+
+export interface MyScores {
+  total: number
+  breakdown: Record<string, number>
+  season: { name: string | null; total: number } | null
+  history: ScoreEntry[]
+}
+
+export interface RankingRow {
+  rank: number
+  name: string
+  faculty: string | null
+  group_name: string | null
+  total: number
+  attendance: number
+  tests: number
+  is_me: boolean
+}
+
+export interface Ranking {
+  period: 'week' | 'month' | 'season' | 'all'
+  scope: 'all' | 'faculty' | 'group'
+  starts_at: string | null
+  items: RankingRow[]
+  me: RankingRow | null
+}
+
+export interface FacultyRanking {
+  rank: number
+  faculty: string
+  members: number
+  total: number
+  average: number
+}
+
+export interface MyRanking {
+  week: RankingRow | null
+  month: RankingRow | null
+  all: RankingRow | null
+}

@@ -11,6 +11,7 @@ import { FacultiesPage } from './pages/FacultiesPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { QuotesPage } from './pages/QuotesPage'
+import { ScoresPage } from './pages/ScoresPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SessionProvider, useSession } from './store/session'
 import { useRoute } from './utils/router'
@@ -21,6 +22,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   books: BooksPage,
   quotes: QuotesPage,
   events: EventsPage,
+  scores: ScoresPage,
   faculties: FacultiesPage,
   settings: SettingsPage,
   admins: AdminsPage,

@@ -4,7 +4,7 @@ import { ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
-import type { Book, ClubEvent, Page } from '../types/api'
+import type { Book, ClubEvent, MyRanking, Page } from '../types/api'
 import { EventCard } from './EventsPage'
 import { daysUntil, formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
@@ -30,6 +30,7 @@ export function HomePage() {
   const { me, api } = useAuth()
   const { state, reload } = useAsync((signal) => api<Page<Book>>('/api/v1/books?limit=3', { signal }))
   const events = useAsync((signal) => api<Page<ClubEvent>>('/api/v1/events?scope=upcoming&limit=1', { signal }))
+  const ranking = useAsync((signal) => api<MyRanking>('/api/v1/me/ranking', { signal }))
   if (!me) return null
 
   const current = state.status === 'success' ? state.data.items.find((book) => book.status === 'ACTIVE') : undefined
@@ -42,6 +43,14 @@ export function HomePage() {
           <p className="text-sm text-app-hint">Assalomu alaykum,</p>
           <h1 className="truncate text-lg font-semibold">{me.first_name}! 📖</h1>
         </div>
+        {ranking.state.status === 'success' && (
+          <button type="button" onClick={() => navigate('/results')} className="ml-auto text-right">
+            <p className="text-xl font-semibold tabular-nums">{ranking.state.data.all?.total ?? 0}</p>
+            <p className="text-xs text-app-hint">
+              {ranking.state.data.all ? `ball · ${ranking.state.data.all.rank}-o'rin` : 'ball'}
+            </p>
+          </button>
+        )}
       </Card>
 
       <SectionTitle>Joriy kitob</SectionTitle>
