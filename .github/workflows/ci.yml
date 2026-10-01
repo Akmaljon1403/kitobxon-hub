@@ -124,17 +124,19 @@ jobs:
             (cd "$app" && npm ci && npm run build)
             mkdir -p "backend/static/$app" && cp -r "$app/dist/." "backend/static/$app/"
           done
-      - name: Prepare the database
-        working-directory: backend
-        run: |
-          alembic upgrade head
-          PYTHONPATH=. python ../e2e/seed.py
       - name: Install Playwright
         working-directory: e2e
         run: |
           npm ci
           npx playwright install --with-deps chromium
           npm run typecheck
+      # Seeded right before the run: the one-time admin links expire after 5 minutes, and
+      # installing the browser can take that long on a slow package mirror.
+      - name: Prepare the database
+        working-directory: backend
+        run: |
+          alembic upgrade head
+          PYTHONPATH=. python ../e2e/seed.py
       - name: Run browser journeys
         working-directory: e2e
         run: npx playwright test
