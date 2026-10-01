@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     admin_faculties,
     admin_notifications,
     admin_quizzes,
+    admin_reports,
     admin_scores,
     admin_system,
     admin_users,
@@ -44,6 +45,7 @@ for module in (
     admin_scores,
     admin_notifications,
     admin_achievements,
+    admin_reports,
     admin_system,
 ):
     api_router.include_router(module.router)

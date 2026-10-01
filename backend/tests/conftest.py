@@ -9,6 +9,7 @@ the ``public`` schema of that database.
 from __future__ import annotations
 
 import os
+import tempfile
 
 os.environ.setdefault("TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/kitobxon_test")
 os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
@@ -21,6 +22,9 @@ os.environ["BOT_USERNAME"] = "kitobxon_test_bot"
 os.environ["SUPER_ADMIN_TELEGRAM_IDS"] = "900000001"
 os.environ.pop("REDIS_URL", None)
 os.environ["WORKER_ENABLED"] = "false"
+os.environ["STORAGE_BACKEND"] = "local"
+os.environ["STORAGE_LOCAL_PATH"] = tempfile.mkdtemp(prefix="kitobxon-test-storage-")
+os.environ.pop("AI_API_KEY", None)
 
 import asyncio
 from collections.abc import AsyncIterator

@@ -114,7 +114,7 @@ class Settings(BaseSettings):
 
     # ---- AI report drafting (optional) ----
     ai_api_key: SecretStr | None = None
-    ai_model: str = "claude-sonnet-5-5"
+    ai_model: str = "claude-opus-5-5"
 
     @field_validator("cors_origins", mode="before")
     @classmethod
