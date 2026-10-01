@@ -12,6 +12,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import BaseEventIsolation
 from aiogram.fsm.storage.memory import SimpleEventIsolation
 from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
+from aiogram.utils.token import TokenValidationError, validate_token
 
 from app.bot import texts
 from app.bot.errors import on_error
@@ -82,8 +83,27 @@ def get_bot_runtime() -> BotRuntime | None:
     if not settings.bot_enabled or settings.bot_token is None:
         return None
     if _runtime is None:
-        _runtime = BotRuntime(create_bot(settings.bot_token.get_secret_value()), create_dispatcher())
+        token = settings.bot_token.get_secret_value()
+        if not bot_token_is_valid(token):
+            return None  # reported once by bot_token_is_valid; the API keeps running without the bot
+        _runtime = BotRuntime(create_bot(token), create_dispatcher())
     return _runtime
+
+
+_reported_invalid_token = False
+
+
+def bot_token_is_valid(token: str) -> bool:
+    """BotFather tokens look like ``123456789:AA...``; anything else would crash aiogram."""
+    global _reported_invalid_token
+    try:
+        validate_token(token)
+    except TokenValidationError:
+        if not _reported_invalid_token:
+            logger.error("BOT_TOKEN is not a valid Telegram bot token; the bot is disabled until it is fixed")
+            _reported_invalid_token = True
+        return False
+    return True
 
 
 async def close_bot_runtime() -> None:

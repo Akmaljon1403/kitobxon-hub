@@ -82,10 +82,20 @@ async def _telegram() -> list[Check]:
     if settings.bot_mode != "webhook":
         return [Check("bot", "info", "Telegram bot", f"Rejim: {settings.bot_mode} (serverda odatda «webhook»).")]
     runtime = get_bot_runtime()
+    if runtime is None:
+        return [
+            Check(
+                "bot",
+                "error",
+                "Telegram bot",
+                "BOT_TOKEN noto'g'ri — bot o'chirilgan. @BotFather bergan tokenni (123456789:AA... ko'rinishida) "
+                "qayta nusxalab, Render → Environment → BOT_TOKEN ga qo'ying.",
+            )
+        ]
     expected = f"{settings.base_url.rstrip('/')}{WEBHOOK_PATH}" if settings.base_url else None
     try:
         async with asyncio.timeout(_TELEGRAM_TIMEOUT_SECONDS):
-            info = await runtime.bot.get_webhook_info()  # type: ignore[union-attr]
+            info = await runtime.bot.get_webhook_info()
     except Exception as exc:
         logger.warning("Webhook check failed: %s", type(exc).__name__)
         return [
@@ -114,7 +124,7 @@ async def _telegram() -> list[Check]:
                 f"Navbatda {info.pending_update_count} ta xabar.",
             )
         ]
-    username = f"@{runtime.username}" if runtime and runtime.username else "bot"  # type: ignore[union-attr]
+    username = f"@{runtime.username}" if runtime and runtime.username else "bot"
     return [Check("bot", "ok", "Telegram bot", f"{username} xabarlarni qabul qilyapti.")]
 
 

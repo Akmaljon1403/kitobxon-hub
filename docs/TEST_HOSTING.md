@@ -46,7 +46,8 @@ Telegram orqali qilinadi. Taxminan **30–40 daqiqa** vaqt oladi.
    * **Postgres version:** taklif qilinganini qoldiring
    * **Region:** **AWS Europe Central 1 (Frankfurt)** — O'zbekistonga eng yaqinlaridan biri
 3. **Create project** ni bosing.
-4. Ochilgan sahifada **Connect** (yoki **Connection string**) tugmasini bosing.
+4. Ochilgan sahifada **Connect** (yoki **Connection string**) tugmasini bosing. Oynadagi ro'yxatdan
+   **Connection string** ni tanlang (`psql` emas).
 5. `postgresql://...` bilan boshlanadigan uzun manzilni **Copy** qiling. U taxminan shunday ko'rinadi:
    `postgresql://neondb_owner:AbC123...@ep-cool-name-123456.eu-central-1.aws.neon.tech/neondb?sslmode=require`
 6. Bu manzilni ham vaqtincha saqlab qo'ying — bu ham **maxfiy** (ichida parol bor).
@@ -165,6 +166,8 @@ dagi qadamlarni bajaring: fayllar uchun doimiy ombor, har kungi zaxira nusxa, ku
 |---|---|---|
 | Bot umuman javob bermaydi, 2–3 daqiqadan keyin ham | Token noto'g'ri yoki server ishlamayapti | Render → **Logs** bo'limini oching. `Could not configure the Telegram bot` yozuvi bo'lsa — `BOT_TOKEN` ni tekshiring (bo'sh joy qolmaganiga e'tibor bering) va **Save** qiling |
 | `/health/db` xato beradi | `DATABASE_URL` noto'g'ri | Neon'dan manzilni qaytadan nusxalang (to'liq, `postgresql://` dan oxirigacha) |
+| Render'da **Failed deploy**, Logs'da `❌ Sozlamalarda xato` | Qaysi qiymat noto'g'ri ekani shu qatorda o'zbekcha yozilgan | Ko'rsatilgan qiymatni Render → **Environment** da tuzating → **Save Changes** (server o'zi qayta urinadi) |
+| Logs'da `DATABASE_URL must be a PostgreSQL URL` | Manzil o'rniga boshqa matn qo'yilgan | Render → **Environment** → `DATABASE_URL` qiymati aynan `postgresql://` bilan boshlanishi kerak. Neon → **Connect** → **Connection string** dan qayta nusxalang |
 | Render'da **Build failed** | Kodda xatolik | GitHub → **Actions** bo'limida yashil ✅ bor-yo'qligini tekshiring va menga Logs'dagi oxirgi qizil qatorlarni yuboring |
 | Mini App "Internet aloqasi yo'q" deydi | Server uxlayapti | 1 daqiqa kutib, **Qayta urinish** ni bosing |
 | `/admin` "faqat administratorlar uchun" deydi | Telegram ID kiritilmagan | 5-qadamni bajaring; `/myid` dagi raqam bilan bir xil ekanini tekshiring |
