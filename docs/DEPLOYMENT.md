@@ -119,8 +119,9 @@ repository secrets (Settings → Secrets and variables → Actions):
 | `BACKUP_PASSPHRASE` | a long random password, also stored outside GitHub (password manager / sealed envelope) |
 
 Until both exist the workflow stays green and prints a reminder. Scheduled workflows run on the
-repository's **default branch**, so merge the code into it. `pg_dump` runs from the
-`postgres:18` image (must not be older than the server; override with `PG_IMAGE`). CI exercises
+repository's **default branch**, so merge the code into it. `pg_dump` / `pg_restore` run from the
+official `postgres:<major>` image matching the server's major version (detected automatically;
+override with `PG_IMAGE`, or use installed tools with `PG_TOOLS=local`). CI exercises
 the whole cycle (backup → verify → restore into a new database → compare row counts) on every push.
 
 ### On your own server (cron)
@@ -190,7 +191,7 @@ Cloudflare R2 (10 GB free):
 | Database | `GET /health/db` |
 | Redis | `GET /health/redis` (`not_configured` when unused) |
 | Logs | JSON lines on stdout with `request_id`; ship them to any log service. Secrets are redacted. |
-| Uptime | Any HTTP monitor (UptimeRobot, Better Stack) on `/health` and `/health/db` |
+| Uptime | Any HTTP monitor (UptimeRobot, Better Stack) on `/health`, and on `/health/db` for an always-on database. On a serverless database billed by compute time (Neon free) do not poll `/health/db` every few minutes: it keeps the database awake; use the Admin Panel's *Tizim holati* instead |
 
 ## 8. Go-live checklist
 
@@ -199,7 +200,7 @@ Cloudflare R2 (10 GB free):
 - [ ] At least two super admins (`SUPER_ADMIN_TELEGRAM_IDS`, then Admin Panel → Adminlar)
 - [ ] Object storage configured (`STORAGE_BACKEND=s3`), bucket private, versioning on
 - [ ] Backup secrets configured; one manual *Database backup* run succeeded; one restore practised
-- [ ] Uptime monitor on `/health` and `/health/db` (alerts by e-mail/Telegram)
+- [ ] Uptime monitor on `/health` (alerts by e-mail/Telegram); `/health/db` only for an always-on database
 - [ ] Organisation details filled in (Admin Panel → Sozlamalar → Tashkilot) for official reports
 - [ ] Faculties checked, first book, event and test created; a test member went through the
       registration → check-in → test flow

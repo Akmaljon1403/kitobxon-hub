@@ -83,8 +83,11 @@ Agar hali qilmagan bo'lsangiz ([TEST_HOSTING.md](TEST_HOSTING.md) dagi "serverni
 
 1. **https://uptimerobot.com** → bepul ro'yxatdan o'ting.
 2. **New monitor** → **HTTP(s)** → URL: `https://SIZNING-MANZIL.onrender.com/health` → interval **5 daqiqa**.
-3. Ikkinchi monitor: `https://SIZNING-MANZIL.onrender.com/health/db` (ma'lumotlar bazasi uchun).
-4. **Alert contacts** da emailingizni (xohlasangiz Telegram'ni ham) belgilang — server to'xtasa xabar keladi.
+3. **Alert contacts** da emailingizni (xohlasangiz Telegram'ni ham) belgilang — server to'xtasa xabar keladi.
+
+⚠️ `/health/db` manzilini bepul tarifda **5 daqiqalik** monitorga qo'ymang: u ma'lumotlar bazasini
+doim uyg'oq ushlab turadi va Neon'ning oylik bepul limiti tugab qoladi. Baza holatini
+**Tizim holati** sahifasida ko'rasiz.
 
 ---
 
