@@ -25,3 +25,7 @@ services:
         sync: false
       - key: SUPER_ADMIN_TELEGRAM_IDS
         sync: false
+      # Reminders are checked every 30 minutes so the free Neon database can sleep in between
+      # (Neon's free plan has a monthly compute limit). Use 60 on a paid/always-on database.
+      - key: WORKER_INTERVAL_SECONDS
+        value: "1800"

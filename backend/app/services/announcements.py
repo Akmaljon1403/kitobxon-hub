@@ -18,6 +18,7 @@ from typing import Any
 from sqlalchemy import Select, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models import (
     Book,
     BookQuote,
@@ -166,8 +167,12 @@ async def test_results(session: AsyncSession, test: Test, standings: list[dict[s
 
 
 def reminder_window(minutes: int) -> timedelta:
-    """How long after "M minutes before" a reminder is still worth sending."""
-    return timedelta(minutes=min(max(minutes // 2, 10), 180))
+    """How long after "M minutes before" a reminder is still worth sending.
+
+    Never shorter than the scheduler interval (plus a margin), so a check always falls inside it.
+    """
+    window = timedelta(minutes=min(max(minutes // 2, 10), 180))
+    return max(window, timedelta(seconds=get_settings().worker_interval_seconds + 120))
 
 
 async def event_reminders(session: AsyncSession, now: datetime | None = None) -> int:

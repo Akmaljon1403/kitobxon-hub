@@ -318,3 +318,13 @@ export interface AttemptDetail {
   answers: { question: string; selected: string[]; correct: string[]; is_correct: boolean | null; answered_at: string | null }[]
   activity: { type: string; at: string; details: Record<string, unknown> | null }[]
 }
+
+export interface NotificationSummary {
+  pending: number
+  sent_24h: number
+  failed_24h: number
+  skipped_24h: number
+  worker_enabled: boolean
+  bot_configured: boolean
+  recent_broadcasts: { at: string; actor: string | null; message: string; recipients: number; filters: Record<string, unknown> }[]
+}

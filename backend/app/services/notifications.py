@@ -92,7 +92,9 @@ async def render(session: AsyncSession, type_: NotificationType, **values: Any) 
     template = await session.scalar(select(NotificationTemplate).where(NotificationTemplate.type == type_))
     if template is None or not template.is_active:
         return None
-    safe = _Values(str, {key: html.escape(str(value), quote=False) if value is not None else "—" for key, value in values.items()})
+    safe = _Values(
+        str, {key: html.escape(str(value), quote=False) if value is not None else "—" for key, value in values.items()}
+    )
     return template.body.format_map(safe).strip()
 
 
