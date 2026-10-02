@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{ heading }} — {{ club }}</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f3f6f4; --card: #fff; --text: #14231c; --hint: #5f6f67; --ok: #1f7a4d; --bad: #b42318; --line: #e3e9e5; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0f1713; --card: #18231d; --text: #eef3f0; --hint: #9fb0a7; --ok: #4cc38a; --bad: #f97066; --line: #26352d; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 32px 16px; }
+  .card { background: var(--card); border-radius: 20px; padding: 28px 22px; box-shadow: 0 6px 24px rgba(0,0,0,.06); }
+  .badge { font-size: 44px; line-height: 1; }
+  h1 { font-size: 21px; margin: 12px 0 4px; }
+  .state { font-weight: 600; color: var(--ok); }
+  .state.bad { color: var(--bad); }
+  dl { margin: 20px 0 0; border-top: 1px solid var(--line); }
+  dt { color: var(--hint); font-size: 13px; margin-top: 12px; }
+  dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+  footer { color: var(--hint); font-size: 13px; text-align: center; margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="badge">{{ icon }}</div>
+    <h1>{{ heading }}</h1>
+    <div class="state{% if not valid %} bad{% endif %}">{{ state }}</div>
+    {% if rows %}
+    <dl>
+      {% for label, value in rows %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
+    </dl>
+    {% endif %}
+  </div>
+  <footer>{{ organization }} · {{ club }}<br>Tekshirilgan vaqt: {{ checked_at }}</footer>
+</main>
+</body>
+</html>

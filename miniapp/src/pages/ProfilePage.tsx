@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Avatar } from '../components/Avatar'
+import { PassportCard } from '../components/PassportCard'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle, Toggle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -158,6 +159,8 @@ export function ProfilePage() {
         {me.is_admin && <Badge tone="info">Administrator</Badge>}
       </Card>
 
+      <PassportCard />
+
       <SectionTitle>O'qish joyi</SectionTitle>
       {editing ? (
         <ProfileEditor me={me} onDone={() => setEditing(false)} />
@@ -173,13 +176,16 @@ export function ProfilePage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => navigate('/rewards')}>
-          <Card className="flex items-center gap-2 py-3 text-[15px] font-medium">🎁 Sovg'alarim</Card>
-        </button>
-        <button type="button" onClick={() => navigate('/achievements')}>
-          <Card className="flex items-center gap-2 py-3 text-[15px] font-medium">🏅 Yutuqlarim</Card>
-        </button>
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { route: '/certificates', label: '🎓 Sertifikatlar' },
+          { route: '/achievements', label: '🏅 Yutuqlar' },
+          { route: '/rewards', label: "🎁 Sovg'alar" },
+        ].map((item) => (
+          <button key={item.route} type="button" onClick={() => navigate(item.route)}>
+            <Card className="flex items-center justify-center py-3 text-sm font-medium">{item.label}</Card>
+          </button>
+        ))}
       </div>
 
       <SectionTitle>Bildirishnomalar</SectionTitle>

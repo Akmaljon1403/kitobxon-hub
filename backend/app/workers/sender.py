@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 LEASE = timedelta(minutes=5)
 MAX_ATTEMPTS = 5
 SEND_INTERVAL_SECONDS = 1 / 25
+CAPTION_LIMIT = 1024  # Telegram's limit for a file caption
 
 
 @dataclass
@@ -142,7 +144,8 @@ async def send_due_notifications(
                 _finish(notification, NotificationStatus.SKIPPED, "outdated")
                 report.skipped += 1
             else:
-                retry_after = await _deliver(bot, notification, user, report)
+                document = await _document(session, notification)
+                retry_after = await _deliver(bot, notification, user, report, document)
                 if retry_after is not None:
                     # Telegram asked us to slow down: put the rest of the batch back as well.
                     for waiting in batch[index + 1 :]:
@@ -163,15 +166,47 @@ async def send_due_notifications(
     return report
 
 
-async def _deliver(bot: Bot, notification: Notification, user: User, report: SendReport) -> int | None:
+async def _document(session: AsyncSession, notification: Notification) -> BufferedInputFile | None:
+    """The file sent together with the message (a certificate PDF), if any."""
+    certificate_id = (notification.payload or {}).get("certificate_id")
+    if not certificate_id:
+        return None
+    from app.services import certificates
+
+    try:
+        certificate = await certificates.get(session, uuid.UUID(certificate_id))
+        if certificate.revoked_at is not None:
+            return None
+        data = await certificates.pdf_bytes(session, certificate)
+        return BufferedInputFile(data, filename=certificates.filename(certificate))
+    except Exception:  # the message itself still matters; the member can download the file later
+        logger.exception("Certificate %s could not be attached", certificate_id)
+        return None
+
+
+async def _deliver(
+    bot: Bot,
+    notification: Notification,
+    user: User,
+    report: SendReport,
+    document: BufferedInputFile | None = None,
+) -> int | None:
     """Send one message and record the outcome. Returns seconds to wait if rate-limited."""
     try:
-        message = await bot.send_message(
-            chat_id=user.telegram_id,
-            text=notification.text,
-            reply_markup=_markup(notification.payload),
-            disable_web_page_preview=True,
-        )
+        if document is not None and len(notification.text) <= CAPTION_LIMIT:
+            message = await bot.send_document(
+                chat_id=user.telegram_id,
+                document=document,
+                caption=notification.text,
+                reply_markup=_markup(notification.payload),
+            )
+        else:
+            message = await bot.send_message(
+                chat_id=user.telegram_id,
+                text=notification.text,
+                reply_markup=_markup(notification.payload),
+                disable_web_page_preview=True,
+            )
     except TelegramRetryAfter as exc:
         notification.scheduled_at = datetime.now(UTC) + timedelta(seconds=exc.retry_after)
         notification.attempts -= 1

@@ -146,7 +146,8 @@ RANKING_ME = "Siz: <b>{rank}-o'rin</b>, {total} ball"
 RANKING_ME_NONE = "Siz bu oy hali ball to'plamadingiz."
 RANKING_EMPTY = "🏆 Bu oy hali hech kim ball to'plamadi. Birinchi bo'ling!"
 
-ACHIEVEMENTS = "🏅 <b>Yutuqlarim</b>: {done} / {total}\n{last}{next}"
+ACHIEVEMENTS = "🏅 <b>Yutuqlarim</b>: {done} / {total}\n{last}{next}{certificates}"
+ACHIEVEMENTS_CERTIFICATES = "\n\n🎓 Sertifikatlar: {count}"
 ACHIEVEMENTS_LAST = "\nOxirgisi: {icon} {title}"
 ACHIEVEMENTS_NEXT = "\nKeyingisi: {icon} {title} — {progress}/{threshold}"
 ACHIEVEMENTS_NONE = "🏅 Hozircha yutuqlar sozlanmagan."
@@ -158,6 +159,20 @@ PASSPORT = (
     "🎓 {course}-kurs, {group}-guruh\n"
     "📅 A'zo bo'lgan: {registered}\n"
     "🏆 {total} ball"
+)
+BTN_PASSPORT_FILE = "📥 Fayl sifatida (asl sifat)"
+BTN_CERTIFICATES = "🎓 Sertifikatlarim"
+FILE_SENT = "Yuborildi ✅"
+FILE_FAILED = "Faylni tayyorlab bo'lmadi. Birozdan keyin qayta urinib ko'ring."
+CERTIFICATES = (
+    "🎓 <b>Sertifikatlaringiz</b> — {count} ta\n\nQaysi birini yuboray? PDF faylni yuklab olib, chop etishingiz mumkin."
+)
+CERTIFICATES_NONE = (
+    "🎓 Hozircha sertifikatingiz yo'q.\n\n"
+    "Sertifikat avtomatik beriladi:\n"
+    "• testda 1-, 2- yoki 3-o'rinni olganlarga (tadbir testida — davomatdan o'tganlarga);\n"
+    "• oy yakunida reytingdagi eng faol uchlikka.\n\n"
+    "Omad! 💪"
 )
 
 SETTINGS = (

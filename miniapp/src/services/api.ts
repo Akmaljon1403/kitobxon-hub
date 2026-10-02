@@ -74,3 +74,26 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
   return payload as T
 }
+
+/** A file (image, PDF) from an authenticated endpoint. */
+export async function apiBlob(path: string, token: string): Promise<Blob> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } })
+  } catch {
+    throw new ApiError('NETWORK_ERROR', "Internet aloqasi yo'q. Qayta urinib ko'ring.", 0)
+  }
+  if (!response.ok) {
+    let message = "Faylni yuklab bo'lmadi. Keyinroq urinib ko'ring."
+    let code = 'HTTP_ERROR'
+    try {
+      const body = (await response.json()) as ApiErrorBody
+      message = body.error?.message ?? message
+      code = body.error?.code ?? code
+    } catch {
+      // not JSON
+    }
+    throw new ApiError(code, message, response.status)
+  }
+  return response.blob()
+}

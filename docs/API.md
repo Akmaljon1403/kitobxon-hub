@@ -87,6 +87,8 @@ Blocking a user or removing admin rights has the same effect immediately.
 |---|---|---|
 | GET | `/health`, `/health/db`, `/health/redis` | Health checks |
 | GET | `/api/v1/meta` | App name, version, bot username |
+| GET | `/v/{code}` | HTML page behind the QR codes: checks a Kitobxon passport (`KH000042-XXXXXXXX`, HMAC-signed) or a certificate (10-character code). Shows only what is printed on the document; 60/min per IP |
+| GET | `/api/v1/files/{token}` | A passport PNG or certificate PDF behind a signed link that expires after 5 minutes (made by `POST /me/downloads`); 30/min per IP |
 
 ### Authentication
 
@@ -128,6 +130,12 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/me/rewards` | My rewards (codes are never included in the list) |
 | POST | `/api/v1/me/rewards/{id}/code` | Reveal my promo code (only the recipient; marks it delivered) |
 | POST | `/api/v1/me/rewards/{id}/redeemed` | "I have used it" |
+| GET | `/api/v1/me/passport[?download=true]` | My Kitobxon passport as a PNG ID card (Telegram photo, stats, verification QR). 20 files/min |
+| POST | `/api/v1/me/passport/send` | The bot sends the passport (PNG file) to my chat. 6/min; 409 `BOT_BLOCKED`, 503 `BOT_UNAVAILABLE` |
+| GET | `/api/v1/me/certificates` | My certificates (revoked ones are hidden) |
+| GET | `/api/v1/me/certificates/{id}/pdf` | Certificate PDF (A4 landscape) — only the owner |
+| POST | `/api/v1/me/certificates/{id}/send` | The bot sends the PDF to my chat |
+| POST | `/api/v1/me/downloads` | `{"kind": "passport" \| "certificate", "id"?}` → `{url, filename, expires_in}` for Telegram's `downloadFile` |
 
 ### Admin: access control
 
@@ -245,6 +253,19 @@ Blocking a user or removing admin rights has the same effect immediately.
 | POST | `/api/v1/admin/rewards/{id}/assign` | `{"user_id", "note"?, "idempotency_key"?}` — gives the next unused code; one active assignment per member and reward; audited; member notified |
 | GET | `/api/v1/admin/rewards/{id}/recipients` | |
 | POST | `/api/v1/admin/user-rewards/{id}/status` | `DELIVERED` / `REDEEMED` / `REVOKED` (a revoked code is never handed out again) |
+
+### Admin: certificates (`REWARD_MANAGE`)
+
+Issued automatically: places 1–3 of every closed test (for a test linked to an event only members whose
+attendance at that event is VERIFIED take part), and places 1–3 of the previous month's ranking (job
+`monthly_certificates`, from 10:00 on the 1st; settings `certificates.*`). The bot sends the PDF.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/admin/certificates?q=&kind=` | search by name, title or code |
+| POST | `/api/v1/admin/certificates` | `{"user_id", "title", "description", "place"?}` — issue by hand (audited, member notified) |
+| POST | `/api/v1/admin/certificates/{id}/revoke` | `{"reason"}` — the QR page then shows "Bekor qilingan" |
+| GET | `/api/v1/admin/certificates/{id}/pdf` | download (a revoked one carries a stamp) |
 
 ### Admin: notifications
 

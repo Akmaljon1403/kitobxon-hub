@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
-import { ApiError, apiRequest, type RequestOptions } from '../services/api'
+import { ApiError, apiBlob, apiRequest, type RequestOptions } from '../services/api'
 import type { Me, PublicMeta, TokenResponse } from '../types/api'
 import { getWebApp } from '../utils/telegram'
 
@@ -18,6 +18,8 @@ interface AuthContextValue {
   meta: PublicMeta | null
   /** Authenticated API call; re-authenticates once with Telegram data when the token expired. */
   api: <T>(path: string, options?: Omit<RequestOptions, 'token'>) => Promise<T>
+  /** Authenticated file download (images, PDFs). */
+  download: (path: string) => Promise<Blob>
   refreshMe: () => Promise<void>
   retry: () => void
 }
@@ -79,6 +81,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signIn],
   )
 
+  const download = useCallback(
+    async (path: string): Promise<Blob> => {
+      const token = tokenRef.current ?? (await signIn())
+      try {
+        return await apiBlob(path, token)
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return apiBlob(path, await signIn())
+        throw error
+      }
+    },
+    [signIn],
+  )
+
   const refreshMe = useCallback(async () => {
     setMe(await api<Me>('/api/v1/me'))
   }, [api])
@@ -118,8 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [api, signIn, attempt])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, me, meta, api, refreshMe, retry: () => setAttempt((n) => n + 1) }),
-    [status, me, meta, api, refreshMe],
+    () => ({ status, me, meta, api, download, refreshMe, retry: () => setAttempt((n) => n + 1) }),
+    [status, me, meta, api, download, refreshMe],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

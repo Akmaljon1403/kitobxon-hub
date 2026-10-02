@@ -14,6 +14,7 @@ const GROUP_TITLES: Record<string, string> = {
   attendance: '✅ Davomat',
   notifications: '🔔 Bildirishnomalar',
   org: '🏛 Tashkilot (rasmiy hisobotlar uchun)',
+  certificates: '🎓 Sertifikatlar',
   ranking: '📊 Reyting',
 }
 

@@ -126,6 +126,18 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "Tashkilot (universitet) nomi",
     ),
     SettingDefinition("org.club_name", "Kitobxon Hub", ShortText, "Klub nomi"),
+    # ---- Certificates ----
+    SettingDefinition(
+        "certificates.test_winners",
+        True,
+        bool,
+        "Test g'oliblariga (1-3-o'rin) sertifikat avtomatik beriladi (tadbir testida — faqat davomatdan o'tganlarga)",
+    ),
+    SettingDefinition(
+        "certificates.monthly_top", True, bool, "Oy yakunida reytingdagi 1-3-o'rinlarga sertifikat beriladi"
+    ),
+    SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
+    SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.services import achievements, announcements
 from app.services import attendance as attendance_service
+from app.services import certificates as certificate_service
 from app.services import quizzes as quiz_service
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("monthly_top_ranks", achievements.monthly_top_ranks),
     # New jobs go last: the position is part of each job's lock id.
     ("attendance_auto_open", attendance_service.open_scheduled_sessions),
+    ("monthly_certificates", certificate_service.issue_monthly),
 )
 
 

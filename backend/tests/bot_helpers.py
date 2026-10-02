@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.base import BaseSession
 from aiogram.enums import ParseMode
-from aiogram.methods import AnswerCallbackQuery, SendMessage
+from aiogram.methods import AnswerCallbackQuery, SendDocument, SendMessage, SendPhoto
 from aiogram.methods.base import TelegramMethod
 from aiogram.types import CallbackQuery, Chat, Contact, Message, PhotoSize, Update
 from aiogram.types import User as TgUser
@@ -57,6 +57,13 @@ class FakeTelegramSession(BaseSession):
 
     def all_text(self) -> str:
         return "\n".join(message.text for message in self.sent_messages())
+
+    def last_caption(self) -> str:
+        """Caption of the last photo or file sent."""
+        for request in reversed(self.requests):
+            if isinstance(request, (SendPhoto, SendDocument)):
+                return request.caption or ""
+        return ""
 
     def alerts(self) -> list[str]:
         return [r.text or "" for r in self.requests if isinstance(r, AnswerCallbackQuery)]

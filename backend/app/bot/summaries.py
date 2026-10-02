@@ -19,7 +19,9 @@ from app.models.enums import AttendanceSessionStatus, BookStatus, ReadingStatus,
 from app.services import achievements as achievement_service
 from app.services import attendance as attendance_service
 from app.services import books as book_service
+from app.services import certificates as certificate_service
 from app.services import events as event_service
+from app.services import passport as passport_service
 from app.services import quizzes as quiz_service
 from app.services import ranking as ranking_service
 from app.utils.timezone import format_date, format_human, format_human_date, local_tz
@@ -179,11 +181,15 @@ async def achievements(session: AsyncSession, member: User) -> str:
         if upcoming
         else ""
     )
-    return texts.ACHIEVEMENTS.format(done=len(unlocked), total=len(items), last=last, next=nxt)
+    count = await certificate_service.count_for_member(session, member.id)
+    certificates = texts.ACHIEVEMENTS_CERTIFICATES.format(count=count) if count else ""
+    return texts.ACHIEVEMENTS.format(
+        done=len(unlocked), total=len(items), last=last, next=nxt, certificates=certificates
+    )
 
 
 def member_number(member: User) -> str:
-    return f"KH-{member.member_number:06d}"
+    return passport_service.member_number(member)
 
 
 async def passport(session: AsyncSession, member: User) -> str:

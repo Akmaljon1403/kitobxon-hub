@@ -63,6 +63,7 @@ your own reverse proxy (e.g. `127.0.0.1`) so that clients cannot fake their IP.
 | Everything | `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` (camera, microphone, geolocation, payment, USB off); `Strict-Transport-Security` in production |
 | API (`/api`, `/telegram`, `/health`) | `Cache-Control: no-store` (personal data never cached), `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` |
 | Admin Panel (`/admin`) | Content-Security-Policy: scripts from the same origin and Telegram's `telegram-web-app.js`, API calls only to the same origin, `frame-ancestors https://web.telegram.org` (the panel opens inside Telegram from the bot; no other site may embed it), `object-src 'none'`, `base-uri 'none'` |
+| QR verification page (`/v/<code>`) | `default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'`, `no-store`, `noindex`. Passport codes are HMAC-signed member numbers; certificate codes are 10 random characters (32^10). The page shows only what is printed on the document itself |
 | Mini App (`/app`) | Same policy, plus Telegram's `telegram-web-app.js`. It may be framed, because Telegram Web shows Mini Apps in an iframe; a framed copy is useless to an attacker since signing in needs launch data signed by Telegram |
 
 Images may come from any `https:` address (book covers are external links). Book links accept only

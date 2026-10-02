@@ -166,7 +166,8 @@ DEFAULT_NOTIFICATION_TEMPLATES: tuple[TemplateSeed, ...] = (
     TemplateSeed(
         NotificationType.CERTIFICATE,
         "Sertifikat",
-        "🎓 Tabriklaymiz! Sizga «{title}» sertifikati berildi.\n{details}",
+        "🎓 <b>Tabriklaymiz! Sizga sertifikat berildi.</b>\n\n🏅 {title}\n\n"
+        "Sertifikat PDF fayl sifatida ilova qilingan — uni yuklab olib, chop etishingiz mumkin.\n{details}",
         is_critical=True,
     ),
     TemplateSeed(NotificationType.PREMIUM, "Premium obuna", "💎 {message}", is_critical=True),

@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { MemberAchievement } from '../types/api'
 import { formatDate } from '../utils/format'
+import { navigate } from '../utils/router'
 
 function Badge({ item }: { item: MemberAchievement }) {
   const unlocked = Boolean(item.unlocked_at)
@@ -43,11 +44,20 @@ export function AchievementsPage() {
   const locked = state.data.filter((item) => !item.unlocked_at)
   return (
     <>
-      <div className="px-1 pt-1">
-        <h1 className="text-xl font-semibold">🏅 Yutuqlar</h1>
-        <p className="text-sm text-app-hint">
-          {unlocked.length} / {state.data.length} ta yutuq qo'lga kiritildi
-        </p>
+      <div className="flex items-start justify-between gap-2 px-1 pt-1">
+        <div>
+          <h1 className="text-xl font-semibold">🏅 Yutuqlar</h1>
+          <p className="text-sm text-app-hint">
+            {unlocked.length} / {state.data.length} ta yutuq qo'lga kiritildi
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/certificates')}
+          className="shrink-0 rounded-xl bg-app-surface px-3 py-2 text-sm font-medium"
+        >
+          🎓 Sertifikatlarim
+        </button>
       </div>
       {state.data.length === 0 && <EmptyState icon="🏅" title="Hozircha yutuqlar yo'q" />}
       {unlocked.length > 0 && (

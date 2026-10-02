@@ -32,6 +32,8 @@ export interface Faculty {
 
 export interface Me {
   id: string
+  /** Membership number printed on the Kitobxon passport, e.g. KH-000042. */
+  member_number: string
   first_name: string
   last_name: string
   telegram_username: string | null
@@ -287,4 +289,22 @@ export interface MemberReward {
   has_code: boolean
   assigned_at: string
   redeemed_at: string | null
+}
+
+export type CertificateKind = 'TEST_PLACE' | 'MONTHLY_TOP' | 'MANUAL'
+
+export interface Certificate {
+  id: string
+  kind: CertificateKind
+  place: number | null
+  title: string
+  description: string
+  issued_at: string
+  code: string
+}
+
+export interface DownloadLink {
+  url: string
+  filename: string
+  expires_in: number
 }

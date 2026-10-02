@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.health import router as health_router
 from app.api.v1.router import api_router
+from app.api.verify import router as verify_router
 from app.bot.setup import close_bot_runtime, configure_telegram, get_bot_runtime
 from app.bot.webhook import router as telegram_router
 from app.core.config import Settings, get_settings
@@ -122,6 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(api_router)
     app.include_router(telegram_router)
+    app.include_router(verify_router)
     _mount_frontends(app, settings)
     return app
 
