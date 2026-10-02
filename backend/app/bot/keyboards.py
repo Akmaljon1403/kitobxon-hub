@@ -117,6 +117,32 @@ def section_more(route: str) -> InlineKeyboardMarkup | None:
     return inline([app_button(route, texts.BTN_MORE)])
 
 
+def passport() -> InlineKeyboardMarkup | None:
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_PASSPORT_FILE, callback_data="pp:file")],
+        [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [app_button("profile", texts.BTN_MORE)],
+    )
+
+
+def achievements() -> InlineKeyboardMarkup | None:
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [app_button("achievements", texts.BTN_MORE)],
+    )
+
+
+def certificates(items: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
+    """One button per certificate: (id, title)."""
+    return inline(
+        *[
+            [InlineKeyboardButton(text=f"📄 {title[:60]}", callback_data=f"cert:get:{cid}")]
+            for cid, title in items[:20]
+        ],
+        [app_button("certificates", texts.BTN_MORE)],
+    )
+
+
 def attendance(scan: bool) -> InlineKeyboardMarkup | None:
     return inline([app_button("checkin?scan=1", texts.BTN_SCAN_QR)] if scan else [app_button("events", texts.BTN_MORE)])
 

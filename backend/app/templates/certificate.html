@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Sertifikat — {{ name }}</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  html { font-family: "Liberation Serif", "Times New Roman", "DejaVu Serif", serif; color: #1c2b24; }
+  body { margin: 0; }
+  .sheet {
+    position: relative; width: 297mm; height: 210mm; box-sizing: border-box; padding: 11mm;
+    background: #fffdf7;
+  }
+  .frame {
+    position: relative; height: 100%; box-sizing: border-box; border: 2.4mm solid #1f5c40; padding: 1.6mm;
+  }
+  .inner {
+    position: relative; height: 100%; box-sizing: border-box; border: 0.5mm solid #c9a24e;
+    padding: 12mm 22mm 10mm; text-align: center;
+  }
+  .corner { position: absolute; width: 9mm; height: 9mm; background: #c9a24e; transform: rotate(45deg); }
+  .corner.tl { top: -5.2mm; left: -5.2mm; } .corner.tr { top: -5.2mm; right: -5.2mm; }
+  .corner.bl { bottom: -5.2mm; left: -5.2mm; } .corner.br { bottom: -5.2mm; right: -5.2mm; }
+  .org { font-size: 11pt; letter-spacing: 1.6pt; text-transform: uppercase; font-weight: bold; color: #1f5c40; }
+  .club { font-size: 11pt; margin-top: 1.5mm; color: #4b5d54; letter-spacing: 0.6pt; }
+  h1 {
+    margin: 7mm 0 0; font-size: 50pt; letter-spacing: 12pt; color: #1f5c40; font-weight: bold;
+    padding-left: 12pt; /* letter-spacing adds space after the last letter too */
+  }
+  .rule { width: 70mm; margin: 2mm auto 0; border-top: 0.5mm solid #c9a24e; }
+  .medal {
+    width: 24mm; height: 24mm; margin: 6mm auto 0; border-radius: 50%; color: #fff;
+    border: 1.2mm solid rgba(255, 255, 255, 0.9); box-shadow: 0 0 0 0.6mm #c9a24e;
+    font-family: "DejaVu Sans", sans-serif;
+  }
+  .medal .n { font-size: 26pt; font-weight: bold; line-height: 16mm; padding-top: 1mm; }
+  .medal .w { font-size: 6.5pt; letter-spacing: 1.2pt; margin-top: -2.5mm; }
+  .place-1 { background: #c9a24e; } .place-2 { background: #8f9aa3; } .place-3 { background: #b07a4a; }
+  .lead { margin-top: {{ '5mm' if place else '10mm' }}; font-size: 14pt; font-style: italic; color: #4b5d54; }
+  .name {
+    display: inline-block; margin-top: 3mm; padding: 0 10mm 2mm; font-size: 34pt; font-weight: bold;
+    border-bottom: 0.4mm solid #c9a24e; color: #14402c;
+  }
+  .details { margin-top: 2mm; font-size: 12pt; color: #4b5d54; }
+  .text { margin: 5mm auto 0; width: 190mm; font-size: 15pt; line-height: 1.4; }
+  .footer {
+    position: absolute; left: 22mm; right: 22mm; bottom: 10mm; display: flex; align-items: flex-end;
+    justify-content: space-between; font-size: 11pt; text-align: left;
+  }
+  .footer .col { width: 33%; }
+  .footer .center { text-align: center; }
+  .footer .right { text-align: right; }
+  .sign-line { display: inline-block; width: 55mm; border-bottom: 0.3mm solid #1c2b24; height: 10mm; }
+  .muted { color: #6b7a72; font-size: 9pt; }
+  .qr { width: 24mm; height: 24mm; }
+  .code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; letter-spacing: 0.6pt; }
+  .revoked {
+    position: absolute; top: 78mm; left: 0; right: 0; text-align: center; font-size: 64pt; font-weight: bold;
+    color: rgba(185, 28, 28, 0.18); transform: rotate(-18deg); letter-spacing: 6pt;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="frame">
+    <div class="inner">
+      <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="org">{{ organization }}</div>
+      <div class="club">{{ club }}</div>
+      <h1>SERTIFIKAT</h1>
+      <div class="rule"></div>
+      {% if place %}
+      <div class="medal place-{{ place }}"><div class="n">{{ place }}</div><div class="w">O'RIN</div></div>
+      {% endif %}
+      <div class="lead">Ushbu sertifikat</div>
+      <div class="name">{{ name }}</div>
+      {% if details %}<div class="details">{{ details }}</div>{% endif %}
+      <div class="text">{{ description }}</div>
+      <div class="footer">
+        <div class="col">
+          <div>Sana: <b>{{ issued_on }}</b></div>
+          <div class="muted">№ {{ number }}</div>
+        </div>
+        <div class="col center">
+          <div class="sign-line"></div>
+          <div>{{ signer_title }}{% if signer_name %} — {{ signer_name }}{% endif %}</div>
+        </div>
+        <div class="col right">
+          {% if qr %}<img class="qr" src="{{ qr }}" alt="">{% endif %}
+          <div class="muted">Tekshirish kodi</div>
+          <div class="code">{{ code }}</div>
+        </div>
+      </div>
+      {% if revoked %}<div class="revoked">BEKOR QILINGAN</div>{% endif %}
+    </div>
+  </div>
+</div>
+</body>
+</html>

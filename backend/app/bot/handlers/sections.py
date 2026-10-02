@@ -4,21 +4,29 @@ notification settings, and attendance by typing the code shown on the screen."""
 from __future__ import annotations
 
 import html
+import logging
 import re
+import uuid
 
 from aiogram import F, Router
+from aiogram.enums import ChatAction
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import keyboards, summaries, texts
 from app.bot.access import is_admin
 from app.bot.filters import ActiveMember
 from app.bot.states import AttendanceCode
+from app.core.errors import NotFoundError
 from app.models import User, UserNotificationSettings
 from app.services import attendance as attendance_service
+from app.services import certificates as certificate_service
+from app.services import delivery
+from app.services import passport as passport_service
 
+logger = logging.getLogger(__name__)
 router = Router(name="sections")
 router.message.filter(ActiveMember())
 router.callback_query.filter(ActiveMember())
@@ -63,6 +71,9 @@ async def _answer_section(message: Message, state: FSMContext, db: AsyncSession,
     if label == texts.BTN_ATTENDANCE:
         await _attendance(message, state, db, member)
         return
+    if label == texts.BTN_PASSPORT:
+        await _passport(message, db, member)
+        return
     builders = {
         texts.BTN_BOOKS: summaries.books,
         texts.BTN_EVENTS: summaries.events,
@@ -70,10 +81,14 @@ async def _answer_section(message: Message, state: FSMContext, db: AsyncSession,
         texts.BTN_RESULTS: summaries.results,
         texts.BTN_RANKING: summaries.ranking,
         texts.BTN_ACHIEVEMENTS: summaries.achievements,
-        texts.BTN_PASSPORT: summaries.passport,
     }
     text = await builders[label](db, member)
-    await message.answer(text, reply_markup=keyboards.section_more(keyboards.SECTION_ROUTES[label]))
+    markup = (
+        keyboards.achievements()
+        if label == texts.BTN_ACHIEVEMENTS
+        else keyboards.section_more(keyboards.SECTION_ROUTES[label])
+    )
+    await message.answer(text, reply_markup=markup)
 
 
 @router.message(Command("davomat"))
@@ -86,6 +101,71 @@ async def attendance_command(message: Message, state: FSMContext, db: AsyncSessi
 async def passport_command(message: Message, state: FSMContext, db: AsyncSession, member: User) -> None:
     await state.clear()
     await _answer_section(message, state, db, member, texts.BTN_PASSPORT)
+
+
+# ---------------------------------------------------------------------------- passport and certificates
+
+
+async def _passport(message: Message, db: AsyncSession, member: User) -> None:
+    """The passport card as a picture, with the short text summary as its caption."""
+    caption = await summaries.passport(db, member)
+    try:
+        if message.bot is not None:
+            await message.bot.send_chat_action(message.chat.id, ChatAction.UPLOAD_PHOTO)
+        image = await passport_service.render(db, member, bot=message.bot)
+    except Exception:
+        logger.exception("Passport image failed for %s", member.id)
+        await message.answer(caption, reply_markup=keyboards.passport())
+        return
+    await message.answer_photo(
+        BufferedInputFile(image, filename=passport_service.filename(member)),
+        caption=caption,
+        reply_markup=keyboards.passport(),
+    )
+
+
+@router.callback_query(F.data == "pp:file")
+async def passport_file(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    try:
+        await delivery.send_passport(callback.bot, db, member, as_file=True)
+    except Exception:
+        logger.exception("Passport file failed for %s", member.id)
+        await callback.answer(texts.FILE_FAILED, show_alert=True)
+        return
+    await callback.answer(texts.FILE_SENT)
+
+
+@router.callback_query(F.data == "cert:list")
+async def certificate_list(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    items = await certificate_service.member_certificates(db, member.id)
+    await callback.answer()
+    if not isinstance(callback.message, Message):
+        return
+    if not items:
+        await callback.message.answer(texts.CERTIFICATES_NONE, reply_markup=keyboards.section_more("certificates"))
+        return
+    await callback.message.answer(
+        texts.CERTIFICATES.format(count=len(items)),
+        reply_markup=keyboards.certificates([(str(item.id), item.title) for item in items]),
+    )
+
+
+@router.callback_query(F.data.startswith("cert:get:"))
+async def certificate_file(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    try:
+        certificate_id = uuid.UUID((callback.data or "").removeprefix("cert:get:"))
+        certificate = await certificate_service.get_own(db, user_id=member.id, certificate_id=certificate_id)
+    except (ValueError, NotFoundError):
+        await callback.answer(texts.FILE_FAILED, show_alert=True)
+        return
+    try:
+        await delivery.send_certificate(callback.bot, db, member, certificate)
+        await db.commit()
+    except Exception:
+        logger.exception("Certificate file failed for %s", certificate.id)
+        await callback.answer(texts.FILE_FAILED, show_alert=True)
+        return
+    await callback.answer(texts.FILE_SENT)
 
 
 # ---------------------------------------------------------------------------- attendance

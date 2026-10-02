@@ -8,6 +8,7 @@ from app.api.deps import CurrentUserDep, DbSession
 from app.models import Faculty, UserNotificationSettings
 from app.schemas.user import FacultyOut, MeOut, MeUpdateIn, NotificationSettingsIn, NotificationSettingsOut
 from app.services import users as user_service
+from app.services.passport import member_number
 from app.services.settings import get_setting
 
 router = APIRouter(prefix="/me", tags=["me"])
@@ -18,6 +19,7 @@ async def _me(current, db) -> MeOut:
     faculty = await db.get(Faculty, user.faculty_id) if user.faculty_id else None
     return MeOut(
         id=user.id,
+        member_number=member_number(user),
         first_name=user.first_name,
         last_name=user.last_name,
         telegram_username=user.telegram_username,

@@ -111,7 +111,7 @@ async def test_old_keyboard_buttons_still_work_and_refresh_the_menu(db: AsyncSes
     harness = BotHarness(6003)
     await harness.send("👤 Profilim")
     messages = harness.session.sent_messages()
-    assert "Aziza" in messages[-2].text  # the passport summary
+    assert "Aziza" in harness.session.last_caption()  # the passport picture
     assert messages[-1].text == texts.MENU_UPDATED
     assert isinstance(messages[-1].reply_markup, ReplyKeyboardMarkup)
 

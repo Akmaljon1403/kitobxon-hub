@@ -51,6 +51,7 @@ from app.models.enums import (
     TestStatus,
 )
 from app.services import achievements, announcements
+from app.services import certificates as certificate_service
 from app.services.audit import record_audit
 from app.services.books import award_book_completion, get_or_create_read
 from app.services.scoring import award_points, current_season_id
@@ -387,7 +388,9 @@ async def close_test(session: AsyncSession, *, actor_id: uuid.UUID | None, test_
     first_close = test.rank_bonus_awarded_at is None
     await award_rank_bonuses(session, test)
     if first_close:
-        await announcements.test_results(session, test, await test_standings(session, test))
+        standings = await test_standings(session, test)
+        await announcements.test_results(session, test, standings)
+        await certificate_service.issue_for_test(session, test, standings)
     await session.commit()
     return test
 

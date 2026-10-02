@@ -7,6 +7,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
 import { BooksPage } from './pages/BooksPage'
+import { CertificatesPage } from './pages/CertificatesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsPage } from './pages/EventsPage'
 import { FacultiesPage } from './pages/FacultiesPage'
@@ -38,6 +39,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   achievements: AchievementsPage,
   reports: ReportsPage,
   rewards: RewardsPage,
+  certificates: CertificatesPage,
   analytics: AnalyticsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,

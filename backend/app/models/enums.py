@@ -216,3 +216,9 @@ class SupportTicketStatus(StrEnum):
     OPEN = "OPEN"  # waiting for the club's answer
     ANSWERED = "ANSWERED"
     CLOSED = "CLOSED"
+
+
+class CertificateKind(StrEnum):
+    TEST_PLACE = "TEST_PLACE"  # 1st-3rd place in a test (of an event: only members who attended)
+    MONTHLY_TOP = "MONTHLY_TOP"  # 1st-3rd place in last month's ranking
+    MANUAL = "MANUAL"  # issued by an administrator

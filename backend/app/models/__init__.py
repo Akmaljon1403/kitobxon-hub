@@ -6,6 +6,7 @@ from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.book import Book, BookQuote, BookRead
 from app.models.bot import BotFsmState
+from app.models.certificate import Certificate
 from app.models.event import Event, EventRegistration
 from app.models.notification import Notification, NotificationTemplate
 from app.models.rbac import LoginToken, Permission, Role, RolePermission, UserPermission, UserRole
@@ -31,6 +32,7 @@ __all__ = [
     "BotFsmState",
     "Campaign",
     "CampaignBook",
+    "Certificate",
     "Event",
     "EventRegistration",
     "Faculty",

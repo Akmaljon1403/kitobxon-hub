@@ -237,8 +237,8 @@ async def test_profile_and_section_buttons(db: AsyncSession, monkeypatch: pytest
     harness = BotHarness(5101)
 
     await harness.send(texts.BTN_PASSPORT)
-    assert "Malika" in harness.last_text() and "402" in harness.last_text()
-    assert "KH-" in harness.last_text()
+    caption = harness.session.last_caption()
+    assert "Malika" in caption and "402" in caption and "KH-" in caption
 
     await harness.send(texts.BTN_EVENTS)
     assert harness.last_text() == texts.EVENTS_NONE

@@ -70,7 +70,7 @@ PERMISSION_INFO: dict[Perm, tuple[str, str]] = {
     Perm.REPORT_APPROVE: ("reports", "Hisobotni tasdiqlash va PDF yaratish"),
     Perm.NOTIFICATION_SEND: ("notifications", "A'zolarga xabar yuborish"),
     Perm.ANALYTICS_VIEW: ("analytics", "Statistika va tahlillarni ko'rish"),
-    Perm.REWARD_MANAGE: ("rewards", "Sovg'alar va promo-kodlarni boshqarish"),
+    Perm.REWARD_MANAGE: ("rewards", "Sovg'alar, promo-kodlar va sertifikatlarni boshqarish"),
     Perm.SEASON_MANAGE: ("seasons", "Mavsumlar va kitobxonlik kampaniyalarini boshqarish"),
     Perm.SETTINGS_MANAGE: ("system", "Tizim sozlamalari, ball qoidalari va fakultetlarni o'zgartirish"),
     Perm.AUDIT_LOG_VIEW: ("system", "Audit jurnalini ko'rish"),

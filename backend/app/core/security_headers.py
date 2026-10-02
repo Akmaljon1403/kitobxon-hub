@@ -34,6 +34,10 @@ _SPA_POLICY = (
 ADMIN_CSP = _SPA_POLICY.format(scripts=" https://telegram.org", frames="; frame-ancestors https://web.telegram.org")
 MINIAPP_CSP = _SPA_POLICY.format(scripts=" https://telegram.org", frames="")
 API_CSP = "default-src 'none'; frame-ancestors 'none'"
+# The public page behind certificate and passport QR codes: static HTML with inline styles only.
+VERIFY_CSP = (
+    "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+)
 HSTS = "max-age=31536000"
 
 _API_PREFIXES = ("/api/", "/telegram/", "/health")
@@ -49,6 +53,10 @@ def headers_for(path: str, *, production: bool) -> dict[str, str]:
     elif path == "/admin" or path.startswith("/admin/"):
         # No X-Frame-Options here: it cannot allow Telegram Web; frame-ancestors in the CSP does.
         headers["Content-Security-Policy"] = ADMIN_CSP
+    elif path.startswith("/v/"):
+        headers["X-Frame-Options"] = "DENY"
+        headers["Content-Security-Policy"] = VERIFY_CSP
+        headers["Cache-Control"] = "no-store"
     elif path.startswith(_DOCS_PATHS):
         headers["X-Frame-Options"] = "DENY"  # Swagger UI loads its own scripts; no CSP here
     else:

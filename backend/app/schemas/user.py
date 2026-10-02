@@ -18,6 +18,7 @@ class MeOut(BaseModel):
     """The signed-in member's own profile (only ever returned to that member)."""
 
     id: uuid.UUID
+    member_number: str
     first_name: str
     last_name: str
     telegram_username: str | None

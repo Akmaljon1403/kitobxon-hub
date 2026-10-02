@@ -20,3 +20,4 @@ boto3==1.43.106
 anthropic==1.11.0
 # Encrypts promo codes at rest (AES-GCM).
 cryptography==50.0.2
+segno==1.6.6
