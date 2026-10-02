@@ -3,6 +3,7 @@ import { AchievementsPage } from './pages/AchievementsPage'
 import { LoadingState } from './components/StateViews'
 import { BookDetailPage } from './pages/BookDetailPage'
 import { BooksPage } from './pages/BooksPage'
+import { CheckInPage } from './pages/CheckInPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { HomePage } from './pages/HomePage'
@@ -38,6 +39,7 @@ function Routes() {
   else if (section === 'rewards') page = <RewardsPage />
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
+  else if (section === 'checkin') page = <CheckInPage />
   else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>
 }

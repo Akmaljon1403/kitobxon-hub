@@ -157,6 +157,13 @@ class NotificationType(StrEnum):
     REWARD = "REWARD"
     ADMIN_MESSAGE = "ADMIN_MESSAGE"
     SYSTEM = "SYSTEM"
+    # Added in revision 0004.
+    SUPPORT = "SUPPORT"
+    CERTIFICATE = "CERTIFICATE"
+    PREMIUM = "PREMIUM"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
+    FEEDBACK_REQUEST = "FEEDBACK_REQUEST"
+    DIGEST = "DIGEST"
 
 
 class NotificationStatus(StrEnum):
@@ -203,3 +210,9 @@ class ReportStatus(StrEnum):
     APPROVED = "APPROVED"
     PDF_GENERATED = "PDF_GENERATED"
     ARCHIVED = "ARCHIVED"
+
+
+class SupportTicketStatus(StrEnum):
+    OPEN = "OPEN"  # waiting for the club's answer
+    ANSWERED = "ANSWERED"
+    CLOSED = "CLOSED"

@@ -11,7 +11,7 @@ from app.api.deps import CurrentUser, CurrentUserDep, DbSession, get_current_use
 from app.models import AttendanceRecord, Event, EventRegistration
 from app.models.enums import AttendanceStatus, RegistrationStatus
 from app.schemas.common import Page
-from app.schemas.event import CheckInIn, CheckInOut, EventOut
+from app.schemas.event import CheckInIn, CheckInOut, EventOut, LiveAttendanceOut
 from app.security.rate_limit import RateLimit, enforce
 from app.services import attendance as attendance_service
 from app.services import events as event_service
@@ -82,6 +82,11 @@ async def cancel_registration(event_id: uuid.UUID, current: CurrentUserDep, db: 
 async def _check_in_rate_limit(current: Annotated[CurrentUser, Depends(get_current_user)]) -> CurrentUser:
     await enforce(CHECK_IN_LIMIT, str(current.user.id))
     return current
+
+
+@router.get("/attendance/open", response_model=list[LiveAttendanceOut], summary="Events where I can check in right now")
+async def open_attendance(current: CurrentUserDep, db: DbSession) -> list[LiveAttendanceOut]:
+    return [LiveAttendanceOut(**row) for row in await attendance_service.live_events_for_member(db, current.user.id)]
 
 
 @router.post("/attendance/verify", response_model=CheckInOut, summary="Check in with the QR code or the short code")

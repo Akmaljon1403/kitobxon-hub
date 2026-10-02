@@ -19,6 +19,7 @@ const GROUP_TITLES: Record<string, string> = {
   analytics: 'Statistika',
   rewards: "Sovg'alar",
   seasons: 'Mavsumlar',
+  support: 'Murojaatlar',
   system: 'Tizim',
 }
 
@@ -143,6 +144,36 @@ export function AdminsPage() {
   )
 }
 
+// Typical jobs in the club. "To'liq admin" means every permission (managing admins stays with super admins).
+const PRESETS: { label: string; hint: string; permissions?: string[] }[] = [
+  { label: "⭐ To'liq admin", hint: 'Barcha ruxsatlar' },
+  {
+    label: '📅 Tadbir va davomat',
+    hint: "Tadbir yaratish, davomatni ochish va tuzatish",
+    permissions: ['EVENT_VIEW', 'EVENT_CREATE', 'EVENT_EDIT', 'ATTENDANCE_VIEW', 'ATTENDANCE_MANAGE', 'USER_VIEW'],
+  },
+  {
+    label: '📚 Kitob va testlar',
+    hint: "Kitob, iqtibos va testlarni boshqarish",
+    permissions: ['BOOK_VIEW', 'BOOK_CREATE', 'BOOK_EDIT', 'TEST_VIEW', 'TEST_CREATE', 'TEST_EDIT', 'TEST_PUBLISH'],
+  },
+  {
+    label: "🏆 Ballar va sovg'alar",
+    hint: "Ballarni qo'lda berish, mavsumlar, sovg'alar",
+    permissions: ['USER_VIEW', 'SCORE_VIEW', 'SCORE_MANAGE', 'REWARD_MANAGE', 'SEASON_MANAGE'],
+  },
+  {
+    label: '📨 Xabar va murojaatlar',
+    hint: "A'zolarga xabar yuborish va murojaatlarga javob berish",
+    permissions: ['USER_VIEW', 'NOTIFICATION_SEND', 'SUPPORT_MANAGE'],
+  },
+  {
+    label: '📄 Hisobot va tahlil',
+    hint: 'Rasmiy hisobotlar va statistika',
+    permissions: ['EVENT_VIEW', 'REPORT_VIEW', 'REPORT_CREATE', 'REPORT_APPROVE', 'ANALYTICS_VIEW'],
+  },
+]
+
 function AdminModal({
   account,
   catalogue,
@@ -248,6 +279,30 @@ function AdminModal({
         </Field>
       )}
       <p className="text-sm font-medium">{account ? 'Ruxsatlar' : '2. Ruxsatlarni belgilang'}</p>
+      <div className="flex flex-col gap-2 rounded-lg bg-app-surface p-3">
+        <p className="text-xs text-app-hint">Tayyor lavozimlar — bosilsa, kerakli ruxsatlar belgilanadi (keyin o'zgartirsa bo'ladi):</p>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((preset) => {
+            const codes = preset.permissions ?? catalogue.map((item) => item.code)
+            const active = codes.every((code) => selected.has(code))
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                title={preset.hint}
+                aria-pressed={active}
+                onClick={() => setSelected(new Set([...selected, ...codes]))}
+                className={`rounded-full border px-3 py-1 text-sm transition ${active ? 'border-app-button bg-app-button text-app-button-text' : 'border-app-border bg-app-bg hover:bg-app-surface'}`}
+              >
+                {preset.label}
+              </button>
+            )
+          })}
+          <button type="button" onClick={() => setSelected(new Set())} className="rounded-full px-3 py-1 text-sm text-app-hint hover:text-app-text">
+            Tozalash
+          </button>
+        </div>
+      </div>
       <PermissionPicker catalogue={catalogue} selected={selected} onChange={setSelected} />
       <InlineError message={error} />
     </Modal>

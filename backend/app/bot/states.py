@@ -9,3 +9,21 @@ class Registration(StatesGroup):
     course = State()
     group = State()
     confirm = State()
+
+
+class AttendanceCode(StatesGroup):
+    """The member pressed «✅ Davomat» while attendance is open; the next text is the code."""
+
+    waiting = State()
+
+
+class SupportCompose(StatesGroup):
+    """A member is writing to the club's administrators."""
+
+    waiting = State()
+
+
+class SupportReply(StatesGroup):
+    """An administrator is answering a member (the ticket id is in the state data)."""
+
+    waiting = State()

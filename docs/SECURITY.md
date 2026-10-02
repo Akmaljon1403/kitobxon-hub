@@ -11,9 +11,9 @@ the backend verifies everything.**
 | Member identity | The Telegram account. `telegram_id` is unique; the backend never accepts a Telegram ID sent by JavaScript. |
 | Mini App login | Telegram `initData` is verified with HMAC-SHA256 (key derived from the bot token), compared in constant time; `auth_date` older than 24 h (configurable) or in the future is rejected. |
 | Sessions | JWT (HS256), 24 h for members, 12 h for admins. The signing key is derived from `SECRET_KEY` for this purpose only. Tokens contain the user's `token_version`; logout, blocking or dismissal increments it and invalidates every token at once. |
-| Admin login | No passwords. One-time links from the bot (valid 5 minutes, single use, only a SHA-256 hash is stored, token carried in the URL fragment so it never reaches server logs) or Telegram initData with `scope=admin`. |
+| Admin login | No passwords. Inside Telegram (bot → «🛠 Boshqaruv») the panel signs in with the admin's signed Telegram initData (`scope=admin`). On a computer: one-time links from the bot (valid 5 minutes, single use, only a SHA-256 hash is stored, token carried in the URL fragment so it never reaches server logs). |
 | Admin vs member tokens | Admin endpoints require an admin-scoped token **and** a currently assigned ADMIN/SUPER_ADMIN role (checked on every request). |
-| Bootstrap | Telegram IDs in `SUPER_ADMIN_TELEGRAM_IDS` receive SUPER_ADMIN on their next login; the grant is audited. |
+| Bootstrap | Telegram IDs in `SUPER_ADMIN_TELEGRAM_IDS` receive SUPER_ADMIN on their next message to the bot or login; the grant is audited. |
 
 ## Authorization (RBAC)
 
@@ -62,7 +62,7 @@ your own reverse proxy (e.g. `127.0.0.1`) so that clients cannot fake their IP.
 |---|---|
 | Everything | `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy` (camera, microphone, geolocation, payment, USB off); `Strict-Transport-Security` in production |
 | API (`/api`, `/telegram`, `/health`) | `Cache-Control: no-store` (personal data never cached), `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` |
-| Admin Panel (`/admin`) | Content-Security-Policy: scripts only from the same origin, API calls only to the same origin, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'none'`; `X-Frame-Options: DENY` (no clickjacking) |
+| Admin Panel (`/admin`) | Content-Security-Policy: scripts from the same origin and Telegram's `telegram-web-app.js`, API calls only to the same origin, `frame-ancestors https://web.telegram.org` (the panel opens inside Telegram from the bot; no other site may embed it), `object-src 'none'`, `base-uri 'none'` |
 | Mini App (`/app`) | Same policy, plus Telegram's `telegram-web-app.js`. It may be framed, because Telegram Web shows Mini Apps in an iframe; a framed copy is useless to an attacker since signing in needs launch data signed by Telegram |
 
 Images may come from any `https:` address (book covers are external links). Book links accept only

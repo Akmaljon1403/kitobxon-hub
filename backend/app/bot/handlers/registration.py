@@ -16,6 +16,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import keyboards, texts
+from app.bot.access import is_admin
 from app.bot.states import Registration
 from app.core.errors import ConflictError
 from app.models import User
@@ -52,10 +53,11 @@ async def _steps(db: AsyncSession) -> dict[str, str]:
     return {name: f"{index}/{len(names)}" for index, name in enumerate(names, start=1)}
 
 
-async def send_member_home(message: Message, member: User) -> None:
+async def send_member_home(message: Message, member: User, db: AsyncSession) -> None:
     if member.status == UserStatus.ACTIVE:
         await message.answer(
-            texts.WELCOME_BACK.format(first_name=html.escape(member.first_name)), reply_markup=keyboards.main_menu()
+            texts.WELCOME_BACK.format(first_name=html.escape(member.first_name)),
+            reply_markup=keyboards.main_menu(is_admin=await is_admin(db, member)),
         )
     else:
         await message.answer(_STATUS_TEXT.get(member.status, texts.ACCOUNT_INACTIVE), reply_markup=keyboards.remove())
@@ -79,7 +81,7 @@ async def start(
         return
     if member is not None:
         await state.clear()
-        await send_member_home(message, member)
+        await send_member_home(message, member, db)
         return
     await _begin(message, state, db)
 
@@ -93,12 +95,13 @@ async def _check_in_from_qr(
         await _begin(message, state, db)
         return
     if member.status != UserStatus.ACTIVE:
-        await send_member_home(message, member)
+        await send_member_home(message, member, db)
         return
+    await state.clear()
     result = await attendance_service.check_in(db, user=member, token=payload)
     await message.answer(
         texts.ATTENDANCE_OK.format(title=html.escape(result.event.title), points=result.points),
-        reply_markup=keyboards.main_menu(),
+        reply_markup=keyboards.main_menu(is_admin=await is_admin(db, member)),
     )
 
 
@@ -138,7 +141,7 @@ async def phone(message: Message, state: FSMContext, db: AsyncSession) -> None:
             "PHONE_IN_USE", "Bu telefon raqami boshqa hisobga bog'langan. Klub rahbariyatiga murojaat qiling."
         )
     await state.update_data(phone=value)
-    await message.answer("✅ Raqam qabul qilindi.", reply_markup=keyboards.remove())
+    await message.answer(texts.PHONE_ACCEPTED, reply_markup=keyboards.remove())
     await _ask_faculty_or_course(message, state, db)
 
 
@@ -245,7 +248,8 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         await callback.message.edit_reply_markup(reply_markup=None)
         if user.status == UserStatus.ACTIVE:
             await callback.message.answer(
-                texts.REGISTERED.format(first_name=html.escape(user.first_name)), reply_markup=keyboards.main_menu()
+                texts.REGISTERED.format(first_name=html.escape(user.first_name)),
+                reply_markup=keyboards.main_menu(is_admin=await is_admin(db, user)),
             )
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
@@ -268,4 +272,4 @@ async def stale_registration_button(callback: CallbackQuery) -> None:
 @router.message(StateFilter(Registration), ~F.text.startswith("/"))
 async def unexpected_input(message: Message) -> None:
     """Stickers, photos, etc. during registration."""
-    await message.answer("Iltimos, savolga matn ko'rinishida javob bering yoki /cancel buyrug'ini yuboring.")
+    await message.answer(texts.REGISTRATION_TEXT_ONLY)

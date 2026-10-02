@@ -49,10 +49,22 @@ def _markup(payload: dict[str, Any] | None) -> InlineKeyboardMarkup | None:
     buttons = (payload or {}).get("buttons") or []
     webapp_url = get_settings().webapp_url
     rows = []
+    admin_url = f"{get_settings().base_url}/admin/" if get_settings().base_url else None
     for button in buttons:
         if button.get("app_route") is not None and webapp_url:
             url = f"{webapp_url}#/{button['app_route']}" if button["app_route"] else webapp_url
             rows.append([InlineKeyboardButton(text=button["text"], web_app=WebAppInfo(url=url))])
+        elif button.get("admin_route") is not None and admin_url:
+            # The Admin Panel opens inside Telegram and signs in with the admin's Telegram account.
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text=button["text"], web_app=WebAppInfo(url=f"{admin_url}#/{button['admin_route']}")
+                    )
+                ]
+            )
+        elif button.get("callback"):
+            rows.append([InlineKeyboardButton(text=button["text"], callback_data=button["callback"])])
         elif button.get("url"):
             rows.append([InlineKeyboardButton(text=button["text"], url=button["url"])])
     return InlineKeyboardMarkup(inline_keyboard=rows) if rows else None

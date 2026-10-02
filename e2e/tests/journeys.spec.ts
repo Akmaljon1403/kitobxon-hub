@@ -164,6 +164,8 @@ test('the admin signs in with a one-time link and sees the results', async ({ pa
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => message.type() === 'error' && errors.push(message.text()))
+  // Outside Telegram the Telegram script has nothing to do; keep the run independent of telegram.org.
+  await page.route('https://telegram.org/**', (r) => r.fulfill({ contentType: 'application/javascript', body: '' }))
 
   await page.goto(`/admin/#/login?token=${state.admin_links.ui}`)
   await expect(page.getByText("Jami a'zolar")).toBeVisible()

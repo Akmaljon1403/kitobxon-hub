@@ -186,9 +186,9 @@ export function ProfilePage() {
       <NotificationsCard />
 
       {me.is_admin && (
-        <p className="px-2 text-center text-xs text-app-hint">
-          Admin panelga kirish uchun botga /admin buyrug'ini yuboring.
-        </p>
+        <Button variant="secondary" onClick={() => window.location.assign('/admin/')}>
+          🛠 Admin panel
+        </Button>
       )}
     </>
   )

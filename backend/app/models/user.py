@@ -47,6 +47,10 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     )
 
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    # Short public membership number printed on the Kitobxon passport (KH-000042).
+    member_number: Mapped[int] = mapped_column(
+        Integer, unique=True, server_default=text("nextval('users_member_number_seq')")
+    )
     telegram_username: Mapped[str | None] = mapped_column(String(64))
     first_name: Mapped[str] = mapped_column(String(64))
     last_name: Mapped[str] = mapped_column(String(64))

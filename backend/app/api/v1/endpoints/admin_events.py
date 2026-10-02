@@ -129,6 +129,8 @@ async def registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> l
 
 @router.get("/events/{event_id}/attendance", response_model=AttendanceOverviewOut, summary="Live attendance list")
 async def attendance_overview(event_id: uuid.UUID, _: AttendanceViewer, db: DbSession) -> AttendanceOverviewOut:
+    # Attendance opens by itself at the scheduled time; opening the screen makes it immediate.
+    await attendance_service.open_scheduled_sessions(db, event_id=event_id)
     records = await attendance_service.list_records(db, event_id)
     open_session = await attendance_service.get_open_session(db, event_id)
     is_open = open_session is not None and open_session.closes_at > datetime.now(UTC)
@@ -179,6 +181,7 @@ async def close_attendance(event_id: uuid.UUID, current: AttendanceManager, db: 
     summary="Current rotating QR token and short code for the projector screen",
 )
 async def attendance_token(event_id: uuid.UUID, _: AttendanceManager, db: DbSession) -> AttendanceTokenOut:
+    await attendance_service.open_scheduled_sessions(db, event_id=event_id)
     display = await attendance_service.current_display_token(db, event_id)
     username = bot_username()
     start = f"{attendance_service.QR_PREFIX}{display.token}"

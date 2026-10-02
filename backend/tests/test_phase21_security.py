@@ -57,14 +57,16 @@ async def test_api_responses_carry_security_headers(client: httpx.AsyncClient, d
 def test_header_policy_per_area() -> None:
     admin = headers_for("/admin/assets/index.js", production=True)
     assert admin["Content-Security-Policy"] == ADMIN_CSP
-    assert admin["X-Frame-Options"] == "DENY"
+    # Only Telegram Web may show the Admin Panel in a frame (it opens from the bot).
+    assert "frame-ancestors https://web.telegram.org" in ADMIN_CSP
+    assert "X-Frame-Options" not in admin
     assert admin["Strict-Transport-Security"].startswith("max-age=")
     # Telegram Web shows the Mini App in an iframe, so it must stay embeddable.
     miniapp = headers_for("/app/", production=True)
     assert miniapp["Content-Security-Policy"] == MINIAPP_CSP
     assert "X-Frame-Options" not in miniapp and "frame-ancestors" not in MINIAPP_CSP
     assert "https://telegram.org" in MINIAPP_CSP and "'unsafe-eval'" not in MINIAPP_CSP
-    assert "script-src 'self';" in ADMIN_CSP  # no third-party scripts in the admin panel
+    assert "script-src 'self' https://telegram.org;" in ADMIN_CSP  # only Telegram's script
     assert "Cache-Control" not in miniapp  # static files may be cached
 
 

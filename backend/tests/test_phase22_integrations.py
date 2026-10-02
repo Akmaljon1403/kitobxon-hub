@@ -172,4 +172,4 @@ async def test_backend_serves_both_web_apps_with_their_policies(tmp_path: Path) 
     assert miniapp.headers["Content-Security-Policy"] == MINIAPP_CSP
     assert admin.status_code == 200 and "<title>admin</title>" in admin.text
     assert admin.headers["Content-Security-Policy"] == ADMIN_CSP
-    assert admin.headers["X-Frame-Options"] == "DENY"
+    assert "frame-ancestors https://web.telegram.org" in admin.headers["Content-Security-Policy"]

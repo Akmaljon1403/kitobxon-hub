@@ -13,7 +13,7 @@ from aiogram.client.session.base import BaseSession
 from aiogram.enums import ParseMode
 from aiogram.methods import AnswerCallbackQuery, SendMessage
 from aiogram.methods.base import TelegramMethod
-from aiogram.types import CallbackQuery, Chat, Contact, Message, Update
+from aiogram.types import CallbackQuery, Chat, Contact, Message, PhotoSize, Update
 from aiogram.types import User as TgUser
 
 from app.bot.setup import create_dispatcher
@@ -91,6 +91,11 @@ class BotHarness:
     async def share_contact(self, phone: str, owner_id: int | None = None) -> None:
         contact = Contact(phone_number=phone, first_name=self.user.first_name, user_id=owner_id or self.user.id)
         update = Update(update_id=next(_ids), message=self._message(contact=contact))
+        await self.dispatcher.feed_update(self.bot, update)
+
+    async def send_photo(self, file_id: str, caption: str | None = None) -> None:
+        photo = [PhotoSize(file_id=file_id, file_unique_id=f"u-{file_id}", width=800, height=600)]
+        update = Update(update_id=next(_ids), message=self._message(photo=photo, caption=caption))
         await self.dispatcher.feed_update(self.bot, update)
 
     async def press(self, data: str) -> None:

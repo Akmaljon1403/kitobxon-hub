@@ -1,4 +1,4 @@
-"""Commands available to everybody: /help, /myid, /admin, /cancel."""
+"""Commands available to everybody: /help, /myid, /cancel."""
 
 from __future__ import annotations
 
@@ -9,17 +9,22 @@ from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import keyboards, texts
-from app.core.config import get_settings
+from app.bot.access import is_admin
 from app.models import User
-from app.services.auth import NotAdminError, admin_login_url, create_admin_login_link
+from app.models.enums import UserStatus
 
 router = Router(name="common")
 
 
 @router.message(Command("help"))
-@router.message(F.text == texts.BTN_HELP)
-async def help_(message: Message) -> None:
-    await message.answer(texts.HELP)
+@router.message(F.text.in_({texts.BTN_HELP, "ℹ️ Yordam"}))
+async def help_(message: Message, state: FSMContext, member: User | None) -> None:
+    if member is None:  # possibly in the middle of registration: keep it going
+        await message.answer(texts.HELP.split("\n\n")[0] + "\n\n" + texts.NOT_REGISTERED)
+        return
+    await state.clear()  # leaves «write to admin» / «attendance code» mode
+    active = member.status == UserStatus.ACTIVE
+    await message.answer(texts.HELP, reply_markup=keyboards.help_menu() if active else None)
 
 
 @router.message(Command("myid"))
@@ -29,28 +34,14 @@ async def my_id(message: Message) -> None:
 
 
 @router.message(Command("cancel"))
-async def cancel(message: Message, state: FSMContext) -> None:
+async def cancel(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
     if await state.get_state() is None:
         await message.answer(texts.NOTHING_TO_CANCEL)
         return
     await state.clear()
-    await message.answer("Bekor qilindi.")
-
-
-@router.message(Command("admin"))
-async def admin_login(message: Message, db: AsyncSession, member: User | None) -> None:
-    if member is None:
-        await message.answer(texts.ADMIN_ONLY)
-        return
-    if get_settings().base_url is None:
-        await message.answer(texts.ADMIN_URL_NOT_CONFIGURED)
-        return
-    try:
-        raw_token, _ = await create_admin_login_link(db, member)
-    except NotAdminError:
-        await message.answer(texts.ADMIN_ONLY)
-        return
-    url = admin_login_url(raw_token)
-    assert url is not None
-    minutes = max(1, get_settings().admin_login_link_ttl_seconds // 60)
-    await message.answer(texts.ADMIN_LINK.format(minutes=minutes), reply_markup=keyboards.admin_login(url))
+    markup = (
+        keyboards.main_menu(is_admin=await is_admin(db, member))
+        if member is not None and member.status == UserStatus.ACTIVE
+        else None
+    )
+    await message.answer(texts.CANCELLED, reply_markup=markup)

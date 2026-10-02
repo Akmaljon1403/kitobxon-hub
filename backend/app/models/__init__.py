@@ -14,6 +14,7 @@ from app.models.reward import Reward, RewardCode, UserReward
 from app.models.score import ScoreTransaction
 from app.models.season import Campaign, CampaignBook, Season
 from app.models.settings import SystemSetting
+from app.models.support import SupportMessage, SupportTicket
 from app.models.test import Test, TestActivityLog, TestAnswer, TestAttempt, TestOption, TestQuestion
 from app.models.user import Faculty, User, UserNotificationSettings
 
@@ -45,6 +46,8 @@ __all__ = [
     "RolePermission",
     "ScoreTransaction",
     "Season",
+    "SupportMessage",
+    "SupportTicket",
     "SystemSetting",
     "Test",
     "TestActivityLog",

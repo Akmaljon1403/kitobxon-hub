@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     admin_reports,
     admin_rewards,
     admin_scores,
+    admin_support,
     admin_system,
     admin_users,
     auth,
@@ -51,6 +52,7 @@ for module in (
     admin_achievements,
     admin_reports,
     admin_rewards,
+    admin_support,
     admin_analytics,
     admin_system,
 ):

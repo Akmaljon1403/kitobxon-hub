@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select, union
+from sqlalchemy import Select, and_, or_, select, union
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models import Role, RolePermission, User, UserPermission, UserRole
-from app.models.enums import SystemRole
+from app.models.enums import SystemRole, UserStatus
 from app.security.permissions import Perm
 from app.services.audit import record_audit
 
@@ -79,3 +79,22 @@ async def ensure_bootstrap_super_admin(session: AsyncSession, user: User) -> boo
     )
     await session.flush()
     return True
+
+
+def admins_with_permission(permission: Perm) -> Select[tuple[uuid.UUID]]:
+    """Active administrators who hold ``permission`` (super admins hold every permission)."""
+    super_admins = (
+        select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.code == SystemRole.SUPER_ADMIN)
+    )
+    admins = select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.code == SystemRole.ADMIN)
+    via_roles = (
+        select(UserRole.user_id)
+        .join(RolePermission, RolePermission.role_id == UserRole.role_id)
+        .where(RolePermission.permission_code == permission.value)
+    )
+    direct = select(UserPermission.user_id).where(UserPermission.permission_code == permission.value)
+    return select(User.id).where(
+        User.status == UserStatus.ACTIVE,
+        User.deleted_at.is_(None),
+        or_(User.id.in_(super_admins), and_(User.id.in_(admins), or_(User.id.in_(via_roles), User.id.in_(direct)))),
+    )

@@ -110,6 +110,7 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/events?scope=upcoming\|past` | Published, completed and cancelled events with my registration / attendance |
 | GET | `/api/v1/events/{event_id}` | Event details |
 | POST / DELETE | `/api/v1/events/{event_id}/register` | Register ("I intend to come") / cancel before the start |
+| GET | `/api/v1/attendance/open` | member — events where attendance is open now (opens scheduled sessions on the spot) |
 | POST | `/api/v1/attendance/verify` | `{"token"}` (QR) or `{"code"}` (6 characters), optional `event_id`. Atomic with the points; 10 tries/min per member |
 | GET | `/api/v1/tests` | Open, upcoming and closed tests with my attempts (never correct answers) |
 | GET | `/api/v1/tests/{test_id}` | One test with my attempts |
@@ -251,6 +252,21 @@ Blocking a user or removing admin rights has the same effect immediately.
 |---|---|---|
 | GET | `/api/v1/admin/notifications/summary` | `NOTIFICATION_SEND` — queue state (pending, sent/failed/skipped in 24 h) and recent broadcasts |
 | POST | `/api/v1/admin/notifications/broadcast` | `NOTIFICATION_SEND` — `{"message", "faculty_id"?, "course"?, "group_name"?, "with_app_button", "dry_run"}`; `dry_run` only counts recipients. Audited |
+
+### Admin: member messages (support)
+
+Members write through the bot («💬 Yordam» → «✉️ Adminga yozish»); every admin with
+`SUPPORT_MANAGE` receives a Telegram message with a reply button. Answers reach the member signed
+by "Klub rahbariyati"; the admin's name is visible only inside the Admin Panel.
+
+| Method | Path | Required |
+|---|---|---|
+| GET | `/api/v1/admin/support?status=OPEN\|ANSWERED\|CLOSED` | `SUPPORT_MANAGE` — conversations, unread first |
+| GET | `/api/v1/admin/support/summary` | `SUPPORT_MANAGE` — `{"unread"}` |
+| GET | `/api/v1/admin/support/{ticket_id}` | `SUPPORT_MANAGE` — messages; marks the conversation read |
+| POST | `/api/v1/admin/support/{ticket_id}/reply` | `SUPPORT_MANAGE` — `{"text"}`; sent by the bot, audited |
+| POST | `/api/v1/admin/support/{ticket_id}/status` | `SUPPORT_MANAGE` — close / reopen |
+| GET | `/api/v1/admin/support/messages/{message_id}/photo` | `SUPPORT_MANAGE` — attached photo, fetched through the bot |
 
 ### Admin: system
 

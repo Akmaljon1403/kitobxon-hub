@@ -50,7 +50,7 @@ async def test_full_registration(db: AsyncSession) -> None:
     harness = BotHarness(5001)
 
     await harness.send("/start")
-    assert "xush kelibsiz" in harness.all_text()
+    assert "Kitobxon Hub</b> — kitobxonlar klubimizning rasmiy boti" in harness.all_text()
     assert "1/6" in harness.last_text()
 
     await harness.send("akmaljon")
@@ -164,7 +164,7 @@ async def test_cancel_and_help_during_registration(db: AsyncSession) -> None:
     harness = BotHarness(5008)
     await harness.send("/start")
     await harness.send("/help")
-    assert "Kitobxon Hub — yordam" in harness.last_text()
+    assert "Yordam" in harness.last_text() and texts.NOT_REGISTERED in harness.last_text()
     await harness.send("/cancel")
     assert harness.last_text() == texts.REGISTRATION_CANCELLED
     assert await db.scalar(select(func.count()).select_from(BotFsmState)) == 0
@@ -218,15 +218,16 @@ async def test_registered_member_gets_main_menu(db: AsyncSession) -> None:
     labels = {button.text for row in keyboard.keyboard for button in row}
     assert labels == {
         texts.BTN_BOOKS,
-        texts.BTN_PROFILE,
-        texts.BTN_RANKING,
         texts.BTN_EVENTS,
+        texts.BTN_ATTENDANCE,
         texts.BTN_TESTS,
         texts.BTN_RESULTS,
+        texts.BTN_RANKING,
+        texts.BTN_PASSPORT,
         texts.BTN_ACHIEVEMENTS,
-        texts.BTN_NOTIFICATIONS,
+        texts.BTN_SETTINGS,
         texts.BTN_HELP,
-    }
+    }  # no «Boshqaruv» for ordinary members
 
 
 async def test_profile_and_section_buttons(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -235,10 +236,12 @@ async def test_profile_and_section_buttons(db: AsyncSession, monkeypatch: pytest
     await db.commit()
     harness = BotHarness(5101)
 
-    await harness.send(texts.BTN_PROFILE)
+    await harness.send(texts.BTN_PASSPORT)
     assert "Malika" in harness.last_text() and "402" in harness.last_text()
+    assert "KH-" in harness.last_text()
 
     await harness.send(texts.BTN_EVENTS)
+    assert harness.last_text() == texts.EVENTS_NONE
     markup = harness.session.sent_messages()[-1].reply_markup
     assert isinstance(markup, InlineKeyboardMarkup)
     assert markup.inline_keyboard[0][0].web_app.url == "https://kitobxon.example.org/app/#/events"
@@ -250,7 +253,7 @@ async def test_notification_toggle(db: AsyncSession) -> None:
     db.add(UserNotificationSettings(user_id=user_id))
     await db.commit()
     harness = BotHarness(5102)
-    await harness.send(texts.BTN_NOTIFICATIONS)
+    await harness.send(texts.BTN_SETTINGS)
     await harness.press("ntf:quote_of_day")
     db.expire_all()
     settings = await db.get(UserNotificationSettings, user_id)
@@ -264,7 +267,7 @@ async def test_blocked_member_cannot_use_menu(db: AsyncSession) -> None:
     await create_user(db, telegram_id=5103, status=UserStatus.BLOCKED)
     await db.commit()
     harness = BotHarness(5103)
-    await harness.send(texts.BTN_PROFILE)
+    await harness.send(texts.BTN_PASSPORT)
     assert harness.last_text() == texts.ACCOUNT_BLOCKED
 
 
@@ -283,17 +286,39 @@ async def test_myid(db: AsyncSession) -> None:
 # ---------------------------------------------------------------------------- admin login
 
 
-async def test_admin_command_sends_one_time_link(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_admin_section_opens_panel_inside_telegram(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "public_base_url", "https://kitobxon.example.org")
     admin = await create_user(db, telegram_id=5200)
     await db.commit()
     await grant_role(db, admin, "ADMIN")
 
     harness = BotHarness(5200)
-    await harness.send("/admin")
+    await harness.send("/start")
+    keyboard = harness.session.sent_messages()[-1].reply_markup
+    assert texts.BTN_ADMIN in {button.text for row in keyboard.keyboard for button in row}
+
+    await harness.send(texts.BTN_ADMIN)
     message = harness.session.sent_messages()[-1]
-    button = message.reply_markup.inline_keyboard[0][0]
+    assert "Boshqaruv" in message.text
+    panel = message.reply_markup.inline_keyboard[0][0]
+    assert panel.web_app.url == "https://kitobxon.example.org/admin/#/"
+
+    # A one-time link for a computer, on request.
+    await harness.press("adm:link")
+    button = harness.session.sent_messages()[-1].reply_markup.inline_keyboard[0][0]
     assert button.url.startswith("https://kitobxon.example.org/admin/#/login?token=")
+
+
+async def test_owner_gets_admin_rights_from_the_bot(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Registered first, listed in SUPER_ADMIN_TELEGRAM_IDS later: the bot grants the role itself."""
+    monkeypatch.setattr(get_settings(), "public_base_url", "https://kitobxon.example.org")
+    await create_user(db, telegram_id=900000001)
+    await db.commit()
+    harness = BotHarness(900000001)
+    await harness.send("/admin")
+    assert "Boshqaruv" in harness.last_text()
+    owner = await _member(db, 900000001)
+    assert await db.scalar(select(func.count()).select_from(UserRole).where(UserRole.user_id == owner.id)) == 1
 
 
 async def test_admin_command_refused_for_members(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -331,7 +356,7 @@ async def test_webhook_requires_secret(client, db: AsyncSession, monkeypatch: py
         "/telegram/webhook", json=update, headers={"X-Telegram-Bot-Api-Secret-Token": bot_setup.webhook_secret()}
     )
     assert accepted.status_code == 200
-    assert any(isinstance(r, SendMessage) and "xush kelibsiz" in r.text for r in harness.session.requests)
+    assert any(isinstance(r, SendMessage) and "Ro'yxatdan o'tish" in r.text for r in harness.session.requests)
 
 
 # ---------------------------------------------------------------------------- faculties (admin API)

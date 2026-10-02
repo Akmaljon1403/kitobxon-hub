@@ -162,4 +162,20 @@ DEFAULT_NOTIFICATION_TEMPLATES: tuple[TemplateSeed, ...] = (
     ),
     TemplateSeed(NotificationType.ADMIN_MESSAGE, "Klub xabari", "📢 {message}", is_critical=True),
     TemplateSeed(NotificationType.SYSTEM, "Tizim xabari", "{message}", is_critical=True),
+    TemplateSeed(NotificationType.SUPPORT, "Murojaat va javoblar", "{message}", is_critical=True),
+    TemplateSeed(
+        NotificationType.CERTIFICATE,
+        "Sertifikat",
+        "🎓 Tabriklaymiz! Sizga «{title}» sertifikati berildi.\n{details}",
+        is_critical=True,
+    ),
+    TemplateSeed(NotificationType.PREMIUM, "Premium obuna", "💎 {message}", is_critical=True),
+    TemplateSeed(NotificationType.ANNOUNCEMENT, "Yangi imkoniyat", "🎉 {message}"),
+    TemplateSeed(
+        NotificationType.FEEDBACK_REQUEST,
+        "Tadbir haqida fikr",
+        "💬 «{event_title}» tadbiri sizga yoqdimi? Bir bosishda baho bering — "
+        "bu keyingi tadbirlarni yaxshilashga yordam beradi.",
+    ),
+    TemplateSeed(NotificationType.DIGEST, "Haftalik xulosa", "{message}"),
 )
