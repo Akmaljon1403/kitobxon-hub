@@ -88,12 +88,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     # ---- Attendance ----
     SettingDefinition(
         "attendance.token_ttl_seconds",
-        60,
+        30,
         Annotated[int, Field(ge=10, le=600)],
         "QR/kodning amal qilish vaqti (soniya)",
     ),
     SettingDefinition(
-        "attendance.rotation_seconds", 30, Annotated[int, Field(ge=5, le=300)], "QR/kod qanchada yangilanadi (soniya)"
+        "attendance.rotation_seconds", 10, Annotated[int, Field(ge=5, le=300)], "QR/kod qanchada yangilanadi (soniya)"
     ),
     SettingDefinition(
         "attendance.require_registration", False, bool, "Davomat uchun tadbirga oldindan ro'yxatdan o'tish shart"

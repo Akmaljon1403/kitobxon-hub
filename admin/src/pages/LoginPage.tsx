@@ -41,9 +41,13 @@ export function LoginPage({ linkToken, notice }: { linkToken: string | null; not
             <ol className="list-decimal space-y-1.5 pl-5 text-sm">
               <li>Telegram'da klub botini oching.</li>
               <li>
-                <code className="rounded bg-app-surface px-1.5 py-0.5">/admin</code> buyrug'ini yuboring.
+                Pastdagi <b>«🛠 Boshqaruv»</b> tugmasini bosing (yoki{' '}
+                <code className="rounded bg-app-surface px-1.5 py-0.5">/admin</code> yuboring).
               </li>
-              <li>Bot yuborgan «🔐 Admin panelga kirish» tugmasini bosing.</li>
+              <li>
+                <b>«🛠 Admin panelni ochish»</b> — panel Telegram ichida ochiladi. Kompyuterda ishlash uchun{' '}
+                <b>«💻 Kompyuter uchun havola»</b>ni bosing.
+              </li>
             </ol>
             <p className="text-xs text-app-hint">
               Havola faqat bir marta ishlaydi va 5 daqiqa amal qiladi. Parol kerak emas.

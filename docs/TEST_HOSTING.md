@@ -111,8 +111,10 @@ Keyin Telegram'da botingizni oching va **/start** ni bosing:
 3. `SUPER_ADMIN_TELEGRAM_IDS` qiymatini `0` dan o'zingizning raqamingizga almashtiring.
    Bir nechta odam bo'lsa — vergul bilan: `123456789,987654321`
 4. **Save Changes** ni bosing. Server avtomatik qayta ishga tushadi (1–3 daqiqa).
-5. Botga **/admin** yuboring → "🔐 Admin panelga kirish" tugmasi keladi. Bosing — admin panel ochiladi.
-   Uni kompyuterda ochish qulayroq: havolani nusxalab kompyuter brauzeriga qo'ying (5 daqiqa ichida).
+5. Botga istalgan xabar yozing (masalan /start) — pastki menyuda **🛠 Boshqaruv** tugmasi paydo bo'ladi.
+   Uni bosing → **🛠 Admin panelni ochish** — admin panel shu yerning o'zida, Telegram ichida ochiladi.
+   Kompyuterda ishlash uchun **💻 Kompyuter uchun havola**ni bosing va havolani kompyuter brauzeriga
+   qo'ying (5 daqiqa ichida).
 
 ### Admin panelda birinchi ishlar
 

@@ -12,10 +12,13 @@ import { navigate } from '../utils/router'
 const SHORTCUTS = [
   { route: 'books', icon: '📚', label: 'Kitoblar' },
   { route: 'events', icon: '📅', label: 'Tadbirlar' },
+  { route: 'checkin', icon: '✅', label: 'Davomat' },
   { route: 'tests', icon: '📝', label: 'Testlar' },
   { route: 'results', icon: '📊', label: 'Natijalarim' },
-  { route: 'achievements', icon: '🏅', label: 'Yutuqlar' },
   { route: 'ranking', icon: '🏆', label: 'Reyting' },
+  { route: 'achievements', icon: '🏅', label: 'Yutuqlar' },
+  { route: 'profile', icon: '🪪', label: 'Pasportim' },
+  { route: 'rewards', icon: '🎁', label: "Sovg'alar" },
 ]
 
 function deadlineText(deadline: string | null): string | null {
@@ -32,6 +35,11 @@ export function HomePage() {
   const events = useAsync((signal) => api<Page<ClubEvent>>('/api/v1/events?scope=upcoming&limit=1', { signal }))
   const ranking = useAsync((signal) => api<MyRanking>('/api/v1/me/ranking', { signal }))
   const tests = useAsync((signal) => api<ClubTest[]>('/api/v1/tests', { signal }))
+  const attendance = useAsync((signal) =>
+    api<{ event_id: string; title: string; checked_in: boolean }[]>('/api/v1/attendance/open', { signal }),
+  )
+  const liveAttendance =
+    attendance.state.status === 'success' ? attendance.state.data.find((item) => !item.checked_in) : undefined
   const openTest =
     tests.state.status === 'success'
       ? tests.state.data.find((test) => test.state === 'OPEN' && (test.in_progress || test.attempts.length === 0))
@@ -57,6 +65,23 @@ export function HomePage() {
           </button>
         )}
       </Card>
+
+      {liveAttendance && (
+        <button type="button" className="text-left" onClick={() => navigate('/checkin?scan=1')}>
+          <Card className="flex items-center gap-3 border-2 border-app-button">
+            <span aria-hidden className="text-3xl">
+              ✅
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold">Davomat ochiq!</p>
+              <p className="truncate text-sm text-app-hint">«{liveAttendance.title}» — bosing va QR kodni skanerlang</p>
+            </div>
+            <span aria-hidden className="ml-auto text-app-link">
+              →
+            </span>
+          </Card>
+        </button>
+      )}
 
       <SectionTitle>Joriy kitob</SectionTitle>
       {state.status === 'loading' && <LoadingState />}

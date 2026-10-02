@@ -97,6 +97,15 @@ class CheckInOut(BaseModel):
     checked_in_at: datetime
 
 
+class LiveAttendanceOut(BaseModel):
+    event_id: uuid.UUID
+    title: str
+    location: str | None
+    starts_at: datetime
+    closes_at: datetime
+    checked_in: bool
+
+
 class AttendanceSessionIn(BaseModel):
     minutes: int | None = Field(default=None, ge=1, le=600, description="Keep attendance open for N minutes")
 

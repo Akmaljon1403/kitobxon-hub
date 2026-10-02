@@ -1,9 +1,9 @@
 """HTTP hardening applied to every response and request.
 
 * Security headers chosen per area: the API never renders HTML and must not be cached or
-  framed; the Admin Panel may not be framed by anyone; the Mini App must stay embeddable
-  because Telegram Web shows it in an iframe (it cannot sign in without Telegram's signed
-  launch data anyway).
+  framed; the Admin Panel may be framed only by Telegram Web; the Mini App must stay embeddable
+  because Telegram Web shows it in an iframe (neither can sign in without Telegram's signed
+  launch data or a one-time link anyway).
 * Request body size limits, so a single request cannot exhaust memory.
 """
 
@@ -29,7 +29,9 @@ _SPA_POLICY = (
     "img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; "
     "object-src 'none'; base-uri 'none'; form-action 'self'{frames}"
 )
-ADMIN_CSP = _SPA_POLICY.format(scripts="", frames="; frame-ancestors 'none'")
+# The Admin Panel also opens inside Telegram (from the bot), so it may load Telegram's script and
+# be shown by Telegram Web; no other site may embed it.
+ADMIN_CSP = _SPA_POLICY.format(scripts=" https://telegram.org", frames="; frame-ancestors https://web.telegram.org")
 MINIAPP_CSP = _SPA_POLICY.format(scripts=" https://telegram.org", frames="")
 API_CSP = "default-src 'none'; frame-ancestors 'none'"
 HSTS = "max-age=31536000"
@@ -45,8 +47,8 @@ def headers_for(path: str, *, production: bool) -> dict[str, str]:
     if path == "/app" or path.startswith("/app/"):
         headers["Content-Security-Policy"] = MINIAPP_CSP
     elif path == "/admin" or path.startswith("/admin/"):
+        # No X-Frame-Options here: it cannot allow Telegram Web; frame-ancestors in the CSP does.
         headers["Content-Security-Policy"] = ADMIN_CSP
-        headers["X-Frame-Options"] = "DENY"
     elif path.startswith(_DOCS_PATHS):
         headers["X-Frame-Options"] = "DENY"  # Swagger UI loads its own scripts; no CSP here
     else:

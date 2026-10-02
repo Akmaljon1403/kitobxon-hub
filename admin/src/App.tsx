@@ -18,6 +18,7 @@ import { ReportEditorPage, ReportsPage } from './pages/ReportsPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SupportPage, SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
 import { TestsPage } from './pages/TestsPage'
@@ -33,6 +34,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   tests: TestsPage,
   scores: ScoresPage,
   notifications: NotificationsPage,
+  support: SupportPage,
   achievements: AchievementsPage,
   reports: ReportsPage,
   rewards: RewardsPage,
@@ -68,6 +70,18 @@ function Router() {
           <AttendancePage eventId={entityId} />
         ) : (
           <Card className="p-6 text-sm text-app-hint">Davomatni ko'rish uchun ruxsatingiz yo'q.</Card>
+        )}
+      </AdminLayout>
+    )
+  }
+
+  if (section === 'support' && entityId) {
+    return (
+      <AdminLayout section="support">
+        {can('SUPPORT_MANAGE') ? (
+          <SupportTicketPage ticketId={entityId} />
+        ) : (
+          <Card className="p-6 text-sm text-app-hint">Murojaatlarni ko'rish uchun ruxsatingiz yo'q.</Card>
         )}
       </AdminLayout>
     )

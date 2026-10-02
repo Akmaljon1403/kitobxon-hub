@@ -40,6 +40,7 @@ class Perm(StrEnum):
     SEASON_MANAGE = "SEASON_MANAGE"
     SETTINGS_MANAGE = "SETTINGS_MANAGE"
     AUDIT_LOG_VIEW = "AUDIT_LOG_VIEW"
+    SUPPORT_MANAGE = "SUPPORT_MANAGE"
 
 
 # (group, description shown to administrators)
@@ -73,6 +74,7 @@ PERMISSION_INFO: dict[Perm, tuple[str, str]] = {
     Perm.SEASON_MANAGE: ("seasons", "Mavsumlar va kitobxonlik kampaniyalarini boshqarish"),
     Perm.SETTINGS_MANAGE: ("system", "Tizim sozlamalari, ball qoidalari va fakultetlarni o'zgartirish"),
     Perm.AUDIT_LOG_VIEW: ("system", "Audit jurnalini ko'rish"),
+    Perm.SUPPORT_MANAGE: ("support", "A'zolar murojaatlarini o'qish va ularga javob berish"),
 }
 
 assert set(PERMISSION_INFO) == set(Perm), "Every permission needs a description"

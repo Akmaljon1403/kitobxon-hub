@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import { useSession } from '../store/session'
 import { navigate } from '../utils/router'
@@ -22,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'reports', icon: '📄', label: 'Hisobotlar', visible: (can) => can('REPORT_VIEW') },
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', visible: () => true },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", visible: (can) => can('REWARD_MANAGE') },
+  { route: 'support', icon: '📨', label: 'Murojaatlar', visible: (can) => can('SUPPORT_MANAGE') },
   { route: 'notifications', icon: '📢', label: 'Xabarlar', visible: (can) => can('NOTIFICATION_SEND') },
   { route: 'faculties', icon: '🏛', label: 'Fakultetlar', visible: () => true },
   { route: 'settings', icon: '⚙️', label: 'Sozlamalar', visible: () => true },
@@ -29,9 +30,32 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'audit', icon: '🧾', label: 'Audit jurnali', visible: (can) => can('AUDIT_LOG_VIEW') },
 ]
 
+/** Conversations waiting for an answer, refreshed every minute (shown next to «Murojaatlar»). */
+function useUnreadSupport(): number {
+  const { api, can } = useSession()
+  const allowed = can('SUPPORT_MANAGE')
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!allowed) return
+    let stopped = false
+    const load = () =>
+      api<{ unread: number }>('/api/v1/admin/support/summary')
+        .then((result) => !stopped && setCount(result.unread))
+        .catch(() => undefined)
+    void load()
+    const timer = window.setInterval(load, 60_000)
+    return () => {
+      stopped = true
+      window.clearInterval(timer)
+    }
+  }, [allowed, api])
+  return count
+}
+
 export function AdminLayout({ section, children }: { section: string; children: ReactNode }) {
   const { admin, can, logout } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
+  const unread = useUnreadSupport()
   const items = NAV_ITEMS.filter((item) => item.visible(can, Boolean(admin?.is_super_admin)))
 
   const nav = (
@@ -54,7 +78,12 @@ export function AdminLayout({ section, children }: { section: string; children: 
             <span aria-hidden className="w-5 text-center">
               {item.icon}
             </span>
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.route === 'support' && unread > 0 && (
+              <span className="rounded-full bg-app-danger px-2 py-0.5 text-xs font-semibold text-white" aria-label={`${unread} ta yangi`}>
+                {unread}
+              </span>
+            )}
           </button>
         )
       })}

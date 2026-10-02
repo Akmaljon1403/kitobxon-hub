@@ -23,8 +23,9 @@ import io
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Select, and_, exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -130,6 +131,33 @@ def _is_live(attendance_session: AttendanceSession | None, now: datetime) -> boo
     )
 
 
+async def _create_session(
+    session: AsyncSession, *, event: Event, actor_id: uuid.UUID | None, closes_at: datetime, now: datetime
+) -> AttendanceSession:
+    ttl = await get_setting(session, "attendance.token_ttl_seconds")
+    rotation = min(await get_setting(session, "attendance.rotation_seconds"), ttl)
+    attendance_session = AttendanceSession(
+        event_id=event.id,
+        opened_by=actor_id,
+        opened_at=now,
+        closes_at=closes_at,
+        token_ttl_seconds=ttl,
+        rotation_seconds=rotation,
+    )
+    session.add(attendance_session)
+    await session.flush()
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="ATTENDANCE_SESSION_OPEN" if actor_id else "ATTENDANCE_SESSION_AUTO_OPEN",
+        entity_type="event",
+        entity_id=event.id,
+        after={"closes_at": closes_at.isoformat()},
+    )
+    await announcements.attendance_opened(session, event)
+    return attendance_session
+
+
 async def open_session(
     session: AsyncSession, *, actor_id: uuid.UUID, event_id: uuid.UUID, minutes: int | None
 ) -> AttendanceSession:
@@ -149,29 +177,80 @@ async def open_session(
         closes_at = event.attendance_closes_at
     else:
         closes_at = now + timedelta(minutes=15)
-    ttl = await get_setting(session, "attendance.token_ttl_seconds")
-    rotation = min(await get_setting(session, "attendance.rotation_seconds"), ttl)
-    attendance_session = AttendanceSession(
-        event_id=event.id,
-        opened_by=actor_id,
-        opened_at=now,
-        closes_at=closes_at,
-        token_ttl_seconds=ttl,
-        rotation_seconds=rotation,
-    )
-    session.add(attendance_session)
-    await session.flush()
-    record_audit(
-        session,
-        actor_id=actor_id,
-        action="ATTENDANCE_SESSION_OPEN",
-        entity_type="event",
-        entity_id=event.id,
-        after={"closes_at": closes_at.isoformat()},
-    )
-    await announcements.attendance_opened(session, event)
+    attendance_session = await _create_session(session, event=event, actor_id=actor_id, closes_at=closes_at, now=now)
     await session.commit()
     return attendance_session
+
+
+def _due_events(now: datetime, event_id: uuid.UUID | None = None) -> Select[tuple[Event]]:
+    """Published events inside their attendance window that never had an attendance session."""
+    conditions = [
+        Event.status == EventStatus.PUBLISHED,
+        Event.deleted_at.is_(None),
+        Event.attendance_opens_at <= now,
+        Event.attendance_closes_at > now,
+        ~exists(select(AttendanceSession.id).where(AttendanceSession.event_id == Event.id)),
+    ]
+    if event_id is not None:
+        conditions.append(Event.id == event_id)
+    return select(Event).where(*conditions)
+
+
+async def open_scheduled_sessions(
+    session: AsyncSession, *, event_id: uuid.UUID | None = None, now: datetime | None = None
+) -> int:
+    """Open attendance automatically at the event's scheduled time (once per event).
+
+    Called by the scheduler and, so nobody has to wait for it, whenever the attendance screen
+    or a member's check-in page is opened. An administrator who closed attendance early is not
+    overruled: an event that already had a session is never reopened automatically.
+    """
+    now = now or datetime.now(UTC)
+    opened = 0
+    for event in list(await session.scalars(_due_events(now, event_id))):
+        # Serialise parallel callers per event; the re-check sees a session created meanwhile.
+        await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"attendance-open:{event.id}"))))
+        if await session.scalar(select(AttendanceSession.id).where(AttendanceSession.event_id == event.id).limit(1)):
+            continue
+        await _create_session(session, event=event, actor_id=None, closes_at=event.attendance_closes_at, now=now)
+        opened += 1
+    # Tidy up: sessions whose time is over are marked closed.
+    await session.execute(
+        update(AttendanceSession)
+        .where(AttendanceSession.status == AttendanceSessionStatus.OPEN, AttendanceSession.closes_at <= now)
+        .values(status=AttendanceSessionStatus.CLOSED, closed_at=AttendanceSession.closes_at)
+    )
+    await session.commit()
+    return opened
+
+
+async def live_events_for_member(session: AsyncSession, user_id: uuid.UUID) -> list[dict[str, Any]]:
+    """Events where a member can check in right now (attendance is open)."""
+    await open_scheduled_sessions(session)
+    now = datetime.now(UTC)
+    rows = await session.execute(
+        select(Event, AttendanceSession.closes_at, AttendanceRecord.id)
+        .join(AttendanceSession, AttendanceSession.event_id == Event.id)
+        .outerjoin(AttendanceRecord, and_(AttendanceRecord.event_id == Event.id, AttendanceRecord.user_id == user_id))
+        .where(
+            AttendanceSession.status == AttendanceSessionStatus.OPEN,
+            AttendanceSession.closes_at > now,
+            Event.deleted_at.is_(None),
+            Event.status == EventStatus.PUBLISHED,
+        )
+        .order_by(Event.starts_at)
+    )
+    return [
+        {
+            "event_id": event.id,
+            "title": event.title,
+            "location": event.location,
+            "starts_at": event.starts_at,
+            "closes_at": closes_at,
+            "checked_in": record_id is not None,
+        }
+        for event, closes_at, record_id in rows
+    ]
 
 
 async def close_session(session: AsyncSession, *, actor_id: uuid.UUID, event_id: uuid.UUID) -> None:

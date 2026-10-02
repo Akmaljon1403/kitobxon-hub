@@ -23,6 +23,21 @@ interface SessionValue {
 
 const SessionContext = createContext<SessionValue | null>(null)
 
+interface TelegramWebAppLite {
+  initData: string
+  ready?: () => void
+  expand?: () => void
+}
+
+/** Signed launch data when the panel is opened from the bot inside Telegram, otherwise null. */
+export function telegramInitData(): string | null {
+  const webApp = (window as unknown as { Telegram?: { WebApp?: TelegramWebAppLite } }).Telegram?.WebApp
+  if (!webApp?.initData) return null
+  webApp.ready?.()
+  webApp.expand?.()
+  return webApp.initData
+}
+
 function readToken(): string | null {
   try {
     return sessionStorage.getItem(TOKEN_KEY)
@@ -56,7 +71,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return await apiRequest<T>(path, { ...options, token })
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
-          signOut('Sessiya muddati tugadi. Botga /admin yuborib, qaytadan kiring.')
+          signOut("Sessiya muddati tugadi. Botdagi «🛠 Boshqaruv» tugmasi orqali qaytadan kiring.")
         }
         throw error
       }
@@ -64,8 +79,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [token, signOut],
   )
 
+  const loginWithTelegram = useCallback(async (initData: string) => {
+    const result = await apiRequest<TokenResponse>('/api/v1/auth/telegram', {
+      method: 'POST',
+      body: { init_data: initData, scope: 'admin' },
+    })
+    writeToken(result.access_token)
+    setToken(result.access_token)
+  }, [])
+
   useEffect(() => {
     if (!token) {
+      const initData = telegramInitData()
+      if (initData) {
+        setState({ kind: 'loading' })
+        loginWithTelegram(initData).catch((error: unknown) =>
+          setState({ kind: 'signed_out', message: error instanceof ApiError ? error.message : undefined }),
+        )
+        return
+      }
       setState((current) => (current.kind === 'signed_out' ? current : { kind: 'signed_out' }))
       return
     }
@@ -79,7 +111,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [token, signOut])
+  }, [token, signOut, loginWithTelegram])
 
   const loginWithLink = useCallback(async (linkToken: string) => {
     const result = await apiRequest<TokenResponse>('/api/v1/auth/admin/exchange', {

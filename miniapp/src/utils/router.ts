@@ -11,6 +11,13 @@ function currentPath(): string {
   return clean.startsWith('/') ? clean : `/${clean}`
 }
 
+/** Query parameters of the current route, e.g. "#/checkin?scan=1" → scan=1. */
+export function routeQuery(): URLSearchParams {
+  const raw = window.location.hash.replace(/^#/, '')
+  const path = raw.split(/[?&]?tgWebApp/)[0] ?? ''
+  return new URLSearchParams(path.split('?')[1] ?? '')
+}
+
 export function navigate(path: string): void {
   window.location.hash = path
 }

@@ -16,7 +16,7 @@ from aiogram.utils.token import TokenValidationError, validate_token
 
 from app.bot import texts
 from app.bot.errors import on_error
-from app.bot.handlers import common, fallback, menu, registration
+from app.bot.handlers import admin, common, fallback, registration, sections, support
 from app.bot.middlewares import DbSessionMiddleware, FloodMiddleware, MemberMiddleware
 from app.bot.storage import PostgresStorage
 from app.core.config import Settings, get_settings
@@ -27,9 +27,10 @@ logger = logging.getLogger(__name__)
 WEBHOOK_PATH = "/telegram/webhook"
 
 COMMANDS = [
-    BotCommand(command="start", description="Bosh menyu / ro'yxatdan o'tish"),
-    BotCommand(command="help", description="Yordam"),
-    BotCommand(command="myid", description="Telegram ID raqamim"),
+    BotCommand(command="start", description="Bosh menyu"),
+    BotCommand(command="davomat", description="Tadbirda davomat qilish"),
+    BotCommand(command="pasport", description="Kitobxon pasportim"),
+    BotCommand(command="help", description="Yordam va adminga yozish"),
     BotCommand(command="cancel", description="Joriy amalni bekor qilish"),
 ]
 
@@ -56,7 +57,10 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.update.outer_middleware(FloodMiddleware())
     dispatcher.update.outer_middleware(DbSessionMiddleware())
     dispatcher.update.outer_middleware(MemberMiddleware())
-    dispatcher.include_routers(registration.router, common.router, menu.router, fallback.router)
+    # Order matters: free-text handlers (support messages) come after the menu buttons.
+    dispatcher.include_routers(
+        registration.router, common.router, admin.router, sections.router, support.router, fallback.router
+    )
     dispatcher.errors.register(on_error)
     _dispatcher = dispatcher
     return dispatcher
@@ -124,7 +128,7 @@ async def configure_telegram(runtime: BotRuntime, *, with_webhook: bool) -> None
     await bot.set_my_description(description=texts.BOT_DESCRIPTION)
     if settings.webapp_url:
         await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(text="📚 Kitobxon Hub", web_app=WebAppInfo(url=settings.webapp_url))
+            menu_button=MenuButtonWebApp(text="📱 Ilova", web_app=WebAppInfo(url=settings.webapp_url))
         )
     if with_webhook:
         if not settings.base_url:
