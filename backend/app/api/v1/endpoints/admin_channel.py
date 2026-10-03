@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import uuid
 from typing import Annotated
 
@@ -10,8 +11,8 @@ from pydantic import AwareDatetime
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.models import ChannelPost
-from app.models.enums import ChannelPostKind
-from app.schemas.channel import ChannelOut, ChannelPostOut, ChannelStickerOut
+from app.models.enums import ChannelPostKind, ChannelPostStatus
+from app.schemas.channel import ChannelOut, ChannelPostOut, ChannelPostTextIn, ChannelStickerOut
 from app.security.permissions import Perm
 from app.services import channel as channel_service
 
@@ -32,6 +33,11 @@ def _post(post: ChannelPost) -> ChannelPostOut:
         sent_at=post.sent_at,
         last_error=post.last_error,
         manual=post.kind == ChannelPostKind.MANUAL,
+        plain_text=channel_service.plain_text(post.text),
+        in_review=post.status == ChannelPostStatus.PENDING
+        and post.review_sent_at is not None
+        and post.reviewed_at is None,
+        reviewed_at=post.reviewed_at,
     )
 
 
@@ -42,7 +48,12 @@ async def channel_overview(_: Sender, db: DbSession) -> ChannelOut:
         posts=[_post(post) for post in await channel_service.recent_posts(db)],
         stickers=[
             ChannelStickerOut(
-                id=s.id, emoji=s.emoji, set_name=s.set_name, is_animated=s.is_animated, created_at=s.created_at
+                id=s.id,
+                emoji=s.emoji,
+                set_name=s.set_name,
+                is_animated=s.is_animated,
+                mood=s.mood,
+                created_at=s.created_at,
             )
             for s in await channel_service.stickers(db)
         ],
@@ -85,6 +96,23 @@ async def test_post(current: Sender, db: DbSession) -> ChannelPostOut:
 @router.post("/posts/{post_id}/cancel", response_model=ChannelPostOut, summary="Cancel a post not sent yet")
 async def cancel_post(post_id: uuid.UUID, current: Sender, db: DbSession) -> ChannelPostOut:
     return _post(await channel_service.cancel_post(db, actor_id=current.user.id, post_id=post_id))
+
+
+@router.post("/posts/{post_id}/publish-now", response_model=ChannelPostOut, summary="Approve: post it right now")
+async def publish_now(post_id: uuid.UUID, current: Sender, db: DbSession) -> ChannelPostOut:
+    return _post(await channel_service.publish_now(db, actor_id=current.user.id, post_id=post_id))
+
+
+@router.put(
+    "/posts/{post_id}/text",
+    response_model=ChannelPostOut,
+    summary="New text for a post not sent yet (plain text); it goes out right after",
+)
+async def edit_post(post_id: uuid.UUID, payload: ChannelPostTextIn, current: Sender, db: DbSession) -> ChannelPostOut:
+    post = await channel_service.edit_post(
+        db, actor_id=current.user.id, post_id=post_id, text=html.escape(payload.text.strip(), quote=False)
+    )
+    return _post(post)
 
 
 @router.delete("/stickers/{sticker_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Forget a saved sticker")

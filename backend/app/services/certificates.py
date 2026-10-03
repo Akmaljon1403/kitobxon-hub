@@ -102,7 +102,9 @@ async def issue(
     assert certificate is not None
     with_pdf = await _pdf_allowed(session, user_id)
     details = f"Tekshirish kodi: {display_code(certificate.verify_code)}"
-    if not with_pdf:
+    if with_pdf:
+        details = "📎 PDF nusxasi shu xabarga ilova qilingan — yuklab olib, chop etishingiz mumkin.\n" + details
+    else:
         link = verify_url(certificate.verify_code)
         details += "\n\n📄 PDF nusxasini yuklab olish va chop etish — 💎 Premium imkoniyati." + (
             f"\nSertifikatingiz onlayn tasdiqlangan — ushbu havolani istalgan kishiga ko'rsating: {link}"
@@ -114,7 +116,7 @@ async def issue(
         buttons: list[dict[str, Any]] = [{"text": "🎓 Sertifikatlarim", "app_route": "certificates"}]
         if not with_pdf:
             buttons.append({"text": "💎 Premium", "app_route": "premium"})
-        payload: dict[str, Any] = {"buttons": buttons}
+        payload: dict[str, Any] = {"buttons": buttons, "mood": "CELEBRATE"}
         if with_pdf:
             payload["certificate_id"] = str(certificate.id)
         await enqueue_notification(

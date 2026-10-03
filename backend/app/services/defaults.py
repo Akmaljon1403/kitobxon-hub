@@ -105,60 +105,71 @@ DEFAULT_NOTIFICATION_TEMPLATES: tuple[TemplateSeed, ...] = (
     TemplateSeed(
         NotificationType.EVENT_CREATED,
         "Yangi tadbir",
-        "📅 Yangi tadbir: «{event_title}»\n🕒 {starts_at}\n📍 {location}\n\n"
-        "Qatnashmoqchi bo'lsangiz, ilovada ro'yxatdan o'ting.",
+        "📅 <b>Yangi uchrashuv: «{event_title}»</b>\n🕒 {starts_at}\n📍 {location}\n\n"
+        "Kitob haqidagi suhbat — kitobning davomi. Qatnashmoqchi bo'lsangiz, ilovada joyingizni band qiling 👇",
     ),
     TemplateSeed(
         NotificationType.EVENT_REMINDER,
         "Tadbir eslatmasi",
-        "⏰ Eslatma: «{event_title}» tadbiri {starts_at} da boshlanadi.\n📍 {location}",
+        "⏰ <b>Eslatma:</b> «{event_title}» {starts_at} da boshlanadi.\n📍 {location}\n\n"
+        "Kitobingiz va savollaringizni olib keling — eng qiziq fikrlar suhbatda tug'iladi 📚",
     ),
-    TemplateSeed(NotificationType.EVENT_STARTED, "Tadbir boshlandi", "▶️ «{event_title}» tadbiri boshlandi!"),
+    TemplateSeed(
+        NotificationType.EVENT_STARTED,
+        "Tadbir boshlandi",
+        "▶️ «{event_title}» boshlandi! Birinchi sahifa ochildi — kechikmang 📖",
+    ),
     TemplateSeed(
         NotificationType.ATTENDANCE_OPEN,
         "Davomat ochildi",
-        "✅ «{event_title}» tadbirida davomat ochildi. Ekrandagi QR kodni ilova orqali skanerlang yoki kodni kiriting.",
+        "✅ «{event_title}» tadbirida davomat ochildi. Ekrandagi QR kodni ilova orqali skanerlang yoki kodni "
+        "kiriting — bugungi sahifa kitobxonlik kundaligingizga yozilsin ✍️",
     ),
     TemplateSeed(
         NotificationType.TEST_STARTED,
         "Yangi test",
-        "📝 Yangi test: «{test_title}»\nTest {ends_at} gacha ochiq. Ishlash vaqti: {duration} daqiqa.",
+        "📝 <b>Yangi test: «{test_title}»</b>\nTest {ends_at} gacha ochiq, ishlash vaqti — {duration} daqiqa.\n\n"
+        "O'qiganlaringizni sinab ko'ring: har bir to'g'ri javob — ball 🎯",
     ),
     TemplateSeed(
         NotificationType.TEST_ENDING,
         "Test yopilmoqda",
-        "⌛ «{test_title}» testi {ends_at} da yopiladi. Hali ishlamagan bo'lsangiz, ulguring!",
+        "⌛ «{test_title}» testi {ends_at} da yopiladi. Oxirgi bob qolgandek — ulguring! 🏃",
     ),
     TemplateSeed(
         NotificationType.TEST_RESULT,
         "Test natijasi",
         "📊 «{test_title}» testidagi natijangiz: {score} / {max_score} ball.",
-        is_critical=True,
     ),
     TemplateSeed(
         NotificationType.NEW_BOOK,
         "Yangi kitob",
-        "📚 Yangi kitob: «{book_title}» — {book_author}\n🗓 O'qish muddati: {deadline}",
+        "📚 <b>Yangi kitob: «{book_title}»</b> — {book_author}\n🗓 O'qish muddati: {deadline}\n\n"
+        "Har bir kitob — yangi dunyo. Birinchi sahifani bugun oching! 📖",
     ),
     TemplateSeed(
         NotificationType.READING_REMINDER,
         "O'qish eslatmasi",
-        "📖 «{book_title}» kitobini o'qish muddati {deadline} da tugaydi.",
+        "📖 «{book_title}» sizni kutyapti: o'qish muddati {deadline} da tugaydi.\n"
+        "Kuniga bir necha bet — va marra sizniki! 💪",
     ),
     TemplateSeed(
-        NotificationType.QUOTE_OF_DAY, "Kun iqtibosi", "💬 Kun iqtibosi\n\n«{quote_text}»\n\n— {quote_author}"
+        NotificationType.QUOTE_OF_DAY,
+        "Kun iqtibosi",
+        "💬 <b>Kun iqtibosi</b>\n\n<i>«{quote_text}»</i>\n\n— {quote_author}",
     ),
     TemplateSeed(NotificationType.RANKING_UPDATE, "Reyting", "🏆 Reytingdagi o'rningiz: {rank}-o'rin ({total} ball)."),
     TemplateSeed(
         NotificationType.ACHIEVEMENT_UNLOCKED,
         "Yangi yutuq",
-        "🏅 Tabriklaymiz! Siz «{achievement_title}» yutug'ini qo'lga kiritdingiz.",
+        "🏅 Tabriklaymiz! Siz «{achievement_title}» yutug'ini qo'lga kiritdingiz.\n"
+        "Kitobxonlik tarixingizga yangi sahifa yozildi ✨",
     ),
     TemplateSeed(
         NotificationType.REWARD,
         "Sovg'a",
-        "🎁 Sizga sovg'a berildi: «{reward_title}». Batafsil ma'lumot ilovada.",
-        is_critical=True,
+        "🎁 Sizga sovg'a berildi: «{reward_title}»! Batafsil ma'lumot ilovada — «Sovg'alarim» bo'limida.\n"
+        "Mutolaangiz yanada maroqli bo'lsin 📚",
     ),
     TemplateSeed(NotificationType.ADMIN_MESSAGE, "Klub xabari", "📢 {message}", is_critical=True),
     TemplateSeed(NotificationType.SYSTEM, "Tizim xabari", "{message}", is_critical=True),
@@ -167,8 +178,7 @@ DEFAULT_NOTIFICATION_TEMPLATES: tuple[TemplateSeed, ...] = (
         NotificationType.CERTIFICATE,
         "Sertifikat",
         "🎓 <b>Tabriklaymiz! Sizga sertifikat berildi.</b>\n\n🏅 {title}\n\n"
-        "Sertifikat PDF fayl sifatida ilova qilingan — uni yuklab olib, chop etishingiz mumkin.\n{details}",
-        is_critical=True,
+        "Mehnatingiz muhrlandi — bu kitobxonlik yo'lingizdagi yangi bekat.\n{details}",
     ),
     TemplateSeed(NotificationType.PREMIUM, "Premium obuna", "💎 {message}", is_critical=True),
     TemplateSeed(
@@ -179,13 +189,13 @@ DEFAULT_NOTIFICATION_TEMPLATES: tuple[TemplateSeed, ...] = (
     TemplateSeed(
         NotificationType.FEEDBACK_REQUEST,
         "Tadbir haqida fikr",
-        "💬 «{event_title}» tadbiri sizga yoqdimi? Bir bosishda baho bering — "
-        "bu keyingi tadbirlarni yaxshilashga yordam beradi.",
+        "💬 «{event_title}» sizga yoqdimi? Kitobga taqriz yozilgandek, tadbirga ham bir bosishda baho bering — "
+        "keyingilari yanada qiziq bo'ladi.",
     ),
     TemplateSeed(
         NotificationType.DIGEST,
         "Haftalik xulosa",
-        "📊 <b>Haftalik xulosangiz</b>\n\n{message}\n\nYangi haftada omad! 📚",
+        "📊 <b>Haftalik xulosangiz</b>\n\n{message}\n\nYangi hafta — yangi bob. Omad! 📚",
     ),
 )
 

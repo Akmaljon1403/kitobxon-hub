@@ -5,7 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, PageHeader, S
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { ChannelOverview, ChannelPost, ChannelPostKind } from '../types/api'
+import type { ChannelOverview, ChannelPost, ChannelPostKind, ChannelSticker } from '../types/api'
 import { formatDateTime, fromLocalInput } from '../utils/format'
 import { navigate } from '../utils/router'
 
@@ -27,6 +27,13 @@ const STATUS = {
 } as const
 
 /** Telegram HTML of a post as plain text for the list. */
+const STICKER_MOODS: Record<ChannelSticker['mood'], string> = {
+  CELEBRATE: '· tabrik',
+  READING: '· kitob',
+  WELCOME: '· salom',
+  ANY: '',
+}
+
 function plain(text: string): string {
   const element = document.createElement('div')
   element.innerHTML = text.replace(/<br\s*\/?>/g, '\n')
@@ -137,6 +144,7 @@ export function ChannelPage() {
   const { state, reload } = useAsync((signal) => api<ChannelOverview>('/api/v1/admin/channel', { signal }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
 
   async function act(work: () => Promise<unknown>) {
     setBusy(true)
@@ -202,7 +210,36 @@ export function ChannelPage() {
             <tr key={post.id} className={post.status === 'CANCELLED' ? 'text-app-hint' : ''}>
               <td className="whitespace-nowrap px-4 py-2 text-sm">{KINDS[post.kind]}</td>
               <td className="max-w-md px-4 py-2 text-sm">
-                <p className="line-clamp-3 whitespace-pre-line">{plain(post.text) || '🖼 (rasm)'}</p>
+                {editing?.id === post.id ? (
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      className="min-h-32 w-full rounded-lg border border-app-border bg-app-surface p-2 text-sm"
+                      value={editing.text}
+                      maxLength={4000}
+                      onChange={(event) => setEditing({ id: post.id, text: event.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        loading={busy}
+                        disabled={!editing.text.trim()}
+                        onClick={() =>
+                          void act(async () => {
+                            await api(`/api/v1/admin/channel/posts/${post.id}/text`, { method: 'PUT', body: { text: editing.text } })
+                            setEditing(null)
+                          })
+                        }
+                      >
+                        Saqlash va joylash
+                      </Button>
+                      <Button variant="ghost" onClick={() => setEditing(null)}>
+                        Bekor
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="line-clamp-3 whitespace-pre-line">{plain(post.text) || '🖼 (rasm)'}</p>
+                )}
+                {post.in_review && <p className="text-xs font-medium text-app-link">👀 Adminlar tekshiruvida — javob bo'lmasa, ko'rsatilgan vaqtda o'zi chiqadi</p>}
                 <p className="text-xs text-app-hint">
                   {post.has_photo && '🖼 rasm '}
                   {post.has_sticker && '🎨 stiker'}
@@ -215,9 +252,19 @@ export function ChannelPage() {
               </td>
               <td className="px-4 py-2 text-right">
                 {post.status === 'PENDING' && (
-                  <Button variant="ghost" className="text-app-danger" disabled={busy} onClick={() => void act(() => api(`/api/v1/admin/channel/posts/${post.id}/cancel`, { method: 'POST' }))}>
-                    Bekor qilish
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button variant="secondary" disabled={busy} onClick={() => void act(() => api(`/api/v1/admin/channel/posts/${post.id}/publish-now`, { method: 'POST' }))}>
+                      ▶️ Hozir joylash
+                    </Button>
+                    {editing?.id !== post.id && (
+                      <Button variant="ghost" disabled={busy} onClick={() => setEditing({ id: post.id, text: post.plain_text })}>
+                        ✏️ Tahrirlash
+                      </Button>
+                    )}
+                    <Button variant="ghost" className="text-app-danger" disabled={busy} onClick={() => void act(() => api(`/api/v1/admin/channel/posts/${post.id}/cancel`, { method: 'POST' }))}>
+                      Bekor qilish
+                    </Button>
+                  </div>
                 )}
               </td>
             </tr>
@@ -228,13 +275,16 @@ export function ChannelPage() {
       <Card className="flex flex-col gap-2 p-4">
         <h2 className="font-semibold">🎨 Stikerlar ({overview.stickers.length})</h2>
         <p className="text-sm text-app-hint">
-          Botga <b>/stiker</b> deb yozing va yoqqan stikerlarni yuboring (animatsion stikerlar ham bo'ladi). Avtomatik postlardan keyin ulardan biri tasodifiy qo'shiladi.
+          Botga <b>/stiker</b> deb yozing va yoqqan stikerlarni yuboring (animatsion va Premium stikerlar ham bo'ladi). Bot ularni mos joyda ishlatadi: 🎉 quvnoqlari —
+          g'alaba va tabriklardan keyin, 📚 kitoblilari — kitob postlaridan keyin, 👋 salomlashuvchilari — yangi a'zolarga. Avtomatik post kanalga chiqishidan
+          oldin adminlarga botda ko'rsatiladi (odatda 5 daqiqa; Sozlamalar → 📣 Telegram kanal).
         </p>
         <div className="flex flex-wrap gap-2">
           {overview.stickers.map((sticker, index) => (
             <span key={sticker.id} className="flex items-center gap-1 rounded-full border border-app-border px-3 py-1 text-sm">
               {sticker.emoji ?? '🙂'} {sticker.set_name ?? `Stiker ${index + 1}`}
               {sticker.is_animated && <span className="text-xs text-app-hint">(animatsion)</span>}
+              <span className="text-xs text-app-hint">{STICKER_MOODS[sticker.mood]}</span>
               <button
                 type="button"
                 aria-label="O'chirish"

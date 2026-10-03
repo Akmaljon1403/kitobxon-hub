@@ -118,6 +118,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "Kitob muddati tugashidan necha kun oldin eslatiladi (0 = eslatilmaydi)",
     ),
     SettingDefinition("notifications.quote_of_day_time", "09:00", ClockTime, "Kun iqtibosi yuboriladigan vaqt"),
+    SettingDefinition(
+        "notifications.stickers",
+        True,
+        bool,
+        "Tabrik xabarlarida (g'alaba, sertifikat, yutuq) stiker va 🎉 animatsiya. Stikerlar botda /stiker orqali",
+    ),
     # ---- Organisation (used in official reports) ----
     SettingDefinition(
         "org.organization_name",
@@ -175,6 +181,13 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("channel.post_results", True, bool, "Test g'oliblari, sovg'a o'yinlari va oy peshqadamlari"),
     SettingDefinition("channel.post_invites", True, bool, "Har dushanba botga taklif posti"),
     SettingDefinition("channel.stickers", True, bool, "Avtomatik postlardan keyin saqlangan stikerlardan biri"),
+    SettingDefinition(
+        "channel.review_minutes",
+        5,
+        Annotated[int, Field(ge=0, le=60)],
+        "Avtomatik post kanalga chiqishidan oldin adminlarga ko'rsatiladi; shu daqiqalarda hech kim javob "
+        "bermasa, o'zi joylanadi (0 — tekshiruvsiz)",
+    ),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",

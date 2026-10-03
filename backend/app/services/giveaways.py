@@ -57,7 +57,7 @@ from app.models.enums import (
 )
 from app.services import rewards as reward_service
 from app.services.audit import record_audit
-from app.services.notifications import app_button, enqueue_for_members, enqueue_notification, render
+from app.services.notifications import app_button, celebrate, enqueue_for_members, enqueue_notification, render
 from app.services.settings import get_setting
 from app.utils.timezone import MONTHS_UZ, format_date, local_tz
 
@@ -650,7 +650,7 @@ async def _award(
             type_=NotificationType.SYSTEM,
             text=(await render(session, NotificationType.SYSTEM, message=text)) or text,
             dedup_key=f"giveaway:{giveaway_id}:win:{slot}",
-            payload=app_button("premium", "💎 Premium"),
+            payload=celebrate(app_button("premium", "💎 Premium")),
             priority=2,
         )
         await session.commit()

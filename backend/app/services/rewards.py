@@ -20,7 +20,7 @@ from app.models import Reward, RewardCode, User, UserReward
 from app.models.enums import NotificationType, RewardCodeStatus, RewardStatus, UserRewardStatus, UserStatus
 from app.security.crypto import decrypt_secret, encrypt_secret, keyed_hash
 from app.services.audit import record_audit
-from app.services.notifications import app_button, enqueue_notification, render
+from app.services.notifications import app_button, celebrate, enqueue_notification, render
 
 CODE_PURPOSE = "reward-code"
 _FIELDS = ("title", "description", "type", "value", "expires_at", "status")
@@ -280,7 +280,7 @@ async def assign(
             type_=NotificationType.REWARD,
             text=text,
             dedup_key=f"reward:{user_reward.id}",
-            payload=app_button("rewards", "🎁 Sovg'alarim"),
+            payload=celebrate(app_button("rewards", "🎁 Sovg'alarim")),
             priority=2,
         )
     await session.commit()

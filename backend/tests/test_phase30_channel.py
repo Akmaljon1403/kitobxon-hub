@@ -321,7 +321,7 @@ async def test_admin_saves_stickers_in_the_bot(db: AsyncSession) -> None:
 
     harness = BotHarness(9401)
     await harness.send("/stiker")
-    assert "Kanal postlari uchun stikerlar" in harness.last_text()
+    assert "Bot va kanal uchun stikerlar" in harness.last_text()
 
     async def send_sticker(unique: str) -> None:
         sticker = Sticker(
@@ -339,7 +339,7 @@ async def test_admin_saves_stickers_in_the_bot(db: AsyncSession) -> None:
         await harness.dispatcher.feed_update(harness.bot, update)
 
     await send_sticker("one")
-    assert "Jami stikerlar: 1" in harness.last_text()
+    assert "Jami stikerlar: 1" in harness.last_text() and "kitob mavzusida" in harness.last_text()
     await send_sticker("one")
     assert "allaqachon saqlangan" in harness.last_text()
     await harness.send("salom")

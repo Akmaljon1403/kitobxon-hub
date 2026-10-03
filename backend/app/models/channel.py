@@ -36,6 +36,7 @@ class ChannelPost(UUIDPrimaryKeyMixin, Base):
     message_id: Mapped[int | None] = mapped_column(BigInteger)
     last_error: Mapped[str | None] = mapped_column(Text)
     # Automatic posts are shown to the admins first (5 minutes); who approved or edited it, and when.
+    review_sent_at: Mapped[datetime | None] = mapped_column()
     reviewed_at: Mapped[datetime | None] = mapped_column()
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))

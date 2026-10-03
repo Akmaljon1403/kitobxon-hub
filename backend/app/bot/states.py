@@ -59,6 +59,12 @@ class CardReject(StatesGroup):
     waiting = State()
 
 
+class ChannelPostEdit(StatesGroup):
+    """An admin is writing a new text for an automatic channel post (post id in the data)."""
+
+    waiting = State()
+
+
 class ChannelStickers(StatesGroup):
     """An admin is sending stickers to be used in the channel posts (/stiker)."""
 

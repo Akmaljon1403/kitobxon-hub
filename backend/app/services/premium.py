@@ -210,7 +210,9 @@ async def _extend(
     return subscription
 
 
-async def _tell(session: AsyncSession, user_id: uuid.UUID, message: str, dedup_key: str) -> None:
+async def _tell(
+    session: AsyncSession, user_id: uuid.UUID, message: str, dedup_key: str, *, festive: bool = False
+) -> None:
     text = await render(session, NotificationType.PREMIUM, message=message)
     if text is not None:
         await enqueue_notification(
@@ -219,7 +221,10 @@ async def _tell(session: AsyncSession, user_id: uuid.UUID, message: str, dedup_k
             type_=NotificationType.PREMIUM,
             text=text,
             dedup_key=dedup_key,
-            payload={"buttons": [{"text": "💎 Premium", "app_route": "premium"}]},
+            payload={
+                "buttons": [{"text": "💎 Premium", "app_route": "premium"}],
+                **({"mood": "CELEBRATE"} if festive else {}),
+            },
             priority=2,
         )
 
@@ -265,7 +270,7 @@ async def grant(
         entity_id=subscription.id,
         after={"user_id": str(user_id), "days": days, "lifetime": lifetime, "note": note},
     )
-    await _tell(session, user_id, message, f"premium:grant:{subscription.id}")
+    await _tell(session, user_id, message, f"premium:grant:{subscription.id}", festive=True)
     await session.commit()
     return subscription
 
@@ -307,6 +312,7 @@ async def start_trial(session: AsyncSession, user: User) -> PremiumSubscription:
         f"🎁 {days} kunlik bepul Premium boshlandi! Oltin pasport, to'liq reyting, sertifikat PDF va boshqa "
         f"imkoniyatlarni sinab ko'ring. Sinov {format_date(subscription.ends_at)} gacha — pul yechilmaydi.",
         f"premium:trial:{user.id}",
+        festive=True,
     )
     await session.commit()
     return subscription

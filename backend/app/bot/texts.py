@@ -377,11 +377,28 @@ CARD_REJECTED = "❌ Rad etildi. A'zoga sabab bilan xabar yuborildi."
 
 # ---- Channel stickers (/stiker, admins) ----
 STICKER_ASK = (
-    "🎨 <b>Kanal postlari uchun stikerlar</b>\n\n"
-    "Menga yoqqan stikerlaringizni birma-bir yuboring (oddiy yoki animatsion). Bot ularni saqlaydi va "
-    "kanaldagi avtomatik postlardan keyin bittasini tasodifiy qo'shadi.\n\nTugatgach — /tayyor"
+    "🎨 <b>Bot va kanal uchun stikerlar</b>\n\n"
+    "Menga yoqqan stikerlaringizni birma-bir yuboring (oddiy, animatsion yoki Premium). Bot ularni saqlaydi "
+    "va mos joyda ishlatadi: 🎉 kabi quvnoq stikerlar — g'alaba va tabriklardan keyin, 📚 kitobli stikerlar — "
+    "kitob postlaridan keyin, 👋 salomlashuvchilar — yangi a'zolarga.\n\nTugatgach — /tayyor"
 )
-STICKER_SAVED = "✅ Saqlandi. Jami stikerlar: {total} ta. Yana yuboring yoki /tayyor"
+STICKER_SAVED = "✅ Saqlandi ({mood}). Jami stikerlar: {total} ta. Yana yuboring yoki /tayyor"
+STICKER_MOODS = {
+    "CELEBRATE": "🎉 tabriklar uchun",
+    "READING": "📚 kitob mavzusida",
+    "WELCOME": "👋 salomlashish uchun",
+    "ANY": "har qanday xabar uchun",
+}
+# ---- Channel posts: the admins look first ----
+CHANNEL_POST_NOW = "✅ Post kanalga joylanmoqda."
+CHANNEL_POST_CANCELLED = "❌ Post bekor qilindi — kanalga chiqmaydi."
+CHANNEL_POST_EDIT_ASK = (
+    "✏️ Post uchun yangi matnni yuboring (qalin, kursiv kabi bezaklar saqlanadi).\n"
+    "Post 30 daqiqa kutadi; matn kelmasa, avvalgi holida chiqadi. Bekor qilish: /cancel"
+)
+CHANNEL_POST_EDITED = "✅ Matn yangilandi — post kanalga joylanmoqda."
+CHANNEL_POST_EDIT_KEPT = "Matn o'zgarmadi: post 30 daqiqadan keyin avvalgi holida chiqadi."
+CHANNEL_POST_TEXT_ONLY = "Iltimos, post matnini oddiy xabar qilib yuboring yoki /cancel"
 STICKER_DUPLICATE = "Bu stiker allaqachon saqlangan (jami {total} ta). Boshqasini yuboring yoki /tayyor"
 STICKER_ONLY = "Stiker yuboring yoki /tayyor deb yozing."
 STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sahifasida ko'rasiz va keraksizini o'chirasiz."

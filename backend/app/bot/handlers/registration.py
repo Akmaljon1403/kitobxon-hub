@@ -19,8 +19,9 @@ from app.bot import access, keyboards, texts
 from app.bot.states import Registration
 from app.core.errors import ConflictError
 from app.models import User
-from app.models.enums import UserStatus
+from app.models.enums import StickerMood, UserStatus
 from app.services import attendance as attendance_service
+from app.services import literary, stickers
 from app.services.members import (
     RegistrationData,
     after_registration,
@@ -259,9 +260,12 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         await callback.message.edit_reply_markup(reply_markup=None)
         if user.status == UserStatus.ACTIVE:
             await callback.message.answer(
-                texts.REGISTERED.format(first_name=html.escape(user.first_name)),
+                texts.REGISTERED.format(first_name=html.escape(user.first_name))
+                + "\n\n"
+                + literary.epigraph(f"welcome:{user.id}"),
                 reply_markup=await access.menu(db, user),
             )
+            await stickers.send(db, callback.message, StickerMood.WELCOME)
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
     await after_registration(db, user.id)

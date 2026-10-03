@@ -38,11 +38,14 @@ from app.models.enums import (
     ChannelPostKind,
     ChannelPostStatus,
     EventStatus,
+    NotificationType,
+    StickerMood,
     UserStatus,
 )
 from app.services.audit import record_audit
 from app.services.notifications import wake_sender
 from app.services.settings import get_setting
+from app.services.stickers import mood_for
 from app.utils.timezone import MONTHS_UZ, format_human_date, local_tz
 
 # Posts never go out at night (club time zone): they wait for the morning.
@@ -124,11 +127,25 @@ async def is_on(session: AsyncSession, kind: ChannelPostKind | None = None) -> b
     return bool(await get_setting(session, toggle)) if toggle else True
 
 
-async def _random_sticker(session: AsyncSession) -> str | None:
+POST_MOODS = {
+    ChannelPostKind.RESULTS: StickerMood.CELEBRATE,
+    ChannelPostKind.BOOK: StickerMood.READING,
+    ChannelPostKind.READING_NUDGE: StickerMood.READING,
+    ChannelPostKind.QUOTE: StickerMood.READING,
+    ChannelPostKind.INVITE: StickerMood.WELCOME,
+}
+
+
+async def _random_sticker(session: AsyncSession, kind: ChannelPostKind) -> str | None:
+    """A saved sticker that suits the post (a celebrating one under results, a reading one under books)."""
     if not await get_setting(session, "channel.stickers"):
         return None
-    ids = list(await session.scalars(select(ChannelSticker.file_id)))
-    return random.choice(ids) if ids else None  # noqa: S311 - decoration, not security
+    rows = (await session.execute(select(ChannelSticker.mood, ChannelSticker.file_id))).all()
+    wanted = POST_MOODS.get(kind, StickerMood.ANY)
+    choices = [file_id for mood, file_id in rows if mood == wanted] or [
+        file_id for mood, file_id in rows if mood == StickerMood.ANY
+    ]
+    return random.choice(choices or [file_id for _, file_id in rows]) if rows else None  # noqa: S311
 
 
 async def queue(
@@ -151,8 +168,9 @@ async def queue(
         return False
     when = scheduled_at or datetime.now(UTC)
     if automatic:
-        when = next_daytime(when)
-        sticker_file_id = sticker_file_id or await _random_sticker(session)
+        # The admins get a few minutes to look at it first (see ``request_reviews``).
+        when = next_daytime(when + timedelta(minutes=await review_minutes(session)))
+        sticker_file_id = sticker_file_id or await _random_sticker(session, kind)
     statement = (
         insert(ChannelPost)
         .values(
@@ -486,6 +504,157 @@ async def scheduled_posts(session: AsyncSession, now: datetime | None = None) ->
     )
 
 
+# ---------------------------------------------------------------------------- admins look first
+
+EDIT_HOLD = timedelta(minutes=30)  # how long a post waits for the admin's new text
+
+
+async def review_minutes(session: AsyncSession) -> int:
+    return int(await get_setting(session, "channel.review_minutes") or 0)
+
+
+def plain_text(text: str) -> str:
+    """The post without HTML tags (an admin preview of a cut text, the panel's edit field)."""
+    return html.unescape(re.sub(r"<[^>]+>", "", text))
+
+
+async def request_reviews(session: AsyncSession, now: datetime | None = None) -> int:
+    """Show automatic posts to the admins a few minutes before they go out: post now, cancel or edit.
+    Nobody answers — the post goes out at its time. Returns how many posts were shown."""
+    from app.security.permissions import Perm
+    from app.services.notifications import enqueue_for_members
+    from app.services.rbac import admins_with_permission
+
+    minutes = await review_minutes(session)
+    if minutes <= 0:
+        return 0
+    now = now or datetime.now(UTC)
+    posts = list(
+        await session.scalars(
+            select(ChannelPost)
+            .where(
+                ChannelPost.status == ChannelPostStatus.PENDING,
+                ChannelPost.kind != ChannelPostKind.MANUAL,
+                ChannelPost.review_sent_at.is_(None),
+                ChannelPost.reviewed_at.is_(None),
+                ChannelPost.scheduled_at > now,
+                ChannelPost.scheduled_at <= now + timedelta(minutes=minutes),
+            )
+            .order_by(ChannelPost.scheduled_at)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    chat = normalize_chat_id(str(await get_setting(session, "channel.chat_id")))
+    for post in posts:
+        post.review_sent_at = now
+        local = post.scheduled_at.astimezone(local_tz())
+        body = post.text if len(post.text) <= 3000 else _e(plain_text(post.text)[:3000]) + "…"
+        text = (
+            f"👀 <b>Kanal uchun post tayyor</b> — soat {local:%H:%M} da {_e(chat)} kanaliga o'zi chiqadi.\n"
+            "Hech kim javob bermasa, shunday joylanadi.\n\n"
+            f"{body}" + ("\n\n🖼 <i>Rasm bilan</i>" if post.photo_key or post.photo_url else "")
+        )
+        await enqueue_for_members(
+            session,
+            type_=NotificationType.SYSTEM,
+            text=text,
+            dedup_prefix=f"channel-review:{post.id}",
+            members=admins_with_permission(Perm.NOTIFICATION_SEND),
+            payload={
+                "buttons": [
+                    {
+                        "row": [
+                            {"text": "✅ Hozir joylash", "callback": f"chp:ok:{post.id.hex}"},
+                            {"text": "❌ Bekor qilish", "callback": f"chp:no:{post.id.hex}"},
+                        ]
+                    },
+                    {"text": "✏️ Matnni o'zgartirish", "callback": f"chp:edit:{post.id.hex}"},
+                ]
+            },
+            priority=1,
+        )
+    if posts:
+        await session.commit()
+        wake_sender()
+    return len(posts)
+
+
+async def _pending(
+    session: AsyncSession, post_id: uuid.UUID, *, actor_id: uuid.UUID | None = None, by_preview: bool = False
+) -> ChannelPost:
+    """A post not sent yet. ``by_preview``: an admin pressed a button under the preview, so a post
+    another admin already decided on is left alone (the panel can still change it)."""
+    post = await session.get(ChannelPost, post_id, with_for_update=True, populate_existing=True)
+    if post is None:
+        raise NotFoundError("POST_NOT_FOUND", "Post topilmadi.")
+    if post.status != ChannelPostStatus.PENDING:
+        raise ConflictError(
+            "POST_NOT_PENDING",
+            "Bu post allaqachon joylangan." if post.status == ChannelPostStatus.SENT else "Bu post bekor qilingan.",
+        )
+    if by_preview and post.reviewed_at is not None and post.reviewed_by != actor_id:
+        raise ConflictError("POST_REVIEWED", "Boshqa admin bu postni allaqachon ko'rib chiqdi.")
+    return post
+
+
+def _reviewed(post: ChannelPost, actor_id: uuid.UUID, now: datetime) -> None:
+    post.reviewed_at = now
+    post.reviewed_by = actor_id
+
+
+async def publish_now(
+    session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID, by_preview: bool = False
+) -> ChannelPost:
+    """An admin approved the post: it goes out now (or in the morning, if it is night)."""
+    post = await _pending(session, post_id, actor_id=actor_id, by_preview=by_preview)
+    now = datetime.now(UTC)
+    _reviewed(post, actor_id, now)
+    post.scheduled_at = next_daytime(now)
+    record_audit(
+        session, actor_id=actor_id, action="CHANNEL_POST_APPROVE", entity_type="channel_post", entity_id=post.id
+    )
+    await session.commit()
+    wake_sender()
+    return post
+
+
+async def hold_for_edit(session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID) -> ChannelPost:
+    """The admin is writing a new text: the post waits up to 30 minutes, then goes out as it is."""
+    post = await _pending(session, post_id, actor_id=actor_id, by_preview=True)
+    now = datetime.now(UTC)
+    _reviewed(post, actor_id, now)
+    post.scheduled_at = max(post.scheduled_at, now + EDIT_HOLD)
+    await session.commit()
+    return post
+
+
+async def edit_post(session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID, text: str) -> ChannelPost:
+    """New text (Telegram HTML) for a post not sent yet; it goes out right away."""
+    body = text.strip()
+    if not body:
+        raise BadRequestError("EMPTY_POST", "Post matnini yozing.")
+    if len(body) > 4000:
+        raise BadRequestError("POST_TOO_LONG", "Post 4000 belgidan oshmasin.")
+    post = await _pending(session, post_id)
+    now = datetime.now(UTC)
+    before = post.text
+    post.text = body
+    _reviewed(post, actor_id, now)
+    post.scheduled_at = next_daytime(now)
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="CHANNEL_POST_EDIT",
+        entity_type="channel_post",
+        entity_id=post.id,
+        before={"text": before[:500]},
+        after={"text": body[:500]},
+    )
+    await session.commit()
+    wake_sender()
+    return post
+
+
 # ---------------------------------------------------------------------------- admin
 
 
@@ -549,13 +718,12 @@ async def test_post(session: AsyncSession, *, actor_id: uuid.UUID) -> ChannelPos
     )
 
 
-async def cancel_post(session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID) -> ChannelPost:
-    post = await session.get(ChannelPost, post_id)
-    if post is None:
-        raise NotFoundError("POST_NOT_FOUND", "Post topilmadi.")
-    if post.status != ChannelPostStatus.PENDING:
-        raise ConflictError("POST_NOT_PENDING", "Faqat hali yuborilmagan postni bekor qilish mumkin.")
+async def cancel_post(
+    session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID, by_preview: bool = False
+) -> ChannelPost:
+    post = await _pending(session, post_id, actor_id=actor_id, by_preview=by_preview)
     post.status = ChannelPostStatus.CANCELLED
+    _reviewed(post, actor_id, datetime.now(UTC))
     record_audit(
         session, actor_id=actor_id, action="CHANNEL_POST_CANCEL", entity_type="channel_post", entity_id=post.id
     )
@@ -594,6 +762,7 @@ async def add_sticker(
             emoji=emoji,
             set_name=set_name,
             is_animated=is_animated,
+            mood=mood_for(emoji),
             created_by=actor_id,
         )
         .on_conflict_do_nothing(index_elements=[ChannelSticker.file_unique_id])

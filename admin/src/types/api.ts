@@ -541,6 +541,9 @@ export interface ChannelPost {
   sent_at: string | null
   last_error: string | null
   manual: boolean
+  plain_text: string
+  in_review: boolean
+  reviewed_at: string | null
 }
 
 export interface ChannelSticker {
@@ -548,6 +551,7 @@ export interface ChannelSticker {
   emoji: string | null
   set_name: string | null
   is_animated: boolean
+  mood: 'CELEBRATE' | 'READING' | 'WELCOME' | 'ANY'
   created_at: string
 }
 
