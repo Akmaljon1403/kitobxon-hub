@@ -181,12 +181,30 @@ def premium_offer() -> InlineKeyboardMarkup | None:
     return inline([InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")])
 
 
-def premium_plans(plans: list[tuple[str, str]], *, donations: bool) -> InlineKeyboardMarkup | None:
+def premium_plans(plans: list[tuple[str, str]], *, donations: bool, card: bool = False) -> InlineKeyboardMarkup | None:
     """plans: (plan id hex, button text)."""
     return inline(
         *[[InlineKeyboardButton(text=label, callback_data=f"prem:buy:{plan_id}")] for plan_id, label in plans],
+        [InlineKeyboardButton(text=texts.BTN_PAY_CARD, callback_data="card:open")] if card else [],
         [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
         [app_button("premium", texts.BTN_MORE)],
+    )
+
+
+def card_plans(plans: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
+    """plans: (plan id hex, button text); the last button is a donation of any amount."""
+    return inline(
+        *[[InlineKeyboardButton(text=label, callback_data=f"card:plan:{plan_id}")] for plan_id, label in plans],
+        [InlineKeyboardButton(text=texts.CARD_DONATE, callback_data="card:don")],
+    )
+
+
+def card_decision(payment_hex: str) -> InlineKeyboardMarkup | None:
+    return inline(
+        [
+            InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"cp:ok:{payment_hex}"),
+            InlineKeyboardButton(text="❌ Rad etish", callback_data=f"cp:no:{payment_hex}"),
+        ]
     )
 
 

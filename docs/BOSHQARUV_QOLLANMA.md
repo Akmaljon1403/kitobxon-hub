@@ -132,9 +132,96 @@ to'lovdan bir necha hafta o'tib yechiladi va eng kam yechish miqdori bor — ani
 > Tavsiya: tushumlar va xarajatlarni (kitoblar, sovg'alar, tadbirlar) ochiq e'lon qilib boring —
 > bu a'zolar ishonchini oshiradi. Institut ma'muriyati bilan ham kelishib oling.
 
-## 10. Kundalik ish — qisqa ro'yxat
+### Karta orqali to'lov (so'mda)
 
-- Har tadbirdan oldin: tadbir yaratilganini va davomat oynasini tekshiring.
+Telegram Stars'siz ham to'lash mumkin: a'zo klub kartasiga pul o'tkazadi va chek rasmini yuboradi,
+siz tasdiqlaysiz — Premium **o'zi yoqiladi**.
+
+> Muhim: bot a'zolarga Telegram Stars «bera olmaydi» — Telegram bunga ruxsat bermaydi. Shuning uchun
+> karta to'lovi tasdiqlanganda a'zo tanlagan **Premium muddati** (yoki hissa) avtomatik yoziladi.
+> Payme/Click orqali to'liq avtomatik to'lov uchun klub nomidan merchant (shartnoma) kerak bo'ladi —
+> kerak bo'lsa, keyin qo'shamiz.
+
+**Yoqish (bir marta):**
+
+1. **⚙️ Sozlamalar → 💳 Karta orqali to'lov** — karta raqami va karta egasining ismi.
+2. **💎 Premium → Tariflar** — har bir tarifga **«Karta narxi (so'm)»** yozing (masalan, 1 oy — 25 000).
+   Narx yozilmagan tarif karta orqali sotilmaydi.
+3. **🧩 Imkoniyatlar → 💳 Karta orqali to'lov → Hammaga**.
+
+**Har kuni:** a'zo chek yuborsa, botga darhol xabar keladi: **«🧾 Chekni ko'rish»** → chek rasmi →
+**✅ Tasdiqlash** yoki **❌ Rad etish** (sababini yozasiz, a'zoga boradi). Xuddi shu ishni admin
+panelda **💎 Premium → 💳 Karta orqali to'lovlar** bo'limida ham qilasiz. Pul kartaga **haqiqatan tushganini**
+bank ilovangizda tekshirib, keyin tasdiqlang. Bu ishni faqat **bosh administrator** qiladi.
+
+## 10. Sovg'a o'yinlari (boshqa ilovalar uchun promokodlar)
+
+Promokodlarni adolatli qoida bo'yicha tarqatish: **Admin panel → 🎲 Sovg'a o'yinlari**.
+
+**Tayyorgarlik:** **🎁 Sovg'alar** → yangi sovg'a (masalan, «Kitob ilovasi — 1 oylik obuna») →
+**Berish va kodlar** → hamkor bergan kodlarni kiriting (har qatorda bitta). Kodlar shifrlangan holda
+saqlanadi, faqat g'olib o'z kodini ko'radi.
+
+**O'yin turlari:**
+
+| Qoida | Qachon ishlatiladi |
+|---|---|
+| 🎲 Tasodifiy g'oliblar | tasodifiy a'zolarga. Adminlar qatnashmaydi; xohlasangiz faqat tadbirga kelganlar yoki faqat Premium a'zolar orasida. Premium a'zolarga ikki baravar imkoniyat |
+| 📝 Testlarda eng ko'p ball | oyda bir marta — oy davomida testlardan eng ko'p ball to'plaganga |
+| 📅 Har bir tadbir testining o'rinlari | oyda 4 ta tadbir bo'lsa, har birining 1-, 2-, 3-o'rinlariga **alohida** (4 × 3 = 12 g'olib). Faqat tadbirga kelganlar (davomat) hisoblanadi |
+| 🏆 Reyting peshqadamlari | davr bo'yicha reytingdagi birinchi o'rinlarga |
+
+**Qanday ishlatiladi:**
+
+1. **+ Yangi o'yin** → nomi, sovg'a, qoida, g'oliblar soni, davr («Shu oy» tugmasi).
+2. **Belgilangan vaqtda avtomatik** — masalan, oyning oxirgi kuni soat 20:00. **🔁 Har oy takrorlansin**
+   belgilansa, keyingi oyning o'yini o'zi rejalashtiriladi — har oy qayta yaratish shart emas.
+3. Yoki **Ko'rish va o'tkazish** → kim g'olib bo'lishini oldindan ko'rasiz → **🎲 Hozir o'tkazish**.
+
+G'oliblarga kod va tabrik xabari darhol boradi, kod ilovadagi **🎁 Sovg'alarim** bo'limida ochiladi.
+«E'lon qilinsin» belgilangan bo'lsa, barcha a'zolar va kanal g'oliblar ro'yxatini ko'radi. A'zolar
+ilovada yaqindagi o'yinlarni va so'nggi g'oliblarni ko'rib turadi — bu qatnashishga undaydi.
+Kodlar yetmasa, o'yin o'tkazilmaydi va sizga xabar keladi — kod qo'shsangiz, o'zi o'tkaziladi.
+
+## 11. Telegram kanal (@FJSTIMutolaaxona)
+
+Bot kanalga o'zi qiziqarli postlar joylaydi va o'quvchilarni botga taklif qiladi.
+
+**Ulash (bir marta):**
+
+1. Telegram'da kanal → **Administratorlar → Administrator qo'shish** → botni toping → **«Xabar
+   joylash»** huquqini yoqing.
+2. **⚙️ Sozlamalar → 📣 Telegram kanal** → «Bot klub kanaliga post joylaydi» ni yoqing. Kanal manzili
+   allaqachon `@FJSTIMutolaaxona` deb yozilgan.
+3. **📣 Telegram kanal** sahifasida **🧪 Sinov posti** ni bosing — bir necha soniyada kanalda chiqadi.
+   Chiqmasa, sahifada xato sababi ko'rinadi (ko'pincha — bot admin qilinmagan).
+
+**Bot o'zi joylaydigan postlar:**
+
+- yangi tadbir: «Shanba, 15-noyabr, soat 15:00 … **«O'tkan kunlar» asarini o'qib kelamiz!**» (tadbirga
+  kitob biriktirilgan bo'lsa, muqovasi bilan);
+- tadbirdan bir kun va 3 soat oldin eslatma: «Ertaga soat 15:00 da …»;
+- yangi kitob, muddatning yarmida «Yarmiga yetdingizmi?» va oxirida **«Asarni tugatay deb
+  qoldingizmi, kitobxonlar?»**;
+- kun iqtibosi, test g'oliblari, sovg'a o'yini g'oliblari, oyning eng faol kitobxonlari;
+- har dushanba botga qo'shilishga taklif.
+
+Har bir post ostida **«📲 Botga qo'shilish»** tugmasi bor. Kechasi (21:30 – 08:00) post joylanmaydi —
+ertalab soat 9:00 da chiqadi. Qaysi postlar chiqishini sozlamalarda alohida o'chirib qo'yasiz.
+
+**O'zingiz yozish:** **📣 Telegram kanal → Kanalga post yozish** — matn, rasm, stiker, istalgan vaqtga
+rejalashtirish.
+
+**Stikerlar:** botga **/stiker** deb yozing va yoqqan stikerlaringizni yuboring (animatsion stikerlar
+ham bo'ladi). Avtomatik postlardan keyin ulardan biri qo'shiladi. Matn ichidagi Telegram Premium
+emojilari esa faqat Fragment'dan sotib olingan bot nomiga ega botlarda ishlaydi — shuning uchun
+stikerlardan foydalanamiz.
+
+## 12. Kundalik ish — qisqa ro'yxat
+
+- Har tadbirdan oldin: tadbir yaratilganini, kitob biriktirilganini va davomat oynasini tekshiring.
 - Tadbirda: Davomat sahifasini ekranga chiqaring.
-- Haftada bir: **📨 Murojaatlar**, **⭐ baholar**, **📈 Tahlillar**.
-- Oy boshida: **🗓 Davr hisoboti** → PDF → institut rahbariyatiga.
+- Kelgan cheklarni (karta to'lovlari) bank ilovasi bilan solishtirib tasdiqlang.
+- Haftada bir: **📨 Murojaatlar**, **⭐ baholar**, **📈 Tahlillar**, **📣 Telegram kanal** (xato yo'qmi).
+- Oy boshida: **🗓 Davr hisoboti** → PDF → institut rahbariyatiga; **🎲 Sovg'a o'yinlari** — kodlar
+  yetarlimi.

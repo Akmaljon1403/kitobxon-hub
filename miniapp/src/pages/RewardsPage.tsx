@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { Giveaways } from '../components/Giveaways'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -118,6 +119,7 @@ export function RewardsPage() {
         </EmptyState>
       )}
       {state.status === 'success' && state.data.map((reward) => <RewardCard key={reward.id} reward={reward} onChanged={reload} />)}
+      <Giveaways />
     </>
   )
 }

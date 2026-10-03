@@ -9,7 +9,7 @@ from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, Str
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
-from app.models.enums import FeatureMode, PaymentKind, PaymentStatus, PremiumSource
+from app.models.enums import CardPaymentStatus, FeatureMode, PaymentKind, PaymentStatus, PremiumSource
 
 
 class FeatureFlag(Base):
@@ -32,12 +32,14 @@ class PremiumPlan(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("stars > 0", name="stars_positive"),
         CheckConstraint("days > 0", name="days_positive"),
+        CheckConstraint("price_uzs IS NULL OR price_uzs > 0", name="price_uzs_positive"),
     )
 
     code: Mapped[str] = mapped_column(String(32), unique=True)
     title: Mapped[str] = mapped_column(String(64))
     description: Mapped[str | None] = mapped_column(Text)
     stars: Mapped[int] = mapped_column(Integer)  # price in Telegram Stars (XTR)
+    price_uzs: Mapped[int | None] = mapped_column(Integer)  # price for card payments; None = not sold by card
     days: Mapped[int] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
@@ -86,3 +88,31 @@ class PremiumSubscription(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     granted_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     note: Mapped[str | None] = mapped_column(Text)
     revoked_at: Mapped[datetime | None] = mapped_column()
+
+
+class CardPayment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """A payment to the club's bank card: the member sends the receipt, the super admin confirms it."""
+
+    __tablename__ = "card_payments"
+    __table_args__ = (
+        CheckConstraint("amount_uzs > 0", name="amount_positive"),
+        Index("ix_card_payments_status_created_at", "status", "created_at"),
+        Index("ix_card_payments_user_id", "user_id"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[PaymentKind] = mapped_column(enum_column(PaymentKind))
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("premium_plans.id", ondelete="SET NULL"))
+    amount_uzs: Mapped[int] = mapped_column(Integer)
+    receipt_key: Mapped[str] = mapped_column(String(512))
+    status: Mapped[CardPaymentStatus] = mapped_column(
+        enum_column(CardPaymentStatus),
+        default=CardPaymentStatus.PENDING,
+        server_default=CardPaymentStatus.PENDING.value,
+    )
+    decided_at: Mapped[datetime | None] = mapped_column()
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    reject_reason: Mapped[str | None] = mapped_column(Text)
+    subscription_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("premium_subscriptions.id", ondelete="SET NULL")
+    )

@@ -239,6 +239,7 @@ class FeatureMode(StrEnum):
 class PremiumSource(StrEnum):
     STARS = "STARS"  # paid with Telegram Stars
     MANUAL = "MANUAL"  # granted by an administrator (prize, paid in cash, ...)
+    CARD = "CARD"  # paid to the club's card, receipt confirmed by the super admin
 
 
 class PaymentKind(StrEnum):
@@ -249,3 +250,47 @@ class PaymentKind(StrEnum):
 class PaymentStatus(StrEnum):
     PAID = "PAID"
     REFUNDED = "REFUNDED"
+
+
+class CardPaymentStatus(StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class GiveawayRule(StrEnum):
+    RANDOM = "RANDOM"  # random winners among the audience (premium members: 2x chance)
+    TEST_TOP = "TEST_TOP"  # most test points in the period
+    EVENT_PLACES = "EVENT_PLACES"  # places 1..N of every event's test in the period, each separately
+    RANKING_TOP = "RANKING_TOP"  # top N of the club ranking for the period
+
+
+class GiveawayAudience(StrEnum):
+    ALL = "ALL"  # every active member
+    ATTENDED = "ATTENDED"  # attended at least one event in the period
+    PREMIUM = "PREMIUM"  # premium members only
+
+
+class GiveawayStatus(StrEnum):
+    DRAFT = "DRAFT"
+    SCHEDULED = "SCHEDULED"  # drawn automatically at scheduled_at
+    DONE = "DONE"
+    CANCELLED = "CANCELLED"
+
+
+class ChannelPostKind(StrEnum):
+    EVENT = "EVENT"  # a new event was announced
+    EVENT_REMINDER = "EVENT_REMINDER"  # «ertaga soat 15:00 da ... o'qib kelamiz»
+    BOOK = "BOOK"  # a new book to read
+    READING_NUDGE = "READING_NUDGE"  # «asarni tugatay deb qoldingizmi?»
+    QUOTE = "QUOTE"  # quote of the day
+    RESULTS = "RESULTS"  # test winners, giveaway winners, the month's leaders
+    INVITE = "INVITE"  # weekly invitation to join the bot
+    MANUAL = "MANUAL"  # written by an admin
+
+
+class ChannelPostStatus(StrEnum):
+    PENDING = "PENDING"
+    SENT = "SENT"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"

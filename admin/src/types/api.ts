@@ -476,3 +476,82 @@ export interface RewardRecipient {
   delivered_at: string | null
   redeemed_at: string | null
 }
+
+export type GiveawayRule = 'RANDOM' | 'TEST_TOP' | 'EVENT_PLACES' | 'RANKING_TOP'
+export type GiveawayAudience = 'ALL' | 'ATTENDED' | 'PREMIUM'
+export type GiveawayStatus = 'DRAFT' | 'SCHEDULED' | 'DONE' | 'CANCELLED'
+
+export interface GiveawayWinner {
+  user_id: string | null
+  name: string
+  full_name: string | null
+  reason: string
+  place: number | null
+  error?: string | null
+}
+
+export interface Giveaway {
+  id: string
+  title: string
+  reward_id: string
+  reward_title: string
+  codes_available: number | null
+  rule: GiveawayRule
+  rule_title: string
+  audience: GiveawayAudience
+  winners_count: number
+  premium_bonus: boolean
+  period_start: string
+  period_end: string
+  period_label: string
+  status: GiveawayStatus
+  scheduled_at: string | null
+  announce: boolean
+  repeat_monthly: boolean
+  drawn_at: string | null
+  seed: string | null
+  winners: GiveawayWinner[]
+  created_at: string
+}
+
+export interface GiveawayPreview {
+  eligible: number
+  premium: number
+  winners: GiveawayWinner[]
+  codes_available: number | null
+  notes: string[]
+}
+
+export type ChannelPostKind = 'EVENT' | 'EVENT_REMINDER' | 'BOOK' | 'READING_NUDGE' | 'QUOTE' | 'RESULTS' | 'INVITE' | 'MANUAL'
+
+export interface ChannelPost {
+  id: string
+  kind: ChannelPostKind
+  text: string
+  has_photo: boolean
+  has_sticker: boolean
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'CANCELLED'
+  scheduled_at: string
+  sent_at: string | null
+  last_error: string | null
+  manual: boolean
+}
+
+export interface ChannelSticker {
+  id: string
+  emoji: string | null
+  set_name: string | null
+  is_animated: boolean
+  created_at: string
+}
+
+export interface ChannelOverview {
+  enabled: boolean
+  chat_id: string | null
+  link: string | null
+  pending: number
+  last_sent_at: string | null
+  last_error: string | null
+  posts: ChannelPost[]
+  stickers: ChannelSticker[]
+}

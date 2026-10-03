@@ -324,6 +324,7 @@ export interface PremiumPlan {
   description: string | null
   stars: number
   days: number
+  price_uzs: number | null
 }
 
 export interface PremiumStatus {
@@ -335,6 +336,18 @@ export interface PremiumStatus {
   donation_amounts: number[]
   premium_features: { code: string; title: string; description: string }[]
   perks: { icon: string; title: string; description: string }[]
+  card: { number: string; holder: string } | null
+}
+
+export interface CardPayment {
+  id: string
+  kind: 'PREMIUM' | 'DONATION'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  amount_uzs: number
+  plan_title: string | null
+  created_at: string
+  decided_at: string | null
+  reject_reason: string | null
 }
 
 export interface EventFeedback {
@@ -367,4 +380,24 @@ export interface PersonalStats {
   books_completed: number
   streak_weeks: number
   member_days: number
+}
+
+export interface PublicGiveaway {
+  id: string
+  title: string
+  reward: string
+  rule: 'RANDOM' | 'TEST_TOP' | 'EVENT_PLACES' | 'RANKING_TOP'
+  rule_title: string
+  winners_count: number
+  period: string
+  premium_bonus: boolean
+  audience: 'ALL' | 'ATTENDED' | 'PREMIUM'
+  scheduled_at: string | null
+  drawn_at: string | null
+  winners: { name: string; reason: string; place: number | null }[]
+}
+
+export interface MemberGiveaways {
+  upcoming: PublicGiveaway[]
+  recent: PublicGiveaway[]
 }

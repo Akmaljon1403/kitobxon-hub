@@ -86,6 +86,14 @@ FEATURES: tuple[Feature, ...] = (
         premium_allowed=False,
     ),
     Feature(
+        "card_payments",
+        "💳 Karta orqali to'lov",
+        "Premiumni bank kartasiga o'tkazib, chekni yuborish orqali sotib olish",
+        FeatureMode.OFF,
+        "premium",
+        premium_allowed=False,
+    ),
+    Feature(
         "donations",
         "❤️ Klubni qo'llab-quvvatlash",
         "Telegram Stars orqali klub rivojiga hissa qo'shish",

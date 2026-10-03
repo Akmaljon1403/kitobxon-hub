@@ -202,8 +202,14 @@ async def assign(
     user_id: uuid.UUID,
     note: str | None,
     idempotency_key: str | None = None,
+    allow_repeat: bool = False,
+    message: str | None = None,
 ) -> UserReward:
-    """Give a reward to a member. Rewards with codes hand out the next unused, unexpired code."""
+    """Give a reward to a member. Rewards with codes hand out the next unused, unexpired code.
+
+    ``allow_repeat``: the member may already hold this reward (a giveaway won again next month).
+    ``message``: plain text sent instead of the standard «Sizga sovg'a berildi» notification.
+    """
     if idempotency_key:
         existing = await session.scalar(select(UserReward).where(UserReward.idempotency_key == idempotency_key))
         if existing is not None:
@@ -222,7 +228,7 @@ async def assign(
             UserReward.reward_id == reward.id, UserReward.user_id == user_id, UserReward.status.in_(ACTIVE_ASSIGNMENT)
         )
     )
-    if duplicate is not None:
+    if duplicate is not None and not allow_repeat:
         raise ConflictError("ALREADY_ASSIGNED", "Bu a'zoga bu sovg'a allaqachon berilgan.")
 
     code: RewardCode | None = None
@@ -263,7 +269,10 @@ async def assign(
         after={"user_id": str(user_id), "with_code": code is not None},
         reason=user_reward.note,
     )
-    text = await render(session, NotificationType.REWARD, reward_title=reward.title)
+    if message is not None:
+        text = await render(session, NotificationType.SYSTEM, message=message)
+    else:
+        text = await render(session, NotificationType.REWARD, reward_title=reward.title)
     if text is not None:
         await enqueue_notification(
             session,

@@ -98,3 +98,11 @@ def admins_with_permission(permission: Perm) -> Select[tuple[uuid.UUID]]:
         User.deleted_at.is_(None),
         or_(User.id.in_(super_admins), and_(User.id.in_(admins), or_(User.id.in_(via_roles), User.id.in_(direct)))),
     )
+
+
+def super_admins() -> Select[tuple[uuid.UUID]]:
+    """Active super administrators (money matters such as card payments go only to them)."""
+    holders = (
+        select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.code == SystemRole.SUPER_ADMIN)
+    )
+    return select(User.id).where(User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), User.id.in_(holders))

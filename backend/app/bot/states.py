@@ -39,3 +39,27 @@ class PassportPhoto(StatesGroup):
     """A member is sending a picture for their Kitobxon passport."""
 
     waiting = State()
+
+
+class CardReceipt(StatesGroup):
+    """A member paid to the club's card and is sending the receipt (plan or amount in the data)."""
+
+    waiting = State()
+
+
+class CardDonationAmount(StatesGroup):
+    """A member is typing how much they donate by card."""
+
+    waiting = State()
+
+
+class CardReject(StatesGroup):
+    """The super admin is writing why a card payment is rejected (payment id in the data)."""
+
+    waiting = State()
+
+
+class ChannelStickers(StatesGroup):
+    """An admin is sending stickers to be used in the channel posts (/stiker)."""
+
+    waiting = State()
