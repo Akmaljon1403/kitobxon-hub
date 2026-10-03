@@ -41,10 +41,16 @@ from app.models.enums import (
     TestStatus,
     UserStatus,
 )
-from app.services import channel
+from app.services import channel, literary
 from app.services.audit import record_audit
 from app.services.members import normalize_group
-from app.services.notifications import app_button, enqueue_for_members, enqueue_notification, render
+from app.services.notifications import (
+    app_button,
+    celebrate,
+    enqueue_for_members,
+    enqueue_notification,
+    render,
+)
 from app.services.settings import get_setting
 from app.utils.timezone import format_human, format_human_date, local_tz
 
@@ -161,7 +167,9 @@ async def test_results(session: AsyncSession, test: Test, standings: list[dict[s
             type_=NotificationType.TEST_RESULT,
             text=text,
             dedup_key=f"test_result:{test.id}:{user_id}",
-            payload=app_button(f"tests/{test.id}", "📖 Javoblarni ko'rish"),
+            payload=(celebrate if place is not None and place <= 3 else dict)(
+                app_button(f"tests/{test.id}", "📖 Javoblarni ko'rish")
+            ),
             priority=3,
         )
         queued += 1
@@ -317,6 +325,9 @@ async def reading_reminders(session: AsyncSession, now: datetime | None = None) 
         )
         if text is None:
             return queued
+        line = await literary.book_line(session, book.id, f"reminder:{book.id}:{book.deadline}")
+        if line:
+            text += f"\n\n📖 Kitobdan: {line}"
         readers = select(BookRead.user_id).where(
             and_(BookRead.book_id == book.id, BookRead.status == ReadingStatus.READING)
         )

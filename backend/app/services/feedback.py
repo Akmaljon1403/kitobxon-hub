@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ConflictError, NotFoundError
 from app.models import AttendanceRecord, Event, EventFeedback, ScoreTransaction, User
 from app.models.enums import AttendanceStatus, EventStatus, NotificationType
-from app.services import features
+from app.services import features, literary
 from app.services.notifications import enqueue_for_members, enqueue_notification, render
 from app.utils.timezone import format_human, local_tz
 
@@ -204,6 +204,7 @@ async def weekly_digest(session: AsyncSession, now: datetime | None = None) -> i
         text = await render(session, NotificationType.DIGEST, message="\n".join(lines))
         if text is None:
             return queued
+        text += "\n\n" + literary.epigraph(f"digest:{week_label}:{user_id}")
         await enqueue_notification(
             session,
             user_id=user_id,

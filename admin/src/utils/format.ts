@@ -99,6 +99,7 @@ export const USER_STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Faol',
   BLOCKED: 'Bloklangan',
   INACTIVE: 'Nofaol',
+  LEFT: 'Chiqib ketgan',
 }
 
 export const BOOK_STATUS_LABELS: Record<string, string> = {

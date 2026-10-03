@@ -28,6 +28,8 @@ def _out(giveaway: Giveaway, reward_title: str, codes: int | None) -> GiveawayOu
     return GiveawayOut(
         id=giveaway.id,
         title=giveaway.title,
+        prize=giveaway.prize,
+        prize_value=giveaway.prize_value,
         reward_id=giveaway.reward_id,
         reward_title=reward_title,
         codes_available=codes,

@@ -5,7 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { AdminReward, AdminUser, RewardCodeRow, RewardRecipient, RewardType } from '../types/api'
+import type { AdminReward, AdminUser, RewardCodeRow, RewardRecipient, RewardType, TestPlace, TestWinners } from '../types/api'
 import { formatDate, formatDateTime, fromLocalInput, toLocalInput } from '../utils/format'
 import { MemberPicker } from './ScoresPage'
 
@@ -153,7 +153,15 @@ function RewardDetail({ reward, onClose, onChanged }: { reward: AdminReward; onC
             disabled={!member}
             onClick={() =>
               void run(async () => {
-                await api(`/api/v1/admin/rewards/${reward.id}/assign`, { method: 'POST', body: { user_id: member?.id, note: note.trim() || null } })
+                const body = { user_id: member?.id, note: note.trim() || null }
+                try {
+                  await api(`/api/v1/admin/rewards/${reward.id}/assign`, { method: 'POST', body })
+                } catch (err) {
+                  // The member already has this reward: give it again only if the admin really means it.
+                  if (!(err instanceof ApiError && err.code === 'ALREADY_ASSIGNED')) throw err
+                  if (!window.confirm(`${member?.last_name} ${member?.first_name} bu sovg'ani avval ham olgan. Yana berilsinmi?`)) return
+                  await api(`/api/v1/admin/rewards/${reward.id}/assign`, { method: 'POST', body: { ...body, allow_repeat: true } })
+                }
                 setMember(null)
                 setPickerKey((key) => key + 1)
                 setNote('')
@@ -166,6 +174,8 @@ function RewardDetail({ reward, onClose, onChanged }: { reward: AdminReward; onC
         </div>
         {reward.codes_total > 0 && <p className="text-xs text-app-hint">Har bir a'zoga navbatdagi bo'sh kod avtomatik biriktiriladi.</p>}
       </Card>
+
+      <TestWinnersPicker reward={reward} onGiven={(text) => void run(async () => text)} />
 
       <div>
         <h3 className="mb-2 font-semibold">Oluvchilar</h3>
@@ -255,6 +265,77 @@ function RewardDetail({ reward, onClose, onChanged }: { reward: AdminReward; onC
         )}
       </div>
     </Modal>
+  )
+}
+
+const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
+
+/** Places 1-3 of every recent test: give this reward to a place, once per place (any reward counts). */
+function TestWinnersPicker({ reward, onGiven }: { reward: AdminReward; onGiven: (text: string) => void }) {
+  const { api } = useSession()
+  const winners = useAsync((signal) => api<TestWinners[]>('/api/v1/admin/rewards/test-winners?days=90', { signal }))
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function give(test: TestWinners, place: TestPlace) {
+    if (!window.confirm(`«${reward.title}» → ${place.name} («${test.title}», ${place.place}-o'rin)?`)) return
+    setBusy(`${test.test_id}:${place.place}`)
+    setError(null)
+    try {
+      await api(`/api/v1/admin/rewards/${reward.id}/assign-test-place`, { method: 'POST', body: { test_id: test.test_id, place: place.place } })
+      winners.reload()
+      onGiven(`✓ ${place.name} ga berildi («${test.title}», ${place.place}-o'rin)`)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-2 p-3">
+      <p className="text-sm font-medium">📝 Test g'oliblari (oxirgi 90 kun)</p>
+      <p className="text-xs text-app-hint">
+        Har bir testning 1-, 2-, 3-o'rinlari (tadbir testida — faqat qatnashganlar). Sovg'a berilgan o'rin «✅ berilgan» bo'lib qoladi — adashib ikki marta
+        berib bo'lmaydi.
+      </p>
+      <InlineError message={error} />
+      {winners.state.status === 'loading' && <LoadingState />}
+      {winners.state.status === 'success' && winners.state.data.length === 0 && (
+        <p className="text-sm text-app-hint">Yaqinda yopilgan test yo'q.</p>
+      )}
+      {winners.state.status === 'success' &&
+        winners.state.data.map((test) => (
+          <div key={test.test_id} className="rounded-lg border border-app-border p-2">
+            <p className="text-sm font-semibold">
+              «{test.title}»{test.event_title && <span className="font-normal text-app-hint"> · {test.event_title}</span>}
+              <span className="font-normal text-app-hint"> · {formatDate(test.closed_at)}</span>
+            </p>
+            <ul className="mt-1 flex flex-col gap-1">
+              {test.places.map((place) => (
+                <li key={place.place} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span>
+                    {MEDAL[place.place]} {place.name} <span className="text-xs text-app-hint">{place.group_name ?? ''} · {place.score}/{place.max_score}</span>
+                  </span>
+                  {place.given_reward ? (
+                    <Badge tone="success">✅ berilgan: {place.given_reward}</Badge>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      className="px-3 py-1 text-sm"
+                      loading={busy === `${test.test_id}:${place.place}`}
+                      disabled={busy !== null}
+                      onClick={() => void give(test, place)}
+                    >
+                      🎁 Berish
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+    </Card>
   )
 }
 

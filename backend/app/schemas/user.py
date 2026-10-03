@@ -36,6 +36,7 @@ class MeOut(BaseModel):
     features: dict[str, str]
     is_premium: bool
     premium_until: datetime | None
+    premium_lifetime: bool = False
     passport_photo: bool  # the member uploaded their own passport photo
 
 
@@ -76,6 +77,9 @@ class AdminUserOut(BaseModel):
     status: UserStatus
     registered_at: datetime | None
     last_seen_at: datetime | None
+    left_at: datetime | None = None
+    left_reason: str | None = None
+    restore_requested_at: datetime | None = None
 
 
 class AdminUserDetailOut(AdminUserOut):
@@ -93,3 +97,18 @@ class AdminUserUpdateIn(BaseModel):
 class UserStatusIn(BaseModel):
     status: UserStatus
     reason: str = Field(min_length=5, max_length=1000)
+
+
+class EraseIn(BaseModel):
+    reason: str = Field(min_length=5, max_length=1000)
+    confirm: str = Field(description="Type O'CHIRISH to confirm: the personal data cannot be brought back")
+
+
+class ReferralsOut(BaseModel):
+    enabled: bool
+    link: str | None = Field(description="https://t.me/<bot>?start=ref_<member number>")
+    invited: int
+    rewarded: int
+    points: int = Field(description="Points for each friend who comes to an event")
+    premium_days: int
+    monthly_limit: int = Field(description="Rewards a month at most (0 — no limit)")

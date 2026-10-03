@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
+import uuid
+
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -10,8 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import keyboards, summaries, texts
 from app.bot.access import has_permission, is_admin
-from app.bot.states import ChannelStickers
+from app.bot.states import ChannelPostEdit, ChannelStickers
 from app.core.config import get_settings
+from app.core.errors import AppError
 from app.models import User
 from app.models.enums import UserStatus
 from app.security.permissions import Perm
@@ -87,9 +92,103 @@ async def sticker_save(message: Message, db: AsyncSession, member: User | None) 
         set_name=sticker.set_name,
         is_animated=bool(sticker.is_animated or sticker.is_video),
     )
-    await message.answer((texts.STICKER_SAVED if created else texts.STICKER_DUPLICATE).format(total=total))
+    mood = texts.STICKER_MOODS.get(str(created.mood) if created else "ANY", "")
+    await message.answer((texts.STICKER_SAVED if created else texts.STICKER_DUPLICATE).format(total=total, mood=mood))
 
 
 @router.message(ChannelStickers.waiting)
 async def sticker_expected(message: Message) -> None:
     await message.answer(texts.STICKER_ONLY)
+
+
+# ---------------------------------------------------------------------------- channel posts: admins look first
+
+
+async def _post_id(callback: CallbackQuery, db: AsyncSession, member: User | None, prefix: str) -> uuid.UUID | None:
+    if not await _allowed(db, member) or not await has_permission(db, member, Perm.NOTIFICATION_SEND):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return None
+    try:
+        return uuid.UUID(hex=(callback.data or "").removeprefix(prefix))
+    except ValueError:
+        await callback.answer()
+        return None
+
+
+async def _done(callback: CallbackQuery, text: str) -> None:
+    await callback.answer(text)
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(TelegramBadRequest):  # the preview may be too old to edit
+            await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(text)
+
+
+@router.callback_query(F.data.startswith("chp:ok:"))
+async def channel_post_now(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    post_id = await _post_id(callback, db, member, "chp:ok:")
+    if post_id is None or member is None:
+        return
+    try:
+        await channel.publish_now(db, actor_id=member.id, post_id=post_id, by_preview=True)
+    except AppError as error:
+        await callback.answer(error.message, show_alert=True)
+        return
+    await _done(callback, texts.CHANNEL_POST_NOW)
+
+
+@router.callback_query(F.data.startswith("chp:no:"))
+async def channel_post_cancel(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    post_id = await _post_id(callback, db, member, "chp:no:")
+    if post_id is None or member is None:
+        return
+    try:
+        await channel.cancel_post(db, actor_id=member.id, post_id=post_id, by_preview=True)
+    except AppError as error:
+        await callback.answer(error.message, show_alert=True)
+        return
+    await _done(callback, texts.CHANNEL_POST_CANCELLED)
+
+
+@router.callback_query(F.data.startswith("chp:edit:"))
+async def channel_post_edit(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    post_id = await _post_id(callback, db, member, "chp:edit:")
+    if post_id is None or member is None:
+        return
+    try:
+        await channel.hold_for_edit(db, actor_id=member.id, post_id=post_id)
+    except AppError as error:
+        await callback.answer(error.message, show_alert=True)
+        return
+    await state.set_state(ChannelPostEdit.waiting)
+    await state.update_data(post_id=post_id.hex)
+    await callback.answer()
+    if isinstance(callback.message, Message):
+        await callback.message.answer(texts.CHANNEL_POST_EDIT_ASK)
+
+
+@router.message(ChannelPostEdit.waiting, Command("cancel"))
+async def channel_post_edit_cancel(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(texts.CHANNEL_POST_EDIT_KEPT)
+
+
+@router.message(ChannelPostEdit.waiting, F.text)
+async def channel_post_new_text(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    data = await state.get_data()
+    if member is None or not data.get("post_id"):
+        await state.clear()
+        return
+    try:
+        await channel.edit_post(db, actor_id=member.id, post_id=uuid.UUID(hex=data["post_id"]), text=message.html_text)
+    except AppError as error:
+        if error.code != "EMPTY_POST" and error.code != "POST_TOO_LONG":
+            await state.clear()
+        await message.answer(error.message)
+        return
+    await state.clear()
+    await message.answer(texts.CHANNEL_POST_EDITED)
+
+
+@router.message(ChannelPostEdit.waiting)
+async def channel_post_text_expected(message: Message) -> None:
+    await message.answer(texts.CHANNEL_POST_TEXT_ONLY)

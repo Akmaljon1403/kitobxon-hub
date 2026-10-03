@@ -70,6 +70,15 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     last_seen_at: Mapped[datetime | None] = mapped_column()
     # Incremented to invalidate every access token issued to this user (logout everywhere, block).
     token_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # Leaving the club (status LEFT): when and why ("BOT_BLOCKED", "CANCELLED"); a restore request.
+    left_at: Mapped[datetime | None] = mapped_column()
+    left_reason: Mapped[str | None] = mapped_column(String(16))
+    restore_requested_at: Mapped[datetime | None] = mapped_column()
+    # When the personal data was erased (the row stays, anonymous, for the club's statistics).
+    erased_at: Mapped[datetime | None] = mapped_column()
+    # The member who invited this one (t.me/<bot>?start=ref_<member number>) and when they were thanked.
+    referred_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    referral_rewarded_at: Mapped[datetime | None] = mapped_column()
 
     faculty: Mapped[Faculty | None] = relationship(lazy="raise")
 

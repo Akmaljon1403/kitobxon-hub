@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.models import (
+    AttendanceRecord,
     Book,
     Faculty,
     ScoreTransaction,
@@ -43,6 +44,7 @@ from app.models import (
 )
 from app.models.enums import (
     AttemptStatus,
+    AttendanceStatus,
     QuestionType,
     ReadingStatus,
     ReadingVerification,
@@ -608,6 +610,22 @@ async def test_standings(session: AsyncSession, test: Test) -> list[dict[str, An
         {"place": place, "user_id": user_id, "score": -key[0], "duration_seconds": int(key[1])}
         for place, (user_id, key) in enumerate(ordered, start=1)
     ]
+
+
+async def official_places(session: AsyncSession, test: Test, limit: int = 3) -> list[dict[str, Any]]:
+    """Places 1..limit as announced: for a test of an event only members whose attendance at
+    that event was confirmed take places (the same rule as for certificates)."""
+    standings = await test_standings(session, test)
+    if test.event_id is not None:
+        present = set(
+            await session.scalars(
+                select(AttendanceRecord.user_id).where(
+                    AttendanceRecord.event_id == test.event_id, AttendanceRecord.status == AttendanceStatus.VERIFIED
+                )
+            )
+        )
+        standings = [row for row in standings if row["user_id"] in present]
+    return [{**row, "place": place} for place, row in enumerate(standings[:limit], start=1)]
 
 
 # ---------------------------------------------------------------------------- members

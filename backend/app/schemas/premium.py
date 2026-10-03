@@ -15,6 +15,20 @@ class PlanOut(BaseModel):
     stars: int
     days: int
     price_uzs: int | None = None
+    # The prices for this member right now (after a personal discount, if any).
+    stars_now: int | None = None
+    price_uzs_now: int | None = None
+
+
+class DiscountOut(BaseModel):
+    percent: int
+    valid_until: datetime
+    note: str | None
+
+
+class StarsPackageOut(BaseModel):
+    stars: int
+    price_uzs: int
 
 
 class CardDetailsOut(BaseModel):
@@ -36,6 +50,7 @@ class PerkOut(BaseModel):
 
 class PremiumStatusOut(BaseModel):
     is_premium: bool
+    lifetime: bool = False  # super administrators and gifts "for life"
     until: datetime | None
     store_open: bool
     donations_open: bool
@@ -44,6 +59,9 @@ class PremiumStatusOut(BaseModel):
     premium_features: list[PremiumFeatureOut]
     perks: list[PerkOut]
     card: CardDetailsOut | None = None
+    trial_days: int = 0  # the free trial the member can still start
+    discount: DiscountOut | None = None
+    stars_packages: list[StarsPackageOut] = []
 
 
 class InvoiceIn(BaseModel):
@@ -141,7 +159,8 @@ class SubscriptionOut(BaseModel):
 
 class GrantIn(BaseModel):
     user_id: uuid.UUID
-    days: int = Field(ge=1, le=3660)
+    days: int | None = Field(default=None, ge=1, le=3660)
+    lifetime: bool = False
     note: str | None = Field(default=None, max_length=500)
 
 
@@ -172,6 +191,8 @@ class CardPaymentOut(BaseModel):
     created_at: datetime
     decided_at: datetime | None
     reject_reason: str | None
+    stars: int | None = None
+    delivered_at: datetime | None = None
 
 
 class AdminCardPaymentOut(CardPaymentOut):

@@ -49,7 +49,7 @@ from app.models.enums import (
     ScoreCategory,
 )
 from app.security.crypto import derive_key, keyed_hash
-from app.services import achievements, announcements
+from app.services import achievements, announcements, referrals
 from app.services.audit import record_audit
 from app.services.events import effective_points, get_event
 from app.services.scoring import award_points, reverse_latest_award
@@ -387,6 +387,7 @@ async def check_in(
         source_id=event.id,
     )
     await achievements.evaluate(session, user.id)
+    await referrals.on_first_attendance(session, user.id)
     await session.commit()
     return CheckInResult(event=event, record=record, points=points)
 
@@ -457,6 +458,7 @@ async def manual_check_in(
         reason=note,
     )
     await achievements.evaluate(session, user_id)
+    await referrals.on_first_attendance(session, user_id)
     await session.commit()
     return record
 

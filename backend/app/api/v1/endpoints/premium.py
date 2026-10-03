@@ -45,6 +45,8 @@ def card_payment_out(payment: CardPayment, plan_title: str | None) -> CardPaymen
         created_at=payment.created_at,
         decided_at=payment.decided_at,
         reject_reason=payment.reject_reason,
+        stars=payment.stars,
+        delivered_at=payment.delivered_at,
     )
 
 
@@ -60,11 +62,14 @@ async def submit_card_payment(
     file: Annotated[UploadFile, File()],
     plan_id: Annotated[uuid.UUID | None, Form()] = None,
     amount_uzs: Annotated[int | None, Form(ge=1, le=100_000_000)] = None,
+    stars: Annotated[int | None, Form(ge=1, le=100_000)] = None,
 ) -> CardPaymentOut:
-    if (plan_id is None) == (amount_uzs is None):
-        raise BadRequestError("CHOOSE_ONE", "Tarifni yoki hissa miqdorini tanlang.")
+    if sum(value is not None for value in (plan_id, amount_uzs, stars)) != 1:
+        raise BadRequestError("CHOOSE_ONE", "Tarif, Stars to'plami yoki hissa miqdoridan bittasini tanlang.")
     data = await file.read(card_payments.MAX_RECEIPT_BYTES + 1)
-    payment = await card_payments.submit(db, current.user, receipt=data, plan_id=plan_id, amount_uzs=amount_uzs)
+    payment = await card_payments.submit(
+        db, current.user, receipt=data, plan_id=plan_id, amount_uzs=amount_uzs, stars=stars
+    )
     plan = await db.get(PremiumPlan, payment.plan_id) if payment.plan_id else None
     return card_payment_out(payment, plan.title if plan else None)
 
@@ -72,3 +77,13 @@ async def submit_card_payment(
 @router.get("/card-payments", response_model=list[CardPaymentOut], summary="My card payments and their status")
 async def my_card_payments(current: CurrentUserDep, db: DbSession) -> list[CardPaymentOut]:
     return [card_payment_out(p, title) for p, title in await card_payments.member_payments(db, current.user.id)]
+
+
+@router.post(
+    "/trial",
+    response_model=PremiumStatusOut,
+    summary="Start the one free Premium trial",
+)
+async def start_trial(current: CurrentUserDep, db: DbSession) -> PremiumStatusOut:
+    await premium_service.start_trial(db, current.user)
+    return PremiumStatusOut(**await premium_service.member_status(db, current.user))

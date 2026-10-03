@@ -6,8 +6,15 @@ from fastapi import APIRouter
 
 from app.api.deps import CurrentUserDep, DbSession
 from app.models import Faculty, UserNotificationSettings
-from app.schemas.user import FacultyOut, MeOut, MeUpdateIn, NotificationSettingsIn, NotificationSettingsOut
-from app.services import features, premium
+from app.schemas.user import (
+    FacultyOut,
+    MeOut,
+    MeUpdateIn,
+    NotificationSettingsIn,
+    NotificationSettingsOut,
+    ReferralsOut,
+)
+from app.services import features, premium, referrals
 from app.services import users as user_service
 from app.services.passport import member_number
 from app.services.settings import get_setting
@@ -37,6 +44,7 @@ async def _me(current, db) -> MeOut:
         features=await features.access(db, user),
         is_premium=await premium.is_premium(db, user.id),
         premium_until=await premium.premium_until(db, user.id),
+        premium_lifetime=await premium.is_lifetime(db, user.id),
         passport_photo=user.passport_photo_key is not None,
     )
 
@@ -69,3 +77,8 @@ async def update_notification_settings(
         db, current.user.id, payload.model_dump(exclude_unset=True)
     )
     return _settings_out(settings)
+
+
+@router.get("/referrals", response_model=ReferralsOut, summary="My invitation link and invited friends")
+async def my_referrals(current: CurrentUserDep, db: DbSession) -> ReferralsOut:
+    return ReferralsOut(**await referrals.summary(db, current.user))

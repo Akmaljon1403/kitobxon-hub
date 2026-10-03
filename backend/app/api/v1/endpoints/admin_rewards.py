@@ -19,6 +19,8 @@ from app.schemas.reward import (
     RewardOut,
     RewardStatusIn,
     RewardUpdateIn,
+    TestPlaceIn,
+    TestWinnersOut,
 )
 from app.security.permissions import Perm
 from app.services import rewards as reward_service
@@ -116,11 +118,40 @@ async def assign(reward_id: uuid.UUID, payload: AssignIn, current: Manager, db: 
         user_id=payload.user_id,
         note=payload.note,
         idempotency_key=payload.idempotency_key,
+        allow_repeat=payload.allow_repeat,
     )
+    return await _recipient_of(db, reward_id, row.id)
+
+
+async def _recipient_of(db, reward_id: uuid.UUID, user_reward_id: uuid.UUID) -> RecipientOut:
     for recipient, user in await reward_service.recipients(db, reward_id):
-        if recipient.id == row.id:
+        if recipient.id == user_reward_id:
             return _recipient(recipient, user)
     raise AssertionError("assignment disappeared")
+
+
+@router.get(
+    "/rewards/test-winners",
+    response_model=list[TestWinnersOut],
+    summary="Places 1-3 of recently closed tests, with the rewards they already got",
+)
+async def test_winners(_: Manager, db: DbSession, days: int = 60) -> list[TestWinnersOut]:
+    return [TestWinnersOut(**item) for item in await reward_service.test_winners(db, days=min(max(days, 1), 365))]
+
+
+@router.post(
+    "/rewards/{reward_id}/assign-test-place",
+    response_model=RecipientOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Give the reward to a test place (once per place)",
+)
+async def assign_test_place(
+    reward_id: uuid.UUID, payload: TestPlaceIn, current: Manager, db: DbSession
+) -> RecipientOut:
+    row = await reward_service.assign_test_place(
+        db, actor_id=current.user.id, reward_id=reward_id, test_id=payload.test_id, place=payload.place
+    )
+    return await _recipient_of(db, reward_id, row.id)
 
 
 def _recipient(row, user) -> RecipientOut:

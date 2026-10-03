@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from typing import Any, Literal
 
 from sqlalchemy import Select, case, func, select
@@ -176,21 +176,9 @@ async def ranking(
 
 
 async def _premium_among(session: AsyncSession, user_ids: list[uuid.UUID]) -> set[uuid.UUID]:
-    if not user_ids:
-        return set()
-    from app.models import PremiumSubscription
+    from app.services.premium import premium_among
 
-    now = datetime.now(UTC)
-    return set(
-        await session.scalars(
-            select(PremiumSubscription.user_id).where(
-                PremiumSubscription.user_id.in_(user_ids),
-                PremiumSubscription.revoked_at.is_(None),
-                PremiumSubscription.starts_at <= now,
-                PremiumSubscription.ends_at > now,
-            )
-        )
-    )
+    return await premium_among(session, user_ids)
 
 
 async def faculty_ranking(session: AsyncSession, *, period: Period) -> list[dict[str, Any]]:

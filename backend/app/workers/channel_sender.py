@@ -133,6 +133,7 @@ async def send_channel_posts(session_factory: async_sessionmaker[AsyncSession], 
         chat_id = channel.normalize_chat_id(str(await get_setting(session, "channel.chat_id")))
         if chat_id is None:
             return 0
+        await channel.request_reviews(session)  # the admins see automatic posts a few minutes before
         batch = await _claim(session, limit)
         published = 0
         for post in batch:

@@ -188,13 +188,45 @@ class Theme:
     ring: tuple[int, int, int, int]  # the guilloche rings
     frame: tuple[int, int, int] | None = None  # an outer frame (premium designs)
     premium: bool = True
+    ink: tuple[int, int, int] = WHITE  # the text; light designs use a dark ink
+    badge_text: tuple[int, int, int] | None = None  # the status chip's text (default: ``dark``)
+
+    def soft(self, alpha: int) -> tuple[int, int, int, int]:
+        return (*self.ink, alpha)
+
+    @property
+    def qr(self) -> tuple[int, int, int]:
+        """QR modules need strong contrast on white: the darker of the ink and the dark colour."""
+        return min(self.ink, self.dark, key=sum)
 
 
 THEMES: dict[str, Theme] = {
     "classic": Theme("Klassik yashil", (63, 157, 110), (16, 58, 41), GOLD, (255, 255, 255, 14), premium=False),
-    "gold": Theme("Oltin", (24, 92, 66), (8, 36, 26), GOLD, (*GOLD, 34), GOLD),
+    # A real gold card: bright metal with dark-brown engraving.
+    "gold": Theme(
+        "Oltin",
+        (250, 226, 150),
+        (196, 146, 52),
+        (112, 66, 10),
+        (255, 255, 255, 46),
+        (120, 76, 16),
+        ink=(54, 34, 6),
+        badge_text=(252, 234, 176),
+    ),
+    "silver": Theme(
+        "Kumush",
+        (238, 241, 245),
+        (156, 166, 178),
+        (44, 62, 86),
+        (255, 255, 255, 52),
+        (92, 106, 124),
+        ink=(28, 36, 48),
+        badge_text=(238, 241, 245),
+    ),
     "midnight": Theme("Tungi ko'k", (44, 78, 150), (10, 20, 48), (205, 216, 236), (205, 216, 236, 26), (205, 216, 236)),
     "ruby": Theme("Yoqut", (150, 36, 66), (50, 10, 24), GOLD, (*GOLD, 28), GOLD),
+    "ocean": Theme("Okean", (22, 150, 168), (4, 46, 70), (168, 238, 228), (168, 238, 228, 26), (168, 238, 228)),
+    "lavender": Theme("Lavanda", (146, 104, 196), (48, 24, 86), GOLD, (*GOLD, 26), GOLD),
 }
 
 
@@ -333,12 +365,13 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
     theme = THEMES.get(data.theme, THEMES["classic"])
     card = _background(theme)
     draw = ImageDraw.Draw(card)
-    soft = (255, 255, 255, 190)
-    faint = (255, 255, 255, 150)
+    ink = theme.ink
+    soft = theme.soft(200)
+    faint = theme.soft(160)
 
     # Header: the club's mark, the title and the membership number.
     _book_icon(draw, 48, 44, 64, theme)
-    draw.text((132, 40), "KITOBXON PASPORTI", font=_bold(44), fill=WHITE)
+    draw.text((132, 40), "KITOBXON PASPORTI", font=_bold(44), fill=ink)
     subtitle_font = _regular(19)
     draw.text(
         (134, 96), _clip(draw, data.organization, subtitle_font, WIDTH - 48 - 200 - 134), font=subtitle_font, fill=soft
@@ -366,7 +399,7 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
     draw.rounded_rectangle(
         (48, 532, 48 + status_width, 572), radius=20, fill=theme.accent if data.active else (200, 200, 200)
     )
-    draw.text((48 + 18, 541), status, font=status_font, fill=theme.dark)
+    draw.text((48 + 18, 541), status, font=status_font, fill=theme.badge_text or theme.dark)
     draw.text((48, 590), f"Berilgan sana: {datetime.now(local_tz()):%d.%m.%Y}", font=_regular(17), fill=faint)
 
     # Personal details: only what does not change from day to day.
@@ -376,7 +409,7 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
     def field(x: int, y: int, label: str, value: str, width: int, size: int = 36) -> None:
         _spaced(draw, (x, y), label, _regular(15), faint)
         font = _fit(draw, value, width, size)
-        draw.text((x, y + 24), _clip(draw, value, font, width), font=font, fill=WHITE)
+        draw.text((x, y + 24), _clip(draw, value, font, width), font=font, fill=ink)
 
     field(left, 176, "FAMILIYASI", data.last_name, column - 24, 40)
     field(left + column, 176, "ISMI", data.first_name, full - column, 40)
@@ -386,9 +419,9 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
     field(left + column, 358, "A'ZO BO'LGAN", data.member_since, full - column, 30)
 
     # The club's motto between two thin lines.
-    draw.line((left, 452, WIDTH - 48, 452), fill=(255, 255, 255, 60), width=1)
+    draw.line((left, 452, WIDTH - 48, 452), fill=theme.soft(70), width=1)
     draw.text((left, 470), "«Kitob — aql chirog'i, bilim kaliti»", font=_serif(26), fill=(*theme.accent, 255))
-    draw.line((left, 520, WIDTH - 48, 520), fill=(255, 255, 255, 60), width=1)
+    draw.line((left, 520, WIDTH - 48, 520), fill=theme.soft(70), width=1)
 
     # Footer: what the card is, and the QR code that opens live results and verification.
     draw.text((left, 566), "Ushbu pasport Kitobxonlar klubi a'zoligini tasdiqlaydi.", font=_regular(19), fill=soft)
@@ -397,7 +430,7 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
         qr_size = 150
         x, y = WIDTH - 48 - qr_size, HEIGHT - 40 - qr_size
         draw.rounded_rectangle((x - 10, y - 10, x + qr_size + 10, y + qr_size + 10), radius=14, fill=WHITE)
-        card.paste(_qr(data.verify_url, qr_size, theme.dark), (x, y))
+        card.paste(_qr(data.verify_url, qr_size, theme.qr), (x, y))
 
     output = io.BytesIO()
     card.convert("RGB").save(output, format="PNG", optimize=True)

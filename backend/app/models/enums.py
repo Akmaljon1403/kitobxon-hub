@@ -10,6 +10,9 @@ class UserStatus(StrEnum):
     ACTIVE = "ACTIVE"
     BLOCKED = "BLOCKED"
     INACTIVE = "INACTIVE"
+    # Left the club (blocked the bot, or the membership was cancelled). The data is kept for 30 days
+    # so a returning member can restore it (14 days: by themselves, 30 days: on request), then erased.
+    LEFT = "LEFT"
 
 
 class SystemRole(StrEnum):
@@ -240,11 +243,15 @@ class PremiumSource(StrEnum):
     STARS = "STARS"  # paid with Telegram Stars
     MANUAL = "MANUAL"  # granted by an administrator (prize, paid in cash, ...)
     CARD = "CARD"  # paid to the club's card, receipt confirmed by the super admin
+    TRIAL = "TRIAL"  # the one free trial week of a member
+    GIVEAWAY = "GIVEAWAY"  # won in a giveaway (e.g. the first members who joined)
+    REFERRAL = "REFERRAL"  # a friend the member invited came to their first event
 
 
 class PaymentKind(StrEnum):
     PREMIUM = "PREMIUM"
     DONATION = "DONATION"
+    STARS = "STARS"  # Telegram Stars bought with a card payment: the admin gifts them in Telegram
 
 
 class PaymentStatus(StrEnum):
@@ -263,6 +270,7 @@ class GiveawayRule(StrEnum):
     TEST_TOP = "TEST_TOP"  # most test points in the period
     EVENT_PLACES = "EVENT_PLACES"  # places 1..N of every event's test in the period, each separately
     RANKING_TOP = "RANKING_TOP"  # top N of the club ranking for the period
+    NEW_MEMBERS = "NEW_MEMBERS"  # the first N members who joined in the period (awarded as they join)
 
 
 class GiveawayAudience(StrEnum):
@@ -294,3 +302,18 @@ class ChannelPostStatus(StrEnum):
     SENT = "SENT"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
+
+
+class GiveawayPrize(StrEnum):
+    CODES = "CODES"  # promo codes of a reward
+    PREMIUM_DAYS = "PREMIUM_DAYS"  # N days of Premium
+    PREMIUM_DISCOUNT = "PREMIUM_DISCOUNT"  # a personal discount (percent) on Premium
+
+
+class StickerMood(StrEnum):
+    """Which messages a saved sticker suits (taken from its emoji)."""
+
+    CELEBRATE = "CELEBRATE"  # wins, places, certificates, Premium
+    READING = "READING"  # books, reading reminders, quotes
+    WELCOME = "WELCOME"  # greetings, new members, invitations
+    ANY = "ANY"

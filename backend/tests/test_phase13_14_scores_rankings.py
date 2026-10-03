@@ -6,16 +6,24 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx
+import pytest
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AuditLog, Faculty, ScoreTransaction, User
-from app.models.enums import ScoreCategory, UserStatus
+from app.models import AuditLog, Faculty, FeatureFlag, ScoreTransaction, User
+from app.models.enums import FeatureMode, ScoreCategory, UserStatus
 from app.security.permissions import Perm
 from app.services.ranking import display_name, period_start
 from app.services.scoring import award_points
 from tests.factories import create_user
 from tests.helpers import admin_headers, grant_permissions, grant_role, member_headers
+
+
+@pytest.fixture(autouse=True)
+async def _full_ranking_for_everyone(db: AsyncSession) -> None:
+    """These tests are about the order of the ranking; the Premium lock is tested elsewhere."""
+    db.add(FeatureFlag(code="ranking_full", mode=FeatureMode.ALL))
+    await db.commit()
 
 
 async def _give(

@@ -24,14 +24,21 @@ interface Overview {
 
 interface CardPayment {
   id: string
-  kind: 'PREMIUM' | 'DONATION'
+  kind: 'PREMIUM' | 'DONATION' | 'STARS'
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   amount_uzs: number
   plan_title: string | null
   created_at: string
   decided_at: string | null
   reject_reason: string | null
+  stars: number | null
+  delivered_at: string | null
   member: Member
+}
+
+function cardWhat(payment: CardPayment): string {
+  if (payment.kind === 'STARS') return `⭐ ${payment.stars} Stars`
+  return payment.plan_title ? `💎 Premium ${payment.plan_title}` : '❤️ Hissa'
 }
 
 function uzs(amount: number): string {
@@ -148,6 +155,7 @@ export function PremiumPage() {
   const [member, setMember] = useState<AdminUser | null>(null)
   const [pickerKey, setPickerKey] = useState(0)
   const [days, setDays] = useState('30')
+  const [lifetime, setLifetime] = useState(false)
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -224,24 +232,31 @@ export function PremiumPage() {
 
       <Card className="flex flex-col gap-3 p-4">
         <h2 className="font-semibold">Premium sovg'a qilish</h2>
-        <p className="text-sm text-app-hint">Masalan, g'oliblarga yoki naqd to'lagan a'zoga. A'zoga bot orqali xabar boradi.</p>
+        <p className="text-sm text-app-hint">
+          Masalan, g'oliblarga yoki naqd to'lagan a'zoga. A'zoga bot orqali xabar boradi. Bosh administratorlarda Premium doim (umrbod) yoqiq.
+        </p>
         <MemberPicker key={pickerKey} value={member} onChange={setMember} />
         <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
           <Field label="Kun">
-            <Input type="number" min={1} max={3660} value={days} onChange={(e) => setDays(e.target.value)} />
+            <Input type="number" min={1} max={3660} value={lifetime ? '' : days} disabled={lifetime} placeholder="♾" onChange={(e) => setDays(e.target.value)} />
+            <label className="mt-1 flex items-center gap-1.5 text-xs">
+              <input type="checkbox" className="size-3.5" checked={lifetime} onChange={(e) => setLifetime(e.target.checked)} />
+              ♾ Umrbod
+            </label>
           </Field>
           <Field label="Izoh (ixtiyoriy)">
             <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Oktabr g'olibi" />
           </Field>
           <div className="flex items-end">
             <Button
-              disabled={!member || Number(days) < 1}
+              disabled={!member || (!lifetime && Number(days) < 1)}
               onClick={() =>
                 void run(async () => {
                   await api('/api/v1/admin/premium/grant', {
                     method: 'POST',
-                    body: { user_id: member?.id, days: Number(days), note: note.trim() || null },
+                    body: { user_id: member?.id, days: lifetime ? null : Number(days), lifetime, note: note.trim() || null },
                   })
+                  setLifetime(false)
                   setMember(null)
                   setPickerKey((key) => key + 1)
                   setNote('')
@@ -270,7 +285,7 @@ export function PremiumPage() {
                   {row.note && <p className="text-xs text-app-hint">{row.note}</p>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-sm">
-                  {formatDateTime(row.starts_at)} → {formatDateTime(row.ends_at)}
+                  {formatDateTime(row.starts_at)} → {row.ends_at >= '2099' ? '♾ umrbod' : formatDateTime(row.ends_at)}
                 </td>
                 <td className="px-4 py-2 text-right">
                   <Button
@@ -395,6 +410,18 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
     }
   }
 
+  async function delivered(payment: CardPayment) {
+    setError(null)
+    if (!window.confirm(`${payment.member.last_name} ${payment.member.first_name} ga ${payment.stars} ⭐ yubordingizmi?`)) return
+    try {
+      await api(`/api/v1/admin/premium/card-payments/${payment.id}/delivered`, { method: 'POST' })
+      reload()
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    }
+  }
+
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
@@ -420,7 +447,7 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
                 {payment.member.last_name} {payment.member.first_name}
                 <p className="font-mono text-xs text-app-hint">{payment.member.member_number}</p>
               </td>
-              <td className="px-4 py-2 text-sm">{payment.plan_title ? `💎 Premium ${payment.plan_title}` : '❤️ Hissa'}</td>
+              <td className="px-4 py-2 text-sm">{cardWhat(payment)}</td>
               <td className="whitespace-nowrap px-4 py-2 tabular-nums">{uzs(payment.amount_uzs)}</td>
               <td className="px-4 py-2">
                 <Receipt paymentId={payment.id} />
@@ -434,9 +461,20 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
                       Rad etish
                     </Button>
                   </>
+                ) : payment.kind === 'STARS' && payment.status === 'APPROVED' && !payment.delivered_at ? (
+                  <>
+                    <p className="mb-1 max-w-xs whitespace-normal text-xs text-app-hint">
+                      Telegram'da a'zoga {payment.stars} ⭐ sovg'a qiling (profil → 🎁 Sovg'a yuborish → Stars), so'ng belgilang:
+                    </p>
+                    <Button onClick={() => void delivered(payment)}>⭐ Stars yuborildi</Button>
+                  </>
                 ) : (
                   <Badge tone={payment.status === 'APPROVED' ? 'success' : 'warning'}>
-                    {payment.status === 'APPROVED' ? 'Tasdiqlangan' : `Rad etilgan: ${payment.reject_reason ?? ''}`}
+                    {payment.status === 'APPROVED'
+                      ? payment.kind === 'STARS'
+                        ? 'Stars yuborilgan'
+                        : 'Tasdiqlangan'
+                      : `Rad etilgan: ${payment.reject_reason ?? ''}`}
                   </Badge>
                 )}
               </td>

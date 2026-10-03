@@ -63,6 +63,31 @@ class AssignIn(BaseModel):
     user_id: uuid.UUID
     note: str | None = Field(default=None, max_length=1000)
     idempotency_key: str | None = Field(default=None, min_length=8, max_length=120)
+    allow_repeat: bool = Field(default=False, description="Give again even if the member already has this reward")
+
+
+class TestPlaceIn(BaseModel):
+    test_id: uuid.UUID
+    place: int = Field(ge=1, le=3)
+
+
+class TestPlaceOut(BaseModel):
+    place: int
+    user_id: uuid.UUID
+    name: str
+    group_name: str | None
+    score: int
+    max_score: int
+    given_reward: str | None = Field(description="The reward this place already received, if any")
+    given_at: datetime | None
+
+
+class TestWinnersOut(BaseModel):
+    test_id: uuid.UUID
+    title: str
+    event_title: str | None
+    closed_at: datetime
+    places: list[TestPlaceOut]
 
 
 class RecipientOut(BaseModel):

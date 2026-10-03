@@ -5,7 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { AdminReward, Giveaway, GiveawayAudience, GiveawayPreview, GiveawayRule } from '../types/api'
+import type { AdminReward, Giveaway, GiveawayAudience, GiveawayPreview, GiveawayPrize, GiveawayRule } from '../types/api'
 import { formatDateTime, fromLocalInput, toLocalInput } from '../utils/format'
 
 const RULES: Record<GiveawayRule, { title: string; hint: string; count: string }> = {
@@ -29,6 +29,16 @@ const RULES: Record<GiveawayRule, { title: string; hint: string; count: string }
     hint: "Davr bo'yicha klub reytingidagi eng yuqori o'rinlar.",
     count: "G'oliblar soni",
   },
+  NEW_MEMBERS: {
+    title: "🆕 Botga qo'shilgan birinchi a'zolar",
+    hint: "Davr ichida botga qo'shilgan birinchi N kishi — sovg'a ro'yxatdan o'tishi bilan darhol beriladi (masalan: 1–15-noyabr, birinchi 50 kishiga Premium −50%). Adminlar hisobga olinmaydi.",
+    count: "Nechta a'zo (birinchi N)",
+  },
+}
+const PRIZES: Record<GiveawayPrize, string> = {
+  CODES: "🎁 Promokodlar (sovg'adan)",
+  PREMIUM_DAYS: '💎 Premium kunlari',
+  PREMIUM_DISCOUNT: '🎟 Premium chegirmasi (%)',
 }
 const AUDIENCES: Record<GiveawayAudience, string> = {
   ALL: "Barcha faol a'zolar",
@@ -61,6 +71,8 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
   const [thisStart, thisEnd] = monthRange(0)
   const [form, setForm] = useState({
     title: giveaway?.title ?? '',
+    prize: giveaway?.prize ?? ('CODES' as GiveawayPrize),
+    prize_value: String(giveaway?.prize_value ?? 30),
     reward_id: giveaway?.reward_id ?? '',
     rule: giveaway?.rule ?? ('TEST_TOP' as GiveawayRule),
     audience: giveaway?.audience ?? ('ALL' as GiveawayAudience),
@@ -82,18 +94,21 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
   async function save() {
     setBusy(true)
     setError(null)
+    const automatic = form.automatic || form.rule === 'NEW_MEMBERS'
     const body = {
       title: form.title.trim(),
-      reward_id: form.reward_id,
+      prize: form.prize,
+      prize_value: form.prize === 'CODES' ? null : Number(form.prize_value),
+      reward_id: form.prize === 'CODES' ? form.reward_id : null,
       rule: form.rule,
-      audience: form.rule === 'EVENT_PLACES' ? 'ALL' : form.audience,
+      audience: form.rule === 'EVENT_PLACES' || form.rule === 'NEW_MEMBERS' ? 'ALL' : form.audience,
       winners_count: Number(form.winners_count),
       premium_bonus: form.premium_bonus,
       period_start: form.period_start,
       period_end: form.period_end,
-      scheduled_at: form.automatic ? fromLocalInput(form.scheduled_at) : null,
+      scheduled_at: automatic ? fromLocalInput(form.scheduled_at) : null,
       announce: form.announce,
-      repeat_monthly: form.automatic && form.repeat_monthly,
+      repeat_monthly: automatic && form.repeat_monthly,
     }
     try {
       await api(giveaway ? `/api/v1/admin/giveaways/${giveaway.id}` : '/api/v1/admin/giveaways', { method: giveaway ? 'PATCH' : 'POST', body })
@@ -121,7 +136,11 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
           <Button variant="secondary" onClick={onClose}>
             Bekor qilish
           </Button>
-          <Button loading={busy} disabled={form.title.trim().length < 3 || !form.reward_id || !form.period_start || !form.period_end} onClick={() => void save()}>
+          <Button
+            loading={busy}
+            disabled={form.title.trim().length < 3 || (form.prize === 'CODES' ? !form.reward_id : Number(form.prize_value) < 1) || !form.period_start || !form.period_end}
+            onClick={() => void save()}
+          >
             Saqlash
           </Button>
         </>
@@ -131,17 +150,35 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
         <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={255} />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Sovg'a (promokodlar) *" hint={chosen ? (chosen.codes_total ? `Bo'sh kodlar: ${chosen.codes_available}` : "Kodsiz sovg'a — qo'lda topshiriladi") : "Avval «🎁 Sovg'alar» bo'limida sovg'a yarating va kodlarni kiriting"}>
-          <Select value={form.reward_id} onChange={(e) => setForm({ ...form, reward_id: e.target.value })}>
-            <option value="">— tanlang —</option>
-            {activeRewards.map((reward) => (
-              <option key={reward.id} value={reward.id}>
-                {reward.title}
-                {reward.codes_total ? ` (${reward.codes_available} kod)` : ''}
+        <Field label="G'oliblarga nima beriladi">
+          <Select value={form.prize} onChange={(e) => setForm({ ...form, prize: e.target.value as GiveawayPrize, prize_value: e.target.value === 'PREMIUM_DISCOUNT' ? '50' : '30' })}>
+            {Object.entries(PRIZES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </Select>
         </Field>
+        {form.prize === 'CODES' ? (
+          <Field label="Sovg'a (promokodlar) *" hint={chosen ? (chosen.codes_total ? `Bo'sh kodlar: ${chosen.codes_available}` : "Kodsiz sovg'a — qo'lda topshiriladi") : "Avval «🎁 Sovg'alar» bo'limida sovg'a yarating va kodlarni kiriting"}>
+            <Select value={form.reward_id} onChange={(e) => setForm({ ...form, reward_id: e.target.value })}>
+              <option value="">— tanlang —</option>
+              {activeRewards.map((reward) => (
+                <option key={reward.id} value={reward.id}>
+                  {reward.title}
+                  {reward.codes_total ? ` (${reward.codes_available} kod)` : ''}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : (
+          <Field
+            label={form.prize === 'PREMIUM_DAYS' ? 'Necha kunlik Premium' : 'Chegirma foizi (1–90)'}
+            hint={form.prize === 'PREMIUM_DISCOUNT' ? "G'olib 30 kun ichida chegirmali narxda sotib oladi (Stars yoki karta)" : 'Darhol yoqiladi'}
+          >
+            <Input type="number" min={1} max={form.prize === 'PREMIUM_DAYS' ? 365 : 90} value={form.prize_value} onChange={(e) => setForm({ ...form, prize_value: e.target.value })} />
+          </Field>
+        )}
         <Field label="Qoida">
           <Select value={form.rule} onChange={(e) => setForm({ ...form, rule: e.target.value as GiveawayRule })}>
             {Object.entries(RULES).map(([value, item]) => (
@@ -157,7 +194,7 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
         <Field label={rule.count}>
           <Input type="number" min={1} max={form.rule === 'EVENT_PLACES' ? 10 : 100} value={form.winners_count} onChange={(e) => setForm({ ...form, winners_count: e.target.value })} />
         </Field>
-        {form.rule !== 'EVENT_PLACES' && (
+        {form.rule !== 'EVENT_PLACES' && form.rule !== 'NEW_MEMBERS' && (
           <Field label="Kimlar qatnashadi">
             <Select value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value as GiveawayAudience })}>
               {Object.entries(AUDIENCES).map(([value, label]) => (
@@ -195,10 +232,10 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
       </div>
       <div className="flex flex-col gap-2 rounded-lg border border-app-border p-3">
         <label className="flex items-center gap-2 text-sm">
-          <input type="radio" checked={form.automatic} onChange={() => setForm({ ...form, automatic: true })} />
+          <input type="radio" checked={form.automatic || form.rule === 'NEW_MEMBERS'} onChange={() => setForm({ ...form, automatic: true })} />
           Belgilangan vaqtda <b>avtomatik</b> o'tkazilsin
         </label>
-        {form.automatic && (
+        {(form.automatic || form.rule === 'NEW_MEMBERS') && (
           <div className="flex flex-col gap-2 pl-6">
             <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} />
             <label className="flex items-center gap-2 text-sm">
@@ -207,10 +244,14 @@ function GiveawayModal({ giveaway, onClose, onSaved }: { giveaway: Giveaway | nu
             </label>
           </div>
         )}
-        <label className="flex items-center gap-2 text-sm">
-          <input type="radio" checked={!form.automatic} onChange={() => setForm({ ...form, automatic: false })} />
-          O'zim «O'tkazish» tugmasini bosaman
-        </label>
+        {form.rule === 'NEW_MEMBERS' ? (
+          <p className="text-xs text-app-hint">Bu qoida doim avtomatik: a'zolar qo'shilishi bilan sovg'a oladi, davr oxirida o'yin yopiladi.</p>
+        ) : (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="radio" checked={!form.automatic} onChange={() => setForm({ ...form, automatic: false })} />
+            O'zim «O'tkazish» tugmasini bosaman
+          </label>
+        )}
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" className="size-4" checked={form.announce} onChange={(e) => setForm({ ...form, announce: e.target.checked })} />
@@ -358,7 +399,8 @@ export function GiveawaysPage() {
                 <td className="min-w-[16rem] px-4 py-2.5">
                   <p className="font-medium">{giveaway.title}</p>
                   <p className="text-xs text-app-hint">
-                    🎁 {giveaway.reward_title}
+                    {giveaway.prize === 'CODES' ? '🎁 ' : ''}
+                    {giveaway.reward_title}
                     {giveaway.codes_available !== null && ` · ${giveaway.codes_available} bo'sh kod`}
                   </p>
                 </td>

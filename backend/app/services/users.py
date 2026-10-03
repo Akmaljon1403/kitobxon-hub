@@ -168,6 +168,10 @@ async def change_user_status(
 ) -> User:
     if status == UserStatus.PENDING:
         raise BadRequestError("INVALID_STATUS", "A'zoni qayta «kutilmoqda» holatiga o'tkazib bo'lmaydi.")
+    if status == UserStatus.LEFT:
+        raise BadRequestError(
+            "INVALID_STATUS", "A'zolikni bekor qilish uchun «A'zolikni bekor qilish» tugmasidan foydalaning."
+        )
     if user_id == actor_id:
         raise ForbiddenError("SELF_STATUS_CHANGE", "O'z hisobingiz holatini o'zgartira olmaysiz.")
     user = await get_user(session, user_id)
@@ -179,6 +183,8 @@ async def change_user_status(
 
     previous = user.status
     user.status = status
+    if previous == UserStatus.LEFT:  # coming back through the status switch: forget the leaving
+        user.left_at = user.left_reason = user.restore_requested_at = None
     if status != UserStatus.ACTIVE:
         user.token_version += 1  # end every session of the member immediately
     record_audit(

@@ -17,6 +17,7 @@ class CertificateOut(BaseModel):
     description: str
     issued_at: datetime
     code: str
+    verify_url: str | None = None  # the public page anyone can open to check the certificate
 
 
 class CertificateMemberOut(BaseModel):
@@ -42,8 +43,8 @@ class CertificateIssueIn(BaseModel):
 
 
 class DownloadLinkIn(BaseModel):
-    kind: Literal["passport", "certificate"]
-    id: uuid.UUID | None = Field(default=None, description="The certificate (not needed for the passport)")
+    kind: Literal["passport", "certificate", "portfolio"]
+    id: uuid.UUID | None = Field(default=None, description="The certificate (not needed for the passport or portfolio)")
 
 
 class DownloadLinkOut(BaseModel):

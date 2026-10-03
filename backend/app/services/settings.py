@@ -118,6 +118,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "Kitob muddati tugashidan necha kun oldin eslatiladi (0 = eslatilmaydi)",
     ),
     SettingDefinition("notifications.quote_of_day_time", "09:00", ClockTime, "Kun iqtibosi yuboriladigan vaqt"),
+    SettingDefinition(
+        "notifications.stickers",
+        True,
+        bool,
+        "Tabrik xabarlarida (g'alaba, sertifikat, yutuq) stiker va 🎉 animatsiya. Stikerlar botda /stiker orqali",
+    ),
     # ---- Organisation (used in official reports) ----
     SettingDefinition(
         "org.organization_name",
@@ -143,6 +149,44 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "payments.card_number", "", ShortText, "Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012"
     ),
     SettingDefinition("payments.card_holder", "", ShortText, "Karta egasining ismi (to'lovchi tekshirishi uchun)"),
+    SettingDefinition(
+        "payments.stars_packages",
+        [50, 100, 250, 500],
+        Annotated[list[Annotated[int, Field(ge=1, le=100_000)]], Field(max_length=8)],
+        "Karta orqali sotiladigan Stars to'plamlari (bo'sh — sotilmaydi)",
+    ),
+    SettingDefinition(
+        "payments.star_price_uzs",
+        250,
+        Annotated[int, Field(ge=0, le=10_000)],
+        "1 ta Stars narxi so'mda (Telegram'da sotib olish narxiga qarab; 0 — sotilmaydi)",
+    ),
+    # ---- Premium ----
+    SettingDefinition(
+        "premium.trial_days",
+        7,
+        Annotated[int, Field(ge=0, le=30)],
+        "Har bir a'zoga bir marta bepul Premium sinov (kun; 0 — sinov yo'q)",
+    ),
+    # ---- Friend invitations ----
+    SettingDefinition(
+        "referral.points",
+        20,
+        Annotated[int, Field(ge=0, le=500)],
+        "Do'stini taklif qilgan a'zoga ball (do'sti birinchi tadbirda qatnashganda)",
+    ),
+    SettingDefinition(
+        "referral.premium_days",
+        7,
+        Annotated[int, Field(ge=0, le=60)],
+        "Do'stini taklif qilgan a'zoga Premium kunlar (0 — Premium berilmaydi)",
+    ),
+    SettingDefinition(
+        "referral.monthly_limit",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz)",
+    ),
     # ---- Telegram channel (the bot posts there as an administrator) ----
     SettingDefinition(
         "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"
@@ -156,6 +200,13 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("channel.post_results", True, bool, "Test g'oliblari, sovg'a o'yinlari va oy peshqadamlari"),
     SettingDefinition("channel.post_invites", True, bool, "Har dushanba botga taklif posti"),
     SettingDefinition("channel.stickers", True, bool, "Avtomatik postlardan keyin saqlangan stikerlardan biri"),
+    SettingDefinition(
+        "channel.review_minutes",
+        5,
+        Annotated[int, Field(ge=0, le=60)],
+        "Avtomatik post kanalga chiqishidan oldin adminlarga ko'rsatiladi; shu daqiqalarda hech kim javob "
+        "bermasa, o'zi joylanadi (0 — tekshiruvsiz)",
+    ),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",

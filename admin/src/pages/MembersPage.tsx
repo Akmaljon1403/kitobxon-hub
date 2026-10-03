@@ -14,6 +14,16 @@ const STATUS_TONE: Record<UserStatus, 'success' | 'warning' | 'danger' | 'neutra
   PENDING: 'warning',
   BLOCKED: 'danger',
   INACTIVE: 'neutral',
+  LEFT: 'neutral',
+}
+const LEFT_REASONS: Record<string, string> = {
+  BOT_BLOCKED: 'botni bloklagan',
+  CANCELLED: 'admin bekor qilgan',
+  SELF: "o'zi chiqqan",
+}
+
+function daysSince(value: string | null | undefined): number {
+  return value ? Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000) : 0
 }
 
 export function StatusBadge({ status }: { status: UserStatus }) {
@@ -144,7 +154,7 @@ function MemberModal({
   onClose: () => void
   onChanged: () => void
 }) {
-  const { api, can } = useSession()
+  const { api, can, admin } = useSession()
   const { state, reload } = useAsync((signal) => api<AdminUser>(`/api/v1/admin/users/${userId}`, { signal }), [userId])
   const [form, setForm] = useState<Partial<AdminUser> | null>(null)
   const [busy, setBusy] = useState(false)
@@ -185,6 +195,27 @@ function MemberModal({
     )
   }
 
+  function cancelMembership() {
+    const reason = window.prompt(
+      "A'zolikni bekor qilasizmi? A'zo xabarlar olmaydi va reytingda ko'rinmaydi. Ma'lumotlari 30 kun saqlanadi — u so'rov yuborib qaytishi mumkin, keyin avtomatik o'chiriladi.\n\nSababini yozing (a'zo ko'radi):",
+    )
+    if (!reason || reason.trim().length < 5) return
+    return run(() => api(`/api/v1/admin/users/${userId}/cancel-membership`, { method: 'POST', body: { reason } }))
+  }
+
+  function erase() {
+    const reason = window.prompt(
+      "⚠️ A'zoning shaxsiy ma'lumotlari (ism, telefon, Telegram, rasmlar, cheklar, xabarlar) BUTUNLAY o'chiriladi. Qaytarib bo'lmaydi.\n\nSababini yozing:",
+    )
+    if (!reason || reason.trim().length < 5) return
+    const confirm = window.prompt("Tasdiqlash uchun O'CHIRISH deb yozing:")
+    if (!confirm) return
+    return run(async () => {
+      await api(`/api/v1/admin/users/${userId}/erase`, { method: 'POST', body: { reason, confirm } })
+      onClose()
+    })
+  }
+
   function changeStatus(status: UserStatus, question: string) {
     const reason = window.prompt(`${question}\n\nSababini yozing (kamida 5 belgi):`)
     if (!reason) return
@@ -206,6 +237,13 @@ function MemberModal({
             ))}
             <span className="text-xs text-app-hint">Oxirgi faollik: {formatDateTime(state.data.last_seen_at)}</span>
           </div>
+          {state.data.status === 'LEFT' && (
+            <p className="rounded-lg bg-app-surface px-3 py-2 text-sm">
+              🚪 {daysSince(state.data.left_at)} kun oldin klubdan chiqqan ({LEFT_REASONS[state.data.left_reason ?? ''] ?? '—'}). Ma'lumotlari{' '}
+              {Math.max(30 - daysSince(state.data.left_at), 0)} kundan keyin avtomatik o'chiriladi.
+              {state.data.restore_requested_at && <b> 📨 Tiklash so'rovini yuborgan.</b>}
+            </p>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Ism">
               <Input value={form.first_name ?? ''} disabled={!canManage} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
@@ -259,6 +297,21 @@ function MemberModal({
                 {state.data.status === 'ACTIVE' && (
                   <Button variant="danger" onClick={() => changeStatus('BLOCKED', "A'zoni bloklaysizmi?")} loading={busy}>
                     Bloklash
+                  </Button>
+                )}
+                {state.data.status !== 'LEFT' && (
+                  <Button variant="secondary" onClick={() => void cancelMembership()} loading={busy}>
+                    🚪 A'zolikni bekor qilish
+                  </Button>
+                )}
+                {state.data.status === 'LEFT' && (
+                  <Button onClick={() => void run(() => api(`/api/v1/admin/users/${userId}/restore`, { method: 'POST' }))} loading={busy}>
+                    ♻️ A'zolikni tiklash
+                  </Button>
+                )}
+                {admin?.is_super_admin && (
+                  <Button variant="danger" onClick={() => void erase()} loading={busy}>
+                    🗑 Ma'lumotlarini o'chirish
                   </Button>
                 )}
                 {(state.data.status === 'BLOCKED' || state.data.status === 'INACTIVE') && (

@@ -16,7 +16,7 @@ from aiogram.utils.token import TokenValidationError, validate_token
 
 from app.bot import texts
 from app.bot.errors import on_error
-from app.bot.handlers import admin, common, fallback, feedback, payments, registration, sections, support
+from app.bot.handlers import admin, common, fallback, feedback, membership, payments, registration, sections, support
 from app.bot.middlewares import DbSessionMiddleware, FloodMiddleware, MemberMiddleware
 from app.bot.storage import PostgresStorage
 from app.core.config import Settings, get_settings
@@ -31,6 +31,7 @@ COMMANDS = [
     BotCommand(command="davomat", description="Tadbirda davomat qilish"),
     BotCommand(command="pasport", description="Kitobxon pasportim"),
     BotCommand(command="premium", description="Premium va klubni qo'llab-quvvatlash"),
+    BotCommand(command="taklif", description="Do'stni klubga taklif qilish"),
     BotCommand(command="help", description="Yordam va adminga yozish"),
     BotCommand(command="cancel", description="Joriy amalni bekor qilish"),
 ]
@@ -62,6 +63,7 @@ def create_dispatcher() -> Dispatcher:
     # Payments first: Telegram's payment updates must never be taken by a waiting-for-text state.
     dispatcher.include_routers(
         payments.router,
+        membership.router,
         registration.router,
         common.router,
         admin.router,

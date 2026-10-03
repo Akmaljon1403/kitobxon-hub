@@ -98,6 +98,11 @@ async def render(session: AsyncSession, type_: NotificationType, **values: Any) 
     return template.body.format_map(safe).strip()
 
 
+def celebrate(payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Mark a congratulation: the sender adds Telegram's 🎉 effect and a celebrating sticker."""
+    return {**(payload or {}), "mood": "CELEBRATE"}
+
+
 def app_button(route: str, text: str = "📱 Ilovada ochish") -> dict[str, Any]:
     """Payload for an inline button that opens a Mini App page (e.g. ``events/<id>``)."""
     return {"buttons": [{"text": text, "app_route": route}]}

@@ -19,10 +19,12 @@ from app.bot import access, keyboards, texts
 from app.bot.states import Registration
 from app.core.errors import ConflictError
 from app.models import User
-from app.models.enums import UserStatus
+from app.models.enums import StickerMood, UserStatus
 from app.services import attendance as attendance_service
+from app.services import literary, referrals, stickers
 from app.services.members import (
     RegistrationData,
+    after_registration,
     get_active_faculty,
     list_active_faculties,
     normalize_group,
@@ -40,6 +42,7 @@ _STATUS_TEXT = {
     UserStatus.PENDING: texts.ACCOUNT_PENDING,
     UserStatus.BLOCKED: texts.ACCOUNT_BLOCKED,
     UserStatus.INACTIVE: texts.ACCOUNT_INACTIVE,
+    UserStatus.LEFT: texts.ACCOUNT_LEFT,
 }
 
 
@@ -62,9 +65,15 @@ async def send_member_home(message: Message, member: User, db: AsyncSession) -> 
         await message.answer(_STATUS_TEXT.get(member.status, texts.ACCOUNT_INACTIVE), reply_markup=keyboards.remove())
 
 
-async def _begin(message: Message, state: FSMContext, db: AsyncSession) -> None:
+async def begin_registration(message: Message, state: FSMContext, db: AsyncSession) -> None:
+    await _begin(message, state, db)
+
+
+async def _begin(message: Message, state: FSMContext, db: AsyncSession, *, referrer: int | None = None) -> None:
     await state.clear()
     await state.set_state(Registration.first_name)
+    if referrer is not None:
+        await state.update_data(referrer=referrer)
     steps = await _steps(db)
     await message.answer(texts.WELCOME_NEW, reply_markup=keyboards.remove())
     await message.answer(texts.ASK_FIRST_NAME.format(step=steps["first_name"]))
@@ -78,11 +87,17 @@ async def start(
     if payload.startswith(attendance_service.QR_PREFIX):
         await _check_in_from_qr(message, state, db, member, payload)
         return
+    if member is not None and member.status == UserStatus.LEFT:
+        from app.bot.handlers.membership import offer_return
+
+        await state.clear()
+        await offer_return(message, db, member)
+        return
     if member is not None:
         await state.clear()
         await send_member_home(message, member, db)
         return
-    await _begin(message, state, db)
+    await _begin(message, state, db, referrer=referrals.parse(payload))
 
 
 async def _check_in_from_qr(
@@ -241,17 +256,23 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         await state.clear()
         await callback.answer(exc.message, show_alert=True)
         return
+    if await referrals.attach(db, user, data.get("referrer")):
+        await db.commit()
     await state.clear()
     await callback.answer()
     if isinstance(callback.message, Message):
         await callback.message.edit_reply_markup(reply_markup=None)
         if user.status == UserStatus.ACTIVE:
             await callback.message.answer(
-                texts.REGISTERED.format(first_name=html.escape(user.first_name)),
+                texts.REGISTERED.format(first_name=html.escape(user.first_name))
+                + "\n\n"
+                + literary.epigraph(f"welcome:{user.id}"),
                 reply_markup=await access.menu(db, user),
             )
+            await stickers.send(db, callback.message, StickerMood.WELCOME)
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
+    await after_registration(db, user.id)
 
 
 @router.callback_query(F.data == "reg:restart")
@@ -260,7 +281,7 @@ async def restart(callback: CallbackQuery, state: FSMContext, db: AsyncSession, 
     if member is not None or not isinstance(callback.message, Message):
         return
     await callback.message.edit_reply_markup(reply_markup=None)
-    await _begin(callback.message, state, db)
+    await _begin(callback.message, state, db, referrer=(await state.get_data()).get("referrer"))
 
 
 @router.callback_query(F.data.startswith("reg:"))

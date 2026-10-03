@@ -16,7 +16,7 @@ from aiogram.methods import SendMessage, SendPhoto, SendSticker
 from aiogram.methods.base import TelegramMethod
 from aiogram.types import Chat, Message, Sticker, Update
 from PIL import Image
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -208,6 +208,12 @@ class ChannelTelegram(FakeTelegramSession):
         return await super().make_request(bot, method, timeout)
 
 
+async def _make_due(db: AsyncSession, *keys: str) -> None:
+    """Automatic posts wait for the daytime (and for the admins' review); in tests they are due now."""
+    await db.execute(update(ChannelPost).where(ChannelPost.dedup_key.in_(keys)).values(scheduled_at=datetime.now(UTC)))
+    await db.commit()
+
+
 def _bot(session: FakeTelegramSession) -> Bot:
     return Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
@@ -234,6 +240,7 @@ async def test_sender_publishes_and_reports_problems(db: AsyncSession) -> None:
         scheduled_at=datetime.now(UTC) + timedelta(hours=1),
     )
     await db.commit()
+    await _make_due(db, "a")
 
     telegram = ChannelTelegram()
     assert await send_channel_posts(get_session_factory(), _bot(telegram)) == 1
@@ -248,6 +255,7 @@ async def test_sender_publishes_and_reports_problems(db: AsyncSession) -> None:
     # The bot is not an admin of the channel: the post fails and the super admin hears about it.
     await channel.queue(db, kind=ChannelPostKind.INVITE, text="Yana", dedup_key="b")
     await db.commit()
+    await _make_due(db, "b")
     broken = ChannelTelegram(fail="Bad Request: need administrator rights in the channel chat")
     assert await send_channel_posts(get_session_factory(), _bot(broken)) == 0
     failed = await db.scalar(select(ChannelPost).where(ChannelPost.dedup_key == "b"))
@@ -313,7 +321,7 @@ async def test_admin_saves_stickers_in_the_bot(db: AsyncSession) -> None:
 
     harness = BotHarness(9401)
     await harness.send("/stiker")
-    assert "Kanal postlari uchun stikerlar" in harness.last_text()
+    assert "Bot va kanal uchun stikerlar" in harness.last_text()
 
     async def send_sticker(unique: str) -> None:
         sticker = Sticker(
@@ -331,7 +339,7 @@ async def test_admin_saves_stickers_in_the_bot(db: AsyncSession) -> None:
         await harness.dispatcher.feed_update(harness.bot, update)
 
     await send_sticker("one")
-    assert "Jami stikerlar: 1" in harness.last_text()
+    assert "Jami stikerlar: 1" in harness.last_text() and "kitob mavzusida" in harness.last_text()
     await send_sticker("one")
     assert "allaqachon saqlangan" in harness.last_text()
     await harness.send("salom")

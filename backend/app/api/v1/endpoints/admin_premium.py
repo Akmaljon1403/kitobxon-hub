@@ -164,10 +164,17 @@ async def subscriptions(
     )
 
 
-@router.post("/premium/grant", response_model=SubscriptionOut, status_code=201, summary="Give Premium for N days")
+@router.post(
+    "/premium/grant", response_model=SubscriptionOut, status_code=201, summary="Give Premium (N days or for life)"
+)
 async def grant(payload: GrantIn, current: SuperAdminDep, db: DbSession) -> SubscriptionOut:
     subscription = await premium_service.grant(
-        db, actor_id=current.user.id, user_id=payload.user_id, days=payload.days, note=payload.note
+        db,
+        actor_id=current.user.id,
+        user_id=payload.user_id,
+        days=payload.days,
+        note=payload.note,
+        lifetime=payload.lifetime,
     )
     user = await db.get(User, subscription.user_id)
     assert user is not None
@@ -222,6 +229,16 @@ async def card_payment_receipt(payment_id: uuid.UUID, _: SuperAdminDep, db: DbSe
 async def card_payment_approve(payment_id: uuid.UUID, current: SuperAdminDep, db: DbSession) -> dict[str, str]:
     payment = await card_payments.approve(db, actor_id=current.user.id, payment_id=payment_id)
     return {"status": str(payment.status)}
+
+
+@router.post(
+    "/premium/card-payments/{payment_id}/delivered",
+    response_model=dict[str, str],
+    summary="Stars purchase: I gifted the Stars in Telegram (the member is told)",
+)
+async def card_payment_delivered(payment_id: uuid.UUID, current: SuperAdminDep, db: DbSession) -> dict[str, str]:
+    payment = await card_payments.mark_delivered(db, actor_id=current.user.id, payment_id=payment_id)
+    return {"status": "DELIVERED" if payment.delivered_at else str(payment.status)}
 
 
 @router.post("/premium/card-payments/{payment_id}/reject", response_model=dict[str, str], summary="Reject")

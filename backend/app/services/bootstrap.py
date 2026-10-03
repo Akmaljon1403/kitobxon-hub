@@ -101,6 +101,7 @@ async def sync_reference_data(session: AsyncSession) -> None:
                     "description": plan.description,
                     "stars": plan.stars,
                     "days": plan.days,
+                    "price_uzs": plan.price_uzs,
                     "sort_order": index,
                 }
                 for index, plan in enumerate(DEFAULT_PREMIUM_PLANS, start=1)

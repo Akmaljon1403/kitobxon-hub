@@ -169,7 +169,8 @@ async def test_switching_on_announces_the_feature(db: AsyncSession) -> None:
     # Premium only: premium members get the news; the others get a teaser only while the store is open.
     await premium_service.grant(db, actor_id=admin.id, user_id=members[1].id, days=10, note=None)
     await _set(db, admin, "certificates", FeatureMode.OFF)
-    assert await _set(db, admin, "certificates", FeatureMode.PREMIUM, announce=True) == 1
+    # The member with Premium and the super admin (Premium for life).
+    assert await _set(db, admin, "certificates", FeatureMode.PREMIUM, announce=True) == 2
     await _set(db, admin, "premium", FeatureMode.ALL)
     await _set(db, admin, "achievements", FeatureMode.OFF)
     assert await _set(db, admin, "achievements", FeatureMode.PREMIUM, announce=True) == 4
@@ -338,7 +339,7 @@ async def test_mini_app_invoice_link(
     )
     assert link.json() == {"url": "https://t.me/$invoice-test"}
     request = next(r for r in telegram.requests if isinstance(r, CreateInvoiceLink))
-    assert request.currency == "XTR" and request.prices[0].amount == 900
+    assert request.currency == "XTR" and request.prices[0].amount == plan.stars
     both = await client.post(
         "/api/v1/me/premium/invoice", json={"plan_id": str(plan.id), "amount": 5}, headers=member_headers(member)
     )
@@ -364,7 +365,8 @@ async def test_admin_premium_tools(
     headers = admin_headers(admin)
 
     overview = (await client.get("/api/v1/admin/premium/overview", headers=headers)).json()
-    assert overview["premium_members"] == 1 and overview["stars_total"] == plan.stars
+    # The buyer and the super admin (Premium for life).
+    assert overview["premium_members"] == 2 and overview["stars_total"] == plan.stars
     payments = (await client.get("/api/v1/admin/premium/payments", headers=headers)).json()
     assert payments["items"][0]["plan_title"] == "1 oy" and payments["items"][0]["member"]["member_number"].startswith(
         "KH-"
@@ -495,7 +497,7 @@ async def test_feedback_and_quotes_follow_their_switches(db: AsyncSession) -> No
     assert quote.status == QuoteStatus.SCHEDULED  # sent later if switched back on today
     await _set(db, admin, "quote_of_day", FeatureMode.PREMIUM)
     await premium_service.grant(db, actor_id=admin.id, user_id=member.id, days=3, note=None)
-    assert await announcements.quote_of_day(db, now=noon) == 1
+    assert await announcements.quote_of_day(db, now=noon) == 2  # the member and the super admin
     assert await db.scalar(select(func.count()).select_from(EventFeedback)) == 0
 
 
@@ -512,11 +514,16 @@ async def test_weekly_digest_for_premium_members(db: AsyncSession) -> None:
 
     assert await feedback_service.weekly_digest(db, now=next_monday.replace(hour=8)) == 0
     assert await feedback_service.weekly_digest(db, now=next_monday + timedelta(days=1)) == 0
-    assert await feedback_service.weekly_digest(db, now=next_monday) == 1  # premium only by default
+    # Premium only by default: the reader and the super admin (Premium for life).
+    assert await feedback_service.weekly_digest(db, now=next_monday) == 2
     await feedback_service.weekly_digest(db, now=next_monday)
     await db.commit()
-    digests = list(await db.scalars(select(Notification).where(Notification.type == NotificationType.DIGEST)))
-    assert len(digests) == 1 and digests[0].user_id == reader.id
+    digests = list(
+        await db.scalars(
+            select(Notification).where(Notification.type == NotificationType.DIGEST, Notification.user_id == reader.id)
+        )
+    )
+    assert len(digests) == 1 and other.id != reader.id
     assert "Haftalik xulosangiz" in digests[0].text and "«Navbatdagi kecha»" in digests[0].text
 
     await _set(db, admin, "weekly_digest", FeatureMode.ALL)

@@ -6,6 +6,10 @@
 * ``EVENT_PLACES`` — places 1..N of the test of every event held in the period, each event
   separately (four events a month = up to twelve winners).
 * ``RANKING_TOP``  — the top N of the club ranking for the period.
+* ``NEW_MEMBERS``  — the first N members who joined the bot in the period; each gets the prize the
+  moment they register (and the final draw at the end of the period catches anyone missed).
+
+Prizes: promo codes of a reward, N days of Premium, or a personal Premium discount (percent).
 
 A giveaway is drawn at once from the Admin Panel or automatically at ``scheduled_at`` (the
 ``giveaways_due`` job); ``repeat_monthly`` schedules the next month after each draw. Winners and
@@ -41,9 +45,11 @@ from app.models import (
 from app.models.enums import (
     AttendanceStatus,
     GiveawayAudience,
+    GiveawayPrize,
     GiveawayRule,
     GiveawayStatus,
     NotificationType,
+    PremiumSource,
     RewardCodeStatus,
     RewardStatus,
     TestStatus,
@@ -51,9 +57,9 @@ from app.models.enums import (
 )
 from app.services import rewards as reward_service
 from app.services.audit import record_audit
-from app.services.notifications import app_button, enqueue_for_members, render
+from app.services.notifications import app_button, celebrate, enqueue_for_members, enqueue_notification, render
 from app.services.settings import get_setting
-from app.utils.timezone import MONTHS_UZ, local_tz
+from app.utils.timezone import MONTHS_UZ, format_date, local_tz
 
 PREMIUM_WEIGHT = 2
 MAX_EVENT_PLACES = 10
@@ -63,9 +69,14 @@ RULE_TITLES = {
     GiveawayRule.TEST_TOP: "📝 Testlarda eng ko'p ball",
     GiveawayRule.EVENT_PLACES: "📅 Har bir tadbir testining o'rinlari",
     GiveawayRule.RANKING_TOP: "🏆 Reyting peshqadamlari",
+    GiveawayRule.NEW_MEMBERS: "🆕 Botga qo'shilgan birinchi a'zolar",
 }
+DISCOUNT_VALID_DAYS = 30  # how long a won Premium discount can be used
+ANNOUNCE_LINES = 30  # longer winner lists end with «... va yana N kishi»
 _FIELDS = (
     "title",
+    "prize",
+    "prize_value",
     "reward_id",
     "rule",
     "audience",
@@ -335,8 +346,42 @@ async def _ranking_top(session: AsyncSession, giveaway: Giveaway) -> Draw:
     )
 
 
+async def _new_members(session: AsyncSession, giveaway: Giveaway) -> Draw:
+    """The first N members who joined in the period, in the order they registered."""
+    start, end = window(giveaway)
+    users = list(
+        await session.scalars(
+            select(User)
+            .where(
+                User.status == UserStatus.ACTIVE,
+                User.deleted_at.is_(None),
+                User.registered_at >= start,
+                User.registered_at < end,
+                User.id.not_in(_staff()),
+            )
+            .order_by(User.registered_at, User.id)
+            .limit(giveaway.winners_count)
+        )
+    )
+    name_format = await _name_format(session)
+    return Draw(
+        winners=[
+            Winner(
+                user_id=user.id,
+                name=_public_name(user, name_format),
+                full_name=_full_name(user),
+                reason=f"Botga qo'shilgan {place}-a'zo",
+                place=place,
+            )
+            for place, user in enumerate(users, start=1)
+        ]
+    )
+
+
 async def pick(session: AsyncSession, giveaway: Giveaway, seed: str) -> Draw:
     rule = GiveawayRule(giveaway.rule)
+    if rule == GiveawayRule.NEW_MEMBERS:
+        return await _new_members(session, giveaway)
     if rule == GiveawayRule.RANDOM:
         return await _random(session, giveaway, seed)
     if rule == GiveawayRule.TEST_TOP:
@@ -375,10 +420,33 @@ async def codes_available(session: AsyncSession, reward_id: uuid.UUID) -> int | 
     )
 
 
+def prize_title(giveaway: Giveaway, reward_title: str | None) -> str:
+    """What winners get, in words: «Kitob ilovasi», «💎 30 kunlik Premium», «🎟 Premium'ga −50%»."""
+    if giveaway.prize == GiveawayPrize.PREMIUM_DAYS:
+        return f"💎 {giveaway.prize_value} kunlik Premium"
+    if giveaway.prize == GiveawayPrize.PREMIUM_DISCOUNT:
+        return f"🎟 Premium'ga −{giveaway.prize_value}% chegirma"
+    return f"«{reward_title}»" if reward_title else "Sovg'a"
+
+
 async def _validate(session: AsyncSession, giveaway: Giveaway) -> None:
-    reward = await reward_service.get_reward(session, giveaway.reward_id)
-    if reward.status != RewardStatus.ACTIVE:
-        raise BadRequestError("REWARD_NOT_ACTIVE", "Faol sovg'ani tanlang.")
+    from app.services.premium import MAX_DISCOUNT
+
+    prize = GiveawayPrize(giveaway.prize or GiveawayPrize.CODES)
+    giveaway.prize = prize
+    if prize == GiveawayPrize.CODES:
+        if giveaway.reward_id is None:
+            raise BadRequestError("REWARD_REQUIRED", "Promokodli sovg'ani tanlang.")
+        reward = await reward_service.get_reward(session, giveaway.reward_id)
+        if reward.status != RewardStatus.ACTIVE:
+            raise BadRequestError("REWARD_NOT_ACTIVE", "Faol sovg'ani tanlang.")
+        giveaway.prize_value = None
+    else:
+        giveaway.reward_id = None
+        limit = 365 if prize == GiveawayPrize.PREMIUM_DAYS else MAX_DISCOUNT
+        if not giveaway.prize_value or not 1 <= giveaway.prize_value <= limit:
+            what = "Premium kunlari" if prize == GiveawayPrize.PREMIUM_DAYS else "Chegirma foizi"
+            raise BadRequestError("PRIZE_VALUE", f"{what} 1 dan {limit} gacha bo'lishi kerak.")
     if giveaway.period_end < giveaway.period_start:
         raise BadRequestError("PERIOD_ORDER", "Davr oxiri boshidan oldin bo'lishi mumkin emas.")
     limit = MAX_EVENT_PLACES if giveaway.rule == GiveawayRule.EVENT_PLACES else 100
@@ -462,7 +530,7 @@ async def list_all(session: AsyncSession) -> list[tuple[Giveaway, str, int | Non
     rows = (
         await session.execute(
             select(Giveaway, Reward.title)
-            .join(Reward, Reward.id == Giveaway.reward_id)
+            .outerjoin(Reward, Reward.id == Giveaway.reward_id)
             .order_by(
                 (Giveaway.status.in_((GiveawayStatus.DRAFT, GiveawayStatus.SCHEDULED))).desc(),
                 func.coalesce(Giveaway.drawn_at, Giveaway.scheduled_at, Giveaway.created_at).desc(),
@@ -472,19 +540,27 @@ async def list_all(session: AsyncSession) -> list[tuple[Giveaway, str, int | Non
     ).all()
     codes: dict[uuid.UUID, int | None] = {}
     for giveaway, _ in rows:
-        if giveaway.reward_id not in codes:
+        if giveaway.reward_id is not None and giveaway.reward_id not in codes:
             codes[giveaway.reward_id] = await codes_available(session, giveaway.reward_id)
-    return [(giveaway, title, codes[giveaway.reward_id]) for giveaway, title in rows]
+    return [
+        (giveaway, prize_title(giveaway, title), codes.get(giveaway.reward_id) if giveaway.reward_id else None)
+        for giveaway, title in rows
+    ]
 
 
 async def preview(session: AsyncSession, giveaway_id: uuid.UUID) -> dict[str, Any]:
     """Who would win if the giveaway were drawn now (RANDOM: only how many take part)."""
     giveaway = await get(session, giveaway_id)
     draw = await pick(session, giveaway, seed="preview")
-    available = await codes_available(session, giveaway.reward_id)
+    available = await codes_available(session, giveaway.reward_id) if giveaway.reward_id else None
     random_rule = giveaway.rule == GiveawayRule.RANDOM
     notes = list(draw.notes)
-    expected = min(giveaway.winners_count, draw.eligible) if random_rule else len(draw.winners)
+    already = {entry.get("user_id") for entry in giveaway.results or []}
+    expected = (
+        min(giveaway.winners_count, draw.eligible)
+        if random_rule
+        else len([w for w in draw.winners if str(w.user_id) not in already])
+    )
     if available is not None and available < expected:
         notes.append(f"Kodlar yetmaydi: kerak {expected} ta, bor {available} ta. Avval kod qo'shing.")
     return {
@@ -513,70 +589,129 @@ async def _notify_admins(session: AsyncSession, giveaway: Giveaway, text: str, k
     )
 
 
+async def _award(
+    session: AsyncSession,
+    giveaway: Giveaway,
+    winner: Winner,
+    *,
+    slot: str,
+    actor_id: uuid.UUID | None,
+    reward_title: str | None,
+) -> dict[str, Any]:
+    """Give one winner the prize and tell them. Commits; a failure is recorded in the entry instead."""
+    from app.services import premium as premium_service
+
+    entry = winner.as_json()
+    giveaway_id, title, prize, value = giveaway.id, giveaway.title, GiveawayPrize(giveaway.prize), giveaway.prize_value
+    reward_id = giveaway.reward_id
+    label = period_label(giveaway.period_start, giveaway.period_end)
+    head = f"🎉 Tabriklaymiz! Siz «{title}» ({label}) g'olibisiz!\n🏅 {winner.reason}\n"
+    try:
+        if prize == GiveawayPrize.CODES:
+            user_reward = await reward_service.assign(
+                session,
+                actor_id=actor_id,  # type: ignore[arg-type]
+                reward_id=reward_id,  # type: ignore[arg-type]
+                user_id=winner.user_id,
+                note=f"🎲 {title}: {winner.reason}",
+                idempotency_key=f"giveaway:{giveaway_id}:{slot}",
+                allow_repeat=True,
+                message=head
+                + f"🎁 Sovg'angiz: «{reward_title}»\n\nKodni ilovadagi «🎁 Sovg'alarim» bo'limida ko'rasiz.",
+            )
+            entry["user_reward_id"] = str(user_reward.id)
+            return entry
+        if prize == GiveawayPrize.PREMIUM_DAYS:
+            subscription = await premium_service._extend(
+                session,
+                user_id=winner.user_id,
+                days=int(value or 0),
+                source=PremiumSource.GIVEAWAY,
+                granted_by=actor_id,
+                note=f"🎲 {title}",
+            )
+            text = head + f"💎 Sovg'angiz: {value} kunlik Premium — {format_date(subscription.ends_at)} gacha!"
+        else:
+            discount = await premium_service.give_discount(
+                session,
+                user_id=winner.user_id,
+                percent=int(value or 0),
+                days=DISCOUNT_VALID_DAYS,
+                note=title,
+                giveaway_id=giveaway_id,
+            )
+            text = head + (
+                f"🎟 Sovg'angiz: Premium'ga −{value}% chegirma ({format_date(discount.valid_until)} gacha). "
+                "💎 Premium bo'limida narxlar siz uchun allaqachon kamaytirilgan."
+            )
+        await enqueue_notification(
+            session,
+            user_id=winner.user_id,
+            type_=NotificationType.SYSTEM,
+            text=(await render(session, NotificationType.SYSTEM, message=text)) or text,
+            dedup_key=f"giveaway:{giveaway_id}:win:{slot}",
+            payload=celebrate(app_button("premium", "💎 Premium")),
+            priority=2,
+        )
+        await session.commit()
+    except AppError as error:
+        await session.rollback()
+        entry["error"] = error.message
+    return entry
+
+
 async def draw(session: AsyncSession, *, actor_id: uuid.UUID | None, giveaway_id: uuid.UUID) -> Giveaway:
-    """Choose the winners and hand out the codes. Raises (and changes nothing) when there are no
+    """Choose the winners and give the prizes. Raises (and changes nothing) when there are no
     winners or not enough codes, so the admin can fix it and draw again."""
     giveaway = await session.scalar(select(Giveaway).where(Giveaway.id == giveaway_id).with_for_update())
     if giveaway is None:
         raise NotFoundError("GIVEAWAY_NOT_FOUND", "Sovg'a o'yini topilmadi.")
     if giveaway.status not in (GiveawayStatus.DRAFT, GiveawayStatus.SCHEDULED):
         raise ConflictError("GIVEAWAY_CLOSED", "Bu o'yin allaqachon o'tkazilgan yoki bekor qilingan.")
-    reward = await reward_service.get_reward(session, giveaway.reward_id)
-    if reward.status != RewardStatus.ACTIVE or (reward.expires_at and reward.expires_at <= _now()):
-        raise ConflictError("REWARD_NOT_ACTIVE", f"«{reward.title}» sovg'asi faol emas yoki muddati o'tgan.")
+    reward_title = None
+    if giveaway.prize == GiveawayPrize.CODES:
+        reward = await reward_service.get_reward(session, giveaway.reward_id)  # type: ignore[arg-type]
+        if reward.status != RewardStatus.ACTIVE or (reward.expires_at and reward.expires_at <= _now()):
+            raise ConflictError("REWARD_NOT_ACTIVE", f"«{reward.title}» sovg'asi faol emas yoki muddati o'tgan.")
+        reward_title = reward.title
     seed = secrets.token_hex(16)
     result = await pick(session, giveaway, seed)
+    earlier = list(giveaway.results or [])  # NEW_MEMBERS: members already rewarded when they joined
+    done = {entry.get("user_id") for entry in earlier if not entry.get("error")}
+    new = [winner for winner in result.winners if str(winner.user_id) not in done]
     if not result.winners:
         raise ConflictError("NO_WINNERS", "Shartlarga mos g'olib topilmadi. " + " ".join(result.notes))
-    available = await codes_available(session, giveaway.reward_id)
-    if available is not None and available < len(result.winners):
+    available = await codes_available(session, giveaway.reward_id) if giveaway.reward_id else None
+    if available is not None and available < len(new):
         raise ConflictError(
             "NO_CODES_LEFT",
-            f"«{reward.title}» uchun kodlar yetmaydi: kerak {len(result.winners)} ta, bor {available} ta.",
+            f"«{reward_title}» uchun kodlar yetmaydi: kerak {len(new)} ta, bor {available} ta.",
         )
 
     # Record the outcome first: a second click (or worker) now sees DONE and stops.
     giveaway.status = GiveawayStatus.DONE
     giveaway.drawn_at = _now()
     giveaway.seed = seed if giveaway.rule == GiveawayRule.RANDOM else None
-    giveaway.results = [winner.as_json() for winner in result.winners]
+    giveaway.results = earlier + [winner.as_json() for winner in new]
     record_audit(
         session,
         actor_id=actor_id,
         action="GIVEAWAY_DRAW",
         entity_type="giveaway",
         entity_id=giveaway.id,
-        after={"winners": len(result.winners), "seed": giveaway.seed},
+        after={"winners": len(earlier) + len(new), "seed": giveaway.seed},
     )
     await session.commit()
 
-    # A failed assignment rolls the session back, so nothing below reads expired ORM objects.
-    label = period_label(giveaway.period_start, giveaway.period_end)
-    title, reward_title, reward_id = giveaway.title, reward.title, giveaway.reward_id
     assigned_by = actor_id or giveaway.created_by
-    results = []
-    for index, winner in enumerate(result.winners):
-        entry = winner.as_json()
-        try:
-            user_reward = await reward_service.assign(
-                session,
-                actor_id=assigned_by,  # type: ignore[arg-type]
-                reward_id=reward_id,
-                user_id=winner.user_id,
-                note=f"🎲 {title}: {winner.reason}",
-                idempotency_key=f"giveaway:{giveaway_id}:{index}",
-                allow_repeat=True,
-                message=(
-                    f"🎉 Tabriklaymiz! Siz «{title}» ({label}) g'olibisiz!\n"
-                    f"🏅 {winner.reason}\n🎁 Sovg'angiz: «{reward_title}»\n\n"
-                    "Kodni ilovadagi «🎁 Sovg'alarim» bo'limida ko'rasiz."
-                ),
-            )
-            entry["user_reward_id"] = str(user_reward.id)
-        except AppError as error:
-            await session.rollback()
-            entry["error"] = error.message
-        results.append(entry)
+    new_members = giveaway.rule == GiveawayRule.NEW_MEMBERS
+    results = list(earlier)
+    for index, winner in enumerate(new):
+        giveaway = await get(session, giveaway_id)  # fresh after the previous winner's commit or rollback
+        slot = f"new:{winner.user_id}" if new_members else str(index)
+        results.append(
+            await _award(session, giveaway, winner, slot=slot, actor_id=assigned_by, reward_title=reward_title)
+        )
     giveaway = await get(session, giveaway_id)
     giveaway.results = results
     if giveaway.announce:
@@ -587,14 +722,57 @@ async def draw(session: AsyncSession, *, actor_id: uuid.UUID | None, giveaway_id
     return giveaway
 
 
+async def on_member_joined(session: AsyncSession, user_id: uuid.UUID) -> int:
+    """A new member registered: running «first N members» giveaways reward them at once.
+    Returns how many prizes were given (the caller does not need to commit)."""
+    user = await session.get(User, user_id)
+    if user is None or user.status != UserStatus.ACTIVE or user.registered_at is None:
+        return 0
+    joined = user.registered_at.astimezone(local_tz()).date()
+    running = list(
+        await session.scalars(
+            select(Giveaway.id).where(
+                Giveaway.rule == GiveawayRule.NEW_MEMBERS,
+                Giveaway.status == GiveawayStatus.SCHEDULED,
+                Giveaway.period_start <= joined,
+                Giveaway.period_end >= joined,
+            )
+        )
+    )
+    given = 0
+    for giveaway_id in running:
+        giveaway = await session.scalar(select(Giveaway).where(Giveaway.id == giveaway_id).with_for_update())
+        if giveaway is None or any(entry.get("user_id") == str(user_id) for entry in giveaway.results or []):
+            continue
+        draw_now = await _new_members(session, giveaway)
+        winner = next((w for w in draw_now.winners if w.user_id == user_id), None)
+        if winner is None:
+            continue  # all places are taken
+        reward_title = None
+        if giveaway.reward_id is not None:
+            reward = await session.get(Reward, giveaway.reward_id)
+            reward_title = reward.title if reward else None
+        entry = await _award(
+            session, giveaway, winner, slot=f"new:{user_id}", actor_id=giveaway.created_by, reward_title=reward_title
+        )
+        giveaway = await session.scalar(select(Giveaway).where(Giveaway.id == giveaway_id).with_for_update())
+        assert giveaway is not None
+        giveaway.results = [*(giveaway.results or []), entry]
+        await session.commit()
+        given += 0 if entry.get("error") else 1
+    return given
+
+
 def winners_text(giveaway: Giveaway, results: list[dict[str, Any]]) -> str:
     label = period_label(giveaway.period_start, giveaway.period_end)
     lines = [f"🎉 «{giveaway.title}» g'oliblari ({label}):", ""]
-    for entry in results:
-        if entry.get("error"):
-            continue
-        medal = MEDALS.get(entry.get("place") or 0, "🎁") if giveaway.rule != GiveawayRule.RANDOM else "🎁"
+    shown = [entry for entry in results if not entry.get("error")]
+    plain = giveaway.rule in (GiveawayRule.RANDOM, GiveawayRule.NEW_MEMBERS)
+    for entry in shown[:ANNOUNCE_LINES]:
+        medal = "🎁" if plain else MEDALS.get(entry.get("place") or 0, "🎁")
         lines.append(f"{medal} {entry['name']} — {entry['reason']}")
+    if len(shown) > ANNOUNCE_LINES:
+        lines.append(f"… va yana {len(shown) - ANNOUNCE_LINES} kishi")
     lines += ["", "Tabriklaymiz! Keyingi safar siz ham g'olib bo'lishingiz mumkin — kitob o'qishda davom eting 📚"]
     return "\n".join(lines)
 
@@ -682,7 +860,7 @@ async def for_members(session: AsyncSession) -> dict[str, list[dict[str, Any]]]:
     rows = (
         await session.execute(
             select(Giveaway, Reward.title)
-            .join(Reward, Reward.id == Giveaway.reward_id)
+            .outerjoin(Reward, Reward.id == Giveaway.reward_id)
             .where(
                 or_(
                     Giveaway.status == GiveawayStatus.SCHEDULED,
@@ -697,7 +875,7 @@ async def for_members(session: AsyncSession) -> dict[str, list[dict[str, Any]]]:
         item = {
             "id": giveaway.id,
             "title": giveaway.title,
-            "reward": reward_title,
+            "reward": prize_title(giveaway, reward_title),
             "rule": giveaway.rule,
             "rule_title": RULE_TITLES[GiveawayRule(giveaway.rule)],
             "winners_count": giveaway.winners_count,

@@ -51,6 +51,7 @@ export interface Me {
   features: Record<string, FeatureAccess>
   is_premium: boolean
   premium_until: string | null
+  premium_lifetime?: boolean
   passport_photo: boolean
 }
 
@@ -310,6 +311,7 @@ export interface Certificate {
   description: string
   issued_at: string
   code: string
+  verify_url?: string | null
 }
 
 export interface DownloadLink {
@@ -325,10 +327,13 @@ export interface PremiumPlan {
   stars: number
   days: number
   price_uzs: number | null
+  stars_now?: number | null
+  price_uzs_now?: number | null
 }
 
 export interface PremiumStatus {
   is_premium: boolean
+  lifetime?: boolean
   until: string | null
   store_open: boolean
   donations_open: boolean
@@ -337,17 +342,22 @@ export interface PremiumStatus {
   premium_features: { code: string; title: string; description: string }[]
   perks: { icon: string; title: string; description: string }[]
   card: { number: string; holder: string } | null
+  trial_days?: number
+  discount?: { percent: number; valid_until: string; note: string | null } | null
+  stars_packages?: { stars: number; price_uzs: number }[]
 }
 
 export interface CardPayment {
   id: string
-  kind: 'PREMIUM' | 'DONATION'
+  kind: 'PREMIUM' | 'DONATION' | 'STARS'
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   amount_uzs: number
   plan_title: string | null
   created_at: string
   decided_at: string | null
   reject_reason: string | null
+  stars?: number | null
+  delivered_at?: string | null
 }
 
 export interface EventFeedback {
@@ -386,7 +396,7 @@ export interface PublicGiveaway {
   id: string
   title: string
   reward: string
-  rule: 'RANDOM' | 'TEST_TOP' | 'EVENT_PLACES' | 'RANKING_TOP'
+  rule: 'RANDOM' | 'TEST_TOP' | 'EVENT_PLACES' | 'RANKING_TOP' | 'NEW_MEMBERS'
   rule_title: string
   winners_count: number
   period: string
@@ -400,4 +410,14 @@ export interface PublicGiveaway {
 export interface MemberGiveaways {
   upcoming: PublicGiveaway[]
   recent: PublicGiveaway[]
+}
+
+export interface Referrals {
+  enabled: boolean
+  link: string | null
+  invited: number
+  rewarded: number
+  points: number
+  premium_days: number
+  monthly_limit: number
 }

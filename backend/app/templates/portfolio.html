@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Kitobxonlik portfoliosi — {{ name }}</title>
+<style>
+  @page {
+    size: A4; margin: 16mm 15mm 18mm;
+    @bottom-center {
+      content: "Kitobxonlik portfoliosi · {{ number }} · " counter(page) "/" counter(pages);
+      font-family: "DejaVu Sans", sans-serif; font-size: 7.5pt; color: #7a8a82;
+    }
+  }
+  html { font-family: "DejaVu Sans", sans-serif; color: #1c2b24; font-size: 9.5pt; line-height: 1.4; }
+  body { margin: 0; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 0.7mm solid #1f5c40; padding-bottom: 4mm; }
+  .org { font-size: 8pt; letter-spacing: 1pt; text-transform: uppercase; color: #1f5c40; font-weight: bold; }
+  h1 { margin: 2mm 0 1mm; font-family: "DejaVu Serif", serif; font-size: 22pt; color: #14402c; letter-spacing: 0.5pt; }
+  .name { font-size: 15pt; font-weight: bold; margin-top: 2mm; }
+  .meta { color: #4b5d54; margin-top: 1mm; }
+  .qr { text-align: center; width: 30mm; }
+  .qr img { width: 26mm; height: 26mm; }
+  .qr p { margin: 1mm 0 0; font-size: 6.5pt; color: #6b7a72; }
+  .tiles { display: flex; gap: 3mm; margin: 5mm 0 2mm; }
+  .tile { flex: 1; border: 0.3mm solid #d8e2dc; border-radius: 2.5mm; padding: 2.5mm 2mm; text-align: center; background: #f6faf7; }
+  .tile b { display: block; font-size: 15pt; color: #14402c; }
+  .tile span { font-size: 7pt; color: #4b5d54; text-transform: uppercase; letter-spacing: 0.4pt; }
+  h2 { font-family: "DejaVu Serif", serif; font-size: 12pt; color: #1f5c40; margin: 6mm 0 2mm; border-bottom: 0.3mm solid #c9a24e; padding-bottom: 1mm; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1.4mm 1.5mm; border-bottom: 0.2mm solid #e6ece8; vertical-align: top; }
+  td.d { width: 24mm; color: #4b5d54; white-space: nowrap; }
+  td.r { text-align: right; white-space: nowrap; }
+  .muted { color: #6b7a72; }
+  .badge { display: inline-block; padding: 0.3mm 1.6mm; border-radius: 2mm; font-size: 7pt; background: #e7f2ec; color: #1f5c40; }
+  .gold { background: #f6ecd2; color: #7a5410; }
+  .code { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; }
+  .empty { color: #8a968f; font-style: italic; }
+  .note { margin-top: 7mm; font-size: 7.5pt; color: #6b7a72; border-top: 0.3mm solid #e6ece8; padding-top: 2mm; }
+</style>
+</head>
+<body>
+<div class="head">
+  <div>
+    <div class="org">{{ organization }} · {{ club }}</div>
+    <h1>Kitobxonlik portfoliosi</h1>
+    <div class="name">{{ name }}</div>
+    <div class="meta">
+      A'zo raqami: <b>{{ number }}</b>{% if faculty %} · {{ faculty }}{% endif %}{% if course %} · {{ course }}-kurs{% endif %}{% if group %} · {{ group }}-guruh{% endif %}
+    </div>
+    <div class="meta">Klub a'zosi: {{ since }} dan · Hujjat sanasi: {{ generated }}</div>
+  </div>
+  {% if qr %}
+  <div class="qr"><img src="{{ qr }}" alt="QR"><p>Jonli natijalar va tasdiq</p></div>
+  {% endif %}
+</div>
+
+<div class="tiles">
+  <div class="tile"><b>{{ points }}</b><span>ball</span></div>
+  <div class="tile"><b>{{ rank or '—' }}</b><span>reytingdagi o'rin</span></div>
+  <div class="tile"><b>{{ books|length }}</b><span>o'qilgan kitob</span></div>
+  <div class="tile"><b>{{ events|length }}</b><span>tadbir</span></div>
+  <div class="tile"><b>{{ certificates|length }}</b><span>sertifikat</span></div>
+</div>
+
+<h2>O'qilgan kitoblar</h2>
+{% if books %}
+<table>
+  {% for book in books %}
+  <tr><td class="d">{{ book.date }}</td><td><b>«{{ book.title }}»</b> — {{ book.author }}</td>
+      <td class="r">{% if book.verified %}<span class="badge">tasdiqlangan</span>{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="empty">Hali o'qib tugatilgan kitob belgilanmagan.</p>{% endif %}
+
+<h2>Sertifikatlar</h2>
+{% if certificates %}
+<table>
+  {% for certificate in certificates %}
+  <tr><td class="d">{{ certificate.date }}</td><td>{{ certificate.title }}</td><td class="r code">{{ certificate.code }}</td></tr>
+  {% endfor %}
+</table>
+<p class="muted">Har bir sertifikat haqiqiyligini kod yoki sertifikatdagi QR orqali tekshirish mumkin.</p>
+{% else %}<p class="empty">Hozircha sertifikat yo'q.</p>{% endif %}
+
+<h2>Testlar</h2>
+{% if tests %}
+<table>
+  {% for test in tests %}
+  <tr><td class="d">{{ test.date }}</td><td>«{{ test.title }}»</td>
+      <td class="r">{{ test.score }}/{{ test.max }}{% if test.place %} <span class="badge gold">{{ test.place }}-o'rin</span>{% elif test.passed %} <span class="badge">o'tdi</span>{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="empty">Hali test ishlanmagan.</p>{% endif %}
+
+<h2>Qatnashgan tadbirlar</h2>
+{% if events %}
+<table>
+  {% for event in events %}
+  <tr><td class="d">{{ event.date }}</td><td>{{ event.title }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="empty">Davomati tasdiqlangan tadbir yo'q.</p>{% endif %}
+
+<h2>Yutuqlar</h2>
+{% if achievements %}
+<table>
+  {% for item in achievements %}
+  <tr><td class="d">{{ item.date }}</td><td><b>{{ item.title }}</b>{% if item.description %} <span class="muted">— {{ item.description }}</span>{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="empty">Yutuqlar hali yo'q.</p>{% endif %}
+
+<p class="note">
+  Ushbu hujjat {{ club }} tizimi tomonidan a'zoning klubdagi faoliyati asosida avtomatik tayyorlangan.
+  {% if verify %}Natijalarning dolzarb holati: {{ verify }}{% endif %}
+</p>
+</body>
+</html>

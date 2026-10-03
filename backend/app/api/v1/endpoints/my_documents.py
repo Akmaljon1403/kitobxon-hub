@@ -15,7 +15,7 @@ from app.models import Certificate
 from app.schemas.certificate import CertificateOut, DownloadLinkIn, DownloadLinkOut, PassportThemeIn, PassportThemeOut
 from app.security.rate_limit import RateLimit, enforce
 from app.services import certificates as certificate_service
-from app.services import delivery, downloads, features
+from app.services import delivery, downloads, features, portfolio
 from app.services import passport as passport_service
 from app.services import premium as premium_service
 
@@ -58,6 +58,7 @@ def certificate_out(certificate: Certificate) -> CertificateOut:
         description=certificate.description,
         issued_at=certificate.issued_at,
         code=certificate_service.display_code(certificate.verify_code),
+        verify_url=certificate_service.verify_url(certificate.verify_code),
     )
 
 
@@ -140,7 +141,7 @@ async def my_certificates(current: CurrentUserDep, db: DbSession) -> list[Certif
 
 @router.get(
     "/certificates/{certificate_id}/pdf",
-    dependencies=[feature_required("certificates")],
+    dependencies=[feature_required("certificates"), feature_required("certificate_pdf")],
     summary="Download a certificate (PDF)",
     response_class=Response,
 )
@@ -153,7 +154,7 @@ async def certificate_pdf(certificate_id: uuid.UUID, current: FileUser, db: DbSe
 
 @router.post(
     "/certificates/{certificate_id}/send",
-    dependencies=[feature_required("certificates")],
+    dependencies=[feature_required("certificates"), feature_required("certificate_pdf")],
     status_code=status.HTTP_204_NO_CONTENT,
     summary="The bot sends me a certificate (PDF)",
 )
@@ -166,7 +167,13 @@ async def send_certificate(certificate_id: uuid.UUID, current: SendUser, db: DbS
 
 @router.post("/downloads", response_model=DownloadLinkOut, summary="A 5-minute link for Telegram's file download")
 async def download_link(payload: DownloadLinkIn, current: CurrentUserDep, db: DbSession) -> DownloadLinkOut:
-    await features.require(db, current.user, payload.kind if payload.kind == "passport" else "certificates")
+    if payload.kind == "passport":
+        await features.require(db, current.user, "passport")
+    elif payload.kind == "portfolio":
+        await features.require(db, current.user, "portfolio")
+    else:
+        await features.require(db, current.user, "certificates")
+        await features.require(db, current.user, "certificate_pdf")
     base = get_settings().base_url
     if not base:
         raise ServiceUnavailableError(
@@ -175,6 +182,9 @@ async def download_link(payload: DownloadLinkIn, current: CurrentUserDep, db: Db
     if payload.kind == "passport":
         token = downloads.make_token("passport", current.user.id)
         name = passport_service.filename(current.user)
+    elif payload.kind == "portfolio":
+        token = downloads.make_token("portfolio", current.user.id)
+        name = portfolio.filename(current.user)
     else:
         certificate = await certificate_service.get_own(
             db, user_id=current.user.id, certificate_id=payload.id or uuid.UUID(int=0)
@@ -182,3 +192,25 @@ async def download_link(payload: DownloadLinkIn, current: CurrentUserDep, db: Db
         token = downloads.make_token("certificate", certificate.id)
         name = certificate_service.filename(certificate)
     return DownloadLinkOut(url=f"{base}/api/v1/files/{token}", filename=name, expires_in=downloads.TTL_SECONDS)
+
+
+@router.get(
+    "/portfolio",
+    dependencies=[feature_required("portfolio")],
+    summary="My reader's portfolio (PDF): books, certificates, tests, events, achievements",
+    response_class=Response,
+)
+async def portfolio_pdf(current: FileUser, db: DbSession) -> Response:
+    data = await portfolio.render_pdf(db, current.user)
+    return file_response(data, "application/pdf", portfolio.filename(current.user), attachment=True)
+
+
+@router.post(
+    "/portfolio/send",
+    dependencies=[feature_required("portfolio")],
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="The bot sends me my portfolio (PDF)",
+)
+async def send_portfolio(current: SendUser, db: DbSession) -> Response:
+    await delivery.explain_failures(delivery.send_portfolio(delivery.runtime_bot(), db, current.user))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

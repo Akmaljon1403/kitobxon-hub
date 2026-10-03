@@ -144,17 +144,25 @@ async def results(session: AsyncSession, member: User) -> str:
 
 
 async def ranking(session: AsyncSession, member: User) -> str:
-    board = await ranking_service.ranking(session, period="month", scope="all", viewer=member, limit=3)
+    """This week's leaders for everyone; the month's for members with the full ranking (Premium)."""
+    from app.services import features
+
+    full = await features.allowed(session, member, "ranking_full")
+    period = "month" if full == "on" else "week"
+    board = await ranking_service.ranking(session, period=period, scope="all", viewer=member, limit=3)
     if not board.items:
-        return texts.RANKING_EMPTY
+        return texts.RANKING_EMPTY if period == "month" else texts.RANKING_WEEK_EMPTY
     top = "\n".join(
         texts.RANKING_ROW.format(
             medal=MEDALS[index], name=_e(row.name) + (" 💎" if row.premium else ""), total=row.total
         )
         for index, row in enumerate(board.items[:3])
     )
-    me = texts.RANKING_ME.format(rank=board.me.rank, total=board.me.total) if board.me else texts.RANKING_ME_NONE
-    return texts.RANKING.format(top=top, me=me)
+    if period == "month":
+        me = texts.RANKING_ME.format(rank=board.me.rank, total=board.me.total) if board.me else texts.RANKING_ME_NONE
+        return texts.RANKING.format(top=top, me=me)
+    me = texts.RANKING_ME.format(rank=board.me.rank, total=board.me.total) if board.me else texts.RANKING_WEEK_ME_NONE
+    return texts.RANKING_WEEK.format(top=top, me=me) + (texts.RANKING_FULL_TEASER if full == "premium" else "")
 
 
 async def achievements(session: AsyncSession, member: User) -> str:

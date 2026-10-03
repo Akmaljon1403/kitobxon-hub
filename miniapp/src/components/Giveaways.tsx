@@ -19,6 +19,8 @@ function how(giveaway: PublicGiveaway): string {
       return `Testlardan eng ko'p ball to'plagan ${giveaway.winners_count} kishi`
     case 'EVENT_PLACES':
       return `Har bir tadbir testining 1–${giveaway.winners_count}-o'rinlari`
+    case 'NEW_MEMBERS':
+      return `Botga qo'shilgan birinchi ${giveaway.winners_count} kishi — sovg'a darhol beriladi`
     default:
       return `Reytingdagi birinchi ${giveaway.winners_count} kishi`
   }
@@ -40,7 +42,9 @@ export function Giveaways() {
           {upcoming.map((giveaway) => (
             <Card key={giveaway.id} className="flex flex-col gap-1 bg-gradient-to-br from-amber-50 to-transparent dark:from-amber-500/10">
               <p className="font-semibold">{giveaway.title}</p>
-              <p className="text-sm">🎁 {giveaway.reward}</p>
+              <p className="text-sm">
+                <span className="text-app-hint">Sovg'a:</span> {giveaway.reward}
+              </p>
               <p className="text-sm text-app-hint">
                 {how(giveaway)} · {giveaway.period}
               </p>
@@ -62,7 +66,9 @@ export function Giveaways() {
               <ul className="flex flex-col gap-1 text-sm">
                 {giveaway.winners.map((winner, index) => (
                   <li key={`${winner.name}-${index}`} className="flex gap-2">
-                    <span aria-hidden>{giveaway.rule !== 'RANDOM' && winner.place ? (MEDALS[winner.place] ?? '🎁') : '🎁'}</span>
+                    <span aria-hidden>
+                      {giveaway.rule !== 'RANDOM' && giveaway.rule !== 'NEW_MEMBERS' && winner.place ? (MEDALS[winner.place] ?? '🎁') : '🎁'}
+                    </span>
                     <span>
                       <b className="font-medium">{winner.name}</b> <span className="text-app-hint">— {winner.reason}</span>
                     </span>

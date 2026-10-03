@@ -15,7 +15,11 @@ import { getWebApp, haptic } from '../utils/telegram'
 const FREE_FOR_ALL = ['📚 Kitoblar va iqtiboslar', '📅 Tadbirlar va davomat', '📝 Testlar va natijalar', '🏆 Reyting va yutuqlar', '🪪 Kitobxon pasporti', '🎓 Sertifikatlar']
 
 const FAQ: [string, string][] = [
-  ['Telegram Stars (⭐) nima?', "Telegram'ning ichki to'lov birligi. Uni Telegram ilovasida karta orqali sotib olasiz — «Sozlamalar → Telegram Stars»."],
+  [
+    'Telegram Stars (⭐) nima?',
+    "Telegram'ning ichki to'lov birligi. Uni Telegram ilovasida sotib olasiz — «Sozlamalar → Telegram Stars». Qiyin bo'lsa, pastdagi «💳 Karta orqali» bo'limida so'mda to'lab, Stars'ni bizdan sovg'a sifatida oling.",
+  ],
+  ['Bepul sinov bormi?', "Ha — har bir a'zo Premium'ni bir marta bir necha kun bepul sinab ko'ra oladi. Pul yechilmaydi, muddat tugagach o'zi to'xtaydi."],
   ["Muddat tugasa nima bo'ladi?", "Premium o'z-o'zidan uzaytirilmaydi, pul yechilmaydi. Xohlasangiz yana sotib olasiz — muddat oxiridan davom etadi."],
   ["Asosiy imkoniyatlar pullikmi?", "Yo'q. Kitob, tadbir, davomat, test, reyting va sertifikatlar hamma uchun bepul. Premium — qo'shimcha imkoniyatlar va klubga yordam."],
   ['Muammo bo‘lsa?', "Botda /paysupport yoki «✉️ Adminga yozish». Xato to'lov bo'lsa Stars qaytariladi."],
@@ -67,6 +71,23 @@ export function PremiumPage() {
     }
   }
 
+  async function trial() {
+    setBusy('trial')
+    setNotice(null)
+    try {
+      await api('/api/v1/me/premium/trial', { method: 'POST' })
+      haptic('success')
+      setNotice({ text: "🎉 Bepul Premium boshlandi! Barcha imkoniyatlar ochiq." })
+      reload()
+      void refreshMe()
+    } catch (error) {
+      haptic('error')
+      setNotice({ text: error instanceof ApiError ? error.message : "Boshlab bo'lmadi.", error: true })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   if (state.status === 'loading') return <LoadingState />
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   const status = state.data
@@ -83,7 +104,9 @@ export function PremiumPage() {
           💎
         </span>
         <h1 className="text-xl font-semibold">Kitobxon Premium</h1>
-        {status.is_premium ? (
+        {status.lifetime ? (
+          <p className="text-sm text-emerald-100">♾ Sizda umrbod Premium — barcha imkoniyatlar doim ochiq</p>
+        ) : status.is_premium ? (
           <p className="text-sm text-emerald-100">✅ Siz Premium a'zosiz — {formatDate(status.until)} gacha</p>
         ) : (
           <p className="max-w-xs text-sm text-emerald-100">
@@ -97,6 +120,25 @@ export function PremiumPage() {
         <p role={notice.error ? 'alert' : 'status'} className={`text-center text-sm ${notice.error ? 'text-app-danger' : 'text-app-link'}`}>
           {notice.text}
         </p>
+      )}
+
+      {!status.is_premium && (status.trial_days ?? 0) > 0 && (
+        <Card className="flex flex-col items-center gap-2 py-4 text-center ring-1 ring-app-button/40">
+          <p className="font-semibold">🎁 {status.trial_days} kun bepul sinab ko'ring</p>
+          <p className="text-sm text-app-hint">Barcha Premium imkoniyatlari ochiladi. To'lov yechilmaydi, muddat tugagach o'zi to'xtaydi.</p>
+          <div className="w-full max-w-xs">
+            <Button loading={busy === 'trial'} disabled={busy !== null} onClick={() => void trial()}>
+              Bepul boshlash
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {status.discount && (
+        <Card className="py-3 text-center text-sm">
+          🎟 Sizda Premium'ga <b>−{status.discount.percent}%</b> chegirma bor — {formatDate(status.discount.valid_until)} gacha. Narxlar
+          allaqachon kamaytirilgan.
+        </Card>
       )}
 
       {!status.store_open && !status.donations_open && (
@@ -139,8 +181,11 @@ export function PremiumPage() {
                       disabled={busy !== null}
                       onClick={() => void pay(plan.id, { plan_id: plan.id })}
                     >
-                      {plan.stars} ⭐
+                      {plan.stars_now ?? plan.stars} ⭐
                     </Button>
+                    {plan.stars_now != null && plan.stars_now !== plan.stars && (
+                      <p className="mt-0.5 text-center text-xs text-app-hint line-through">{plan.stars} ⭐</p>
+                    )}
                   </div>
                 </Card>
               )
@@ -164,10 +209,15 @@ export function PremiumPage() {
         </>
       )}
 
-      {status.card && (status.store_open || status.donations_open) && (
+      {status.card && (status.store_open || status.donations_open || (status.stars_packages ?? []).length > 0) && (
         <>
-          <SectionTitle>💳 Karta orqali to'lash</SectionTitle>
-          <CardPaymentSection card={status.card} plans={status.store_open ? status.plans : []} onDone={reload} />
+          <SectionTitle>💳 Karta orqali: Premium yoki ⭐ Stars</SectionTitle>
+          <CardPaymentSection
+            card={status.card}
+            plans={status.store_open ? status.plans : []}
+            stars={status.stars_packages ?? []}
+            onDone={reload}
+          />
         </>
       )}
 

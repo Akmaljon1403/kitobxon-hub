@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { Avatar } from '../components/Avatar'
 import { FeatureLocked } from '../components/FeatureGate'
 import { PassportCard } from '../components/PassportCard'
+import { InviteCard } from '../components/InviteCard'
+import { PortfolioCard } from '../components/PortfolioCard'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle, Toggle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -160,11 +162,16 @@ export function ProfilePage() {
         {me.is_admin && <Badge tone="info">Administrator</Badge>}
       </Card>
 
-      {me.features.premium !== 'off' && (
+      {(me.features.premium !== 'off' || me.is_premium) && (
         <button type="button" onClick={() => navigate('/premium')}>
           <Card className="flex items-center justify-between gap-2 py-3 text-left">
             <span className="text-[15px] font-medium">
-              💎 {me.is_premium ? `Premium a'zo — ${formatDate(me.premium_until)} gacha` : 'Premium obuna'}
+              💎{' '}
+              {me.premium_lifetime
+                ? "♾ Umrbod Premium a'zo"
+                : me.is_premium
+                  ? `Premium a'zo — ${formatDate(me.premium_until)} gacha`
+                  : 'Premium obuna'}
             </span>
             <span className="text-app-link">→</span>
           </Card>
@@ -176,6 +183,10 @@ export function ProfilePage() {
       ) : (
         me.features.passport === 'premium' && <FeatureLocked code="passport" access="premium" />
       )}
+
+      <PortfolioCard />
+
+      <InviteCard />
 
       <SectionTitle>O'qish joyi</SectionTitle>
       {editing ? (

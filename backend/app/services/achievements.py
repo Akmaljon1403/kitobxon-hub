@@ -48,7 +48,7 @@ from app.models.enums import (
     UserStatus,
 )
 from app.services.audit import record_audit
-from app.services.notifications import app_button, enqueue_notification, render
+from app.services.notifications import app_button, celebrate, enqueue_notification, render
 from app.services.scoring import award_points, reverse_latest_award
 from app.services.settings import get_setting
 from app.utils.timezone import local_tz
@@ -186,7 +186,7 @@ async def _unlock(
             type_=NotificationType.ACHIEVEMENT_UNLOCKED,
             text=f"{html.escape(achievement.icon, quote=False)} {text}",
             dedup_key=f"achievement:{created}",
-            payload=app_button("achievements", "🏅 Yutuqlarim"),
+            payload=celebrate(app_button("achievements", "🏅 Yutuqlarim")),
         )
     return True
 

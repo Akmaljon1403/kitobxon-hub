@@ -17,13 +17,14 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
-from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
 from app.models import Notification, NotificationTemplate, User, UserNotificationSettings
 from app.models.enums import NotificationStatus, NotificationType, UserStatus
+from app.services import stickers
 from app.services.notifications import PREFERENCE_FIELD, STALE_AFTER
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class SendReport:
     failed: int = 0
     retried: int = 0
     errors: list[str] = field(default_factory=list)
+    blocked: list[int] = field(default_factory=list)  # Telegram ids of members who blocked the bot
 
     @property
     def total(self) -> int:
@@ -131,7 +133,8 @@ async def send_due_notifications(
             is_critical = type_ in critical or notification.priority <= 1
             pref_field = PREFERENCE_FIELD.get(type_)
             stale_after = STALE_AFTER.get(type_)
-            if user is None or user.deleted_at is not None or user.status != UserStatus.ACTIVE:
+            deliver_anyway = bool((notification.payload or {}).get("deliver_to_inactive"))
+            if user is None or user.deleted_at is not None or (user.status != UserStatus.ACTIVE and not deliver_anyway):
                 _finish(notification, NotificationStatus.SKIPPED, "member is not active")
                 report.skipped += 1
             elif (
@@ -147,7 +150,16 @@ async def send_due_notifications(
                 report.skipped += 1
             else:
                 document = await _document(session, notification)
-                retry_after = await _deliver(bot, notification, user, report, document)
+                mood = (notification.payload or {}).get("mood")
+                retry_after = await _deliver(
+                    bot,
+                    notification,
+                    user,
+                    report,
+                    document,
+                    effect=stickers.EFFECTS.get(mood) if mood and await stickers.enabled(session) else None,
+                    sticker=await stickers.pick(session, mood) if mood else None,
+                )
                 if retry_after is not None:
                     # Telegram asked us to slow down: put the rest of the batch back as well.
                     for waiting in batch[index + 1 :]:
@@ -156,6 +168,13 @@ async def send_due_notifications(
                     await session.commit()
                     break
                 await asyncio.sleep(SEND_INTERVAL_SECONDS)
+            await session.commit()
+        if report.blocked:
+            # Blocking the bot means leaving the club: the data is kept 30 days for a return.
+            from app.services import membership
+
+            for telegram_id in set(report.blocked):
+                await membership.on_bot_blocked(session, telegram_id)
             await session.commit()
     if report.total:
         logger.info(
@@ -192,23 +211,37 @@ async def _deliver(
     user: User,
     report: SendReport,
     document: BufferedInputFile | None = None,
+    *,
+    effect: str | None = None,
+    sticker: str | None = None,
 ) -> int | None:
-    """Send one message and record the outcome. Returns seconds to wait if rate-limited."""
-    try:
+    """Send one message and record the outcome. Returns seconds to wait if rate-limited.
+    ``effect``: Telegram's animated message effect (🎉); ``sticker``: sent right after the message."""
+
+    async def send(effect_id: str | None) -> Message:
         if document is not None and len(notification.text) <= CAPTION_LIMIT:
-            message = await bot.send_document(
+            return await bot.send_document(
                 chat_id=user.telegram_id,
                 document=document,
                 caption=notification.text,
                 reply_markup=_markup(notification.payload),
+                message_effect_id=effect_id,
             )
-        else:
-            message = await bot.send_message(
-                chat_id=user.telegram_id,
-                text=notification.text,
-                reply_markup=_markup(notification.payload),
-                disable_web_page_preview=True,
-            )
+        return await bot.send_message(
+            chat_id=user.telegram_id,
+            text=notification.text,
+            reply_markup=_markup(notification.payload),
+            disable_web_page_preview=True,
+            message_effect_id=effect_id,
+        )
+
+    try:
+        try:
+            message = await send(effect)
+        except TelegramBadRequest as exc:
+            if effect is None or "effect" not in str(exc).lower():
+                raise
+            message = await send(None)  # the effect is a decoration: the message matters
     except TelegramRetryAfter as exc:
         notification.scheduled_at = datetime.now(UTC) + timedelta(seconds=exc.retry_after)
         notification.attempts -= 1
@@ -219,6 +252,8 @@ async def _deliver(
         _finish(notification, NotificationStatus.FAILED, str(exc))
         report.failed += 1
         report.errors.append(str(exc))
+        if isinstance(exc, TelegramForbiddenError) and "blocked" in str(exc).lower():
+            report.blocked.append(user.telegram_id)
         return None
     except Exception as exc:  # network problems, Telegram 5xx: try again later
         logger.warning("Notification %s not sent (attempt %s): %s", notification.id, notification.attempts, exc)
@@ -234,4 +269,9 @@ async def _deliver(
     notification.telegram_message_id = message.message_id
     _finish(notification, NotificationStatus.SENT)
     report.sent += 1
+    if sticker:
+        try:
+            await bot.send_sticker(chat_id=user.telegram_id, sticker=sticker)
+        except Exception:  # decoration only
+            logger.info("Notification %s: the sticker could not be sent", notification.id)
     return None
