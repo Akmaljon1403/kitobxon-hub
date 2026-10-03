@@ -405,6 +405,17 @@ STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sah
 
 # ---- Portfolio ----
 BTN_PORTFOLIO = "🗂 Portfolio (PDF)"
+BTN_INVITE = "👥 Do'stni taklif qilish"
+BTN_SHARE_INVITE = "📤 Do'stlarga yuborish"
+INVITE = (
+    "👥 <b>Do'stingizni kitobxonlar klubiga taklif qiling!</b>\n\n"
+    "Shaxsiy havolangiz:\n{link}\n\n"
+    "Do'stingiz shu havola orqali ro'yxatdan o'tib, birinchi tadbirga kelsa — sizga {reward}.{limit}\n\n"
+    "Taklif qilganlaringiz: <b>{invited}</b> · mukofot olingan: <b>{rewarded}</b>"
+)
+INVITE_LIMIT = " (oyiga {limit} tagacha)"
+INVITE_SHARE_TEXT = "Kitobxonlar klubiga qo'shil! Tadbirlar, testlar, sertifikatlar va sovg'alar 📚"
+INVITE_UNAVAILABLE = "Taklif havolasi hozircha tayyor emas. Birozdan keyin urinib ko'ring."
 PORTFOLIO_PREPARING = "🗂 Portfoliongiz tayyorlanmoqda…"
 
 # ---- Leaving and coming back ----

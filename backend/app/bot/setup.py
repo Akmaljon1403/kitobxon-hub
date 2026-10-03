@@ -31,6 +31,7 @@ COMMANDS = [
     BotCommand(command="davomat", description="Tadbirda davomat qilish"),
     BotCommand(command="pasport", description="Kitobxon pasportim"),
     BotCommand(command="premium", description="Premium va klubni qo'llab-quvvatlash"),
+    BotCommand(command="taklif", description="Do'stni klubga taklif qilish"),
     BotCommand(command="help", description="Yordam va adminga yozish"),
     BotCommand(command="cancel", description="Joriy amalni bekor qilish"),
 ]

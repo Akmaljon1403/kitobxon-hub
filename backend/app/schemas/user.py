@@ -102,3 +102,13 @@ class UserStatusIn(BaseModel):
 class EraseIn(BaseModel):
     reason: str = Field(min_length=5, max_length=1000)
     confirm: str = Field(description="Type O'CHIRISH to confirm: the personal data cannot be brought back")
+
+
+class ReferralsOut(BaseModel):
+    enabled: bool
+    link: str | None = Field(description="https://t.me/<bot>?start=ref_<member number>")
+    invited: int
+    rewarded: int
+    points: int = Field(description="Points for each friend who comes to an event")
+    premium_days: int
+    monthly_limit: int = Field(description="Rewards a month at most (0 — no limit)")

@@ -168,6 +168,25 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=30)],
         "Har bir a'zoga bir marta bepul Premium sinov (kun; 0 — sinov yo'q)",
     ),
+    # ---- Friend invitations ----
+    SettingDefinition(
+        "referral.points",
+        20,
+        Annotated[int, Field(ge=0, le=500)],
+        "Do'stini taklif qilgan a'zoga ball (do'sti birinchi tadbirda qatnashganda)",
+    ),
+    SettingDefinition(
+        "referral.premium_days",
+        7,
+        Annotated[int, Field(ge=0, le=60)],
+        "Do'stini taklif qilgan a'zoga Premium kunlar (0 — Premium berilmaydi)",
+    ),
+    SettingDefinition(
+        "referral.monthly_limit",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz)",
+    ),
     # ---- Telegram channel (the bot posts there as an administrator) ----
     SettingDefinition(
         "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"

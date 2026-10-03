@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Avatar } from '../components/Avatar'
 import { FeatureLocked } from '../components/FeatureGate'
 import { PassportCard } from '../components/PassportCard'
+import { InviteCard } from '../components/InviteCard'
 import { PortfolioCard } from '../components/PortfolioCard'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle, Toggle } from '../components/ui'
@@ -184,6 +185,8 @@ export function ProfilePage() {
       )}
 
       <PortfolioCard />
+
+      <InviteCard />
 
       <SectionTitle>O'qish joyi</SectionTitle>
       {editing ? (

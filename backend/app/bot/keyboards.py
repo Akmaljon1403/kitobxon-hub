@@ -149,6 +149,7 @@ def achievements() -> InlineKeyboardMarkup | None:
     return inline(
         [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
         [InlineKeyboardButton(text=texts.BTN_PORTFOLIO, callback_data="pf:get")],
+        [InlineKeyboardButton(text=texts.BTN_INVITE, callback_data="ref:open")],
         [app_button("achievements", texts.BTN_MORE)],
     )
 

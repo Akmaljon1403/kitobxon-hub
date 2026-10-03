@@ -411,3 +411,13 @@ export interface MemberGiveaways {
   upcoming: PublicGiveaway[]
   recent: PublicGiveaway[]
 }
+
+export interface Referrals {
+  enabled: boolean
+  link: string | null
+  invited: number
+  rewarded: number
+  points: number
+  premium_days: number
+  monthly_limit: number
+}

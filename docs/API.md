@@ -124,25 +124,29 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/tests/{test_id}/review` | Correct answers and explanations — only after the test has closed (403 before) |
 | GET | `/api/v1/me/scores` | Total, season total, breakdown by category and ledger history |
 | GET | `/api/v1/me/ranking` | My place this week, month and overall |
-| GET | `/api/v1/rankings?period=week\|month\|season\|all&scope=all\|faculty\|group` | Leaderboard (deterministic tie-breaks, see ARCHITECTURE §8) |
-| GET | `/api/v1/rankings/faculties?period=...` | Faculties ranked by average points per member |
+| GET | `/api/v1/rankings?period=week\|month\|season\|all&scope=all\|faculty\|group` | Leaderboard (deterministic tie-breaks, see ARCHITECTURE §8). `week` and `all` (whole club) are free; other periods and scopes need the `ranking_full` feature (Premium by default) |
+| GET | `/api/v1/rankings/faculties?period=...` | Faculties ranked by average points per member (`ranking_full`) |
 | GET | `/api/v1/me/achievements` | All active achievements with my progress and unlock dates |
 | GET | `/api/v1/me/rewards` | My rewards (codes are never included in the list) |
 | POST | `/api/v1/me/rewards/{id}/code` | Reveal my promo code (only the recipient; marks it delivered) |
 | POST | `/api/v1/me/rewards/{id}/redeemed` | "I have used it" |
 | GET | `/api/v1/me/passport[?download=true]` | My Kitobxon passport as a PNG ID card (own photo or Telegram photo, name, faculty, member number, QR). Points and ranking are not printed — the QR page shows them live. 20 files/min |
 | PUT / DELETE | `/api/v1/me/passport/photo` | Upload my own passport photo (multipart `file`, JPG/PNG/WEBP ≤ 10 MB; turned upright, cropped 4:5, metadata removed) / back to the Telegram picture |
-| GET | `/api/v1/me/passport/themes` | Card designs (`classic`, and for premium members `gold`, `midnight`, `ruby`) with the selected one |
+| GET | `/api/v1/me/passport/themes` | Card designs (`classic`, and for premium members `gold`, `silver`, `midnight`, `ruby`, `ocean`, `lavender`) with the selected one |
 | PUT | `/api/v1/me/passport/theme` | `{"theme"}` — 403 `PREMIUM_REQUIRED` for a premium design |
 | GET | `/api/v1/me/stats` | «Statistikam» (premium by default): points per month (6), breakdown, ranking now and last month, attendance rate, test average, places, streak |
 | POST | `/api/v1/me/passport/send` | The bot sends the passport (PNG file) to my chat. 6/min; 409 `BOT_BLOCKED`, 503 `BOT_UNAVAILABLE` |
 | GET | `/api/v1/me/certificates` | My certificates (revoked ones are hidden) |
-| GET | `/api/v1/me/certificates/{id}/pdf` | Certificate PDF (A4 landscape) — only the owner |
-| POST | `/api/v1/me/certificates/{id}/send` | The bot sends the PDF to my chat |
-| POST | `/api/v1/me/downloads` | `{"kind": "passport" \| "certificate", "id"?}` → `{url, filename, expires_in}` for Telegram's `downloadFile` |
-| GET | `/api/v1/me/premium` | Premium status, plans on sale, donation amounts, which features are premium-only |
+| GET | `/api/v1/me/certificates/{id}/pdf` | Certificate PDF (A4 landscape) — only the owner; feature `certificate_pdf` (Premium by default). Every certificate has `verify_url` (free) |
+| POST | `/api/v1/me/certificates/{id}/send` | The bot sends the PDF to my chat (`certificate_pdf`) |
+| GET | `/api/v1/me/portfolio` | «Kitobxonlik portfoliosi» PDF: books, certificates, tests, events, achievements, QR (feature `portfolio`, Premium by default) |
+| POST | `/api/v1/me/portfolio/send` | The bot sends the portfolio to my chat |
+| POST | `/api/v1/me/downloads` | `{"kind": "passport" \| "certificate" \| "portfolio", "id"?}` → `{url, filename, expires_in}` for Telegram's `downloadFile` |
+| GET | `/api/v1/me/referrals` | My invitation link (`t.me/<bot>?start=ref_<member number>`), friends invited and rewarded, the reward terms |
+| GET | `/api/v1/me/premium` | Premium status (`lifetime`, `until`), free trial days left, my personal `discount`, plans with `stars_now` / `price_uzs_now` after the discount, Stars packages sold by card, donation amounts, premium-only features and perks |
+| POST | `/api/v1/me/premium/trial` | Start the one-time free trial (`premium.trial_days`, default 7); 409 when already used |
 | POST | `/api/v1/me/premium/invoice` | `{"plan_id"}` or `{"amount"}` (donation) → `{url}` for `Telegram.WebApp.openInvoice` (Telegram Stars, XTR); 403 `FEATURE_OFF` while the store is closed |
-| POST | `/api/v1/me/premium/card-payments` | Paid to the club's card: multipart `file` (receipt screenshot ≤ 10 MB) and exactly one of `plan_id` (plan with a so'm price) or `amount_uzs` (donation ≥ 1 000). 409 `CARD_PAYMENTS_OFF`, 409 `TOO_MANY_PENDING` (3 waiting receipts). Super admins get the receipt in the bot |
+| POST | `/api/v1/me/premium/card-payments` | Paid to the club's card: multipart `file` (receipt screenshot ≤ 10 MB) and exactly one of `plan_id` (plan with a so'm price; a personal discount lowers it), `stars` (a Stars package from `payments.stars_packages`, priced by `payments.star_price_uzs`) or `amount_uzs` (donation ≥ 1 000). 409 `CARD_PAYMENTS_OFF`, 409 `TOO_MANY_PENDING` (3 waiting receipts). Super admins get the receipt in the bot |
 | GET | `/api/v1/me/premium/card-payments` | My card payments and their status (`PENDING` / `APPROVED` / `REJECTED` with the reason) |
 | GET | `/api/v1/me/giveaways` | Upcoming giveaways (`rewards` feature) and the winners of the last 60 days — public names only |
 | GET / PUT | `/api/v1/events/{id}/feedback` | My rating of an event I attended: `{"rating": 1-5, "comment"?}`; 409 `NOT_ATTENDED` otherwise |
@@ -171,6 +175,15 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/admin/users/{user_id}` | `USER_VIEW` |
 | PATCH | `/api/v1/admin/users/{user_id}` | `USER_VIEW` + `USER_MANAGE` — correct names / study details (audited) |
 | POST | `/api/v1/admin/users/{user_id}/status` | `USER_VIEW` + `USER_MANAGE` — `{"status", "reason"}`: approve, block, deactivate (audited) |
+| POST | `/api/v1/admin/users/{user_id}/cancel-membership` | `USER_VIEW` + `USER_MANAGE` — `{"reason"}`: the member leaves the club (`LEFT`, data kept 30 days, the member is told and may ask to come back). Administrators are protected (403) |
+| POST | `/api/v1/admin/users/{user_id}/restore` | `USER_VIEW` + `USER_MANAGE` — bring back a member who left (points, certificates, Premium intact) |
+| POST | `/api/v1/admin/users/{user_id}/erase` | super admin — `{"reason", "confirm": "O'CHIRISH"}`: personal data removed for good (name, phone, Telegram account, photos, receipts, messages); the anonymous row keeps the statistics. 204 |
+
+**Leaving the club.** A member who blocks the bot (seen by the sender or Telegram's `my_chat_member`
+update) becomes `LEFT`: signed out everywhere, hidden from rankings, no messages. Within 14 days `/start`
+offers a self-restore, within 30 days a restore request to admins with `USER_MANAGE` (✅ / ❌ buttons in
+the bot), after 30 days the job `erase_left_members` erases the personal data. Administrators never
+leave automatically.
 
 ### Admin: books and quotes
 
@@ -267,17 +280,20 @@ Telegram's `pre_checkout_query` (plan on sale, price unchanged, payer is the mem
 | GET | `/api/v1/admin/premium/payments` | newest first |
 | POST | `/api/v1/admin/premium/payments/{id}/refund` | `refundStarPayment`, ends the period bought with it |
 | GET | `/api/v1/admin/premium/subscriptions?active=true` | premium periods |
-| POST | `/api/v1/admin/premium/grant` | `{"user_id", "days", "note"?}` — premium as a gift (audited, member notified) |
+| POST | `/api/v1/admin/premium/grant` | `{"user_id", "days"?, "lifetime"?, "note"?}` — premium as a gift for N days or for life (audited, member notified). Super admins are premium for life without a grant |
 | POST | `/api/v1/admin/premium/subscriptions/{id}/revoke` | `{"reason"}` |
 | GET | `/api/v1/admin/events/{id}/feedback` | `EVENT_VIEW` — average, distribution, comments with names |
 | GET | `/api/v1/admin/premium/card-payments?status=PENDING` | card payments (receipts) with the member, plan and amount |
 | GET | `/api/v1/admin/premium/card-payments/{id}/receipt` | the receipt picture (JPEG) |
 | POST | `/api/v1/admin/premium/card-payments/{id}/approve` | Premium starts (source `CARD`, chained after the current end) or the donation is counted; the member is told; 409 when already decided |
 | POST | `/api/v1/admin/premium/card-payments/{id}/reject` | `{"reason"}` — the member gets the reason |
+| POST | `/api/v1/admin/premium/card-payments/{id}/delivered` | `STARS` payments: the admin has gifted the Stars in Telegram; the member is told. 409 when not approved or already marked |
 
 Card payments: the super admin sets `payments.card_number` / `payments.card_holder` in Settings,
 switches on the `card_payments` feature and gives plans a `price_uzs`. Bots cannot give Telegram Stars
-to users, so a confirmed card payment activates Premium (or records a donation) instead.
+to users: a confirmed `STARS` payment sends the super admin step-by-step instructions to gift the Stars
+from their own Telegram account (Telegram charges the admin's card, the Stars land on the member's
+account), and the payment stays in the pending list until it is marked delivered.
 
 ### Admin: rewards (`REWARD_MANAGE`)
 
@@ -288,7 +304,9 @@ to users, so a confirmed card payment activates Premium (or records a donation) 
 | POST | `/api/v1/admin/rewards/{id}/codes` | `{"codes": [...], "expires_at"?}` — up to 500 admin-provided codes, encrypted (AES-GCM), duplicates skipped |
 | GET | `/api/v1/admin/rewards/{id}/codes` | masked codes (`KI••••••CD`), status, recipient |
 | POST | `/api/v1/admin/rewards/{id}/codes/{code_id}/revoke` | withdraw an unused code |
-| POST | `/api/v1/admin/rewards/{id}/assign` | `{"user_id", "note"?, "idempotency_key"?}` — gives the next unused code; one active assignment per member and reward; audited; member notified |
+| POST | `/api/v1/admin/rewards/{id}/assign` | `{"user_id", "note"?, "idempotency_key"?, "allow_repeat"?}` — gives the next unused code; a second active assignment of the same reward needs `allow_repeat` (409 `ALREADY_ASSIGNED` otherwise); audited; member notified |
+| GET | `/api/v1/admin/rewards/test-winners?days=60` | closed tests of the period with places 1–3 (event tests: attendees only) and the reward already given for each place |
+| POST | `/api/v1/admin/rewards/{id}/assign-test-place` | `{"test_id", "place"}` — reward that place's winner; one gift per test place whatever the reward (409 `PLACE_ALREADY_REWARDED`) |
 | GET | `/api/v1/admin/rewards/{id}/recipients` | |
 | POST | `/api/v1/admin/user-rewards/{id}/status` | `DELIVERED` / `REDEEMED` / `REVOKED` (a revoked code is never handed out again) |
 
@@ -298,7 +316,10 @@ Promo codes of a reward handed out by a rule over a period (dates in the club ti
 `RANDOM` (audience `ALL` / `ATTENDED` / `PREMIUM`; administrators never take part; premium members
 count twice with `premium_bonus`; the random seed is stored), `TEST_TOP` (most test points incl. place
 bonuses), `EVENT_PLACES` (places 1..N of the closed test of every event in the period, each event
-separately, attendees only, N ≤ 10) and `RANKING_TOP`. A giveaway with `scheduled_at` is drawn by the
+separately, attendees only, N ≤ 10), `RANKING_TOP` and `NEW_MEMBERS` (the first N members who register
+in the period get the prize the moment they register). The prize (`prize`) is promo codes of a reward
+(`CODES`), `PREMIUM_DAYS` (`prize_value` days) or `PREMIUM_DISCOUNT` (`prize_value` % off Premium, valid
+30 days, used once). A giveaway with `scheduled_at` is drawn by the
 job `giveaways_due`; `repeat_monthly` schedules the same giveaway for the next month after the draw.
 A draw with no winners or too few codes changes nothing (409 `NO_WINNERS` / `NO_CODES_LEFT`; a
 scheduled one waits and the admins are told once). Winners get their code and a personal message;
@@ -306,7 +327,7 @@ with `announce` all members (and the channel) see the winners.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET / POST | `/api/v1/admin/giveaways` | list (planned first) / create (`title`, `reward_id`, `rule`, `audience`, `winners_count`, `premium_bonus`, `period_start`, `period_end`, `scheduled_at`?, `announce`, `repeat_monthly`) |
+| GET / POST | `/api/v1/admin/giveaways` | list (planned first) / create (`title`, `prize`, `reward_id` or `prize_value`, `rule`, `audience`, `winners_count`, `premium_bonus`, `period_start`, `period_end`, `scheduled_at`?, `announce`, `repeat_monthly`) |
 | PATCH | `/api/v1/admin/giveaways/{id}` | edit a draft or scheduled giveaway |
 | GET | `/api/v1/admin/giveaways/{id}/preview` | who would win now (`RANDOM`: how many take part), notes such as open tests or missing codes |
 | POST | `/api/v1/admin/giveaways/{id}/draw` | draw now and hand out the codes (once) |
@@ -321,8 +342,15 @@ its cover), reminders the day before and 3 hours before, new books, reading nudg
 before the deadline, the quote of the day, test winners, giveaway winners, the month's leaders, and a
 weekly invitation (Mondays). Every post has a «📲 Botga qo'shilish» button (`t.me/<bot>?start=channel`);
 posts never go out between 21:30 and 08:00 (they wait until 09:00). Stickers saved with the bot command
-`/stiker` follow automatic posts (`channel.stickers`). Telegram errors (e.g. no rights) mark the post
-failed and the super admins are told once a day.
+`/stiker` follow automatic posts (`channel.stickers`), chosen by the mood of their emoji (🎉 under
+results, 📚 under books). Telegram errors (e.g. no rights) mark the post failed and the super admins
+are told once a day.
+
+**The admins look first.** Automatic posts are scheduled `channel.review_minutes` (default 5) later and
+shown in the bot to admins with `NOTIFICATION_SEND` a few minutes before they go out, with «✅ Hozir
+joylash» (`chp:ok`), «❌ Bekor qilish» (`chp:no`) and «✏️ Matnni o'zgartirish» (`chp:edit`: the post waits
+up to 30 minutes for the new text, formatting kept). Once one admin decides, the others' buttons answer
+«Boshqa admin allaqachon ko'rib chiqdi». Nobody answers — the post goes out at its time.
 
 | Method | Path | Notes |
 |---|---|---|
@@ -330,6 +358,8 @@ failed and the super admins are told once a day.
 | POST | `/api/v1/admin/channel/posts` | multipart: `text`, `photo`?, `sticker_id`?, `with_button`, `scheduled_at`? — the text is sent as plain text. Audited |
 | POST | `/api/v1/admin/channel/test` | a short test post to check the bot's rights |
 | POST | `/api/v1/admin/channel/posts/{id}/cancel` | a post not sent yet |
+| POST | `/api/v1/admin/channel/posts/{id}/publish-now` | approve: it goes out now (or at 09:00 if it is night) |
+| PUT | `/api/v1/admin/channel/posts/{id}/text` | `{"text"}` — new plain text for a post not sent yet; it goes out right after. Audited |
 | DELETE | `/api/v1/admin/channel/stickers/{id}` | forget a saved sticker |
 
 ### Admin: certificates (`REWARD_MANAGE`)

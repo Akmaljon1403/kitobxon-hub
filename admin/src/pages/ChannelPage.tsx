@@ -218,6 +218,7 @@ export function ChannelPage() {
                       maxLength={4000}
                       onChange={(event) => setEditing({ id: post.id, text: event.target.value })}
                     />
+                    <p className="text-xs text-app-hint">Oddiy matn sifatida joylanadi. Qalin/kursiv kerak bo'lsa — botdagi «✏️ Matnni o'zgartirish» dan foydalaning.</p>
                     <div className="flex gap-2">
                       <Button
                         loading={busy}

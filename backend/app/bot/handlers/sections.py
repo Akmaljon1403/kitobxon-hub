@@ -7,12 +7,13 @@ import html
 import logging
 import re
 import uuid
+from urllib.parse import urlencode
 
 from aiogram import F, Router
 from aiogram.enums import ChatAction
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import BufferedInputFile, CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, InlineKeyboardButton, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import access, keyboards, summaries, texts
@@ -22,7 +23,7 @@ from app.core.errors import AppError, NotFoundError
 from app.models import User, UserNotificationSettings
 from app.services import attendance as attendance_service
 from app.services import certificates as certificate_service
-from app.services import delivery
+from app.services import delivery, referrals
 from app.services import passport as passport_service
 from app.services import premium as premium_service
 
@@ -274,6 +275,36 @@ async def portfolio_file(event: Message | CallbackQuery, db: AsyncSession, membe
     except Exception:
         logger.exception("Portfolio failed for %s", member.id)
         await message.answer(texts.FILE_FAILED)
+
+
+@router.message(Command("taklif"))
+@router.callback_query(F.data == "ref:open")
+async def invite_friends(event: Message | CallbackQuery, db: AsyncSession, member: User) -> None:
+    """A personal link to invite friends; the reward comes when the friend attends an event."""
+    if await access.gate(event, db, member, "referrals"):
+        return
+    message = event.message if isinstance(event, CallbackQuery) else event
+    if isinstance(event, CallbackQuery):
+        await event.answer()
+    if not isinstance(message, Message):
+        return
+    info = await referrals.summary(db, member)
+    if not info["link"]:
+        await message.answer(texts.INVITE_UNAVAILABLE)
+        return
+    share = "https://t.me/share/url?" + urlencode({"url": info["link"], "text": texts.INVITE_SHARE_TEXT})
+    reward = referrals.reward_text(info)
+    await message.answer(
+        texts.INVITE.format(
+            link=info["link"],
+            reward=reward,
+            limit=texts.INVITE_LIMIT.format(limit=info["monthly_limit"]) if info["monthly_limit"] else "",
+            invited=info["invited"],
+            rewarded=info["rewarded"],
+        ),
+        reply_markup=keyboards.inline([InlineKeyboardButton(text=texts.BTN_SHARE_INVITE, url=share)]),
+        disable_web_page_preview=True,
+    )
 
 
 # ---------------------------------------------------------------------------- attendance
