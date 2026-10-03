@@ -37,6 +37,12 @@ function Row({ row }: { row: RankingRow }) {
       <div className="min-w-0 flex-1">
         <p className={`truncate ${row.is_me ? 'font-semibold' : 'font-medium'}`}>
           {row.name}
+          {row.premium && (
+            <span aria-label="Premium a'zo" title="Premium a'zo">
+              {' '}
+              💎
+            </span>
+          )}
           {row.is_me && ' (siz)'}
         </p>
         <p className="truncate text-xs text-app-hint">

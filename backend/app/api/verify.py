@@ -41,18 +41,34 @@ async def verify(code: str, db: DbSession) -> HTMLResponse:
             await db.scalar(select(Faculty.name).where(Faculty.id == member.faculty_id)) if member.faculty_id else None
         )
         active = member.status == UserStatus.ACTIVE
+        results = await passport_service.live_results(db, member) if active else None
         page = {
             "valid": active,
             "icon": "🪪" if active else "⛔",
             "heading": "Kitobxon pasporti",
-            "state": "✓ Haqiqiy — faol a'zo" if active else "A'zolik to'xtatilgan",
+            "state": ("✓ Haqiqiy — 💎 Premium a'zo" if results and results["premium"] else "✓ Haqiqiy — faol a'zo")
+            if active
+            else "A'zolik to'xtatilgan",
             "rows": [
                 ("A'zo", f"{member.last_name} {member.first_name}"),
                 ("A'zo raqami", passport_service.member_number(member)),
                 ("Fakultet", faculty or "—"),
+                ("Kurs, guruh", f"{member.course or '—'}-kurs, {member.group_name or '—'}"),
                 ("A'zo bo'lgan sana", format_date(member.registered_at or member.created_at)),
             ],
         }
+        if results:
+            page["stats"] = [
+                (f"{results['points']:,}".replace(",", " "), "ball"),
+                (f"{results['rank']}-o'rin" if results["rank"] else "—", "umumiy reyting"),
+                (f"{results['month_rank']}-o'rin" if results["month_rank"] else "—", "shu oy"),
+                (str(results["books"]), "kitob o'qigan"),
+                (str(results["events"]), "tadbirda qatnashgan"),
+                (str(results["tests"]), "testdan o'tgan"),
+                (str(results["achievements"]), "yutuq"),
+                (str(len(results["certificates"])), "sertifikat"),
+            ]
+            page["certificates"] = results["certificates"]
     else:
         certificate = await certificate_service.by_code(db, code)
         if certificate is not None:

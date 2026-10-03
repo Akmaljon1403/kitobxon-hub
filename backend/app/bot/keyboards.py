@@ -34,15 +34,19 @@ MEMBER_ROWS = (
     (texts.BTN_PASSPORT, texts.BTN_ACHIEVEMENTS),
     (texts.BTN_SETTINGS, texts.BTN_HELP),
 )
-MENU_BUTTONS = frozenset(label for row in MEMBER_ROWS for label in row) | {texts.BTN_ADMIN}
+MENU_BUTTONS = frozenset(label for row in MEMBER_ROWS for label in row) | {texts.BTN_ADMIN, texts.BTN_PREMIUM}
 
 
-def main_menu(*, is_admin: bool = False, hidden: frozenset[str] = frozenset()) -> ReplyKeyboardMarkup:
-    """``hidden``: sections switched off by the super admin (the others close up two per row)."""
+def main_menu(
+    *, is_admin: bool = False, hidden: frozenset[str] = frozenset(), premium: bool = False
+) -> ReplyKeyboardMarkup:
+    """``hidden``: sections switched off by the super admin (the others close up two per row);
+    ``premium``: the Premium store is open, so its button is shown."""
     labels = [label for row in MEMBER_ROWS for label in row if label not in hidden]
     rows = [labels[index : index + 2] for index in range(0, len(labels), 2)]
-    if is_admin:
-        rows.append([texts.BTN_ADMIN])
+    extra = [label for label, shown in ((texts.BTN_PREMIUM, premium), (texts.BTN_ADMIN, is_admin)) if shown]
+    if extra:
+        rows.append(extra)
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=label) for label in row] for row in rows],
         resize_keyboard=True,
@@ -119,11 +123,26 @@ def section_more(route: str) -> InlineKeyboardMarkup | None:
     return inline([app_button(route, texts.BTN_MORE)])
 
 
-def passport() -> InlineKeyboardMarkup | None:
+def passport(*, own_photo: bool = False) -> InlineKeyboardMarkup | None:
     return inline(
-        [InlineKeyboardButton(text=texts.BTN_PASSPORT_FILE, callback_data="pp:file")],
+        [InlineKeyboardButton(text=texts.BTN_PASSPORT_PHOTO, callback_data="pp:photo")],
+        [InlineKeyboardButton(text=texts.BTN_PASSPORT_RESET, callback_data="pp:reset")] if own_photo else [],
+        [
+            InlineKeyboardButton(text=texts.BTN_PASSPORT_THEME, callback_data="pp:themes"),
+            InlineKeyboardButton(text=texts.BTN_PASSPORT_FILE, callback_data="pp:file"),
+        ],
         [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
         [app_button("profile", texts.BTN_MORE)],
+    )
+
+
+def passport_themes(themes: list[tuple[str, str, bool]]) -> InlineKeyboardMarkup | None:
+    """themes: (code, title, selected)."""
+    return inline(
+        *[
+            [InlineKeyboardButton(text=f"{'✅ ' if selected else ''}{title}", callback_data=f"pp:theme:{code}")]
+            for code, title, selected in themes
+        ]
     )
 
 

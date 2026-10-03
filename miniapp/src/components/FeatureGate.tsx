@@ -12,6 +12,7 @@ const TITLES: Record<string, string> = {
   achievements: '🏅 Yutuqlar',
   rewards: "🎁 Sovg'alar",
   weekly_digest: '📊 Haftalik xulosa',
+  personal_stats: '📈 Shaxsiy statistika',
 }
 
 export function useFeature(code: string): FeatureAccess {

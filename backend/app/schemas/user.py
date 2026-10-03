@@ -36,6 +36,7 @@ class MeOut(BaseModel):
     features: dict[str, str]
     is_premium: bool
     premium_until: datetime | None
+    passport_photo: bool  # the member uploaded their own passport photo
 
 
 class MeUpdateIn(BaseModel):

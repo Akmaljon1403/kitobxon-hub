@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import Any, Literal
 
 from sqlalchemy import Select, case, func, select
@@ -94,6 +94,7 @@ class RankingRow:
     total: int
     attendance: int
     tests: int
+    premium: bool = False  # shown with a 💎 next to the name
 
 
 @dataclass(frozen=True)
@@ -149,6 +150,14 @@ async def ranking(
 
     name_format = await get_setting(session, "ranking.public_name_format")
 
+    rows = (await session.execute(select(ranked).where(ranked.c.rank <= limit).order_by(ranked.c.rank))).all()
+    mine = (
+        (await session.execute(select(ranked).where(ranked.c.user_id == viewer.id))).first()
+        if viewer is not None
+        else None
+    )
+    premium_ids = await _premium_among(session, [row.user_id for row in rows] + ([mine.user_id] if mine else []))
+
     def to_row(row: Any) -> RankingRow:
         return RankingRow(
             rank=int(row.rank),
@@ -159,14 +168,29 @@ async def ranking(
             total=int(row.total),
             attendance=int(row.attendance),
             tests=int(row.tests),
+            premium=row.user_id in premium_ids,
         )
 
-    rows = (await session.execute(select(ranked).where(ranked.c.rank <= limit).order_by(ranked.c.rank))).all()
-    me = None
-    if viewer is not None:
-        mine = (await session.execute(select(ranked).where(ranked.c.user_id == viewer.id))).first()
-        me = to_row(mine) if mine else None
+    me = to_row(mine) if mine else None
     return Ranking(period=period, scope=scope, starts_at=period_start(period), items=[to_row(r) for r in rows], me=me)
+
+
+async def _premium_among(session: AsyncSession, user_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    if not user_ids:
+        return set()
+    from app.models import PremiumSubscription
+
+    now = datetime.now(UTC)
+    return set(
+        await session.scalars(
+            select(PremiumSubscription.user_id).where(
+                PremiumSubscription.user_id.in_(user_ids),
+                PremiumSubscription.revoked_at.is_(None),
+                PremiumSubscription.starts_at <= now,
+                PremiumSubscription.ends_at > now,
+            )
+        )
+    )
 
 
 async def faculty_ranking(session: AsyncSession, *, period: Period) -> list[dict[str, Any]]:

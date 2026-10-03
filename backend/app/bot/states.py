@@ -33,3 +33,9 @@ class FeedbackComment(StatesGroup):
     """A member is writing a comment about an event (the event id is in the state data)."""
 
     waiting = State()
+
+
+class PassportPhoto(StatesGroup):
+    """A member is sending a picture for their Kitobxon passport."""
+
+    waiting = State()

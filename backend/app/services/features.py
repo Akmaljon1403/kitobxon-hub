@@ -71,6 +71,13 @@ FEATURES: tuple[Feature, ...] = (
         "results",
     ),
     Feature(
+        "personal_stats",
+        "📈 Shaxsiy statistika",
+        "oylar bo'yicha ballaringiz, davomat foizi, test natijalari va reytingdagi o'sishingiz",
+        FeatureMode.PREMIUM,
+        "stats",
+    ),
+    Feature(
         "premium",
         "💎 Premium obuna",
         "Premium a'zolik: qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa",

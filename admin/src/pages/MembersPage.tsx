@@ -266,6 +266,16 @@ function MemberModal({
                     Faollashtirish
                   </Button>
                 )}
+                <Button
+                  variant="secondary"
+                  loading={busy}
+                  onClick={() => {
+                    if (window.confirm("A'zo yuklagan pasport rasmi o'chirilsinmi? Pasportda Telegram rasmi qoladi."))
+                      void run(() => api(`/api/v1/admin/users/${userId}/passport-photo`, { method: 'DELETE' }))
+                  }}
+                >
+                  🖼 Pasport rasmini o'chirish
+                </Button>
               </div>
               <Button onClick={save} loading={busy}>
                 Saqlash

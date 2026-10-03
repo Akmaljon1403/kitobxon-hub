@@ -15,6 +15,7 @@ const SHORTCUTS: { route: string; icon: string; label: string; feature?: string 
   { route: 'checkin', icon: '✅', label: 'Davomat' },
   { route: 'tests', icon: '📝', label: 'Testlar' },
   { route: 'results', icon: '📊', label: 'Natijalarim' },
+  { route: 'stats', icon: '📈', label: 'Statistikam', feature: 'personal_stats' },
   { route: 'ranking', icon: '🏆', label: 'Reyting', feature: 'ranking' },
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', feature: 'achievements' },
   { route: 'profile', icon: '🪪', label: 'Pasportim' },

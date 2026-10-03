@@ -1,7 +1,9 @@
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
+import { useFeature } from '../components/FeatureGate'
 import { useAuth } from '../store/auth'
+import { navigate } from '../utils/router'
 import type { MyRanking, MyScores, ScoreEntry } from '../types/api'
 import { formatDate } from '../utils/format'
 
@@ -45,6 +47,7 @@ function HistoryItem({ entry }: { entry: ScoreEntry }) {
 }
 
 export function ResultsPage() {
+  const statsAccess = useFeature('personal_stats')
   const { api } = useAuth()
   const scores = useAsync((signal) => api<MyScores>('/api/v1/me/scores?limit=100', { signal }))
   const ranks = useAsync((signal) => api<MyRanking>('/api/v1/me/ranking', { signal }))
@@ -66,6 +69,17 @@ export function ResultsPage() {
           </p>
         )}
       </Card>
+
+      {statsAccess !== 'off' && (
+        <button type="button" onClick={() => navigate('/stats')}>
+          <Card className="flex items-center justify-between gap-2 py-3 text-left">
+            <span className="text-[15px] font-medium">
+              📈 Batafsil statistika{statsAccess === 'premium' && <span className="text-app-hint"> · 💎 Premium</span>}
+            </span>
+            <span className="text-app-link">→</span>
+          </Card>
+        </button>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         {GROUPS.map((group) => (

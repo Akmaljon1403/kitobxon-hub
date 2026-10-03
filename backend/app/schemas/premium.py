@@ -22,6 +22,12 @@ class PremiumFeatureOut(BaseModel):
     description: str
 
 
+class PerkOut(BaseModel):
+    icon: str
+    title: str
+    description: str
+
+
 class PremiumStatusOut(BaseModel):
     is_premium: bool
     until: datetime | None
@@ -30,6 +36,7 @@ class PremiumStatusOut(BaseModel):
     plans: list[PlanOut]
     donation_amounts: list[int]
     premium_features: list[PremiumFeatureOut]
+    perks: list[PerkOut]
 
 
 class InvoiceIn(BaseModel):

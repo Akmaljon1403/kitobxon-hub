@@ -51,6 +51,7 @@ export interface Me {
   features: Record<string, FeatureAccess>
   is_premium: boolean
   premium_until: string | null
+  passport_photo: boolean
 }
 
 export type FeatureAccess = 'on' | 'premium' | 'off'
@@ -159,6 +160,7 @@ export interface RankingRow {
   attendance: number
   tests: number
   is_me: boolean
+  premium?: boolean
 }
 
 export interface Ranking {
@@ -332,10 +334,37 @@ export interface PremiumStatus {
   plans: PremiumPlan[]
   donation_amounts: number[]
   premium_features: { code: string; title: string; description: string }[]
+  perks: { icon: string; title: string; description: string }[]
 }
 
 export interface EventFeedback {
   rating: number
   comment: string | null
   updated_at: string
+}
+
+export interface PassportTheme {
+  code: string
+  title: string
+  premium: boolean
+  colors: string[]
+  selected: boolean
+}
+
+export interface PersonalStats {
+  months: { month: string; label: string; points: number }[]
+  total: number
+  breakdown: Record<string, number>
+  rank: number | null
+  month_rank: number | null
+  last_month_rank: number | null
+  events_held: number
+  events_attended: number
+  attendance_rate: number | null
+  tests_taken: number
+  tests_average_percent: number | null
+  test_places: Record<string, number>
+  books_completed: number
+  streak_weeks: number
+  member_days: number
 }

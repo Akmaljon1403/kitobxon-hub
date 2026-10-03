@@ -33,6 +33,17 @@ from app.services.notifications import active_members, enqueue_notification, ren
 from app.utils.timezone import format_date
 
 CURRENCY = "XTR"
+# What every premium member gets in addition to the features the super admin made premium-only.
+PERKS: tuple[dict[str, str], ...] = (
+    {"icon": "🎨", "title": "Pasport dizaynlari", "description": "oltin, tungi ko'k va yoqut — 3 ta maxsus dizayn"},
+    {"icon": "💎", "title": "Premium belgisi", "description": "reytingda ismingiz yonida va pasportingizda"},
+    {"icon": "🎁", "title": "Sovg'a o'yinlarida 2 barobar imkoniyat", "description": "tasodifiy promokod o'yinlarida"},
+    {
+        "icon": "❤️",
+        "title": "Klub rivojiga hissa",
+        "description": "tushum kitoblar, tadbirlar va sovg'alarga sarflanadi",
+    },
+)
 DONATION_AMOUNTS = (50, 100, 250, 500)
 MAX_DONATION = 10_000
 _PAYLOAD = re.compile(r"^(premium|donation):([0-9a-f]{32}|\d{1,6}):([0-9a-f]{32}):[0-9a-f]{8}$")
@@ -430,6 +441,7 @@ async def member_status(session: AsyncSession, user: User) -> dict[str, Any]:
         ],
         "donation_amounts": list(DONATION_AMOUNTS),
         "premium_features": premium_features,
+        "perks": [dict(perk) for perk in PERKS],
     }
 
 

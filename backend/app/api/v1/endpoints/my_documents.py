@@ -6,17 +6,18 @@ import uuid
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, CurrentUserDep, DbSession, feature_required, get_current_user
 from app.core.config import get_settings
 from app.core.errors import ServiceUnavailableError
 from app.models import Certificate
-from app.schemas.certificate import CertificateOut, DownloadLinkIn, DownloadLinkOut
+from app.schemas.certificate import CertificateOut, DownloadLinkIn, DownloadLinkOut, PassportThemeIn, PassportThemeOut
 from app.security.rate_limit import RateLimit, enforce
 from app.services import certificates as certificate_service
 from app.services import delivery, downloads, features
 from app.services import passport as passport_service
+from app.services import premium as premium_service
 
 router = APIRouter(prefix="/me", tags=["me: passport & certificates"])
 
@@ -69,6 +70,51 @@ def certificate_out(certificate: Certificate) -> CertificateOut:
 async def passport_image(current: FileUser, db: DbSession, download: bool = False) -> Response:
     image = await passport_service.render(db, current.user, bot=delivery.optional_bot())
     return file_response(image, "image/png", passport_service.filename(current.user), attachment=download)
+
+
+@router.get("/passport/themes", response_model=list[PassportThemeOut], summary="Card designs (premium)")
+async def passport_themes(current: CurrentUserDep, db: DbSession) -> list[PassportThemeOut]:
+    premium = await premium_service.is_premium(db, current.user.id)
+    chosen = passport_service.effective_theme(current.user.passport_theme, premium)
+    return [
+        PassportThemeOut(
+            code=code,
+            title=theme.title,
+            premium=theme.premium,
+            colors=[f"#{r:02x}{g:02x}{b:02x}" for r, g, b in (theme.dark, theme.light, theme.accent)],
+            selected=code == chosen,
+        )
+        for code, theme in passport_service.THEMES.items()
+    ]
+
+
+@router.put(
+    "/passport/theme",
+    dependencies=[feature_required("passport")],
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Choose the card design (premium members)",
+)
+async def set_passport_theme(payload: PassportThemeIn, current: CurrentUserDep, db: DbSession) -> Response:
+    await passport_service.set_theme(db, current.user, payload.theme)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put(
+    "/passport/photo",
+    dependencies=[feature_required("passport")],
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Upload my own passport photo (JPG/PNG/WEBP, up to 10 MB)",
+)
+async def upload_passport_photo(current: FileUser, db: DbSession, file: Annotated[UploadFile, File()]) -> Response:
+    data = await file.read(passport_service.MAX_PHOTO_BYTES + 1)
+    await passport_service.set_photo(db, current.user, data)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/passport/photo", status_code=status.HTTP_204_NO_CONTENT, summary="Back to my Telegram profile picture")
+async def delete_passport_photo(current: CurrentUserDep, db: DbSession) -> Response:
+    await passport_service.clear_photo(db, current.user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(

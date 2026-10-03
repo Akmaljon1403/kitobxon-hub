@@ -45,6 +45,7 @@ class RankingRowOut(BaseModel):
     attendance: int
     tests: int
     is_me: bool
+    premium: bool = False
 
 
 class RankingOut(BaseModel):

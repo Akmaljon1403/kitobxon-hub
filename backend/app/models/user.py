@@ -59,6 +59,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     course: Mapped[int | None] = mapped_column(SmallInteger)
     group_name: Mapped[str | None] = mapped_column(String(32))
     photo_url: Mapped[str | None] = mapped_column(Text)
+    # The member's own picture for the Kitobxon passport (storage key); None = the Telegram picture.
+    passport_photo_key: Mapped[str | None] = mapped_column(String(512))
+    passport_theme: Mapped[str | None] = mapped_column(String(16))  # premium members' card design
     language_code: Mapped[str] = mapped_column(String(8), default="uz", server_default=text("'uz'"))
     status: Mapped[UserStatus] = mapped_column(
         enum_column(UserStatus), default=UserStatus.PENDING, server_default=UserStatus.PENDING.value

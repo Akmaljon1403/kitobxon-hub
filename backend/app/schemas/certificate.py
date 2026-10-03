@@ -50,3 +50,15 @@ class DownloadLinkOut(BaseModel):
     url: str
     filename: str
     expires_in: int
+
+
+class PassportThemeOut(BaseModel):
+    code: str
+    title: str
+    premium: bool
+    colors: list[str]  # dark, light, accent (for the picker)
+    selected: bool
+
+
+class PassportThemeIn(BaseModel):
+    theme: str = Field(max_length=16)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import io
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
@@ -151,8 +152,10 @@ async def test_passport_image_and_member_number(client: httpx.AsyncClient, db: A
     assert (await client.get("/api/v1/me/passport")).status_code == 401
 
     data = await passport_service.collect(db, member)
-    assert data.points == 40 and data.rank == 1 and data.group_name == "214"
+    assert data.group_name == "214" and data.theme == "classic"
     assert data.verify_url == f"{BASE}/v/{passport_service.verify_code(member)}"
+    results = await passport_service.live_results(db, member)  # shown behind the QR code, not on the card
+    assert results["points"] == 40 and results["rank"] == 1
 
 
 async def test_passport_drawing_handles_long_names_and_photos() -> None:
@@ -166,16 +169,15 @@ async def test_passport_drawing_handles_long_names_and_photos() -> None:
         course=None,
         group_name=None,
         member_since="01.10.2026",
-        points=123456,
-        rank=None,
-        books=0,
-        events=0,
         verify_url=None,
         active=False,
     )
     for avatar in (photo.getvalue(), b"not an image", None):
         image = Image.open(io.BytesIO(passport_service.draw_passport(data, avatar)))
         assert image.size == (1200, 756)
+    for theme in passport_service.THEMES:
+        themed = dataclasses.replace(data, theme=theme, premium=True, active=True, verify_url="https://x.org/v/1")
+        assert passport_service.draw_passport(themed).startswith(b"\x89PNG")
 
 
 async def test_passport_qr_page_verifies_members(client: httpx.AsyncClient, db: AsyncSession) -> None:
