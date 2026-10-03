@@ -37,6 +37,7 @@ async def _me(current, db) -> MeOut:
         features=await features.access(db, user),
         is_premium=await premium.is_premium(db, user.id),
         premium_until=await premium.premium_until(db, user.id),
+        passport_photo=user.passport_photo_key is not None,
     )
 
 

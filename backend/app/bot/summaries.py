@@ -148,7 +148,9 @@ async def ranking(session: AsyncSession, member: User) -> str:
     if not board.items:
         return texts.RANKING_EMPTY
     top = "\n".join(
-        texts.RANKING_ROW.format(medal=MEDALS[index], name=_e(row.name), total=row.total)
+        texts.RANKING_ROW.format(
+            medal=MEDALS[index], name=_e(row.name) + (" 💎" if row.premium else ""), total=row.total
+        )
         for index, row in enumerate(board.items[:3])
     )
     me = texts.RANKING_ME.format(rank=board.me.rank, total=board.me.total) if board.me else texts.RANKING_ME_NONE

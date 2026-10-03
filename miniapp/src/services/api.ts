@@ -97,3 +97,25 @@ export async function apiBlob(path: string, token: string): Promise<Blob> {
   }
   return response.blob()
 }
+
+/** Upload a file (multipart) to an authenticated endpoint; answers 204 or JSON. */
+export async function apiUpload(path: string, form: FormData, token: string, method: 'PUT' | 'POST' = 'PUT'): Promise<void> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${path}`, { method, headers: { Authorization: `Bearer ${token}` }, body: form })
+  } catch {
+    throw new ApiError('NETWORK_ERROR', "Internet aloqasi yo'q. Qayta urinib ko'ring.", 0)
+  }
+  if (!response.ok) {
+    let message = "Faylni yuklab bo'lmadi. Keyinroq urinib ko'ring."
+    let code = 'HTTP_ERROR'
+    try {
+      const body = (await response.json()) as ApiErrorBody
+      message = body.error?.message ?? message
+      code = body.error?.code ?? code
+    } catch {
+      // not JSON
+    }
+    throw new ApiError(code, message, response.status)
+  }
+}

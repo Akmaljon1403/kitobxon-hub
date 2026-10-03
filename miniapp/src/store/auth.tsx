@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
-import { ApiError, apiBlob, apiRequest, type RequestOptions } from '../services/api'
+import { ApiError, apiBlob, apiRequest, apiUpload, type RequestOptions } from '../services/api'
 import type { Me, PublicMeta, TokenResponse } from '../types/api'
 import { getWebApp } from '../utils/telegram'
 
@@ -20,6 +20,8 @@ interface AuthContextValue {
   api: <T>(path: string, options?: Omit<RequestOptions, 'token'>) => Promise<T>
   /** Authenticated file download (images, PDFs). */
   download: (path: string) => Promise<Blob>
+  /** Authenticated file upload (multipart). */
+  upload: (path: string, form: FormData, method?: 'PUT' | 'POST') => Promise<void>
   refreshMe: () => Promise<void>
   retry: () => void
 }
@@ -94,6 +96,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [signIn],
   )
 
+  const upload = useCallback(
+    async (path: string, form: FormData, method: 'PUT' | 'POST' = 'PUT'): Promise<void> => {
+      const token = tokenRef.current ?? (await signIn())
+      try {
+        await apiUpload(path, form, token, method)
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return apiUpload(path, form, await signIn(), method)
+        throw error
+      }
+    },
+    [signIn],
+  )
+
   const refreshMe = useCallback(async () => {
     setMe(await api<Me>('/api/v1/me'))
   }, [api])
@@ -133,8 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [api, signIn, attempt])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, me, meta, api, download, refreshMe, retry: () => setAttempt((n) => n + 1) }),
-    [status, me, meta, api, download, refreshMe],
+    () => ({ status, me, meta, api, download, upload, refreshMe, retry: () => setAttempt((n) => n + 1) }),
+    [status, me, meta, api, download, upload, refreshMe],
   )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

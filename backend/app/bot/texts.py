@@ -161,6 +161,18 @@ PASSPORT = (
     "🏆 {total} ball"
 )
 BTN_PASSPORT_FILE = "📥 Fayl sifatida (asl sifat)"
+BTN_PASSPORT_PHOTO = "📷 Rasmni almashtirish"
+BTN_PASSPORT_RESET = "↩️ Telegram rasmiga qaytish"
+BTN_PASSPORT_THEME = "🎨 Dizayn (Premium)"
+PASSPORT_PHOTO_ASK = (
+    "📷 Pasport uchun rasmingizni yuboring.\n\n"
+    "Yuzingiz aniq ko'rinsin, rasm tik (vertikal) bo'lgani yaxshi. Bekor qilish: /cancel"
+)
+PASSPORT_PHOTO_HINT = "Rasm yuboring (galereyadan yoki kamera orqali). Bekor qilish: /cancel"
+PASSPORT_PHOTO_SAVED = "✅ Rasm saqlandi! Yangi pasportingiz:"
+PASSPORT_PHOTO_RESET = "✅ Endi pasportda Telegram profilingiz rasmi turadi."
+PASSPORT_THEMES = "🎨 <b>Pasport dizayni</b>\n\nPremium a'zolar pasportining ko'rinishini tanlaydi:"
+PASSPORT_THEME_SAVED = "✅ Dizayn o'zgardi!"
 BTN_CERTIFICATES = "🎓 Sertifikatlarim"
 FILE_SENT = "Yuborildi ✅"
 FILE_FAILED = "Faylni tayyorlab bo'lmadi. Birozdan keyin qayta urinib ko'ring."
@@ -271,7 +283,6 @@ PREMIUM_INFO = (
 PREMIUM_STATUS_ON = "✅ Siz Premium a'zosiz — <b>{until}</b> gacha. Muddatni uzaytirish mumkin."
 PREMIUM_STATUS_OFF = "Siz hozir oddiy a'zosiz."
 PREMIUM_PERK = "• {title} — {description}"
-PREMIUM_PERK_GOLD = "• 🌟 Oltin Kitobxon pasporti va «Premium a'zo» belgisi"
 PREMIUM_PLAN = "{title} — {stars} ⭐"
 DONATE_INFO = (
     "❤️ <b>Klubni qo'llab-quvvatlash</b>\n\n"

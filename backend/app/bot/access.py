@@ -40,7 +40,7 @@ async def menu(db: AsyncSession, member: User) -> ReplyKeyboardMarkup:
 
     access = await features.access(db, member)
     hidden = frozenset(label for label, code in SECTION_FEATURES.items() if access[code] == "off")
-    return keyboards.main_menu(is_admin=await is_admin(db, member), hidden=hidden)
+    return keyboards.main_menu(is_admin=await is_admin(db, member), hidden=hidden, premium=access["premium"] != "off")
 
 
 async def gate(event: Message | CallbackQuery, db: AsyncSession, member: User, code: str) -> bool:

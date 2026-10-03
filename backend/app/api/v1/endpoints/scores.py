@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUserDep, DbSession, feature_required
 from app.schemas.score import FacultyRankingOut, MyRankingOut, MyScoresOut, RankingOut, RankingRowOut, ScoreEntryOut
+from app.services import insights
 from app.services import ranking as ranking_service
 
 router = APIRouter(tags=["scores and rankings"])
@@ -25,6 +26,7 @@ def _row(row: ranking_service.RankingRow | None, viewer_id) -> RankingRowOut | N
         attendance=row.attendance,
         tests=row.tests,
         is_me=row.user_id == viewer_id,
+        premium=row.premium,
     )
 
 
@@ -84,3 +86,12 @@ async def faculty_rankings(
     _: CurrentUserDep, db: DbSession, period: Literal["week", "month", "season", "all"] = "all"
 ) -> list[FacultyRankingOut]:
     return [FacultyRankingOut(**item) for item in await ranking_service.faculty_ranking(db, period=period)]
+
+
+@router.get(
+    "/me/stats",
+    dependencies=[feature_required("personal_stats")],
+    summary="My statistics: points per month, attendance rate, tests, ranking change",
+)
+async def my_stats(current: CurrentUserDep, db: DbSession) -> dict[str, Any]:
+    return await insights.personal_stats(db, current.user)

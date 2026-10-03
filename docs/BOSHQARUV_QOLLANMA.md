@@ -46,9 +46,15 @@ berasiz — a'zo sizning ismingizni ko'rmaydi, javob «Klub rahbariyati» nomida
 
 ## 5. Kitobxon pasporti
 
-Har bir a'zoda rasmli ID-karta bor: ismi, fakulteti, a'zo raqami (KH-000042), ballari, reytingi va
-QR kod. A'zo botda **🪪 Pasportim** ni bosadi yoki ilovada «Profil»dan yuklab oladi. QR kodni
-skanerlagan kishi pasport haqiqiyligini ko'radi. Premium a'zolarning pasporti **oltin ramkali**.
+Har bir a'zoda rasmli ID-karta bor: rasmi, ismi, fakulteti, kursi, guruhi va a'zo raqami (KH-000042).
+Ball va reyting har kuni o'zgargani uchun kartaga yozilmaydi — **QR kodni skanerlagan kishi** pasport
+haqiqiyligini va a'zoning **jonli natijalarini** (ball, reytingdagi o'rni, kitoblar, tadbirlar,
+yutuqlar, sertifikatlar) ko'radi.
+
+- A'zo rasmini o'zi almashtiradi: botda **🪪 Pasportim → 📷 Rasmni almashtirish** yoki ilovada
+  «Profil → 📷 Yangi rasm». Rasm o'zi to'g'rilanadi va kesiladi.
+- Noma'qul rasm bo'lsa: admin panel → **A'zolar** → a'zo → **🖼 Pasport rasmini o'chirish**.
+- Premium a'zolar 4 ta dizayndan birini tanlaydi: klassik yashil, **oltin**, **tungi ko'k**, **yoqut**.
 
 ## 6. Sertifikatlar
 

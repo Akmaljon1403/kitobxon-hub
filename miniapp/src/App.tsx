@@ -14,6 +14,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { RankingPage } from './pages/RankingPage'
 import { ResultsPage } from './pages/ResultsPage'
 import { RewardsPage } from './pages/RewardsPage'
+import { StatsPage } from './pages/StatsPage'
 import { TestDetailPage } from './pages/TestDetailPage'
 import { TestsPage } from './pages/TestsPage'
 import {
@@ -45,6 +46,7 @@ function Routes() {
   else if (section === 'checkin') page = <CheckInPage />
   else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage /></FeatureGate>
   else if (section === 'premium') page = <PremiumPage />
+  else if (section === 'stats') page = <FeatureGate code="personal_stats"><StatsPage /></FeatureGate>
   else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>
 }

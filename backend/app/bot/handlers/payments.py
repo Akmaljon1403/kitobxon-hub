@@ -8,6 +8,7 @@ import uuid
 
 from aiogram import F, Router
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, PreCheckoutQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +38,10 @@ async def _premium_text(db: AsyncSession, member: User) -> str:
     perks = [
         texts.PREMIUM_PERK.format(title=f["title"], description=f["description"]) for f in status["premium_features"]
     ]
-    perks.append(texts.PREMIUM_PERK_GOLD)
+    perks += [
+        texts.PREMIUM_PERK.format(title=f"{perk['icon']} {perk['title']}", description=perk["description"])
+        for perk in status["perks"]
+    ]
     return texts.PREMIUM_INFO.format(status=current, perks="\n".join(perks))
 
 
@@ -57,11 +61,13 @@ async def show_premium(message: Message, db: AsyncSession, member: User) -> None
 
 
 @router.message(Command("premium"))
-async def premium_command(message: Message, db: AsyncSession, member: User | None) -> None:
+@router.message(F.text == texts.BTN_PREMIUM)
+async def premium_command(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
     if not _active(member):
         await message.answer(texts.NOT_REGISTERED)
         return
     assert member is not None
+    await state.clear()  # pressed while writing to the admins or waiting for a photo
     await show_premium(message, db, member)
 
 

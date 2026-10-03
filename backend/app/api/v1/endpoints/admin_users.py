@@ -5,15 +5,18 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
+from app.core.errors import NotFoundError
 from app.models import User
 from app.models.enums import UserStatus
 from app.schemas.common import Page
 from app.schemas.user import AdminUserDetailOut, AdminUserOut, AdminUserUpdateIn, UserStatusIn
 from app.security.permissions import Perm
+from app.services import passport as passport_service
 from app.services import users as user_service
+from app.services.audit import record_audit
 from app.services.rbac import get_role_codes
 
 router = APIRouter(prefix="/admin/users", tags=["admin: members"])
@@ -94,3 +97,17 @@ async def change_status(
         reason=payload.reason,
     )
     return await _detail(db, user, current)
+
+
+@router.delete(
+    "/{user_id}/passport-photo",
+    status_code=204,
+    summary="Remove an unsuitable passport photo (the Telegram picture is used again)",
+)
+async def remove_passport_photo(user_id: uuid.UUID, current: Manager, db: DbSession) -> Response:
+    user = await db.get(User, user_id)
+    if user is None or user.deleted_at is not None:
+        raise NotFoundError("USER_NOT_FOUND", "A'zo topilmadi.")
+    record_audit(db, actor_id=current.user.id, action="PASSPORT_PHOTO_REMOVE", entity_type="user", entity_id=user.id)
+    await passport_service.clear_photo(db, user)
+    return Response(status_code=204)

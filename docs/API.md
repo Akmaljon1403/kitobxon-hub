@@ -87,7 +87,7 @@ Blocking a user or removing admin rights has the same effect immediately.
 |---|---|---|
 | GET | `/health`, `/health/db`, `/health/redis` | Health checks |
 | GET | `/api/v1/meta` | App name, version, bot username |
-| GET | `/v/{code}` | HTML page behind the QR codes: checks a Kitobxon passport (`KH000042-XXXXXXXX`, HMAC-signed) or a certificate (10-character code). Shows only what is printed on the document; 60/min per IP |
+| GET | `/v/{code}` | HTML page behind the QR codes: checks a Kitobxon passport (`KH000042-XXXXXXXX`, HMAC-signed) or a certificate (10-character code). For a passport also the live results (points, overall and monthly place, books, events, tests, achievements, certificates); for a certificate only what is printed on it; 60/min per IP |
 | GET | `/api/v1/files/{token}` | A passport PNG or certificate PDF behind a signed link that expires after 5 minutes (made by `POST /me/downloads`); 30/min per IP |
 
 ### Authentication
@@ -130,7 +130,11 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/me/rewards` | My rewards (codes are never included in the list) |
 | POST | `/api/v1/me/rewards/{id}/code` | Reveal my promo code (only the recipient; marks it delivered) |
 | POST | `/api/v1/me/rewards/{id}/redeemed` | "I have used it" |
-| GET | `/api/v1/me/passport[?download=true]` | My Kitobxon passport as a PNG ID card (Telegram photo, stats, verification QR). 20 files/min |
+| GET | `/api/v1/me/passport[?download=true]` | My Kitobxon passport as a PNG ID card (own photo or Telegram photo, name, faculty, member number, QR). Points and ranking are not printed — the QR page shows them live. 20 files/min |
+| PUT / DELETE | `/api/v1/me/passport/photo` | Upload my own passport photo (multipart `file`, JPG/PNG/WEBP ≤ 10 MB; turned upright, cropped 4:5, metadata removed) / back to the Telegram picture |
+| GET | `/api/v1/me/passport/themes` | Card designs (`classic`, and for premium members `gold`, `midnight`, `ruby`) with the selected one |
+| PUT | `/api/v1/me/passport/theme` | `{"theme"}` — 403 `PREMIUM_REQUIRED` for a premium design |
+| GET | `/api/v1/me/stats` | «Statistikam» (premium by default): points per month (6), breakdown, ranking now and last month, attendance rate, test average, places, streak |
 | POST | `/api/v1/me/passport/send` | The bot sends the passport (PNG file) to my chat. 6/min; 409 `BOT_BLOCKED`, 503 `BOT_UNAVAILABLE` |
 | GET | `/api/v1/me/certificates` | My certificates (revoked ones are hidden) |
 | GET | `/api/v1/me/certificates/{id}/pdf` | Certificate PDF (A4 landscape) — only the owner |
