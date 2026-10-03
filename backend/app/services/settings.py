@@ -143,6 +143,25 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "payments.card_number", "", ShortText, "Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012"
     ),
     SettingDefinition("payments.card_holder", "", ShortText, "Karta egasining ismi (to'lovchi tekshirishi uchun)"),
+    SettingDefinition(
+        "payments.stars_packages",
+        [50, 100, 250, 500],
+        Annotated[list[Annotated[int, Field(ge=1, le=100_000)]], Field(max_length=8)],
+        "Karta orqali sotiladigan Stars to'plamlari (bo'sh — sotilmaydi)",
+    ),
+    SettingDefinition(
+        "payments.star_price_uzs",
+        250,
+        Annotated[int, Field(ge=0, le=10_000)],
+        "1 ta Stars narxi so'mda (Telegram'da sotib olish narxiga qarab; 0 — sotilmaydi)",
+    ),
+    # ---- Premium ----
+    SettingDefinition(
+        "premium.trial_days",
+        7,
+        Annotated[int, Field(ge=0, le=30)],
+        "Har bir a'zoga bir marta bepul Premium sinov (kun; 0 — sinov yo'q)",
+    ),
     # ---- Telegram channel (the bot posts there as an administrator) ----
     SettingDefinition(
         "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"

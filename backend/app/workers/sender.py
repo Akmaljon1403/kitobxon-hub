@@ -41,6 +41,7 @@ class SendReport:
     failed: int = 0
     retried: int = 0
     errors: list[str] = field(default_factory=list)
+    blocked: list[int] = field(default_factory=list)  # Telegram ids of members who blocked the bot
 
     @property
     def total(self) -> int:
@@ -131,7 +132,8 @@ async def send_due_notifications(
             is_critical = type_ in critical or notification.priority <= 1
             pref_field = PREFERENCE_FIELD.get(type_)
             stale_after = STALE_AFTER.get(type_)
-            if user is None or user.deleted_at is not None or user.status != UserStatus.ACTIVE:
+            deliver_anyway = bool((notification.payload or {}).get("deliver_to_inactive"))
+            if user is None or user.deleted_at is not None or (user.status != UserStatus.ACTIVE and not deliver_anyway):
                 _finish(notification, NotificationStatus.SKIPPED, "member is not active")
                 report.skipped += 1
             elif (
@@ -156,6 +158,13 @@ async def send_due_notifications(
                     await session.commit()
                     break
                 await asyncio.sleep(SEND_INTERVAL_SECONDS)
+            await session.commit()
+        if report.blocked:
+            # Blocking the bot means leaving the club: the data is kept 30 days for a return.
+            from app.services import membership
+
+            for telegram_id in set(report.blocked):
+                await membership.on_bot_blocked(session, telegram_id)
             await session.commit()
     if report.total:
         logger.info(
@@ -219,6 +228,8 @@ async def _deliver(
         _finish(notification, NotificationStatus.FAILED, str(exc))
         report.failed += 1
         report.errors.append(str(exc))
+        if isinstance(exc, TelegramForbiddenError) and "blocked" in str(exc).lower():
+            report.blocked.append(user.telegram_id)
         return None
     except Exception as exc:  # network problems, Telegram 5xx: try again later
         logger.warning("Notification %s not sent (attempt %s): %s", notification.id, notification.attempts, exc)

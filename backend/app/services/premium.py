@@ -22,21 +22,35 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.types import LabeledPrice
-from sqlalchemy import Select, exists, func, select
+from sqlalchemy import Select, Uuid, exists, func, literal, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.errors import AppError, BadRequestError, ConflictError, NotFoundError
-from app.models import Payment, PremiumPlan, PremiumSubscription, User
-from app.models.enums import FeatureMode, NotificationType, PaymentKind, PaymentStatus, PremiumSource, UserStatus
+from app.models import Payment, PremiumDiscount, PremiumPlan, PremiumSubscription, Role, User, UserRole
+from app.models.enums import (
+    FeatureMode,
+    NotificationType,
+    PaymentKind,
+    PaymentStatus,
+    PremiumSource,
+    SystemRole,
+    UserStatus,
+)
 from app.services import card_payments
 from app.services.audit import record_audit
 from app.services.notifications import active_members, enqueue_notification, render
-from app.utils.timezone import format_date
+from app.services.settings import get_setting
+from app.utils.timezone import format_date, local_tz
 
 CURRENCY = "XTR"
 # What every premium member gets in addition to the features the super admin made premium-only.
 PERKS: tuple[dict[str, str], ...] = (
-    {"icon": "🎨", "title": "Pasport dizaynlari", "description": "oltin, tungi ko'k va yoqut — 3 ta maxsus dizayn"},
+    {
+        "icon": "🎨",
+        "title": "Pasport dizaynlari",
+        "description": "oltin, kumush, tungi ko'k, yoqut, okean va lavanda — 6 ta maxsus dizayn",
+    },
     {"icon": "💎", "title": "Premium belgisi", "description": "reytingda ismingiz yonida va pasportingizda"},
     {"icon": "🎁", "title": "Sovg'a o'yinlarida 2 barobar imkoniyat", "description": "tasodifiy promokod o'yinlarida"},
     {
@@ -47,7 +61,8 @@ PERKS: tuple[dict[str, str], ...] = (
 )
 DONATION_AMOUNTS = (50, 100, 250, 500)
 MAX_DONATION = 10_000
-_PAYLOAD = re.compile(r"^(premium|donation):([0-9a-f]{32}|\d{1,6}):([0-9a-f]{32}):[0-9a-f]{8}$")
+_PAYLOAD = re.compile(r"^(premium|donation):([0-9a-f]{32}|\d{1,6}):([0-9a-f]{32}):[0-9a-f]{8}(?::([0-9a-f]{32}))?$")
+MAX_DISCOUNT = 90  # a bigger gift is Premium days, not a discount
 
 
 @dataclass(frozen=True)
@@ -56,14 +71,16 @@ class InvoicePayload:
     user_id: uuid.UUID
     plan_id: uuid.UUID | None = None
     amount: int | None = None
+    discount_id: uuid.UUID | None = None
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def premium_payload(plan: PremiumPlan, user: User) -> str:
-    return f"premium:{plan.id.hex}:{user.id.hex}:{secrets.token_hex(4)}"
+def premium_payload(plan: PremiumPlan, user: User, discount: PremiumDiscount | None = None) -> str:
+    suffix = f":{discount.id.hex}" if discount is not None else ""
+    return f"premium:{plan.id.hex}:{user.id.hex}:{secrets.token_hex(4)}{suffix}"
 
 
 def donation_payload(amount: int, user: User) -> str:
@@ -74,12 +91,17 @@ def parse_payload(payload: str) -> InvoicePayload | None:
     match = _PAYLOAD.match(payload or "")
     if not match:
         return None
-    kind, target, user_hex = match.groups()
+    kind, target, user_hex, discount_hex = match.groups()
     if kind == "premium":
         if len(target) != 32:
             return None
-        return InvoicePayload(PaymentKind.PREMIUM, uuid.UUID(hex=user_hex), plan_id=uuid.UUID(hex=target))
-    if len(target) == 32:
+        return InvoicePayload(
+            PaymentKind.PREMIUM,
+            uuid.UUID(hex=user_hex),
+            plan_id=uuid.UUID(hex=target),
+            discount_id=uuid.UUID(hex=discount_hex) if discount_hex else None,
+        )
+    if len(target) == 32 or discount_hex:
         return None
     return InvoicePayload(PaymentKind.DONATION, uuid.UUID(hex=user_hex), amount=int(target))
 
@@ -95,11 +117,49 @@ def _active_condition(now: datetime) -> Any:
     )
 
 
+# A gift "for life" ends on this date; super administrators are premium for life by their role.
+LIFETIME_UNTIL = datetime(2099, 12, 31, tzinfo=UTC)
+
+
+def lifetime_holders() -> Select[tuple[uuid.UUID]]:
+    """Super administrators run the club, so every Premium feature is always theirs."""
+    return select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.code == SystemRole.SUPER_ADMIN)
+
+
+def _subscribers(now: datetime) -> Select[tuple[uuid.UUID]]:
+    return select(PremiumSubscription.user_id).where(*_active_condition(now))
+
+
+def premium_condition(user_id_column: Any, now: datetime | None = None) -> Any:
+    """SQL condition: the user is premium now (a current period or a super administrator)."""
+    moment = now or _now()
+    return or_(user_id_column.in_(_subscribers(moment)), user_id_column.in_(lifetime_holders()))
+
+
 async def is_premium(session: AsyncSession, user_id: uuid.UUID) -> bool:
-    now = _now()
+    return bool(await session.scalar(select(premium_condition(literal(user_id, Uuid)))))
+
+
+async def is_lifetime(session: AsyncSession, user_id: uuid.UUID) -> bool:
+    if await session.scalar(select(lifetime_holders().where(UserRole.user_id == user_id).exists())):
+        return True
     return bool(
-        await session.scalar(select(exists().where(PremiumSubscription.user_id == user_id, *_active_condition(now))))
+        await session.scalar(
+            select(
+                exists().where(
+                    PremiumSubscription.user_id == user_id,
+                    PremiumSubscription.revoked_at.is_(None),
+                    PremiumSubscription.ends_at >= LIFETIME_UNTIL - timedelta(days=1),
+                )
+            )
+        )
     )
+
+
+async def premium_among(session: AsyncSession, user_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    if not user_ids:
+        return set()
+    return set(await session.scalars(select(User.id).where(User.id.in_(user_ids), premium_condition(User.id))))
 
 
 async def premium_until(session: AsyncSession, user_id: uuid.UUID) -> datetime | None:
@@ -115,15 +175,11 @@ async def premium_until(session: AsyncSession, user_id: uuid.UUID) -> datetime |
 
 def premium_members() -> Select[tuple[uuid.UUID]]:
     """Active members who are premium right now (for messages)."""
-    now = _now()
-    current = select(PremiumSubscription.user_id).where(*_active_condition(now))
-    return active_members().where(User.id.in_(current))
+    return active_members().where(premium_condition(User.id))
 
 
 def non_premium_members() -> Select[tuple[uuid.UUID]]:
-    now = _now()
-    current = select(PremiumSubscription.user_id).where(*_active_condition(now))
-    return active_members().where(User.id.not_in(current))
+    return active_members().where(~premium_condition(User.id))
 
 
 async def _extend(
@@ -169,31 +225,176 @@ async def _tell(session: AsyncSession, user_id: uuid.UUID, message: str, dedup_k
 
 
 async def grant(
-    session: AsyncSession, *, actor_id: uuid.UUID, user_id: uuid.UUID, days: int, note: str | None
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    user_id: uuid.UUID,
+    days: int | None,
+    note: str | None,
+    lifetime: bool = False,
 ) -> PremiumSubscription:
-    """Premium given by an administrator (a prize, paid in cash, a gift)."""
+    """Premium given by an administrator (a prize, paid in cash, a gift) — for N days or for life."""
     user = await session.get(User, user_id)
     if user is None or user.deleted_at is not None:
         raise NotFoundError("USER_NOT_FOUND", "A'zo topilmadi.")
-    subscription = await _extend(
-        session, user_id=user_id, days=days, source=PremiumSource.MANUAL, granted_by=actor_id, note=note
-    )
+    if lifetime:
+        subscription = PremiumSubscription(
+            user_id=user_id,
+            source=PremiumSource.MANUAL,
+            starts_at=_now(),
+            ends_at=LIFETIME_UNTIL,
+            granted_by=actor_id,
+            note=note,
+        )
+        session.add(subscription)
+        await session.flush()
+        message = "Sizga umrbod Premium a'zolik sovg'a qilindi! ♾ Barcha Premium imkoniyatlari endi doim siz bilan."
+    else:
+        if not days:
+            raise BadRequestError("DAYS_REQUIRED", "Kunlar sonini kiriting yoki «Umrbod»ni tanlang.")
+        subscription = await _extend(
+            session, user_id=user_id, days=days, source=PremiumSource.MANUAL, granted_by=actor_id, note=note
+        )
+        until = format_date(subscription.ends_at)
+        message = f"Sizga {days} kunlik Premium a'zolik sovg'a qilindi! Amal qiladi: {until} gacha."
     record_audit(
         session,
         actor_id=actor_id,
         action="PREMIUM_GRANT",
         entity_type="premium_subscription",
         entity_id=subscription.id,
-        after={"user_id": str(user_id), "days": days, "note": note},
+        after={"user_id": str(user_id), "days": days, "lifetime": lifetime, "note": note},
+    )
+    await _tell(session, user_id, message, f"premium:grant:{subscription.id}")
+    await session.commit()
+    return subscription
+
+
+# ---------------------------------------------------------------------------- trial, discounts
+
+
+async def trial_days(session: AsyncSession, user: User) -> int:
+    """Days of the free trial the member can still start (0: not offered or already used)."""
+    from app.services import features
+
+    days = int(await get_setting(session, "premium.trial_days"))
+    if days <= 0 or await features.mode(session, "premium") == FeatureMode.OFF:
+        return 0
+    if await is_lifetime(session, user.id):
+        return 0
+    had = await session.scalar(select(exists().where(PremiumSubscription.user_id == user.id)))
+    return 0 if had else days
+
+
+async def start_trial(session: AsyncSession, user: User) -> PremiumSubscription:
+    """The member's one free trial: every Premium feature for a few days, no payment."""
+    await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"trial:{user.id}"))))
+    days = await trial_days(session, user)
+    if not days:
+        raise ConflictError("TRIAL_UNAVAILABLE", "Bepul sinov muddatidan allaqachon foydalangansiz.")
+    subscription = await _extend(session, user_id=user.id, days=days, source=PremiumSource.TRIAL, note="sinov")
+    record_audit(
+        session,
+        actor_id=user.id,
+        action="PREMIUM_TRIAL",
+        entity_type="premium_subscription",
+        entity_id=subscription.id,
+        after={"days": days},
     )
     await _tell(
         session,
-        user_id,
-        f"Sizga {days} kunlik Premium a'zolik sovg'a qilindi! Amal qiladi: {format_date(subscription.ends_at)} gacha.",
-        f"premium:grant:{subscription.id}",
+        user.id,
+        f"🎁 {days} kunlik bepul Premium boshlandi! Oltin pasport, to'liq reyting, sertifikat PDF va boshqa "
+        f"imkoniyatlarni sinab ko'ring. Sinov {format_date(subscription.ends_at)} gacha — pul yechilmaydi.",
+        f"premium:trial:{user.id}",
     )
     await session.commit()
     return subscription
+
+
+def _usable(discount: PremiumDiscount | None, user_id: uuid.UUID) -> bool:
+    return (
+        discount is not None
+        and discount.user_id == user_id
+        and discount.used_at is None
+        and discount.valid_until > _now()
+    )
+
+
+async def active_discount(session: AsyncSession, user_id: uuid.UUID) -> PremiumDiscount | None:
+    """The member's best unused, unexpired personal discount."""
+    return await session.scalar(
+        select(PremiumDiscount)
+        .where(
+            PremiumDiscount.user_id == user_id,
+            PremiumDiscount.used_at.is_(None),
+            PremiumDiscount.valid_until > _now(),
+        )
+        .order_by(PremiumDiscount.percent.desc(), PremiumDiscount.valid_until)
+        .limit(1)
+    )
+
+
+async def give_discount(
+    session: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    percent: int,
+    days: int,
+    note: str,
+    giveaway_id: uuid.UUID | None = None,
+) -> PremiumDiscount:
+    """A personal Premium discount (the caller commits); the member is told."""
+    if not 1 <= percent <= MAX_DISCOUNT:
+        raise BadRequestError("DISCOUNT_RANGE", f"Chegirma 1% dan {MAX_DISCOUNT}% gacha bo'lishi mumkin.")
+    discount = PremiumDiscount(
+        user_id=user_id,
+        percent=percent,
+        valid_until=_now() + timedelta(days=days),
+        note=note[:255],
+        giveaway_id=giveaway_id,
+    )
+    session.add(discount)
+    await session.flush()
+    return discount
+
+
+async def remind_expiring(session: AsyncSession, now: datetime | None = None) -> int:
+    """Scheduler job: one friendly message the day before a Premium period (or the trial) ends,
+    unless the member already has the next period. Only in the daytime."""
+    now = now or _now()
+    local = now.astimezone(local_tz())
+    if not 10 <= local.hour < 20:
+        return 0
+    later = aliased(PremiumSubscription)
+    ending = list(
+        await session.scalars(
+            select(PremiumSubscription).where(
+                PremiumSubscription.revoked_at.is_(None),
+                PremiumSubscription.ends_at > now,
+                PremiumSubscription.ends_at <= now + timedelta(hours=26),
+                ~exists().where(
+                    later.user_id == PremiumSubscription.user_id,
+                    later.revoked_at.is_(None),
+                    later.ends_at > PremiumSubscription.ends_at,
+                ),
+                PremiumSubscription.user_id.not_in(lifetime_holders()),
+            )
+        )
+    )
+    for subscription in ending:
+        if subscription.source == PremiumSource.TRIAL:
+            message = (
+                "🎁 Bepul Premium sinovingiz ertaga tugaydi. Yoqdimi? Davom ettirish arzon — oyiga bir piyola choy "
+                "narxida. Tanlash: 💎 Premium bo'limi."
+            )
+        else:
+            message = (
+                f"Premium muddatingiz {format_date(subscription.ends_at)} da tugaydi. Davom ettirmoqchi bo'lsangiz — "
+                "💎 Premium bo'limidan uzaytirishingiz mumkin. Klubni qo'llab-quvvatlaganingiz uchun rahmat!"
+            )
+        await _tell(session, subscription.user_id, message, f"premium:ending:{subscription.id}")
+    return len(ending)
 
 
 async def revoke_subscription(
@@ -257,14 +458,23 @@ async def update_plan(
 # ---------------------------------------------------------------------------- invoices and payments
 
 
-def plan_invoice(plan: PremiumPlan, user: User) -> dict[str, Any]:
+def discounted(price: int, percent: int | None) -> int:
+    """The price after a personal discount (never below 1)."""
+    if not percent:
+        return price
+    return max(1, round(price * (100 - percent) / 100))
+
+
+def plan_invoice(plan: PremiumPlan, user: User, discount: PremiumDiscount | None = None) -> dict[str, Any]:
     """Arguments for Telegram's sendInvoice / createInvoiceLink."""
+    stars = discounted(plan.stars, discount.percent if discount else None)
+    label = f"Premium {plan.title}" + (f" (−{discount.percent}%)" if discount else "")
     return {
         "title": f"Kitobxon Premium — {plan.title}",
         "description": plan.description or f"{plan.days} kunlik Premium a'zolik",
-        "payload": premium_payload(plan, user),
+        "payload": premium_payload(plan, user, discount),
         "currency": CURRENCY,
-        "prices": [LabeledPrice(label=f"Premium {plan.title}", amount=plan.stars)],
+        "prices": [LabeledPrice(label=label, amount=stars)],
     }
 
 
@@ -286,7 +496,7 @@ async def invoice_link(
     """A t.me/$... link the Mini App opens with ``Telegram.WebApp.openInvoice``."""
     if plan_id is not None:
         await _ensure_on_sale(session, "premium")
-        arguments = plan_invoice(await get_plan(session, plan_id), user)
+        arguments = plan_invoice(await get_plan(session, plan_id), user, await active_discount(session, user.id))
     elif amount is not None:
         await _ensure_on_sale(session, "donations")
         arguments = donation_invoice(amount, user)
@@ -317,7 +527,13 @@ async def check_pre_checkout(
             await _ensure_on_sale(session, "premium")
             assert parsed.plan_id is not None
             plan = await get_plan(session, parsed.plan_id)
-            if plan.stars != total_amount:
+            percent = None
+            if parsed.discount_id is not None:
+                discount = await session.get(PremiumDiscount, parsed.discount_id)
+                if not _usable(discount, user.id):
+                    return "Chegirma muddati tugagan yoki ishlatilgan. Iltimos, qaytadan tanlang."
+                percent = discount.percent  # type: ignore[union-attr]
+            if discounted(plan.stars, percent) != total_amount:
                 return "Tarif narxi o'zgargan. Iltimos, qaytadan tanlang."
         else:
             await _ensure_on_sale(session, "donations")
@@ -362,6 +578,11 @@ async def record_payment(
     session.add(payment)
     await session.flush()
     subscription = None
+    if parsed.discount_id is not None:
+        discount = await session.get(PremiumDiscount, parsed.discount_id)
+        if discount is not None and discount.used_at is None:
+            discount.used_at = _now()
+            discount.used_for = f"payment:{payment.id}"
     if parsed.kind == PaymentKind.PREMIUM:
         subscription = await _extend(
             session,
@@ -425,9 +646,18 @@ async def member_status(session: AsyncSession, user: User) -> dict[str, Any]:
         for feature in features.FEATURES
         if current_modes[feature.code] == FeatureMode.PREMIUM
     ]
+    discount = await active_discount(session, user.id)
+    percent = discount.percent if discount else None
     return {
         "is_premium": await is_premium(session, user.id),
+        "lifetime": await is_lifetime(session, user.id),
         "until": await premium_until(session, user.id),
+        "trial_days": await trial_days(session, user),
+        "discount": (
+            {"percent": discount.percent, "valid_until": discount.valid_until, "note": discount.note}
+            if discount
+            else None
+        ),
         "store_open": current_modes["premium"] != FeatureMode.OFF,
         "donations_open": current_modes["donations"] != FeatureMode.OFF,
         "plans": [
@@ -438,10 +668,13 @@ async def member_status(session: AsyncSession, user: User) -> dict[str, Any]:
                 "stars": plan.stars,
                 "days": plan.days,
                 "price_uzs": plan.price_uzs,
+                "stars_now": discounted(plan.stars, percent),
+                "price_uzs_now": card_payments.discounted_uzs(plan.price_uzs, percent),
             }
             for plan in await list_plans(session)
         ],
         "card": await card_payments.card_details(session),
+        "stars_packages": await card_payments.stars_offer(session),
         "donation_amounts": list(DONATION_AMOUNTS),
         "premium_features": premium_features,
         "perks": [dict(perk) for perk in PERKS],
@@ -464,10 +697,7 @@ async def overview(session: AsyncSession) -> dict[str, Any]:
 
     return {
         "premium_members": int(
-            await session.scalar(
-                select(func.count(func.distinct(PremiumSubscription.user_id))).where(*_active_condition(now))
-            )
-            or 0
+            await session.scalar(select(func.count()).select_from(premium_members().subquery())) or 0
         ),
         "stars_total": await total(),
         "stars_this_month": await total(Payment.created_at >= month_start),

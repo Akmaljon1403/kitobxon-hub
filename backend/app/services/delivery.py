@@ -72,3 +72,15 @@ async def send_certificate(bot: Bot, session: AsyncSession, user: User, certific
         BufferedInputFile(data, filename=certificate_service.filename(certificate)),
         caption=f"🎓 <b>{html.escape(certificate.title, quote=False)}</b>",
     )
+
+
+async def send_portfolio(bot: Bot, session: AsyncSession, user: User) -> None:
+    from app.services import portfolio
+
+    data = await portfolio.render_pdf(session, user)
+    await bot.send_document(
+        user.telegram_id,
+        BufferedInputFile(data, filename=portfolio.filename(user)),
+        caption="🗂 <b>Kitobxonlik portfoliosi</b> — klubdagi barcha natijalaringiz bitta hujjatda. "
+        "Rezyume va grant arizalariga ilova qilishingiz mumkin.",
+    )

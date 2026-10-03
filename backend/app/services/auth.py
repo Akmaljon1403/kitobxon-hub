@@ -48,6 +48,7 @@ _STATUS_ERRORS: dict[UserStatus, tuple[str, str]] = {
     UserStatus.BLOCKED: ("USER_BLOCKED", "Hisobingiz bloklangan. Savollar bo'lsa, klub rahbariyatiga murojaat qiling."),
     UserStatus.PENDING: ("USER_PENDING", "Arizangiz ko'rib chiqilmoqda. Tasdiqlangach, sizga xabar beramiz."),
     UserStatus.INACTIVE: ("USER_INACTIVE", "Hisobingiz faol emas. Klub rahbariyatiga murojaat qiling."),
+    UserStatus.LEFT: ("USER_LEFT", "Siz klubdan chiqqansiz. Qaytish uchun botda /start bosing."),
 }
 
 

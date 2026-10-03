@@ -138,17 +138,17 @@ def passport(*, own_photo: bool = False) -> InlineKeyboardMarkup | None:
 
 def passport_themes(themes: list[tuple[str, str, bool]]) -> InlineKeyboardMarkup | None:
     """themes: (code, title, selected)."""
-    return inline(
-        *[
-            [InlineKeyboardButton(text=f"{'✅ ' if selected else ''}{title}", callback_data=f"pp:theme:{code}")]
-            for code, title, selected in themes
-        ]
-    )
+    buttons = [
+        InlineKeyboardButton(text=f"{'✅ ' if selected else ''}{title}", callback_data=f"pp:theme:{code}")
+        for code, title, selected in themes
+    ]
+    return inline(*[buttons[index : index + 2] for index in range(0, len(buttons), 2)])
 
 
 def achievements() -> InlineKeyboardMarkup | None:
     return inline(
         [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [InlineKeyboardButton(text=texts.BTN_PORTFOLIO, callback_data="pf:get")],
         [app_button("achievements", texts.BTN_MORE)],
     )
 
@@ -181,9 +181,14 @@ def premium_offer() -> InlineKeyboardMarkup | None:
     return inline([InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")])
 
 
-def premium_plans(plans: list[tuple[str, str]], *, donations: bool, card: bool = False) -> InlineKeyboardMarkup | None:
+def premium_plans(
+    plans: list[tuple[str, str]], *, donations: bool, card: bool = False, trial_days: int = 0
+) -> InlineKeyboardMarkup | None:
     """plans: (plan id hex, button text)."""
     return inline(
+        [InlineKeyboardButton(text=texts.BTN_TRIAL.format(days=trial_days), callback_data="prem:trial")]
+        if trial_days
+        else [],
         *[[InlineKeyboardButton(text=label, callback_data=f"prem:buy:{plan_id}")] for plan_id, label in plans],
         [InlineKeyboardButton(text=texts.BTN_PAY_CARD, callback_data="card:open")] if card else [],
         [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
@@ -191,12 +196,20 @@ def premium_plans(plans: list[tuple[str, str]], *, donations: bool, card: bool =
     )
 
 
-def card_plans(plans: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
-    """plans: (plan id hex, button text); the last button is a donation of any amount."""
+def card_plans(plans: list[tuple[str, str]], stars: list[tuple[int, str]] | None = None) -> InlineKeyboardMarkup | None:
+    """plans: (plan id hex, button text); stars: (amount, button text); the last button is a donation."""
+    star_buttons = [
+        InlineKeyboardButton(text=label, callback_data=f"card:stars:{amount}") for amount, label in stars or []
+    ]
     return inline(
         *[[InlineKeyboardButton(text=label, callback_data=f"card:plan:{plan_id}")] for plan_id, label in plans],
+        *[star_buttons[index : index + 2] for index in range(0, len(star_buttons), 2)],
         [InlineKeyboardButton(text=texts.CARD_DONATE, callback_data="card:don")],
     )
+
+
+def stars_sent(payment_hex: str) -> InlineKeyboardMarkup | None:
+    return inline([InlineKeyboardButton(text=texts.BTN_STARS_SENT, callback_data=f"cp:sent:{payment_hex}")])
 
 
 def card_decision(payment_hex: str) -> InlineKeyboardMarkup | None:
@@ -222,6 +235,7 @@ def settings_menu(settings: UserNotificationSettings) -> InlineKeyboardMarkup:
         enabled = bool(getattr(settings, field))
         rows.append([InlineKeyboardButton(text=f"{'✅' if enabled else '❌'} {label}", callback_data=f"ntf:{field}")])
     rows.append([app_button("profile", texts.BTN_EDIT_PROFILE)])
+    rows.append([InlineKeyboardButton(text=texts.BTN_LEAVE, callback_data="mem:leave")])
     markup = inline(*rows)
     assert markup is not None
     return markup

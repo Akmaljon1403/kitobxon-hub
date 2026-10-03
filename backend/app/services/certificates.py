@@ -100,26 +100,40 @@ async def issue(
         return None
     certificate = await session.get(Certificate, new_id)
     assert certificate is not None
-    text = await render(
-        session,
-        NotificationType.CERTIFICATE,
-        title=title,
-        details=f"Tekshirish kodi: {display_code(certificate.verify_code)}",
-    )
+    with_pdf = await _pdf_allowed(session, user_id)
+    details = f"Tekshirish kodi: {display_code(certificate.verify_code)}"
+    if not with_pdf:
+        link = verify_url(certificate.verify_code)
+        details += "\n\n📄 PDF nusxasini yuklab olish va chop etish — 💎 Premium imkoniyati." + (
+            f"\nSertifikatingiz onlayn tasdiqlangan — ushbu havolani istalgan kishiga ko'rsating: {link}"
+            if link
+            else ""
+        )
+    text = await render(session, NotificationType.CERTIFICATE, title=title, details=details)
     if text is not None:
+        buttons: list[dict[str, Any]] = [{"text": "🎓 Sertifikatlarim", "app_route": "certificates"}]
+        if not with_pdf:
+            buttons.append({"text": "💎 Premium", "app_route": "premium"})
+        payload: dict[str, Any] = {"buttons": buttons}
+        if with_pdf:
+            payload["certificate_id"] = str(certificate.id)
         await enqueue_notification(
             session,
             user_id=user_id,
             type_=NotificationType.CERTIFICATE,
             text=text,
             dedup_key=f"certificate:{certificate.id}",
-            payload={
-                "certificate_id": str(certificate.id),
-                "buttons": [{"text": "🎓 Sertifikatlarim", "app_route": "certificates"}],
-            },
+            payload=payload,
             priority=2,
         )
     return certificate
+
+
+async def _pdf_allowed(session: AsyncSession, user_id: uuid.UUID) -> bool:
+    from app.services import features
+
+    user = await session.get(User, user_id)
+    return user is not None and await features.allowed(session, user, "certificate_pdf") == "on"
 
 
 async def _attended(session: AsyncSession, event_id: uuid.UUID) -> set[uuid.UUID]:

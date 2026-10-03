@@ -13,6 +13,9 @@ const TITLES: Record<string, string> = {
   rewards: "🎁 Sovg'alar",
   weekly_digest: '📊 Haftalik xulosa',
   personal_stats: '📈 Shaxsiy statistika',
+  ranking_full: "🏆 To'liq reyting",
+  certificate_pdf: '📄 Sertifikat PDF',
+  portfolio: '🗂 Kitobxonlik portfoliosi',
 }
 
 export function useFeature(code: string): FeatureAccess {

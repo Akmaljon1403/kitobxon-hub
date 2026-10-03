@@ -13,7 +13,7 @@ from app.core.errors import NotFoundError
 from app.security.crypto import constant_time_equals, keyed_hash
 
 TTL_SECONDS = 300
-KINDS = ("passport", "certificate")
+KINDS = ("passport", "certificate", "portfolio")
 
 
 def _signature(body: str) -> str:

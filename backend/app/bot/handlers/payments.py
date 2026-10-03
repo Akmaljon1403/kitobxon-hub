@@ -32,11 +32,16 @@ def _active(member: User | None) -> bool:
 
 async def _premium_text(db: AsyncSession, member: User) -> str:
     status = await premium_service.member_status(db, member)
-    current = (
-        texts.PREMIUM_STATUS_ON.format(until=format_date(status["until"]))
-        if status["is_premium"] and status["until"]
-        else texts.PREMIUM_STATUS_OFF
-    )
+    if status["lifetime"]:
+        current = texts.PREMIUM_STATUS_LIFETIME
+    elif status["is_premium"] and status["until"]:
+        current = texts.PREMIUM_STATUS_ON.format(until=format_date(status["until"]))
+    else:
+        current = texts.PREMIUM_STATUS_OFF
+    if status["discount"]:
+        current += "\n" + texts.PREMIUM_DISCOUNT.format(
+            percent=status["discount"]["percent"], until=format_date(status["discount"]["valid_until"])
+        )
     perks = [
         texts.PREMIUM_PERK.format(title=f["title"], description=f["description"]) for f in status["premium_features"]
     ]
@@ -53,12 +58,21 @@ async def show_premium(message: Message, db: AsyncSession, member: User) -> None
         return
     plans = await premium_service.list_plans(db)
     donations = await features.mode(db, "donations") != FeatureMode.OFF
+    discount = await premium_service.active_discount(db, member.id)
+
+    def label(plan: Any) -> str:
+        if discount is None:
+            return texts.PREMIUM_PLAN.format(title=plan.title, stars=plan.stars)
+        stars = premium_service.discounted(plan.stars, discount.percent)
+        return texts.PREMIUM_PLAN_DISCOUNT.format(title=plan.title, stars=stars, percent=discount.percent)
+
     await message.answer(
         await _premium_text(db, member),
         reply_markup=keyboards.premium_plans(
-            [(plan.id.hex, texts.PREMIUM_PLAN.format(title=plan.title, stars=plan.stars)) for plan in plans],
+            [(plan.id.hex, label(plan)) for plan in plans],
             donations=donations,
             card=await card_payments.card_details(db) is not None,
+            trial_days=await premium_service.trial_days(db, member),
         ),
     )
 
@@ -97,7 +111,29 @@ async def premium_buy(callback: CallbackQuery, db: AsyncSession, member: User | 
         await callback.answer(getattr(exc, "message", texts.PREMIUM_CLOSED), show_alert=True)
         return
     await callback.answer()
-    await callback.bot.send_invoice(chat_id=callback.message.chat.id, **premium_service.plan_invoice(plan, member))
+    discount = await premium_service.active_discount(db, member.id)
+    await callback.bot.send_invoice(
+        chat_id=callback.message.chat.id, **premium_service.plan_invoice(plan, member, discount)
+    )
+
+
+@router.callback_query(F.data == "prem:trial")
+async def premium_trial(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    if not _active(member) or not isinstance(callback.message, Message):
+        await callback.answer()
+        return
+    assert member is not None
+    try:
+        subscription = await premium_service.start_trial(db, member)
+    except AppError as exc:
+        await callback.answer(exc.message, show_alert=True)
+        return
+    await callback.answer("🎉")
+    days = (subscription.ends_at - subscription.starts_at).days
+    await callback.message.answer(
+        texts.TRIAL_STARTED.format(days=days, until=format_date(subscription.ends_at)),
+        reply_markup=await access.menu(db, member),
+    )
 
 
 @router.callback_query(F.data == "don:open")
@@ -190,17 +226,20 @@ async def card_open(callback: CallbackQuery, db: AsyncSession, member: User | No
     if await card_payments.card_details(db) is None:
         await callback.message.answer(texts.CARD_OFF)
         return
-    plans = [plan for plan in await premium_service.list_plans(db) if plan.price_uzs]
-    await callback.message.answer(
-        texts.CARD_CHOOSE,
-        reply_markup=keyboards.card_plans(
-            [
-                (plan.id.hex, texts.CARD_PLAN.format(title=plan.title, price=card_payments.format_uzs(plan.price_uzs)))
-                for plan in plans
-                if plan.price_uzs
-            ]
-        ),
-    )
+    assert member is not None
+    discount = await premium_service.active_discount(db, member.id)
+    store_open = await features.mode(db, "premium") != FeatureMode.OFF
+    plans = [plan for plan in await premium_service.list_plans(db) if plan.price_uzs] if store_open else []
+    labels = []
+    for plan in plans:
+        price = card_payments.discounted_uzs(plan.price_uzs, discount.percent if discount else None)
+        assert price is not None
+        labels.append((plan.id.hex, texts.CARD_PLAN.format(title=plan.title, price=card_payments.format_uzs(price))))
+    stars = [
+        (item["stars"], texts.CARD_STARS.format(stars=item["stars"], price=card_payments.format_uzs(item["price_uzs"])))
+        for item in await card_payments.stars_offer(db)
+    ]
+    await callback.message.answer(texts.CARD_CHOOSE, reply_markup=keyboards.card_plans(labels, stars))
 
 
 async def _instructions(message: Message, db: AsyncSession, what: str, price: str) -> bool:
@@ -232,9 +271,29 @@ async def card_plan(callback: CallbackQuery, state: FSMContext, db: AsyncSession
     if not plan.price_uzs:
         await callback.message.answer(texts.CARD_OFF)
         return
-    if await _instructions(callback.message, db, f"Premium {plan.title}", card_payments.format_uzs(plan.price_uzs)):
+    assert member is not None
+    discount = await premium_service.active_discount(db, member.id)
+    price = card_payments.discounted_uzs(plan.price_uzs, discount.percent if discount else None)
+    assert price is not None
+    if await _instructions(callback.message, db, f"Premium {plan.title}", card_payments.format_uzs(price)):
         await state.set_state(CardReceipt.waiting)
-        await state.update_data(plan_id=plan.id.hex)
+        await state.set_data({"plan_id": plan.id.hex})
+
+
+@router.callback_query(F.data.startswith("card:stars:"))
+async def card_stars(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    await callback.answer()
+    if not _active(member) or not isinstance(callback.message, Message):
+        return
+    amount = (callback.data or "").removeprefix("card:stars:")
+    package = next((item for item in await card_payments.stars_offer(db) if str(item["stars"]) == amount), None)
+    if package is None:
+        await callback.message.answer(texts.CARD_OFF)
+        return
+    what = f"{package['stars']} Telegram Stars"
+    if await _instructions(callback.message, db, what, card_payments.format_uzs(package["price_uzs"])):
+        await state.set_state(CardReceipt.waiting)
+        await state.set_data({"stars": package["stars"]})
 
 
 @router.callback_query(F.data == "card:don")
@@ -258,7 +317,7 @@ async def card_donation_amount(message: Message, state: FSMContext, db: AsyncSes
         return
     if await _instructions(message, db, "Klubga hissa", card_payments.format_uzs(amount)):
         await state.set_state(CardReceipt.waiting)
-        await state.update_data(amount_uzs=amount)
+        await state.set_data({"amount_uzs": amount})
 
 
 @router.message(StateFilter(CardReceipt.waiting), F.photo | F.document)
@@ -281,6 +340,7 @@ async def card_receipt(message: Message, state: FSMContext, db: AsyncSession, me
             receipt=buffer.read() if buffer else b"",
             plan_id=uuid.UUID(hex=data["plan_id"]) if data.get("plan_id") else None,
             amount_uzs=data.get("amount_uzs"),
+            stars=data.get("stars"),
         )
     except AppError as exc:
         await message.answer(exc.message)
@@ -311,7 +371,12 @@ async def _decision_target(callback: CallbackQuery, db: AsyncSession, member: Us
 async def _describe(db: AsyncSession, payment: Any) -> tuple[str, str, str]:
     user = await db.get(User, payment.user_id)
     plan = await premium_service.get_plan(db, payment.plan_id, active=False) if payment.plan_id else None
-    what = f"Premium {plan.title}" if plan else "Hissa"
+    if plan:
+        what = f"Premium {plan.title}"
+    elif payment.kind == PaymentKind.STARS:
+        what = f"{payment.stars} Telegram Stars"
+    else:
+        what = "Hissa"
     name = f"{user.last_name} {user.first_name}" if user else "—"
     return what, name, card_payments.format_uzs(payment.amount_uzs)
 
@@ -347,8 +412,32 @@ async def card_approve(callback: CallbackQuery, db: AsyncSession, member: User |
         return
     _, name, price = await _describe(db, payment)
     await callback.answer("✅")
+    if not isinstance(callback.message, Message):
+        return
+    await callback.message.answer(texts.CARD_APPROVED.format(name=html.escape(name), price=price))
+    if payment.kind == PaymentKind.STARS:
+        user = await db.get(User, payment.user_id)
+        assert user is not None
+        await callback.message.answer(
+            card_payments.gift_steps(payment, user), reply_markup=keyboards.stars_sent(payment.id.hex)
+        )
+
+
+@router.callback_query(F.data.startswith("cp:sent:"))
+async def card_stars_sent(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    payment = await _decision_target(callback, db, member, "cp:sent:")
+    if payment is None:
+        return
+    assert member is not None
+    try:
+        await card_payments.mark_delivered(db, actor_id=member.id, payment_id=payment.id)
+    except AppError as exc:
+        await callback.answer(exc.message, show_alert=True)
+        return
+    _, name, _ = await _describe(db, payment)
+    await callback.answer("⭐")
     if isinstance(callback.message, Message):
-        await callback.message.answer(texts.CARD_APPROVED.format(name=html.escape(name), price=price))
+        await callback.message.answer(texts.CARD_STARS_DELIVERED.format(name=html.escape(name), stars=payment.stars))
 
 
 @router.callback_query(F.data.startswith("cp:no:"))

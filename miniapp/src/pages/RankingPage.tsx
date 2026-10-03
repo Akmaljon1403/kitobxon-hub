@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { FeatureLocked, useFeature } from '../components/FeatureGate'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -58,10 +59,12 @@ function Segmented<T extends string>({
   options,
   value,
   onChange,
+  locked = [],
 }: {
   options: { value: T; label: string }[]
   value: T
   onChange: (value: T) => void
+  locked?: T[]
 }) {
   return (
     <div className="grid gap-1 rounded-xl bg-app-bg p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="tablist">
@@ -75,6 +78,7 @@ function Segmented<T extends string>({
           className={`truncate rounded-lg px-1 py-2 text-[13px] font-medium ${value === option.value ? 'bg-app-button text-app-button-text' : 'text-app-hint'}`}
         >
           {option.label}
+          {locked.includes(option.value) && ' 💎'}
         </button>
       ))}
     </div>
@@ -159,12 +163,32 @@ function FacultyBoard({ period }: { period: Period }) {
 export function RankingPage() {
   const [period, setPeriod] = useState<Period>('week')
   const [scope, setScope] = useState<Scope>('all')
+  // This week's club-wide ranking is free; the other tabs are the «ranking_full» feature.
+  const full = useFeature('ranking_full')
+  const periods = full === 'off' ? PERIODS.filter((p) => p.value === 'week') : PERIODS
+  const scopes = full === 'off' ? SCOPES.filter((s) => s.value === 'all') : SCOPES
+  const isFree = period === 'week' && scope === 'all'
   return (
     <>
       <h1 className="px-1 pt-1 text-xl font-semibold">🏆 Reyting</h1>
-      <Segmented options={PERIODS} value={period} onChange={setPeriod} />
-      <Segmented options={SCOPES} value={scope} onChange={setScope} />
-      {scope === 'faculties' ? <FacultyBoard period={period} /> : <Leaderboard period={period} scope={scope} />}
+      {periods.length > 1 && (
+        <Segmented options={periods} value={period} onChange={setPeriod} locked={full === 'premium' ? ['month', 'all'] : []} />
+      )}
+      {scopes.length > 1 && (
+        <Segmented
+          options={scopes}
+          value={scope}
+          onChange={setScope}
+          locked={full === 'premium' ? ['faculty', 'group', 'faculties'] : []}
+        />
+      )}
+      {!isFree && full !== 'on' ? (
+        <FeatureLocked code="ranking_full" access={full} />
+      ) : scope === 'faculties' ? (
+        <FacultyBoard period={period} />
+      ) : (
+        <Leaderboard period={period} scope={scope} />
+      )}
       <p className="px-2 text-center text-xs text-app-hint">
         Teng ballarda: davomat bali, keyin test bali, keyin ballni avvalroq to'plagan yuqorida turadi.
       </p>

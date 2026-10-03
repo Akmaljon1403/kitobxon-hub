@@ -238,7 +238,9 @@ async def certificate_list(callback: CallbackQuery, db: AsyncSession, member: Us
 
 @router.callback_query(F.data.startswith("cert:get:"))
 async def certificate_file(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
-    if await access.gate(callback, db, member, "certificates"):
+    if await access.gate(callback, db, member, "certificates") or await access.gate(
+        callback, db, member, "certificate_pdf"
+    ):
         return
     try:
         certificate_id = uuid.UUID((callback.data or "").removeprefix("cert:get:"))
@@ -254,6 +256,24 @@ async def certificate_file(callback: CallbackQuery, db: AsyncSession, member: Us
         await callback.answer(texts.FILE_FAILED, show_alert=True)
         return
     await callback.answer(texts.FILE_SENT)
+
+
+@router.message(Command("portfolio"))
+@router.callback_query(F.data == "pf:get")
+async def portfolio_file(event: Message | CallbackQuery, db: AsyncSession, member: User) -> None:
+    """«Kitobxonlik portfoliosi»: all results in one PDF (Premium by default)."""
+    if await access.gate(event, db, member, "portfolio"):
+        return
+    message = event.message if isinstance(event, CallbackQuery) else event
+    if isinstance(event, CallbackQuery):
+        await event.answer(texts.PORTFOLIO_PREPARING)
+    if not isinstance(message, Message) or message.bot is None:
+        return
+    try:
+        await delivery.send_portfolio(message.bot, db, member)
+    except Exception:
+        logger.exception("Portfolio failed for %s", member.id)
+        await message.answer(texts.FILE_FAILED)
 
 
 # ---------------------------------------------------------------------------- attendance

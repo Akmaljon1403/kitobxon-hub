@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, UUIDPrimaryKeyMixin, enum_column
-from app.models.enums import ChannelPostKind, ChannelPostStatus
+from app.models.enums import ChannelPostKind, ChannelPostStatus, StickerMood
 
 
 class ChannelPost(UUIDPrimaryKeyMixin, Base):
@@ -35,6 +35,9 @@ class ChannelPost(UUIDPrimaryKeyMixin, Base):
     sent_at: Mapped[datetime | None] = mapped_column()
     message_id: Mapped[int | None] = mapped_column(BigInteger)
     last_error: Mapped[str | None] = mapped_column(Text)
+    # Automatic posts are shown to the admins first (5 minutes); who approved or edited it, and when.
+    reviewed_at: Mapped[datetime | None] = mapped_column()
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -49,5 +52,9 @@ class ChannelSticker(UUIDPrimaryKeyMixin, Base):
     emoji: Mapped[str | None] = mapped_column(String(16))
     set_name: Mapped[str | None] = mapped_column(String(64))
     is_animated: Mapped[bool] = mapped_column(default=False, server_default="false")
+    # Which messages it suits (from its emoji): wins, reading, greetings or anything.
+    mood: Mapped[StickerMood] = mapped_column(
+        enum_column(StickerMood), default=StickerMood.ANY, server_default=StickerMood.ANY.value
+    )
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

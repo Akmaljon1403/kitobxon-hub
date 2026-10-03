@@ -10,7 +10,7 @@ from app.models.certificate import Certificate
 from app.models.channel import ChannelPost, ChannelSticker
 from app.models.event import Event, EventFeedback, EventRegistration
 from app.models.notification import Notification, NotificationTemplate
-from app.models.premium import CardPayment, FeatureFlag, Payment, PremiumPlan, PremiumSubscription
+from app.models.premium import CardPayment, FeatureFlag, Payment, PremiumDiscount, PremiumPlan, PremiumSubscription
 from app.models.rbac import LoginToken, Permission, Role, RolePermission, UserPermission, UserRole
 from app.models.report import Report, ReportPhoto
 from app.models.reward import Giveaway, Reward, RewardCode, UserReward
@@ -49,6 +49,7 @@ __all__ = [
     "NotificationTemplate",
     "Payment",
     "Permission",
+    "PremiumDiscount",
     "PremiumPlan",
     "PremiumSubscription",
     "Report",

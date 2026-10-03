@@ -120,7 +120,7 @@ async def test_card_designs_are_for_premium_members(client: httpx.AsyncClient, d
     await db.commit()
 
     themes = (await client.get("/api/v1/me/passport/themes", headers=member_headers(member))).json()
-    assert [t["code"] for t in themes] == ["classic", "gold", "midnight", "ruby"]
+    assert [t["code"] for t in themes] == ["classic", "gold", "silver", "midnight", "ruby", "ocean", "lavender"]
     assert next(t for t in themes if t["selected"])["code"] == "classic"
     refused = await client.put("/api/v1/me/passport/theme", json={"theme": "ruby"}, headers=member_headers(member))
     assert refused.status_code == 403 and refused.json()["error"]["code"] == "PREMIUM_REQUIRED"
@@ -208,8 +208,10 @@ async def test_bot_changes_the_photo_and_design(db: AsyncSession) -> None:
     await premium_service.grant(db, actor_id=admin_id, user_id=member_id, days=30, note=None)
     await harness.press("pp:themes")
     themes = harness.session.sent_messages()[-1].reply_markup.inline_keyboard
-    assert [row[0].callback_data for row in themes] == [f"pp:theme:{code}" for code in passport_service.THEMES]
-    assert themes[1][0].text.startswith("✅")  # gold by default
+    assert [button.callback_data for row in themes for button in row] == [
+        f"pp:theme:{code}" for code in passport_service.THEMES
+    ]
+    assert themes[0][1].text.startswith("✅")  # gold by default (two designs per row)
     await harness.press("pp:theme:midnight")
     db.expire_all()
     assert (await db.get(User, member_id)).passport_theme == "midnight"
@@ -245,7 +247,7 @@ async def test_personal_stats_ranking_badge_and_menu_button(client: httpx.AsyncC
     assert stats["total"] == 30 and stats["month_rank"] == 1 and stats["events_attended"] == 1
     assert stats["attendance_rate"] == 100 and stats["breakdown"] == {"ATTENDANCE": 30}
 
-    board = (await client.get("/api/v1/rankings?period=all&scope=all", headers=member_headers(other))).json()
+    board = (await client.get("/api/v1/rankings?period=week&scope=all", headers=member_headers(other))).json()
     assert [(row["total"], row["premium"]) for row in board["items"]] == [(30, True), (10, False)]
 
     status = (await client.get("/api/v1/me/premium", headers=member_headers(member))).json()

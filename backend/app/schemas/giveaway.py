@@ -5,12 +5,14 @@ from datetime import date, datetime
 
 from pydantic import AwareDatetime, BaseModel, Field
 
-from app.models.enums import GiveawayAudience, GiveawayRule, GiveawayStatus
+from app.models.enums import GiveawayAudience, GiveawayPrize, GiveawayRule, GiveawayStatus
 
 
 class GiveawayIn(BaseModel):
     title: str = Field(min_length=3, max_length=255, description="E.g. «Oy testi g'olibi»")
-    reward_id: uuid.UUID
+    prize: GiveawayPrize = GiveawayPrize.CODES
+    prize_value: int | None = Field(default=None, ge=1, le=365, description="Premium days, or discount percent")
+    reward_id: uuid.UUID | None = Field(default=None, description="The reward whose codes are given (prize CODES)")
     rule: GiveawayRule
     audience: GiveawayAudience = GiveawayAudience.ALL
     winners_count: int = Field(ge=1, le=100, description="EVENT_PLACES: places per event (1-10)")
@@ -24,6 +26,8 @@ class GiveawayIn(BaseModel):
 
 class GiveawayUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=3, max_length=255)
+    prize: GiveawayPrize | None = None
+    prize_value: int | None = Field(default=None, ge=1, le=365)
     reward_id: uuid.UUID | None = None
     rule: GiveawayRule | None = None
     audience: GiveawayAudience | None = None
@@ -48,9 +52,11 @@ class GiveawayWinnerOut(BaseModel):
 class GiveawayOut(BaseModel):
     id: uuid.UUID
     title: str
-    reward_id: uuid.UUID
-    reward_title: str
-    codes_available: int | None = Field(description="None: the reward has no codes")
+    prize: GiveawayPrize
+    prize_value: int | None
+    reward_id: uuid.UUID | None
+    reward_title: str = Field(description="What winners get, in words")
+    codes_available: int | None = Field(description="None: no codes involved")
     rule: GiveawayRule
     rule_title: str
     audience: GiveawayAudience

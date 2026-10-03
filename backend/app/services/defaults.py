@@ -197,11 +197,13 @@ class PlanSeed:
     description: str
     stars: int
     days: int
+    price_uzs: int | None = None  # the same plan paid to the club's card (so'm)
 
 
 # Starting prices in Telegram Stars; the super admin changes them in the Admin Panel.
 DEFAULT_PREMIUM_PLANS: tuple[PlanSeed, ...] = (
-    PlanSeed("month", "1 oy", "30 kunlik Premium", 100, 30),
-    PlanSeed("quarter", "3 oy", "90 kunlik Premium — 17% tejaysiz", 250, 90),
-    PlanSeed("year", "1 yil", "365 kunlik Premium — eng foydali", 900, 365),
+    # Student-friendly: about the price of a cup of tea a month.
+    PlanSeed("month", "1 oy", "30 kunlik Premium", 50, 30, 9000),
+    PlanSeed("quarter", "3 oy", "90 kunlik Premium — 20% tejaysiz", 120, 90, 22000),
+    PlanSeed("year", "1 yil", "365 kunlik Premium — eng foydali", 400, 365, 75000),
 )

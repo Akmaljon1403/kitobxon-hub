@@ -26,11 +26,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot import texts
 from app.core.config import get_settings
 from app.core.database import get_session_factory
-from app.models import AttendanceRecord, Certificate, Notification, TestAttempt, User
+from app.models import AttendanceRecord, Certificate, FeatureFlag, Notification, TestAttempt, User
 from app.models.enums import (
     AttemptStatus,
     AttendanceMethod,
     CertificateKind,
+    FeatureMode,
     NotificationStatus,
     NotificationType,
     ScoreCategory,
@@ -51,6 +52,13 @@ from tests.helpers import admin_headers, grant_permissions, grant_role, member_h
 
 sender_module.SEND_INTERVAL_SECONDS = 0
 BASE = "https://kitobxon.example.org"
+
+
+@pytest.fixture(autouse=True)
+async def _certificate_pdf_for_everyone(db: AsyncSession) -> None:
+    """These tests are about the documents; the Premium lock on certificate PDFs is tested elsewhere."""
+    db.add(FeatureFlag(code="certificate_pdf", mode=FeatureMode.ALL))
+    await db.commit()
 
 
 @pytest.fixture(autouse=True)

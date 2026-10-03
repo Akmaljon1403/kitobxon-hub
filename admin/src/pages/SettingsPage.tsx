@@ -16,6 +16,7 @@ const GROUP_TITLES: Record<string, string> = {
   org: '🏛 Tashkilot (rasmiy hisobotlar uchun)',
   certificates: '🎓 Sertifikatlar',
   payments: "💳 Karta orqali to'lov",
+  premium: '💎 Premium',
   channel: '📣 Telegram kanal',
   ranking: '📊 Reyting',
 }

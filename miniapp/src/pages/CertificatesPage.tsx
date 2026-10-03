@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { useFeature } from '../components/FeatureGate'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -10,12 +11,23 @@ import type { Certificate } from '../types/api'
 import { formatDate } from '../utils/format'
 import { saveDocument, sendToChat } from '../utils/files'
 import { navigate } from '../utils/router'
-import { haptic } from '../utils/telegram'
+import { getWebApp, haptic } from '../utils/telegram'
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
 
+/** Anyone who opens the link sees that the certificate is genuine — free for every member. */
+function share(certificate: Certificate) {
+  if (!certificate.verify_url) return
+  const text = `🎓 ${certificate.title} — Kitobxonlar klubi sertifikati`
+  const link = `https://t.me/share/url?url=${encodeURIComponent(certificate.verify_url)}&text=${encodeURIComponent(text)}`
+  const webApp = getWebApp()
+  if (webApp) webApp.openTelegramLink(link)
+  else window.open(link, '_blank')
+}
+
 function CertificateCard({ certificate }: { certificate: Certificate }) {
   const { api } = useAuth()
+  const pdf = useFeature('certificate_pdf')
   const [busy, setBusy] = useState<'save' | 'send' | null>(null)
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
 
@@ -49,20 +61,33 @@ function CertificateCard({ certificate }: { certificate: Certificate }) {
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <Button className="whitespace-nowrap px-2 text-sm" loading={busy === 'save'} disabled={busy !== null} onClick={() => void run('save')}>
-          📥 Yuklab olish
+      {pdf === 'on' ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button className="whitespace-nowrap px-2 text-sm" loading={busy === 'save'} disabled={busy !== null} onClick={() => void run('save')}>
+            📥 Yuklab olish
+          </Button>
+          <Button
+            variant="secondary"
+            className="whitespace-nowrap px-2 text-sm"
+            loading={busy === 'send'}
+            disabled={busy !== null}
+            onClick={() => void run('send')}
+          >
+            📤 Chatga yuborish
+          </Button>
+        </div>
+      ) : (
+        pdf === 'premium' && (
+          <Button className="whitespace-nowrap px-2 text-sm" onClick={() => navigate('/premium')}>
+            💎 PDF yuklab olish — Premium
+          </Button>
+        )
+      )}
+      {certificate.verify_url && (
+        <Button variant="ghost" className="px-2 text-sm" onClick={() => share(certificate)}>
+          🔗 Tasdiqlash havolasini ulashish
         </Button>
-        <Button
-          variant="secondary"
-          className="whitespace-nowrap px-2 text-sm"
-          loading={busy === 'send'}
-          disabled={busy !== null}
-          onClick={() => void run('send')}
-        >
-          📤 Chatga yuborish
-        </Button>
-      </div>
+      )}
       {notice && (
         <p role={notice.error ? 'alert' : 'status'} className={`text-center text-sm ${notice.error ? 'text-app-danger' : 'text-app-hint'}`}>
           {notice.text}

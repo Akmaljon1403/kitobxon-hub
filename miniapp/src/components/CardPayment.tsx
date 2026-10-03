@@ -18,11 +18,34 @@ const STATUS: Record<CardPayment['status'], string> = {
   REJECTED: '❌ Rad etildi',
 }
 
-/** Pay to the club's card and send the receipt; the super admin confirms and Premium switches on. */
-export function CardPaymentSection({ card, plans, onDone }: { card: { number: string; holder: string }; plans: PremiumPlan[]; onDone: () => void }) {
+function itemTitle(item: CardPayment): string {
+  if (item.kind === 'STARS') return `⭐ ${item.stars} Stars`
+  return item.plan_title ? `💎 ${item.plan_title}` : '❤️ Hissa'
+}
+
+function itemStatus(item: CardPayment): string {
+  if (item.kind === 'STARS' && item.status === 'APPROVED') return item.delivered_at ? '⭐ Yuborildi' : '✅ Tasdiqlandi, yuborilmoqda'
+  return STATUS[item.status]
+}
+
+/**
+ * Pay to the club's card and send the receipt: Premium (switches on after the super admin confirms),
+ * Telegram Stars (the admin gifts them in Telegram) or a donation.
+ */
+export function CardPaymentSection({
+  card,
+  plans,
+  stars = [],
+  onDone,
+}: {
+  card: { number: string; holder: string }
+  plans: PremiumPlan[]
+  stars?: { stars: number; price_uzs: number }[]
+  onDone: () => void
+}) {
   const { api, upload } = useAuth()
   const cardPlans = plans.filter((plan) => plan.price_uzs)
-  const [choice, setChoice] = useState<string>(cardPlans[0]?.id ?? 'donation')
+  const [choice, setChoice] = useState<string>(cardPlans[0]?.id ?? (stars[0] ? `stars:${stars[0].stars}` : 'donation'))
   const [amount, setAmount] = useState('20000')
   const [busy, setBusy] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -31,7 +54,12 @@ export function CardPaymentSection({ card, plans, onDone }: { card: { number: st
   const history = useAsync((signal) => api<CardPayment[]>('/api/v1/me/premium/card-payments', { signal }))
 
   const plan = cardPlans.find((item) => item.id === choice)
-  const price = plan ? plan.price_uzs ?? 0 : Number(amount.replace(/\D/g, '')) || 0
+  const pack = stars.find((item) => `stars:${item.stars}` === choice)
+  const price = plan
+    ? plan.price_uzs_now ?? plan.price_uzs ?? 0
+    : pack
+      ? pack.price_uzs
+      : Number(amount.replace(/\D/g, '')) || 0
 
   async function send(file: File) {
     setBusy(true)
@@ -40,10 +68,15 @@ export function CardPaymentSection({ card, plans, onDone }: { card: { number: st
       const form = new FormData()
       form.append('file', file)
       if (plan) form.append('plan_id', plan.id)
+      else if (pack) form.append('stars', String(pack.stars))
       else form.append('amount_uzs', String(price))
       await upload('/api/v1/me/premium/card-payments', form, 'POST')
       haptic('success')
-      setNotice({ text: "✅ Chek qabul qilindi! Admin tekshirgach, Premium avtomatik yoqiladi va sizga xabar keladi." })
+      setNotice({
+        text: pack
+          ? `✅ Chek qabul qilindi! Admin tekshirgach, ${pack.stars} ⭐ Telegram'da sizga sovg'a qilib yuboriladi.`
+          : '✅ Chek qabul qilindi! Admin tekshirgach, sizga xabar keladi.',
+      })
       history.reload()
       onDone()
     } catch (error) {
@@ -66,7 +99,10 @@ export function CardPaymentSection({ card, plans, onDone }: { card: { number: st
 
   return (
     <Card className="flex flex-col gap-3">
-      <p className="text-sm text-app-hint">Telegram Stars bo'lmasa — klub kartasiga to'lab, chekni yuboring. Admin tasdiqlagach Premium o'zi yoqiladi.</p>
+      <p className="text-sm text-app-hint">
+        Telegram Stars'ingiz bo'lmasa yoki ularni qanday olishni bilmasangiz — klub kartasiga to'lang. 💎 Premium tasdiqlangach o'zi yoqiladi, ⭐
+        Stars esa Telegram'da sizga sovg'a qilib yuboriladi.
+      </p>
 
       <div className="flex flex-col gap-1.5">
         {cardPlans.map((item) => (
@@ -77,9 +113,29 @@ export function CardPaymentSection({ card, plans, onDone }: { card: { number: st
             className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-left ${choice === item.id ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
           >
             <span className="font-medium">💎 Premium {item.title}</span>
-            <span className="tabular-nums">{formatUzs(item.price_uzs ?? 0)}</span>
+            <span className="tabular-nums">
+              {item.price_uzs_now && item.price_uzs_now !== item.price_uzs && (
+                <span className="mr-1.5 text-xs text-app-hint line-through">{formatUzs(item.price_uzs ?? 0)}</span>
+              )}
+              {formatUzs(item.price_uzs_now ?? item.price_uzs ?? 0)}
+            </span>
           </button>
         ))}
+        {stars.length > 0 && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {stars.map((item) => (
+              <button
+                key={item.stars}
+                type="button"
+                onClick={() => setChoice(`stars:${item.stars}`)}
+                className={`flex flex-col rounded-xl px-3 py-2 text-left ${choice === `stars:${item.stars}` ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
+              >
+                <span className="font-medium">⭐ {item.stars} Stars</span>
+                <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => setChoice('donation')}
@@ -136,9 +192,9 @@ export function CardPaymentSection({ card, plans, onDone }: { card: { number: st
             <div key={item.id} className="flex flex-col">
               <span className="flex justify-between gap-2">
                 <span>
-                  {item.plan_title ? `💎 ${item.plan_title}` : '❤️ Hissa'} · {formatUzs(item.amount_uzs)}
+                  {itemTitle(item)} · {formatUzs(item.amount_uzs)}
                 </span>
-                <span className="shrink-0">{STATUS[item.status]}</span>
+                <span className="shrink-0">{itemStatus(item)}</span>
               </span>
               <span className="text-xs text-app-hint">
                 {formatDate(item.created_at)}

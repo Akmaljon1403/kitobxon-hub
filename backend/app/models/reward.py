@@ -17,6 +17,7 @@ from sqlalchemy import (
     Date,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     String,
     Text,
@@ -30,6 +31,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
 from app.models.enums import (
     GiveawayAudience,
+    GiveawayPrize,
     GiveawayRule,
     GiveawayStatus,
     RewardCodeStatus,
@@ -102,11 +104,20 @@ class Giveaway(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("winners_count BETWEEN 1 AND 100", name="winners_count_range"),
         CheckConstraint("period_end >= period_start", name="period_order"),
+        CheckConstraint(
+            "(prize = 'CODES' AND reward_id IS NOT NULL) OR (prize <> 'CODES' AND prize_value IS NOT NULL)",
+            name="prize_complete",
+        ),
         Index("ix_giveaways_status_scheduled_at", "status", "scheduled_at"),
     )
 
     title: Mapped[str] = mapped_column(String(255))
-    reward_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("rewards.id", ondelete="RESTRICT"))
+    # What winners get: promo codes of a reward, N days of Premium or a Premium discount (percent).
+    prize: Mapped[GiveawayPrize] = mapped_column(
+        enum_column(GiveawayPrize), default=GiveawayPrize.CODES, server_default=GiveawayPrize.CODES.value
+    )
+    prize_value: Mapped[int | None] = mapped_column(Integer)  # days or percent
+    reward_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rewards.id", ondelete="RESTRICT"))
     rule: Mapped[GiveawayRule] = mapped_column(enum_column(GiveawayRule))
     audience: Mapped[GiveawayAudience] = mapped_column(
         enum_column(GiveawayAudience), default=GiveawayAudience.ALL, server_default=GiveawayAudience.ALL.value

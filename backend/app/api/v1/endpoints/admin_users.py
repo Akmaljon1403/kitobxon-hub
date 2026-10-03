@@ -8,12 +8,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
-from app.core.errors import NotFoundError
+from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models import User
 from app.models.enums import UserStatus
-from app.schemas.common import Page
-from app.schemas.user import AdminUserDetailOut, AdminUserOut, AdminUserUpdateIn, UserStatusIn
+from app.schemas.common import Page, ReasonIn
+from app.schemas.user import AdminUserDetailOut, AdminUserOut, AdminUserUpdateIn, EraseIn, UserStatusIn
 from app.security.permissions import Perm
+from app.services import membership
 from app.services import passport as passport_service
 from app.services import users as user_service
 from app.services.audit import record_audit
@@ -38,6 +39,9 @@ def _out(user: User, faculty_name: str | None, current: CurrentUser) -> AdminUse
         status=user.status,
         registered_at=user.registered_at,
         last_seen_at=user.last_seen_at,
+        left_at=user.left_at,
+        left_reason=user.left_reason,
+        restore_requested_at=user.restore_requested_at,
     )
 
 
@@ -110,4 +114,37 @@ async def remove_passport_photo(user_id: uuid.UUID, current: Manager, db: DbSess
         raise NotFoundError("USER_NOT_FOUND", "A'zo topilmadi.")
     record_audit(db, actor_id=current.user.id, action="PASSPORT_PHOTO_REMOVE", entity_type="user", entity_id=user.id)
     await passport_service.clear_photo(db, user)
+    return Response(status_code=204)
+
+
+@router.post(
+    "/{user_id}/cancel-membership",
+    response_model=AdminUserDetailOut,
+    summary="Cancel the membership (the data is kept 30 days; the member can ask to come back)",
+)
+async def cancel_membership(
+    user_id: uuid.UUID, payload: ReasonIn, current: Manager, db: DbSession
+) -> AdminUserDetailOut:
+    user = await membership.admin_cancel(db, actor_id=current.user.id, user_id=user_id, reason=payload.reason)
+    return await _detail(db, user, current)
+
+
+@router.post("/{user_id}/restore", response_model=AdminUserDetailOut, summary="Bring back a member who left")
+async def restore_membership(user_id: uuid.UUID, current: Manager, db: DbSession) -> AdminUserDetailOut:
+    user = await user_service.get_user(db, user_id)
+    await membership.restore(db, user, actor_id=current.user.id)
+    return await _detail(db, user, current)
+
+
+@router.post(
+    "/{user_id}/erase",
+    status_code=204,
+    summary="Erase the member's personal data for good (super admin; type O'CHIRISH to confirm)",
+)
+async def erase_member(user_id: uuid.UUID, payload: EraseIn, current: Manager, db: DbSession) -> Response:
+    if "SUPER_ADMIN" not in current.roles:
+        raise ForbiddenError("SUPER_ADMIN_ONLY", "Ma'lumotlarni faqat bosh administrator o'chira oladi.")
+    if payload.confirm.strip().upper() not in ("O'CHIRISH", "OCHIRISH"):
+        raise BadRequestError("CONFIRM_REQUIRED", "Tasdiqlash uchun «O'CHIRISH» deb yozing.")
+    await membership.admin_erase(db, actor_id=current.user.id, user_id=user_id, reason=payload.reason)
     return Response(status_code=204)

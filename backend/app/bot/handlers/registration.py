@@ -23,6 +23,7 @@ from app.models.enums import UserStatus
 from app.services import attendance as attendance_service
 from app.services.members import (
     RegistrationData,
+    after_registration,
     get_active_faculty,
     list_active_faculties,
     normalize_group,
@@ -40,6 +41,7 @@ _STATUS_TEXT = {
     UserStatus.PENDING: texts.ACCOUNT_PENDING,
     UserStatus.BLOCKED: texts.ACCOUNT_BLOCKED,
     UserStatus.INACTIVE: texts.ACCOUNT_INACTIVE,
+    UserStatus.LEFT: texts.ACCOUNT_LEFT,
 }
 
 
@@ -62,6 +64,10 @@ async def send_member_home(message: Message, member: User, db: AsyncSession) -> 
         await message.answer(_STATUS_TEXT.get(member.status, texts.ACCOUNT_INACTIVE), reply_markup=keyboards.remove())
 
 
+async def begin_registration(message: Message, state: FSMContext, db: AsyncSession) -> None:
+    await _begin(message, state, db)
+
+
 async def _begin(message: Message, state: FSMContext, db: AsyncSession) -> None:
     await state.clear()
     await state.set_state(Registration.first_name)
@@ -77,6 +83,12 @@ async def start(
     payload = command.args or ""
     if payload.startswith(attendance_service.QR_PREFIX):
         await _check_in_from_qr(message, state, db, member, payload)
+        return
+    if member is not None and member.status == UserStatus.LEFT:
+        from app.bot.handlers.membership import offer_return
+
+        await state.clear()
+        await offer_return(message, db, member)
         return
     if member is not None:
         await state.clear()
@@ -252,6 +264,7 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
             )
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
+    await after_registration(db, user.id)
 
 
 @router.callback_query(F.data == "reg:restart")

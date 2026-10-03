@@ -8,10 +8,12 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUserDep, DbSession, feature_required
 from app.schemas.score import FacultyRankingOut, MyRankingOut, MyScoresOut, RankingOut, RankingRowOut, ScoreEntryOut
-from app.services import insights
+from app.services import features, insights
 from app.services import ranking as ranking_service
 
 router = APIRouter(tags=["scores and rankings"])
+# This week's club-wide ranking is free; other periods and scopes are the «ranking_full» feature.
+FREE_RANKING = ("week", "all")
 
 
 def _row(row: ranking_service.RankingRow | None, viewer_id) -> RankingRowOut | None:
@@ -66,6 +68,8 @@ async def rankings(
     scope: Literal["all", "faculty", "group"] = "all",
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> RankingOut:
+    if (period, scope) != FREE_RANKING:
+        await features.require(db, current.user, "ranking_full")
     ranking = await ranking_service.ranking(db, period=period, scope=scope, viewer=current.user, limit=limit)
     return RankingOut(
         period=ranking.period,
@@ -78,7 +82,7 @@ async def rankings(
 
 @router.get(
     "/rankings/faculties",
-    dependencies=[feature_required("ranking")],
+    dependencies=[feature_required("ranking"), feature_required("ranking_full")],
     response_model=list[FacultyRankingOut],
     summary="Faculties by average points",
 )

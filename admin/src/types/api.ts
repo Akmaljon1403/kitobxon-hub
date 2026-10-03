@@ -1,6 +1,6 @@
 // Response types of the Kitobxon Hub admin API (see /api/docs on the server).
 
-export type UserStatus = 'PENDING' | 'ACTIVE' | 'BLOCKED' | 'INACTIVE'
+export type UserStatus = 'PENDING' | 'ACTIVE' | 'BLOCKED' | 'INACTIVE' | 'LEFT'
 export type BookStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
 export type QuoteStatus = 'DRAFT' | 'SCHEDULED' | 'SENT' | 'ARCHIVED'
 
@@ -47,6 +47,9 @@ export interface AdminUser {
   status: UserStatus
   registered_at: string | null
   last_seen_at: string | null
+  left_at?: string | null
+  left_reason?: string | null
+  restore_requested_at?: string | null
   roles?: string[]
 }
 
@@ -477,7 +480,8 @@ export interface RewardRecipient {
   redeemed_at: string | null
 }
 
-export type GiveawayRule = 'RANDOM' | 'TEST_TOP' | 'EVENT_PLACES' | 'RANKING_TOP'
+export type GiveawayRule = 'RANDOM' | 'TEST_TOP' | 'EVENT_PLACES' | 'RANKING_TOP' | 'NEW_MEMBERS'
+export type GiveawayPrize = 'CODES' | 'PREMIUM_DAYS' | 'PREMIUM_DISCOUNT'
 export type GiveawayAudience = 'ALL' | 'ATTENDED' | 'PREMIUM'
 export type GiveawayStatus = 'DRAFT' | 'SCHEDULED' | 'DONE' | 'CANCELLED'
 
@@ -493,7 +497,9 @@ export interface GiveawayWinner {
 export interface Giveaway {
   id: string
   title: string
-  reward_id: string
+  prize: GiveawayPrize
+  prize_value: number | null
+  reward_id: string | null
   reward_title: string
   codes_available: number | null
   rule: GiveawayRule
@@ -554,4 +560,23 @@ export interface ChannelOverview {
   last_error: string | null
   posts: ChannelPost[]
   stickers: ChannelSticker[]
+}
+
+export interface TestPlace {
+  place: number
+  user_id: string
+  name: string
+  group_name: string | null
+  score: number
+  max_score: number
+  given_reward: string | null
+  given_at: string | null
+}
+
+export interface TestWinners {
+  test_id: string
+  title: string
+  event_title: string | null
+  closed_at: string
+  places: TestPlace[]
 }

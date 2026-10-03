@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, func, text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, SmallInteger, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
@@ -113,6 +113,29 @@ class CardPayment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column()
     decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     reject_reason: Mapped[str | None] = mapped_column(Text)
+    # STARS: how many Stars the member asked for, and when the admin gifted them in Telegram.
+    stars: Mapped[int | None] = mapped_column(Integer)
+    delivered_at: Mapped[datetime | None] = mapped_column()
+    delivered_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    discount_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("premium_discounts.id", ondelete="SET NULL"))
     subscription_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("premium_subscriptions.id", ondelete="SET NULL")
     )
+
+
+class PremiumDiscount(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """A personal discount on Premium (e.g. won by the first members who joined). Used once."""
+
+    __tablename__ = "premium_discounts"
+    __table_args__ = (
+        CheckConstraint("percent BETWEEN 1 AND 100", name="percent_range"),
+        Index("ix_premium_discounts_user_id", "user_id"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    percent: Mapped[int] = mapped_column(SmallInteger)
+    valid_until: Mapped[datetime] = mapped_column()
+    note: Mapped[str | None] = mapped_column(String(255))
+    giveaway_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("giveaways.id", ondelete="SET NULL"))
+    used_at: Mapped[datetime | None] = mapped_column()
+    used_for: Mapped[str | None] = mapped_column(String(64))  # "payment:<id>" or "card:<id>"

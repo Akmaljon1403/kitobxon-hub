@@ -396,3 +396,114 @@ async def mark_redeemed(session: AsyncSession, *, user_id: uuid.UUID, user_rewar
         await _apply_status(session, row, UserRewardStatus.REDEEMED)
         await session.commit()
     return row
+
+
+# ---------------------------------------------------------------------------- test winners
+
+
+def test_place_key(test_id: uuid.UUID, place: int) -> str:
+    """One reward per place of a test, whatever the reward: prevents giving the same place twice."""
+    return f"test-place:{test_id}:{place}"
+
+
+async def test_winners(session: AsyncSession, *, days: int = 60) -> list[dict[str, Any]]:
+    """Places 1-3 of the tests closed in the last ``days`` days, with what each place already got."""
+    from datetime import timedelta
+
+    from app.models import Event, Test
+    from app.models.enums import TestStatus
+    from app.services import quizzes
+
+    tests = list(
+        await session.scalars(
+            select(Test)
+            .where(
+                Test.deleted_at.is_(None),
+                Test.status == TestStatus.CLOSED,
+                Test.ends_at >= datetime.now(UTC) - timedelta(days=days),
+            )
+            .order_by(Test.ends_at.desc())
+        )
+    )
+    given = {
+        ":".join(row.idempotency_key.split(":")[:3]): (row, title)  # without a re-give suffix
+        for row, title in (
+            await session.execute(
+                select(UserReward, Reward.title)
+                .join(Reward, Reward.id == UserReward.reward_id)
+                .where(UserReward.idempotency_key.like("test-place:%"), UserReward.status.in_(ACTIVE_ASSIGNMENT))
+            )
+        ).all()
+    }
+    result = []
+    for test in tests:
+        places = await quizzes.official_places(session, test)
+        if not places:
+            continue
+        users = {
+            u.id: u for u in await session.scalars(select(User).where(User.id.in_([p["user_id"] for p in places])))
+        }
+        event = await session.get(Event, test.event_id) if test.event_id else None
+        rows = []
+        for place in places:
+            user = users[place["user_id"]]
+            done = given.get(test_place_key(test.id, place["place"]))
+            rows.append(
+                {
+                    "place": place["place"],
+                    "user_id": user.id,
+                    "name": f"{user.last_name} {user.first_name}",
+                    "group_name": user.group_name,
+                    "score": place["score"],
+                    "max_score": test.max_score,
+                    "given_reward": done[1] if done else None,
+                    "given_at": done[0].assigned_at if done else None,
+                }
+            )
+        result.append(
+            {
+                "test_id": test.id,
+                "title": test.title,
+                "event_title": event.title if event else None,
+                "closed_at": test.ends_at,
+                "places": rows,
+            }
+        )
+    return result
+
+
+async def assign_test_place(
+    session: AsyncSession, *, actor_id: uuid.UUID, reward_id: uuid.UUID, test_id: uuid.UUID, place: int
+) -> UserReward:
+    """Give the reward to the member who took ``place`` in the test — once per place."""
+    from app.models import Test
+    from app.services import quizzes
+
+    test = await session.get(Test, test_id)
+    if test is None or test.deleted_at is not None:
+        raise NotFoundError("TEST_NOT_FOUND", "Test topilmadi.")
+    holder = next((row for row in await quizzes.official_places(session, test) if row["place"] == place), None)
+    if holder is None:
+        raise NotFoundError("PLACE_NOT_FOUND", "Bu o'rinni egallagan a'zo yo'q.")
+    key = test_place_key(test.id, place)
+    same_place = or_(UserReward.idempotency_key == key, UserReward.idempotency_key.like(f"{key}:%"))
+    existing = await session.scalar(
+        select(UserReward).where(same_place, UserReward.status.in_(ACTIVE_ASSIGNMENT)).limit(1)
+    )
+    if existing is not None:
+        given = await session.get(Reward, existing.reward_id)
+        raise ConflictError(
+            "PLACE_ALREADY_REWARDED",
+            f"Bu o'ringa allaqachon sovg'a berilgan: «{given.title if given else '—'}».",
+        )
+    revoked = await session.scalar(select(UserReward.id).where(same_place).limit(1))
+    return await assign(
+        session,
+        actor_id=actor_id,
+        reward_id=reward_id,
+        user_id=holder["user_id"],
+        note=f"«{test.title}» testi — {place}-o'rin",
+        # A revoked earlier gift keeps its key; the new one gets a fresh suffix.
+        idempotency_key=key if revoked is None else f"{key}:{uuid.uuid4().hex[:8]}",
+        allow_repeat=True,
+    )

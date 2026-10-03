@@ -145,6 +145,10 @@ RANKING_ROW = "{medal} {name} — {total}"
 RANKING_ME = "Siz: <b>{rank}-o'rin</b>, {total} ball"
 RANKING_ME_NONE = "Siz bu oy hali ball to'plamadingiz."
 RANKING_EMPTY = "🏆 Bu oy hali hech kim ball to'plamadi. Birinchi bo'ling!"
+RANKING_WEEK = "🏆 <b>Shu hafta yetakchilari</b>\n{top}\n\n{me}"
+RANKING_WEEK_ME_NONE = "Siz bu hafta hali ball to'plamadingiz — har bir tadbir va test ball keltiradi."
+RANKING_WEEK_EMPTY = "🏆 Bu hafta hali hech kim ball to'plamadi. Birinchi bo'ling!"
+RANKING_FULL_TEASER = "\n\n💎 Oylik va umumiy reyting, fakultet va guruhingizdagi o'rningiz — Premium a'zolar uchun."
 
 ACHIEVEMENTS = "🏅 <b>Yutuqlarim</b>: {done} / {total}\n{last}{next}{certificates}"
 ACHIEVEMENTS_CERTIFICATES = "\n\n🎓 Sertifikatlar: {count}"
@@ -280,10 +284,19 @@ PREMIUM_INFO = (
     "To'lov Telegram Stars (⭐) orqali — xavfsiz va bir zumda. "
     "Tushgan mablag' klub tadbirlari, kitoblar va sovg'alarga sarflanadi."
 )
+PREMIUM_STATUS_LIFETIME = "♾ Sizda <b>umrbod Premium</b> bor — barcha imkoniyatlar doim ochiq."
 PREMIUM_STATUS_ON = "✅ Siz Premium a'zosiz — <b>{until}</b> gacha. Muddatni uzaytirish mumkin."
 PREMIUM_STATUS_OFF = "Siz hozir oddiy a'zosiz."
 PREMIUM_PERK = "• {title} — {description}"
 PREMIUM_PLAN = "{title} — {stars} ⭐"
+PREMIUM_PLAN_DISCOUNT = "{title} — {stars} ⭐ (−{percent}%)"
+PREMIUM_DISCOUNT = "🎟 Sizda Premium'ga <b>−{percent}%</b> chegirma bor — {until} gacha."
+BTN_TRIAL = "🎁 {days} kun bepul sinab ko'rish"
+TRIAL_STARTED = (
+    "🎉 <b>Bepul Premium boshlandi!</b>\n\n"
+    "{days} kun davomida barcha Premium imkoniyatlari ochiq: oltin pasport, to'liq reyting, sertifikat PDF, "
+    "statistika va boshqalar. Sinov {until} gacha — hech qanday to'lov yechilmaydi."
+)
 DONATE_INFO = (
     "❤️ <b>Klubni qo'llab-quvvatlash</b>\n\n"
     "Har qanday hissa kitoblar sotib olish, tadbirlar va g'oliblarga sovg'alar uchun ishlatiladi. "
@@ -325,12 +338,17 @@ FEEDBACK_NOT_ALLOWED = "Bu tadbirga baho bera olmaysiz."
 
 
 # ---- Card payments ----
-BTN_PAY_CARD = "💳 Karta orqali to'lash"
+BTN_PAY_CARD = "💳 Karta orqali (Premium yoki ⭐ Stars)"
 CARD_CHOOSE = (
     "💳 <b>Karta orqali to'lov</b>\n\n"
-    "Telegram Stars bo'lmasa, Premiumni klub kartasiga to'lab olishingiz mumkin. Tarifni tanlang:"
+    "Telegram Stars'ingiz bo'lmasa yoki ularni qanday olishni bilmasangiz — klub kartasiga to'lang:\n"
+    "• <b>💎 Premium</b> — tasdiqlangach o'zi yoqiladi;\n"
+    "• <b>⭐ Stars</b> — tanlagan miqdoringiz Telegram'da sizga sovg'a qilib yuboriladi.\n\nTanlang:"
 )
-CARD_PLAN = "{title} — {price}"
+CARD_PLAN = "💎 {title} — {price}"
+CARD_STARS = "⭐ {stars} Stars — {price}"
+BTN_STARS_SENT = "✅ Stars yuborildi"
+CARD_STARS_DELIVERED = "✅ Belgilandi: {name} ga {stars} ⭐ yuborildi. A'zoga xabar ketdi."
 CARD_DONATE = "❤️ Hissa (istalgan summa)"
 CARD_INSTRUCTIONS = (
     "💳 <b>{what}</b> — <b>{price}</b>\n\n"
@@ -367,3 +385,47 @@ STICKER_SAVED = "✅ Saqlandi. Jami stikerlar: {total} ta. Yana yuboring yoki /t
 STICKER_DUPLICATE = "Bu stiker allaqachon saqlangan (jami {total} ta). Boshqasini yuboring yoki /tayyor"
 STICKER_ONLY = "Stiker yuboring yoki /tayyor deb yozing."
 STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sahifasida ko'rasiz va keraksizini o'chirasiz."
+
+# ---- Portfolio ----
+BTN_PORTFOLIO = "🗂 Portfolio (PDF)"
+PORTFOLIO_PREPARING = "🗂 Portfoliongiz tayyorlanmoqda…"
+
+# ---- Leaving and coming back ----
+ACCOUNT_LEFT = "Siz klubdan chiqqansiz. Qaytish uchun /start bosing."
+LEFT_BACK_SELF = (
+    "👋 <b>Qaytganingizdan xursandmiz, {name}!</b>\n\n"
+    "Siz {days} kun oldin klubdan chiqqansiz. Ma'lumotlaringiz — ballar, sertifikatlar, yutuqlar — hali "
+    "saqlanib turibdi.\n\n♻️ Tiklasangiz, hammasi joyida qoladi. Yoki yangidan boshlashingiz mumkin."
+)
+LEFT_BACK_REQUEST = (
+    "👋 <b>Qaytganingizdan xursandmiz!</b>\n\n"
+    "Siz {days} kun oldin klubdan chiqqansiz. Ma'lumotlaringizni tiklash uchun klub rahbariyatiga so'rov "
+    "yuboring — yoki yangidan ro'yxatdan o'ting."
+)
+LEFT_REQUEST_WAITING = "📨 Tiklash so'rovingiz ko'rib chiqilmoqda — javob kelishi bilan xabar beramiz."
+LEFT_REQUEST_SENT = "📨 So'rovingiz klub rahbariyatiga yuborildi. Tasdiqlashlari bilan xabar beramiz."
+BTN_RESTORE = "♻️ Ma'lumotlarimni tiklash"
+BTN_REQUEST_RESTORE = "📨 Tiklash so'rovini yuborish"
+BTN_START_FRESH = "🆕 Yangidan boshlash"
+FRESH_CONFIRM = (
+    "Eski ma'lumotlaringiz (ballar, sertifikatlar, yutuqlar) <b>butunlay o'chiriladi</b> va yangidan "
+    "ro'yxatdan o'tasiz. Davom etasizmi?"
+)
+BTN_FRESH_YES = "Ha, yangidan boshlayman"
+RESTORED = "♻️ Hammasi tiklandi! Xush kelibsiz, {name} 📚"
+BTN_LEAVE = "🚪 A'zolikni bekor qilish"
+LEAVE_CONFIRM = (
+    "🚪 <b>A'zolikni bekor qilasizmi?</b>\n\n"
+    "Botdan xabarlar kelmaydi, reytingda ko'rinmaysiz. Ma'lumotlaringiz 30 kun saqlanadi: 14 kun ichida "
+    "/start bilan o'zingiz tiklaysiz, keyin — klub rahbariyati orqali. 30 kundan keyin ular butunlay o'chiriladi."
+)
+BTN_LEAVE_YES = "Ha, chiqaman"
+LEFT_DONE = "Siz klubdan chiqdingiz. Qaytmoqchi bo'lsangiz — /start. Kitob o'qishda omad! 📚"
+LEAVE_STAFF = "Administratorlar klubdan chiqa olmaydi. Avval bosh administrator huquqlaringizni olib qo'ysin."
+RESTORE_APPROVED_ADMIN = "✅ {name} a'zoligi tiklandi, unga xabar yuborildi."
+RESTORE_DECLINED_ADMIN = "❌ So'rov rad etildi. Eski ma'lumotlar o'chirildi — u xohlasa yangidan ro'yxatdan o'tadi."
+RESTORE_DECLINED_MEMBER = (
+    "Tiklash so'rovingiz qabul qilinmadi. Xohlasangiz, /start bosib klubga yangidan qo'shilishingiz mumkin."
+)
+RESTORE_ADMIN_ONLY = "Bu amal faqat a'zolarni boshqaruvchi adminlar uchun."
+RESTORE_DONE_ALREADY = "Bu so'rov allaqachon hal qilingan."

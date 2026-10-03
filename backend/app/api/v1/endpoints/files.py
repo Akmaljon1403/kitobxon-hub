@@ -32,6 +32,14 @@ async def download(token: str, db: DbSession) -> Response:
             raise NotFoundError("NOT_FOUND", "Fayl topilmadi.")
         image = await passport_service.render(db, user, bot=delivery.optional_bot())
         return file_response(image, "image/png", passport_service.filename(user), attachment=True)
+    if kind == "portfolio":
+        from app.services import portfolio
+
+        user = await db.get(User, object_id)
+        if user is None or user.deleted_at is not None or user.status != UserStatus.ACTIVE:
+            raise NotFoundError("NOT_FOUND", "Fayl topilmadi.")
+        data = await portfolio.render_pdf(db, user)
+        return file_response(data, "application/pdf", portfolio.filename(user), attachment=True)
     certificate = await certificate_service.get(db, object_id)
     if certificate.revoked_at is not None:
         raise NotFoundError("CERTIFICATE_NOT_FOUND", "Sertifikat topilmadi.")

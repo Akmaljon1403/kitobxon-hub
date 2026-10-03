@@ -6,6 +6,7 @@ rules apply everywhere.
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from dataclasses import dataclass
@@ -27,6 +28,8 @@ from app.services.settings import get_setting
 _NAME_RE = re.compile(r"^[A-Za-zА-Яа-яЁёЎўҚқҒғҲҳʻʼ'’‘`\- ]{2,64}$")
 _GROUP_RE = re.compile(r"^[A-Z0-9А-ЯЁЎҚҒҲ][A-Z0-9А-ЯЁЎҚҒҲ\-/ ]{0,15}$")
 _PHONE_RE = re.compile(r"^\+\d{9,15}$")
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_name(raw: str, field: str = "name") -> str:
@@ -151,3 +154,15 @@ async def register_member(session: AsyncSession, data: RegistrationData) -> User
     await ensure_bootstrap_super_admin(session, user)
     await session.commit()
     return user
+
+
+async def after_registration(session: AsyncSession, user_id: uuid.UUID) -> None:
+    """Welcome gifts after a member registered: «first N members» giveaways (and friend invites).
+    Never breaks the registration itself."""
+    from app.services import giveaways
+
+    try:
+        await giveaways.on_member_joined(session, user_id)
+    except Exception:
+        await session.rollback()
+        logger.exception("Welcome gifts failed for %s", user_id)

@@ -5,12 +5,14 @@ import { getWebApp } from './telegram'
 type Api = <T>(path: string, options?: { method?: 'POST'; body?: unknown }) => Promise<T>
 
 export interface DocumentRef {
-  kind: 'passport' | 'certificate'
+  kind: 'passport' | 'certificate' | 'portfolio'
   id?: string
 }
 
 function sendPath(ref: DocumentRef): string {
-  return ref.kind === 'passport' ? '/api/v1/me/passport/send' : `/api/v1/me/certificates/${ref.id}/send`
+  if (ref.kind === 'passport') return '/api/v1/me/passport/send'
+  if (ref.kind === 'portfolio') return '/api/v1/me/portfolio/send'
+  return `/api/v1/me/certificates/${ref.id}/send`
 }
 
 /** The bot sends the file to the member's chat (works in every Telegram version). */
