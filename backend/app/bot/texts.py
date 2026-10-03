@@ -248,3 +248,66 @@ BOT_DESCRIPTION = (
     "• Kitobxon pasporti\n\n"
     "Boshlash uchun «Start»ni bosing."
 )
+
+
+# ---- Feature switches ----
+FEATURE_OFF = "🔒 «{title}» hozircha o'chirilgan. Klub rahbariyati uni tez orada yoqishi mumkin."
+FEATURE_PREMIUM = (
+    "💎 «{title}» — <b>Premium</b> a'zolar uchun imkoniyat.\n\n"
+    "Premium obuna bu va boshqa qo'shimcha imkoniyatlarni ochadi hamda klub rivojiga hissa bo'ladi."
+)
+
+# ---- Premium and donations (Telegram Stars) ----
+BTN_PREMIUM = "💎 Premium"
+BTN_DONATE = "❤️ Klubni qo'llab-quvvatlash"
+PREMIUM_CLOSED = "💎 Premium obuna hozircha yopiq. Ochilganda albatta xabar beramiz!"
+PREMIUM_INFO = (
+    "💎 <b>Kitobxon Premium</b>\n\n"
+    "{status}\n\n"
+    "<b>Premium bilan:</b>\n{perks}\n\n"
+    "To'lov Telegram Stars (⭐) orqali — xavfsiz va bir zumda. "
+    "Tushgan mablag' klub tadbirlari, kitoblar va sovg'alarga sarflanadi."
+)
+PREMIUM_STATUS_ON = "✅ Siz Premium a'zosiz — <b>{until}</b> gacha. Muddatni uzaytirish mumkin."
+PREMIUM_STATUS_OFF = "Siz hozir oddiy a'zosiz."
+PREMIUM_PERK = "• {title} — {description}"
+PREMIUM_PERK_GOLD = "• 🌟 Oltin Kitobxon pasporti va «Premium a'zo» belgisi"
+PREMIUM_PLAN = "{title} — {stars} ⭐"
+DONATE_INFO = (
+    "❤️ <b>Klubni qo'llab-quvvatlash</b>\n\n"
+    "Har qanday hissa kitoblar sotib olish, tadbirlar va g'oliblarga sovg'alar uchun ishlatiladi. "
+    "Miqdorni tanlang:"
+)
+DONATE_CLOSED = "❤️ Hozircha hissa qabul qilinmayapti. Rahmat!"
+PAYMENT_PREMIUM_OK = (
+    "🎉 <b>Rahmat! Premium faollashtirildi.</b>\n\n"
+    "Amal qilish muddati: <b>{until}</b> gacha.\n"
+    "Qo'llab-quvvatlaganingiz uchun klub nomidan katta rahmat! 💎"
+)
+PAYMENT_DONATION_OK = "❤️ <b>Katta rahmat!</b> {amount} ⭐ hissangiz klub rivojiga sarflanadi."
+PAYMENT_STUCK = (
+    "To'lov qabul qilindi, lekin uni qayd etishda muammo bo'ldi. Xavotir olmang — "
+    "«/paysupport» orqali yozing, admin tekshirib beradi."
+)
+TERMS = (
+    "📄 <b>Foydalanish shartlari</b>\n\n"
+    "1. Klubning asosiy imkoniyatlari (kitoblar, tadbirlar, davomat, testlar, reyting) hamma a'zolar uchun bepul.\n"
+    "2. Premium — ixtiyoriy obuna: qo'shimcha imkoniyatlarni ochadi va tanlangan muddat (kun) davomida amal qiladi. "
+    "Muddat tugagach avtomatik yangilanmaydi.\n"
+    "3. To'lov Telegram Stars orqali qabul qilinadi. Tushgan mablag' klub faoliyatiga sarflanadi.\n"
+    "4. Texnik nosozlik tufayli Premium ishlamasa yoki xato to'lov bo'lsa — /paysupport orqali yozing, "
+    "Stars qaytariladi.\n"
+    "5. Qoidalarni buzgan a'zoning Premium obunasi to'xtatilishi mumkin."
+)
+PAYSUPPORT = (
+    "🧾 <b>To'lov bo'yicha yordam</b>\n\n"
+    "To'lov, Premium yoki qaytarish (refund) haqida savolingizni «✉️ Adminga yozish» orqali yuboring — "
+    "klub rahbariyati tez orada javob beradi."
+)
+
+# ---- Event feedback ----
+FEEDBACK_THANKS = "Rahmat! Bahoyingiz: {stars} ({rating}/5)."
+FEEDBACK_ASK_COMMENT = "Xohlasangiz, tadbir haqida fikringizni yozing — nima yoqdi, nimani yaxshilash kerak?"
+BTN_FEEDBACK_COMMENT = "✍️ Fikr yozish"
+FEEDBACK_COMMENT_SAVED = "✅ Fikringiz klub rahbariyatiga yetkazildi. Rahmat!"
+FEEDBACK_NOT_ALLOWED = "Bu tadbirga baho bera olmaysiz."

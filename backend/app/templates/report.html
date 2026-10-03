@@ -57,6 +57,16 @@
   <h1>HISOBOT</h1>
   <div class="subtitle">{{ report.title }}</div>
 
+  {% if report.kind == "PERIOD" %}
+  <table class="meta">
+    <tr><td class="k">Hisobot davri:</td><td>{{ facts.period.label }}</td></tr>
+    <tr><td class="k">Tayyorlangan:</td><td>{{ prepared_at }}</td></tr>
+  </table>
+  {% elif report.kind == "GENERAL" %}
+  <table class="meta">
+    <tr><td class="k">Sana:</td><td>{{ facts.date }}</td></tr>
+  </table>
+  {% else %}
   <table class="meta">
     <tr><td class="k">Tadbir:</td><td>{{ facts.event.title }}</td></tr>
     <tr><td class="k">Sana va vaqt:</td><td>{{ facts.event.date }}, {{ facts.event.time }}</td></tr>
@@ -65,10 +75,53 @@
     {% if facts.event.responsible %}<tr><td class="k">Mas'ul shaxs:</td><td>{{ facts.event.responsible }}</td></tr>{% endif %}
   </table>
 
+  {% endif %}
+
   {% for block in body %}
     {% if block.kind == "heading" %}<h2>{{ block.text }}</h2>{% else %}<p>{{ block.text }}</p>{% endif %}
   {% endfor %}
 
+  {% if report.kind == "PERIOD" %}
+  <h2>Asosiy ko'rsatkichlar</h2>
+  <table class="stats">
+    <tr><th>Ko'rsatkich</th><th style="text-align:right">Qiymat</th></tr>
+    <tr><td>O'tkazilgan tadbirlar</td><td class="n">{{ facts.summary.events }}</td></tr>
+    <tr><td>Tasdiqlangan qatnashuvlar (jami)</td><td class="n">{{ facts.summary.attendances }}</td></tr>
+    <tr><td>Tadbirlarda qatnashgan turli a'zolar</td><td class="n">{{ facts.summary.participants }}</td></tr>
+    <tr><td>Yangi a'zolar</td><td class="n">{{ facts.summary.new_members }}</td></tr>
+    <tr><td>Faol a'zolar (hisobot tayyorlangan kuni)</td><td class="n">{{ facts.summary.active_members }}</td></tr>
+    <tr><td>O'qib tugatilgan kitoblar</td><td class="n">{{ facts.summary.books_completed }}</td></tr>
+    <tr><td>Berilgan sertifikatlar</td><td class="n">{{ facts.summary.certificates }}</td></tr>
+    {% if facts.feedback and facts.feedback.count %}<tr><td>Tadbirlarga o'rtacha baho (5 ballik)</td><td class="n">{{ facts.feedback.average }} ({{ facts.feedback.count }} ta baho)</td></tr>{% endif %}
+  </table>
+  {% if facts.events %}
+  <h2>Tadbirlar</h2>
+  <table class="stats">
+    <tr><th>Tadbir</th><th>Sana</th><th style="text-align:right">Qatnashdi</th></tr>
+    {% for e in facts.events %}<tr><td>{{ e.title }}</td><td>{{ e.date }}</td><td class="n">{{ e.attended }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+  {% if facts.faculties %}
+  <table class="stats">
+    <tr><th>Fakultet</th><th style="text-align:right">Qatnashgan a'zolar</th></tr>
+    {% for row in facts.faculties %}<tr><td>{{ row.name }}</td><td class="n">{{ row.attended }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+  {% if facts.tests %}
+  <h2>Test natijalari</h2>
+  <table class="stats">
+    <tr><th>Test</th><th style="text-align:right">Ishtirokchi</th><th style="text-align:right">O'rtacha ball</th></tr>
+    {% for t in facts.tests %}<tr><td>{{ t.title }}</td><td class="n">{{ t.participants }}</td><td class="n">{{ t.average_score }} / {{ t.max_score }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+  {% if facts.top_members %}
+  <h2>Eng faol a'zolar</h2>
+  <table class="stats">
+    <tr><th>O'rin</th><th>A'zo</th><th>Fakultet</th><th style="text-align:right">Ball</th></tr>
+    {% for m in facts.top_members %}<tr><td>{{ m.place }}</td><td>{{ m.name }}</td><td>{{ m.faculty or "—" }}</td><td class="n">{{ m.points }}</td></tr>{% endfor %}
+  </table>
+  {% endif %}
+  {% elif report.kind != "GENERAL" %}
   <h2>Davomat statistikasi</h2>
   <table class="stats">
     <tr><th>Ko'rsatkich</th><th style="text-align:right">Qiymat</th></tr>
@@ -92,6 +145,11 @@
   </table>
   {% endif %}
 
+  {% if facts.feedback and facts.feedback.count %}
+  <p class="muted" style="text-indent:0">Ishtirokchilar bahosi: {{ facts.feedback.average }} / 5 ({{ facts.feedback.count }} ta baho).</p>
+  {% endif %}
+  {% endif %}
+
   {% if photos %}
   <h2>Fotosuratlar</h2>
   <div class="photos">
@@ -103,7 +161,7 @@
 
   <div class="sign">
     <table>
-      <tr><td>Mas'ul shaxs:</td><td><span class="line"></span></td><td>{{ facts.event.responsible or "" }}</td></tr>
+      <tr><td>Mas'ul shaxs:</td><td><span class="line"></span></td><td>{{ (facts.event.responsible if facts.event else "") or "" }}</td></tr>
       {% if approved_by %}<tr><td>Tasdiqladi:</td><td><span class="line"></span></td><td>{{ approved_by }}{% if approved_at %} ({{ approved_at }}){% endif %}</td></tr>{% endif %}
     </table>
     <p class="muted" style="text-indent:0; margin-top:14pt">

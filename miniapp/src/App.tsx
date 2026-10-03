@@ -1,5 +1,6 @@
 import { AppLayout } from './layouts/AppLayout'
 import { AchievementsPage } from './pages/AchievementsPage'
+import { FeatureGate } from './components/FeatureGate'
 import { LoadingState } from './components/StateViews'
 import { BookDetailPage } from './pages/BookDetailPage'
 import { BooksPage } from './pages/BooksPage'
@@ -8,6 +9,7 @@ import { CheckInPage } from './pages/CheckInPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { HomePage } from './pages/HomePage'
+import { PremiumPage } from './pages/PremiumPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RankingPage } from './pages/RankingPage'
 import { ResultsPage } from './pages/ResultsPage'
@@ -34,14 +36,15 @@ function Routes() {
   else if (section === 'events' && id) page = <EventDetailPage eventId={id} />
   else if (section === 'events') page = <EventsPage />
   else if (section === 'profile') page = <ProfilePage />
-  else if (section === 'ranking') page = <RankingPage />
+  else if (section === 'ranking') page = <FeatureGate code="ranking"><RankingPage /></FeatureGate>
   else if (section === 'results') page = <ResultsPage />
-  else if (section === 'achievements') page = <AchievementsPage />
-  else if (section === 'rewards') page = <RewardsPage />
+  else if (section === 'achievements') page = <FeatureGate code="achievements"><AchievementsPage /></FeatureGate>
+  else if (section === 'rewards') page = <FeatureGate code="rewards"><RewardsPage /></FeatureGate>
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
   else if (section === 'checkin') page = <CheckInPage />
-  else if (section === 'certificates') page = <CertificatesPage />
+  else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage /></FeatureGate>
+  else if (section === 'premium') page = <PremiumPage />
   else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>
 }

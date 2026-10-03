@@ -32,6 +32,10 @@ class MeOut(BaseModel):
     is_admin: bool
     roles: list[str]
     max_course: int
+    # What the super admin switched on: feature code -> "on" | "premium" (needs Premium) | "off".
+    features: dict[str, str]
+    is_premium: bool
+    premium_until: datetime | None
 
 
 class MeUpdateIn(BaseModel):

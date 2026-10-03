@@ -27,6 +27,8 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'notifications', icon: '📢', label: 'Xabarlar', visible: (can) => can('NOTIFICATION_SEND') },
   { route: 'faculties', icon: '🏛', label: 'Fakultetlar', visible: () => true },
   { route: 'settings', icon: '⚙️', label: 'Sozlamalar', visible: () => true },
+  { route: 'features', icon: '🧩', label: 'Imkoniyatlar', visible: (_, isSuper) => isSuper },
+  { route: 'premium', icon: '💎', label: 'Premium', visible: (_, isSuper) => isSuper },
   { route: 'admins', icon: '🛡', label: 'Adminlar', visible: (_, isSuper) => isSuper },
   { route: 'audit', icon: '🧾', label: 'Audit jurnali', visible: (can) => can('AUDIT_LOG_VIEW') },
 ]

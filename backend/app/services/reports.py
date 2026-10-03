@@ -13,7 +13,7 @@ from __future__ import annotations
 import io
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -23,7 +23,10 @@ from app.core.errors import BadRequestError, ConflictError, NotFoundError
 from app.models import (
     AttendanceRecord,
     Book,
+    BookRead,
+    Certificate,
     Event,
+    EventFeedback,
     EventRegistration,
     Faculty,
     Report,
@@ -32,11 +35,20 @@ from app.models import (
     TestAttempt,
     User,
 )
-from app.models.enums import AttemptStatus, AttendanceStatus, RegistrationStatus, ReportStatus
+from app.models.enums import (
+    AttemptStatus,
+    AttendanceStatus,
+    EventStatus,
+    ReadingStatus,
+    RegistrationStatus,
+    ReportKind,
+    ReportStatus,
+    UserStatus,
+)
 from app.services.audit import record_audit
 from app.services.settings import get_setting
 from app.services.storage import get_storage
-from app.utils.timezone import MONTHS_UZ, to_local
+from app.utils.timezone import MONTHS_UZ, local_tz, to_local
 
 EDITABLE_STATUSES = (ReportStatus.DRAFT, ReportStatus.AI_GENERATED, ReportStatus.REVIEW)
 FINAL_STATUSES = (ReportStatus.APPROVED, ReportStatus.PDF_GENERATED, ReportStatus.ARCHIVED)
@@ -151,8 +163,167 @@ async def build_facts(session: AsyncSession, event: Event) -> dict[str, Any]:
         "faculties": [{"name": name, "attended": count} for name, count in sorted(by_faculty.items())],
         "courses": [{"course": course, "attended": count} for course, count in sorted(by_course.items())],
         "tests": tests,
+        "feedback": await _feedback(session, [event.id]),
         "prepared_at": datetime.now(UTC).isoformat(),
     }
+
+
+async def _feedback(session: AsyncSession, event_ids: list[uuid.UUID]) -> dict[str, Any]:
+    count, average = (
+        await session.execute(
+            select(func.count(), func.avg(EventFeedback.rating)).where(EventFeedback.event_id.in_(event_ids))
+        )
+    ).one()
+    return {"count": int(count or 0), "average": round(float(average), 1) if average is not None else None}
+
+
+def _uz_day(value: date) -> str:
+    return f"{value.year}-yil {value.day}-{MONTHS_UZ[value.month - 1]}"
+
+
+def period_label(start: date, end: date) -> str:
+    """ "2026-yil 1-oktabrdan 31-oktabrgacha" """
+    if start.year == end.year:
+        return f"{start.year}-yil {start.day}-{MONTHS_UZ[start.month - 1]}dan {end.day}-{MONTHS_UZ[end.month - 1]}gacha"
+    return f"{_uz_day(start)}dan {_uz_day(end)}gacha"
+
+
+async def build_period_facts(session: AsyncSession, start: date, end: date) -> dict[str, Any]:
+    """Everything the club did between two dates (inclusive), loaded from the database."""
+    from app.services.ranking import ranking
+
+    since = datetime.combine(start, time.min, tzinfo=local_tz())
+    until = datetime.combine(end + timedelta(days=1), time.min, tzinfo=local_tz())
+    events = list(
+        await session.scalars(
+            select(Event)
+            .where(
+                Event.deleted_at.is_(None),
+                Event.status.in_((EventStatus.PUBLISHED, EventStatus.COMPLETED)),
+                Event.starts_at >= since,
+                Event.starts_at < until,
+            )
+            .order_by(Event.starts_at)
+        )
+    )
+    event_ids = [event.id for event in events]
+    verified = (
+        await session.execute(
+            select(AttendanceRecord.event_id, AttendanceRecord.user_id, Faculty.name)
+            .join(User, User.id == AttendanceRecord.user_id)
+            .outerjoin(Faculty, Faculty.id == User.faculty_id)
+            .where(AttendanceRecord.event_id.in_(event_ids), AttendanceRecord.status == AttendanceStatus.VERIFIED)
+        )
+    ).all()
+    per_event: dict[uuid.UUID, int] = {}
+    faculty_of: dict[uuid.UUID, str] = {}
+    for row in verified:
+        per_event[row.event_id] = per_event.get(row.event_id, 0) + 1
+        faculty_of[row.user_id] = row.name or "Ko'rsatilmagan"
+    by_faculty: dict[str, int] = {}
+    for name in faculty_of.values():
+        by_faculty[name] = by_faculty.get(name, 0) + 1
+
+    tests = []
+    for test in await session.scalars(
+        select(Test)
+        .where(Test.deleted_at.is_(None), Test.starts_at >= since, Test.starts_at < until)
+        .order_by(Test.starts_at)
+    ):
+        participants, average = (
+            await session.execute(
+                select(func.count(func.distinct(TestAttempt.user_id)), func.avg(TestAttempt.score)).where(
+                    TestAttempt.test_id == test.id,
+                    TestAttempt.status.in_((AttemptStatus.SUBMITTED, AttemptStatus.EXPIRED)),
+                )
+            )
+        ).one()
+        if participants:
+            tests.append(
+                {
+                    "title": test.title,
+                    "participants": int(participants),
+                    "average_score": round(float(average or 0), 1),
+                    "max_score": test.max_score,
+                }
+            )
+
+    async def count(query: Any) -> int:
+        return int(await session.scalar(query) or 0)
+
+    board = await ranking(session, period="all", scope="all", viewer=None, limit=5, between=(since, until))
+    names = {  # an official report uses full names, whatever the public ranking shows
+        row.id: f"{row.last_name} {row.first_name}"
+        for row in await session.execute(
+            select(User.id, User.first_name, User.last_name).where(User.id.in_([r.user_id for r in board.items]))
+        )
+    }
+    return {
+        "organization": await get_setting(session, "org.organization_name"),
+        "club": await get_setting(session, "org.club_name"),
+        "period": {"label": period_label(start, end), "start": start.isoformat(), "end": end.isoformat()},
+        "summary": {
+            "events": len(events),
+            "attendances": len(verified),
+            "participants": len(faculty_of),
+            "new_members": await count(
+                select(func.count())
+                .select_from(User)
+                .where(User.deleted_at.is_(None), User.registered_at >= since, User.registered_at < until)
+            ),
+            "active_members": await count(
+                select(func.count())
+                .select_from(User)
+                .where(User.deleted_at.is_(None), User.status == UserStatus.ACTIVE)
+            ),
+            "books_completed": await count(
+                select(func.count())
+                .select_from(BookRead)
+                .where(
+                    BookRead.status == ReadingStatus.COMPLETED,
+                    BookRead.completed_at >= since,
+                    BookRead.completed_at < until,
+                )
+            ),
+            "certificates": await count(
+                select(func.count())
+                .select_from(Certificate)
+                .where(Certificate.revoked_at.is_(None), Certificate.issued_at >= since, Certificate.issued_at < until)
+            ),
+        },
+        "events": [
+            {"title": event.title, "date": _uz_date(event.starts_at), "attended": per_event.get(event.id, 0)}
+            for event in events
+        ],
+        "faculties": [{"name": name, "attended": n} for name, n in sorted(by_faculty.items())],
+        "tests": tests,
+        "top_members": [
+            {"place": row.rank, "name": names.get(row.user_id, row.name), "faculty": row.faculty, "points": row.total}
+            for row in board.items
+        ],
+        "feedback": await _feedback(session, event_ids) if event_ids else {"count": 0, "average": None},
+        "prepared_at": datetime.now(UTC).isoformat(),
+    }
+
+
+async def build_general_facts(session: AsyncSession) -> dict[str, Any]:
+    return {
+        "organization": await get_setting(session, "org.organization_name"),
+        "club": await get_setting(session, "org.club_name"),
+        "date": _uz_date(datetime.now(UTC)),
+        "prepared_at": datetime.now(UTC).isoformat(),
+    }
+
+
+async def facts_for(session: AsyncSession, report: Report) -> dict[str, Any]:
+    if report.kind == ReportKind.EVENT:
+        event = await session.get(Event, report.event_id)
+        assert event is not None
+        return await build_facts(session, event)
+    if report.kind == ReportKind.PERIOD:
+        assert report.period_start is not None and report.period_end is not None
+        return await build_period_facts(session, report.period_start, report.period_end)
+    return await build_general_facts(session)
 
 
 # ---------------------------------------------------------------------------- number check
@@ -209,8 +380,74 @@ def number_issues(report: Report) -> list[str]:
 # ---------------------------------------------------------------------------- template draft
 
 
+def _admin_sections(report: Report) -> list[str]:
+    parts: list[str] = []
+    if report.results:
+        parts += ["## Natijalar", report.results.strip()]
+    if report.conclusion:
+        parts += ["## Xulosa", report.conclusion.strip()]
+    if report.recommendations:
+        parts += ["## Takliflar", report.recommendations.strip()]
+    return parts
+
+
+def _period_draft(report: Report) -> str:
+    facts = report.facts_snapshot or {}
+    summary = facts.get("summary", {})
+    parts = [
+        "## Kirish",
+        f"Ushbu hisobotda {facts.get('club')}ning {facts.get('period', {}).get('label')} davrida amalga "
+        "oshirgan ishlari jamlangan.",
+    ]
+    if report.objective:
+        parts.append(report.objective.strip())
+    parts.append("## Tadbirlar")
+    if summary.get("events"):
+        parts.append(
+            f"Hisobot davrida {summary['events']} ta tadbir o'tkazildi. Ularda jami {summary.get('attendances', 0)}"
+            f" marta qatnashuv qayd etildi, {summary.get('participants', 0)} nafar turli a'zo ishtirok etdi."
+        )
+        parts.append(
+            "; ".join(f"«{row['title']}» ({row['date']}) — {row['attended']} nafar" for row in facts.get("events", []))
+            + "."
+        )
+    else:
+        parts.append("Hisobot davrida tadbirlar o'tkazilmadi.")
+    if report.activity_description:
+        parts.append(report.activity_description.strip())
+    parts.append("## A'zolar va kitobxonlik")
+    parts.append(
+        f"Davr mobaynida {summary.get('new_members', 0)} nafar yangi a'zo qo'shildi; faol a'zolar soni"
+        f" {summary.get('active_members', 0)} nafarni tashkil etadi. A'zolar {summary.get('books_completed', 0)} ta"
+        " kitobni o'qib tugatdi."
+    )
+    for test in facts.get("tests") or []:
+        parts.append(
+            f"«{test['title']}» testida {test['participants']} nafar a'zo qatnashdi, o'rtacha natija"
+            f" {test['average_score']} ball ({test['max_score']} balldan)."
+        )
+    top = facts.get("top_members") or []
+    if top:
+        parts.append("## Eng faol a'zolar")
+        parts.append("; ".join(f"{row['place']}. {row['name']} — {row['points']} ball" for row in top) + ".")
+    return "\n\n".join(parts + _admin_sections(report))
+
+
+def _general_draft(report: Report) -> str:
+    parts: list[str] = []
+    if report.objective:
+        parts += ["## Kirish", report.objective.strip()]
+    if report.activity_description:
+        parts += ["## Amalga oshirilgan ishlar", report.activity_description.strip()]
+    return "\n\n".join(parts + _admin_sections(report)) or report.title
+
+
 def template_draft(report: Report) -> str:
     """A formal draft built only from facts and admin text (used when AI is not configured)."""
+    if report.kind == ReportKind.PERIOD:
+        return _period_draft(report)
+    if report.kind == ReportKind.GENERAL:
+        return _general_draft(report)
     facts = report.facts_snapshot or {}
     event = facts.get("event", {})
     attendance = facts.get("attendance", {})
@@ -246,13 +483,13 @@ def template_draft(report: Report) -> str:
             f"«{test['title']}» testida {test['participants']} nafar a'zo qatnashdi, o'rtacha natija"
             f" {test['average_score']} ball ({test['max_score']} balldan)."
         )
-    if report.results:
-        parts += ["## Natijalar", report.results.strip()]
-    if report.conclusion:
-        parts += ["## Xulosa", report.conclusion.strip()]
-    if report.recommendations:
-        parts += ["## Takliflar", report.recommendations.strip()]
-    return "\n\n".join(parts)
+    feedback = facts.get("feedback") or {}
+    if feedback.get("count"):
+        parts.append(
+            f"Ishtirokchilar tadbirni o'rtacha {feedback['average']} ballga baholadi (5 ballik shkala,"
+            f" {feedback['count']} ta baho)."
+        )
+    return "\n\n".join(parts + _admin_sections(report))
 
 
 # ---------------------------------------------------------------------------- lifecycle
@@ -262,37 +499,75 @@ def _snapshot(report: Report) -> dict[str, Any]:
     return {"status": str(report.status), "version": report.version, "title": report.title}
 
 
+def subject(report: Report, event_title: str | None) -> str:
+    """What the report is about, for lists: the event, the period or "Umumiy"."""
+    if report.kind == ReportKind.EVENT:
+        return event_title or "—"
+    if report.kind == ReportKind.PERIOD and report.period_start and report.period_end:
+        return period_label(report.period_start, report.period_end)
+    return "Umumiy hisobot"
+
+
 async def list_reports(session: AsyncSession, *, limit: int, offset: int) -> tuple[list[tuple[Report, str]], int]:
     total = await session.scalar(select(func.count()).select_from(Report))
     rows = await session.execute(
         select(Report, Event.title)
-        .join(Event, Event.id == Report.event_id)
+        .outerjoin(Event, Event.id == Report.event_id)
         .order_by(Report.created_at.desc())
         .limit(limit)
         .offset(offset)
     )
-    return [(report, title) for report, title in rows], int(total or 0)
+    return [(report, subject(report, title)) for report, title in rows], int(total or 0)
 
 
-async def create_report(session: AsyncSession, *, actor_id: uuid.UUID, event_id: uuid.UUID) -> Report:
-    event = await session.get(Event, event_id)
-    if event is None or event.deleted_at is not None:
-        raise NotFoundError("EVENT_NOT_FOUND", "Tadbir topilmadi.")
-    version = (
-        int(
-            await session.scalar(select(func.coalesce(func.max(Report.version), 0)).where(Report.event_id == event.id))
-            or 0
+MAX_PERIOD_DAYS = 400
+
+
+async def create_report(
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    kind: ReportKind = ReportKind.EVENT,
+    event_id: uuid.UUID | None = None,
+    period_start: date | None = None,
+    period_end: date | None = None,
+    title: str | None = None,
+    version: int | None = None,
+) -> Report:
+    event = None
+    if kind == ReportKind.EVENT:
+        event = await session.get(Event, event_id) if event_id else None
+        if event is None or event.deleted_at is not None:
+            raise NotFoundError("EVENT_NOT_FOUND", "Tadbir topilmadi.")
+        version = (
+            int(
+                await session.scalar(
+                    select(func.coalesce(func.max(Report.version), 0)).where(Report.event_id == event.id)
+                )
+                or 0
+            )
+            + 1
         )
-        + 1
-    )
+        title = title or f"«{event.title}» tadbiri bo'yicha hisobot"
+    elif kind == ReportKind.PERIOD:
+        if period_start is None or period_end is None or period_end < period_start:
+            raise BadRequestError("INVALID_PERIOD", "Davr boshlanishi va tugashini to'g'ri kiriting.")
+        if (period_end - period_start).days > MAX_PERIOD_DAYS:
+            raise BadRequestError("INVALID_PERIOD", "Davr bir yildan oshmasin.")
+        title = title or f"{period_label(period_start, period_end)} faoliyat hisoboti"
+    elif not title:
+        raise BadRequestError("TITLE_REQUIRED", "Hisobot mavzusini yozing.")
     report = Report(
-        event_id=event.id,
-        version=version,
+        kind=kind,
+        event_id=event.id if event else None,
+        period_start=period_start if kind == ReportKind.PERIOD else None,
+        period_end=period_end if kind == ReportKind.PERIOD else None,
+        version=version or 1,
         status=ReportStatus.DRAFT,
-        title=f"«{event.title}» tadbiri bo'yicha hisobot",
-        facts_snapshot=await build_facts(session, event),
+        title=title,
         created_by=actor_id,
     )
+    report.facts_snapshot = await facts_for(session, report)
     session.add(report)
     await session.flush()
     record_audit(
@@ -338,9 +613,7 @@ async def update_report(
 async def refresh_facts(session: AsyncSession, *, actor_id: uuid.UUID, report_id: uuid.UUID) -> Report:
     report = await get_report(session, report_id)
     _ensure_editable(report)
-    event = await session.get(Event, report.event_id)
-    assert event is not None
-    report.facts_snapshot = await build_facts(session, event)
+    report.facts_snapshot = await facts_for(session, report)
     record_audit(session, actor_id=actor_id, action="REPORT_REFRESH_FACTS", entity_type="report", entity_id=report.id)
     await session.commit()
     return report
@@ -409,7 +682,8 @@ async def store_pdf(session: AsyncSession, report: Report) -> bytes:
     from app.services.report_pdf import render_report_pdf
 
     pdf = await render_report_pdf(session, report, draft=False)
-    key = report.pdf_object_key or f"reports/{report.event_id}/{report.id}-v{report.version}.pdf"
+    folder = report.event_id or str(report.kind).lower()
+    key = report.pdf_object_key or f"reports/{folder}/{report.id}-v{report.version}.pdf"
     await get_storage().put(key, pdf, "application/pdf")
     report.pdf_object_key = key
     report.pdf_generated_at = datetime.now(UTC)
@@ -445,7 +719,16 @@ async def archive(session: AsyncSession, *, actor_id: uuid.UUID, report_id: uuid
 async def new_version(session: AsyncSession, *, actor_id: uuid.UUID, report_id: uuid.UUID) -> Report:
     """Start a corrected version of an approved report (the approved one stays unchanged)."""
     source = await get_report(session, report_id)
-    report = await create_report(session, actor_id=actor_id, event_id=source.event_id)
+    report = await create_report(
+        session,
+        actor_id=actor_id,
+        kind=source.kind,
+        event_id=source.event_id,
+        period_start=source.period_start,
+        period_end=source.period_end,
+        title=source.title,
+        version=source.version + 1,
+    )
     for field in (*ADMIN_FIELDS, "body_text"):
         setattr(report, field, getattr(source, field))
     report.status = ReportStatus.REVIEW if report.body_text else ReportStatus.DRAFT

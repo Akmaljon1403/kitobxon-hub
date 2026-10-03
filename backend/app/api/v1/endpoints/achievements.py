@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.deps import CurrentUserDep, DbSession
+from app.api.deps import CurrentUserDep, DbSession, feature_required
 from app.schemas.achievement import AchievementOut
 from app.services import achievements as achievement_service
 
-router = APIRouter(tags=["achievements"])
+router = APIRouter(tags=["achievements"], dependencies=[feature_required("achievements")])
 
 
 @router.get("/me/achievements", response_model=list[AchievementOut], summary="My achievements and progress")

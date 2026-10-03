@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
 
+import { useFeature } from '../components/FeatureGate'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { CheckInResult, ClubEvent } from '../types/api'
+import type { CheckInResult, ClubEvent, EventFeedback } from '../types/api'
 import { formatEventDate, formatTime } from '../utils/format'
 import { navigate } from '../utils/router'
 import { confirmAction, getWebApp, haptic } from '../utils/telegram'
@@ -85,7 +86,79 @@ function CheckInCard({ event, onDone }: { event: ClubEvent; onDone: (result: Che
   )
 }
 
+function FeedbackCard({ eventId }: { eventId: string }) {
+  const { api } = useAuth()
+  const mine = useAsync((signal) => api<EventFeedback | null>(`/api/v1/events/${eventId}/feedback`, { signal }), [eventId])
+  const [rating, setRating] = useState<number | null>(null)
+  const [comment, setComment] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  if (mine.state.status !== 'success') return null
+  const current = rating ?? mine.state.data?.rating ?? 0
+  const text = comment ?? mine.state.data?.comment ?? ''
+
+  async function save(value: number) {
+    setSaving(true)
+    setError(null)
+    try {
+      await api(`/api/v1/events/${eventId}/feedback`, { method: 'PUT', body: { rating: value, comment: text } })
+      setRating(value)
+      setSaved(true)
+      haptic('success')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Saqlab bo'lmadi.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-2">
+      <SectionTitle>⭐ Tadbirga baho bering</SectionTitle>
+      <div className="flex justify-center gap-1" role="radiogroup" aria-label="Baho">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={current === n}
+            aria-label={`${n} baho`}
+            disabled={saving}
+            onClick={() => void save(n)}
+            className={`text-3xl transition-transform active:scale-90 ${n <= current ? '' : 'opacity-30 grayscale'}`}
+          >
+            ⭐
+          </button>
+        ))}
+      </div>
+      {current > 0 && (
+        <>
+          <textarea
+            value={text}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={1000}
+            rows={3}
+            placeholder="Fikringiz (ixtiyoriy): nima yoqdi, nimani yaxshilash kerak?"
+            className="w-full rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          />
+          <Button variant="secondary" loading={saving} onClick={() => void save(current)}>
+            Fikrni yuborish
+          </Button>
+        </>
+      )}
+      {saved && <p className="text-center text-sm text-app-hint">✅ Rahmat! Fikringiz klub rahbariyatiga yetkazildi.</p>}
+      {error && (
+        <p role="alert" className="text-center text-sm text-app-danger">
+          {error}
+        </p>
+      )}
+    </Card>
+  )
+}
+
 export function EventDetailPage({ eventId }: { eventId: string }) {
+  const feedbackAccess = useFeature('event_feedback')
   const { api } = useAuth()
   const { state, reload } = useAsync((signal) => api<ClubEvent>(`/api/v1/events/${eventId}`, { signal }), [eventId])
   const [busy, setBusy] = useState(false)
@@ -162,6 +235,8 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
           </Card>
         )
       )}
+
+      {ended && event.my_attendance === 'VERIFIED' && feedbackAccess === 'on' && <FeedbackCard eventId={event.id} />}
 
       {checkInVisible && (
         <CheckInCard

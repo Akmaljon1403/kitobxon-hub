@@ -355,9 +355,13 @@ export interface AchievementHolder {
 
 export type ReportStatus = 'DRAFT' | 'AI_GENERATED' | 'REVIEW' | 'APPROVED' | 'PDF_GENERATED' | 'ARCHIVED'
 
+export type ReportKind = 'EVENT' | 'PERIOD' | 'GENERAL'
+
 export interface ReportListItem {
   id: string
-  event_id: string
+  kind: ReportKind
+  event_id: string | null
+  /** What the report is about: the event, the period or "Umumiy hisobot". */
   event_title: string
   version: number
   status: ReportStatus
@@ -367,10 +371,11 @@ export interface ReportListItem {
   pdf_ready: boolean
 }
 
+/** Facts loaded from the database; which parts exist depends on the report kind. */
 export interface ReportFacts {
   organization: string
   club: string
-  event: {
+  event?: {
     title: string
     date: string
     time: string
@@ -379,7 +384,7 @@ export interface ReportFacts {
     book_author: string | null
     responsible: string | null
   }
-  attendance: {
+  attendance?: {
     registered: number
     attended: number
     attended_registered: number
@@ -387,14 +392,31 @@ export interface ReportFacts {
     rate_percent: number | null
     suspicious: number
   }
-  faculties: { name: string; attended: number }[]
-  tests: { title: string; participants: number; average_score: number; max_score: number; passed: number }[]
+  period?: { label: string; start: string; end: string }
+  summary?: {
+    events: number
+    attendances: number
+    participants: number
+    new_members: number
+    active_members: number
+    books_completed: number
+    certificates: number
+  }
+  events?: { title: string; date: string; attended: number }[]
+  top_members?: { place: number; name: string; faculty: string | null; points: number }[]
+  feedback?: { count: number; average: number | null }
+  faculties?: { name: string; attended: number }[]
+  tests?: { title: string; participants: number; average_score: number; max_score: number; passed?: number }[]
+  date?: string
   prepared_at: string
 }
 
 export interface ReportDetail {
   id: string
-  event_id: string
+  kind: ReportKind
+  event_id: string | null
+  period_start: string | null
+  period_end: string | null
   version: number
   status: ReportStatus
   title: string

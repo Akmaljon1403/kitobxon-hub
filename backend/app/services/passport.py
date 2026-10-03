@@ -22,6 +22,7 @@ from app.core.config import get_settings
 from app.models import Faculty, User
 from app.models.enums import AchievementCriteria, UserStatus
 from app.security.crypto import constant_time_equals, keyed_hash
+from app.services.settings import get_setting
 from app.services.storage import get_storage
 from app.utils.timezone import local_tz
 
@@ -52,6 +53,8 @@ class PassportData:
     events: int
     verify_url: str | None
     active: bool = True
+    premium: bool = False  # a gold design and the «Premium a'zo» badge
+    organization: str = "Farg'ona jamoat salomatligi tibbiyot instituti · Kitobxonlar klubi"
 
 
 def member_number(user: User) -> str:
@@ -83,6 +86,7 @@ def verify_url(code: str) -> str | None:
 
 async def collect(session: AsyncSession, user: User) -> PassportData:
     from app.services import achievements, ranking
+    from app.services import premium as premium_service
 
     faculty = (
         await session.scalar(select(Faculty.name).where(Faculty.id == user.faculty_id)) if user.faculty_id else None
@@ -105,6 +109,10 @@ async def collect(session: AsyncSession, user: User) -> PassportData:
         events=progress[AchievementCriteria.EVENTS_ATTENDED],
         verify_url=verify_url(verify_code(user)),
         active=user.status == UserStatus.ACTIVE,
+        premium=await premium_service.is_premium(session, user.id),
+        organization=" · ".join(
+            [await get_setting(session, "org.organization_name"), await get_setting(session, "org.club_name")]
+        ),
     )
 
 
@@ -185,23 +193,24 @@ def _spaced(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font, fil
         x += int(draw.textlength(char, font=font)) + spacing
 
 
-def _background() -> Image.Image:
-    # Diagonal gradient: dark green in the top-left corner, lighter green in the bottom-right.
+def _background(premium: bool = False) -> Image.Image:
+    # Diagonal gradient: dark green in the top-left corner, lighter green in the bottom-right
+    # (premium: deeper green with gold rings and a gold frame).
     vertical = Image.linear_gradient("L").resize((WIDTH, HEIGHT))
     horizontal = (
         Image.linear_gradient("L").rotate(90).transpose(Image.Transpose.FLIP_LEFT_RIGHT).resize((WIDTH, HEIGHT))
     )
     mask = Image.blend(vertical, horizontal, 0.5)
-    card = Image.composite(
-        Image.new("RGB", (WIDTH, HEIGHT), GREEN_LIGHT), Image.new("RGB", (WIDTH, HEIGHT), GREEN_DARK), mask
-    )
+    light, dark = ((24, 92, 66), (8, 36, 26)) if premium else (GREEN_LIGHT, GREEN_DARK)
+    card = Image.composite(Image.new("RGB", (WIDTH, HEIGHT), light), Image.new("RGB", (WIDTH, HEIGHT), dark), mask)
+    ring = (*GOLD, 34) if premium else (255, 255, 255, 14)
     card = card.convert("RGBA")
     pattern = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     draw = ImageDraw.Draw(pattern)
     for radius in range(120, 900, 46):  # soft guilloche-like rings, as on official documents
         draw.ellipse(
             (WIDTH - 260 - radius, -180 - radius, WIDTH - 260 + radius, -180 + radius),
-            outline=(255, 255, 255, 14),
+            outline=ring,
             width=2,
         )
     for radius in range(60, 420, 38):
@@ -210,6 +219,8 @@ def _background() -> Image.Image:
             outline=(255, 255, 255, 10),
             width=2,
         )
+    if premium:
+        draw.rounded_rectangle((12, 12, WIDTH - 13, HEIGHT - 13), radius=26, outline=(*GOLD, 255), width=4)
     return Image.alpha_composite(card, pattern)
 
 
@@ -260,7 +271,7 @@ def _qr(url: str, size: int) -> Image.Image:
 
 
 def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
-    card = _background()
+    card = _background(data.premium)
     overlay = Image.new("RGBA", card.size, (0, 0, 0, 0))
     shapes = ImageDraw.Draw(overlay)
     draw = ImageDraw.Draw(card)
@@ -270,8 +281,9 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
     # Header: the club's mark, the title and the membership number.
     _book_icon(draw, 48, 44, 64)
     draw.text((132, 40), "KITOBXON PASPORTI", font=_bold(44), fill=WHITE)
+    subtitle_font = _regular(19)
     draw.text(
-        (134, 96), "Farg'ona jamoat salomatligi tibbiyot instituti · Kitobxonlar klubi", font=_regular(19), fill=soft
+        (134, 96), _clip(draw, data.organization, subtitle_font, WIDTH - 48 - 200 - 134), font=subtitle_font, fill=soft
     )
     _spaced(draw, (WIDTH - 48 - 150, 30), "A'ZO RAQAMI", _regular(15), faint)
     number_font = _mono(32)
@@ -286,7 +298,7 @@ def draw_passport(data: PassportData, avatar: bytes | None = None) -> bytes:
     card = Image.alpha_composite(card, overlay)
     card.alpha_composite(_photo(avatar, initials, (240, 300)), (48, 176))
     draw = ImageDraw.Draw(card)
-    status = "✓ FAOL A'ZO" if data.active else "A'ZOLIK TO'XTATILGAN"
+    status = ("★ PREMIUM A'ZO" if data.premium else "✓ FAOL A'ZO") if data.active else "A'ZOLIK TO'XTATILGAN"
     status_font = _bold(19)
     status_width = int(draw.textlength(status, font=status_font)) + 36
     draw.rounded_rectangle((48, 500, 48 + status_width, 540), radius=20, fill=GOLD if data.active else (200, 200, 200))

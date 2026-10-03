@@ -37,7 +37,10 @@ async def _detail(db, report: Report) -> ReportDetailOut:
     photos = await report_service.list_photos(db, report.id)
     return ReportDetailOut(
         id=report.id,
+        kind=report.kind,
         event_id=report.event_id,
+        period_start=report.period_start,
+        period_end=report.period_end,
         version=report.version,
         status=report.status,
         title=report.title,
@@ -82,6 +85,7 @@ async def list_reports(
         items=[
             ReportListItem(
                 id=report.id,
+                kind=report.kind,
                 event_id=report.event_id,
                 event_title=event_title,
                 version=report.version,
@@ -101,7 +105,15 @@ async def list_reports(
 
 @router.post("", response_model=ReportDetailOut, status_code=status.HTTP_201_CREATED, summary="Start a report")
 async def create_report(payload: ReportCreateIn, current: Creator, db: DbSession) -> ReportDetailOut:
-    report = await report_service.create_report(db, actor_id=current.user.id, event_id=payload.event_id)
+    report = await report_service.create_report(
+        db,
+        actor_id=current.user.id,
+        kind=payload.kind,
+        event_id=payload.event_id,
+        period_start=payload.period_start,
+        period_end=payload.period_end,
+        title=payload.title.strip() if payload.title else None,
+    )
     return await _detail(db, report)
 
 

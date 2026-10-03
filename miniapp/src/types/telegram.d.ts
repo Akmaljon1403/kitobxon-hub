@@ -73,6 +73,8 @@ export interface TelegramWebApp {
   showConfirm(message: string, callback?: (confirmed: boolean) => void): void
   showScanQrPopup?: (params: { text?: string }, callback?: (data: string) => boolean | void) => void
   closeScanQrPopup?: () => void
+  /** Bot API 6.1+: shows a Telegram invoice (Stars payments) inside the Mini App. */
+  openInvoice?: (url: string, callback?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void) => void
   /** Bot API 8.0+: Telegram's own "save file" dialog for a public HTTPS link. */
   downloadFile?: (params: { url: string; file_name: string }, callback?: (accepted: boolean) => void) => void
   onEvent(eventType: string, handler: (...args: unknown[]) => void): void

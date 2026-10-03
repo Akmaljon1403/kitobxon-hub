@@ -11,9 +11,11 @@ import { CertificatesPage } from './pages/CertificatesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsPage } from './pages/EventsPage'
 import { FacultiesPage } from './pages/FacultiesPage'
+import { FeaturesPage } from './pages/FeaturesPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { NotificationsPage } from './pages/NotificationsPage'
+import { PremiumPage } from './pages/PremiumPage'
 import { QuotesPage } from './pages/QuotesPage'
 import { ReportEditorPage, ReportsPage } from './pages/ReportsPage'
 import { RewardsPage } from './pages/RewardsPage'
@@ -40,6 +42,8 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   reports: ReportsPage,
   rewards: RewardsPage,
   certificates: CertificatesPage,
+  features: FeaturesPage,
+  premium: PremiumPage,
   analytics: AnalyticsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,

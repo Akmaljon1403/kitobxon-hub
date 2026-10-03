@@ -7,8 +7,9 @@ from app.models.base import Base
 from app.models.book import Book, BookQuote, BookRead
 from app.models.bot import BotFsmState
 from app.models.certificate import Certificate
-from app.models.event import Event, EventRegistration
+from app.models.event import Event, EventFeedback, EventRegistration
 from app.models.notification import Notification, NotificationTemplate
+from app.models.premium import FeatureFlag, Payment, PremiumPlan, PremiumSubscription
 from app.models.rbac import LoginToken, Permission, Role, RolePermission, UserPermission, UserRole
 from app.models.report import Report, ReportPhoto
 from app.models.reward import Reward, RewardCode, UserReward
@@ -34,12 +35,17 @@ __all__ = [
     "CampaignBook",
     "Certificate",
     "Event",
+    "EventFeedback",
     "EventRegistration",
     "Faculty",
+    "FeatureFlag",
     "LoginToken",
     "Notification",
     "NotificationTemplate",
+    "Payment",
     "Permission",
+    "PremiumPlan",
+    "PremiumSubscription",
     "Report",
     "ReportPhoto",
     "Reward",

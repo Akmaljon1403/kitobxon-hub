@@ -27,6 +27,7 @@ _REQUEST = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
 def _report() -> Any:
     return SimpleNamespace(
         id=uuid.uuid4(),
+        kind="EVENT",
         title="Hisobot",
         objective="Kitobxonlikni rivojlantirish",
         activity_description=None,
@@ -106,6 +107,7 @@ def test_prompt_contains_only_facts_and_admin_notes() -> None:
     assert '"verified": 12' in prompt
     assert "Kitobxonlikni rivojlantirish" in prompt
     assert "takliflar" not in prompt  # empty fields are left out
+    assert "## Tadbirning borishi" in prompt  # the headings of an event report
 
 
 # ---------------------------------------------------------------------------- S3 storage

@@ -96,3 +96,14 @@ async def require_super_admin(current: CurrentAdminDep) -> CurrentUser:
 
 
 SuperAdminDep = Annotated[CurrentUser, Depends(require_super_admin)]
+
+
+def feature_required(code: str) -> Any:
+    """Dependency for member endpoints: 403 FEATURE_OFF / PREMIUM_REQUIRED when not available."""
+
+    async def dependency(current: CurrentUserDep, db: DbSession) -> None:
+        from app.services import features
+
+        await features.require(db, current.user, code)
+
+    return Depends(dependency)

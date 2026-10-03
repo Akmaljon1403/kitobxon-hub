@@ -26,9 +26,11 @@ from app.schemas.event import (
     RecordStatusIn,
     RegistrationOut,
 )
+from app.schemas.premium import FeedbackSummaryOut
 from app.security.permissions import Perm
 from app.services import attendance as attendance_service
 from app.services import events as event_service
+from app.services import feedback as feedback_service
 
 router = APIRouter(prefix="/admin", tags=["admin: events and attendance"])
 EventViewer = Annotated[CurrentUser, Depends(require_permissions(Perm.EVENT_VIEW))]
@@ -228,3 +230,8 @@ async def export_attendance(event_id: uuid.UUID, _: AttendanceViewer, db: DbSess
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
     )
+
+
+@router.get("/events/{event_id}/feedback", response_model=FeedbackSummaryOut, summary="Members' ratings and comments")
+async def event_feedback(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> FeedbackSummaryOut:
+    return FeedbackSummaryOut(**await feedback_service.summary(db, event_id))

@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, SmallInteger, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
@@ -63,3 +63,18 @@ class EventRegistration(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     registered_at: Mapped[datetime] = mapped_column(server_default=func.now())
     cancelled_at: Mapped[datetime | None] = mapped_column()
+
+
+class EventFeedback(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """A member's rating (1-5) and optional comment after an event they attended."""
+
+    __tablename__ = "event_feedback"
+    __table_args__ = (
+        UniqueConstraint("event_id", "user_id"),
+        CheckConstraint("rating BETWEEN 1 AND 5", name="rating_range"),
+    )
+
+    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    rating: Mapped[int] = mapped_column(SmallInteger)
+    comment: Mapped[str | None] = mapped_column(Text)

@@ -8,14 +8,14 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.api.deps import CurrentUser, CurrentUserDep, DbSession, get_current_user
+from app.api.deps import CurrentUser, CurrentUserDep, DbSession, feature_required, get_current_user
 from app.core.config import get_settings
 from app.core.errors import ServiceUnavailableError
 from app.models import Certificate
 from app.schemas.certificate import CertificateOut, DownloadLinkIn, DownloadLinkOut
 from app.security.rate_limit import RateLimit, enforce
 from app.services import certificates as certificate_service
-from app.services import delivery, downloads
+from app.services import delivery, downloads, features
 from app.services import passport as passport_service
 
 router = APIRouter(prefix="/me", tags=["me: passport & certificates"])
@@ -60,24 +60,44 @@ def certificate_out(certificate: Certificate) -> CertificateOut:
     )
 
 
-@router.get("/passport", summary="My Kitobxon passport (PNG image)", response_class=Response)
+@router.get(
+    "/passport",
+    dependencies=[feature_required("passport")],
+    summary="My Kitobxon passport (PNG image)",
+    response_class=Response,
+)
 async def passport_image(current: FileUser, db: DbSession, download: bool = False) -> Response:
     image = await passport_service.render(db, current.user, bot=delivery.optional_bot())
     return file_response(image, "image/png", passport_service.filename(current.user), attachment=download)
 
 
-@router.post("/passport/send", status_code=status.HTTP_204_NO_CONTENT, summary="The bot sends me my passport")
+@router.post(
+    "/passport/send",
+    dependencies=[feature_required("passport")],
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="The bot sends me my passport",
+)
 async def send_passport(current: SendUser, db: DbSession) -> Response:
     await delivery.explain_failures(delivery.send_passport(delivery.runtime_bot(), db, current.user, as_file=True))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/certificates", response_model=list[CertificateOut], summary="My certificates")
+@router.get(
+    "/certificates",
+    dependencies=[feature_required("certificates")],
+    response_model=list[CertificateOut],
+    summary="My certificates",
+)
 async def my_certificates(current: CurrentUserDep, db: DbSession) -> list[CertificateOut]:
     return [certificate_out(c) for c in await certificate_service.member_certificates(db, current.user.id)]
 
 
-@router.get("/certificates/{certificate_id}/pdf", summary="Download a certificate (PDF)", response_class=Response)
+@router.get(
+    "/certificates/{certificate_id}/pdf",
+    dependencies=[feature_required("certificates")],
+    summary="Download a certificate (PDF)",
+    response_class=Response,
+)
 async def certificate_pdf(certificate_id: uuid.UUID, current: FileUser, db: DbSession) -> Response:
     certificate = await certificate_service.get_own(db, user_id=current.user.id, certificate_id=certificate_id)
     data = await certificate_service.pdf_bytes(db, certificate)
@@ -87,6 +107,7 @@ async def certificate_pdf(certificate_id: uuid.UUID, current: FileUser, db: DbSe
 
 @router.post(
     "/certificates/{certificate_id}/send",
+    dependencies=[feature_required("certificates")],
     status_code=status.HTTP_204_NO_CONTENT,
     summary="The bot sends me a certificate (PDF)",
 )
@@ -99,6 +120,7 @@ async def send_certificate(certificate_id: uuid.UUID, current: SendUser, db: DbS
 
 @router.post("/downloads", response_model=DownloadLinkOut, summary="A 5-minute link for Telegram's file download")
 async def download_link(payload: DownloadLinkIn, current: CurrentUserDep, db: DbSession) -> DownloadLinkOut:
+    await features.require(db, current.user, payload.kind if payload.kind == "passport" else "certificates")
     base = get_settings().base_url
     if not base:
         raise ServiceUnavailableError(
