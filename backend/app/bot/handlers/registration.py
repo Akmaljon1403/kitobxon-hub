@@ -15,8 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot import keyboards, texts
-from app.bot.access import is_admin
+from app.bot import access, keyboards, texts
 from app.bot.states import Registration
 from app.core.errors import ConflictError
 from app.models import User
@@ -57,7 +56,7 @@ async def send_member_home(message: Message, member: User, db: AsyncSession) -> 
     if member.status == UserStatus.ACTIVE:
         await message.answer(
             texts.WELCOME_BACK.format(first_name=html.escape(member.first_name)),
-            reply_markup=keyboards.main_menu(is_admin=await is_admin(db, member)),
+            reply_markup=await access.menu(db, member),
         )
     else:
         await message.answer(_STATUS_TEXT.get(member.status, texts.ACCOUNT_INACTIVE), reply_markup=keyboards.remove())
@@ -101,7 +100,7 @@ async def _check_in_from_qr(
     result = await attendance_service.check_in(db, user=member, token=payload)
     await message.answer(
         texts.ATTENDANCE_OK.format(title=html.escape(result.event.title), points=result.points),
-        reply_markup=keyboards.main_menu(is_admin=await is_admin(db, member)),
+        reply_markup=await access.menu(db, member),
     )
 
 
@@ -249,7 +248,7 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         if user.status == UserStatus.ACTIVE:
             await callback.message.answer(
                 texts.REGISTERED.format(first_name=html.escape(user.first_name)),
-                reply_markup=keyboards.main_menu(is_admin=await is_admin(db, user)),
+                reply_markup=await access.menu(db, user),
             )
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))

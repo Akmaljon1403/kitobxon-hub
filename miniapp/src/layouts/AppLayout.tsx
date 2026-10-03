@@ -1,16 +1,19 @@
 import type { ReactNode } from 'react'
 
+import { useAuth } from '../store/auth'
 import { navigate } from '../utils/router'
 
-const TABS = [
+const TABS: { route: string; icon: string; label: string; feature?: string }[] = [
   { route: '', icon: '🏠', label: 'Asosiy' },
   { route: 'books', icon: '📚', label: 'Kitoblar' },
   { route: 'events', icon: '📅', label: 'Tadbirlar' },
-  { route: 'ranking', icon: '🏆', label: 'Reyting' },
+  { route: 'ranking', icon: '🏆', label: 'Reyting', feature: 'ranking' },
   { route: 'profile', icon: '👤', label: 'Profil' },
 ]
 
 export function AppLayout({ section, children }: { section: string; children: ReactNode }) {
+  const { me } = useAuth()
+  const tabs = TABS.filter((tab) => !tab.feature || me?.features?.[tab.feature] !== 'off')
   return (
     <div className="mx-auto min-h-screen max-w-lg pb-24">
       <main className="flex flex-col gap-3 p-3">{children}</main>
@@ -19,8 +22,8 @@ export function AppLayout({ section, children }: { section: string; children: Re
         className="fixed inset-x-0 bottom-0 z-10 border-t border-app-hint/15 bg-app-bg/95 backdrop-blur"
         style={{ paddingBottom: 'var(--tg-safe-area-inset-bottom, 0px)' }}
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-5">
-          {TABS.map((tab) => {
+        <ul className={`mx-auto grid max-w-lg ${tabs.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          {tabs.map((tab) => {
             const active = section === tab.route
             return (
               <li key={tab.route}>

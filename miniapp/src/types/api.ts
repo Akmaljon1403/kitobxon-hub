@@ -47,7 +47,14 @@ export interface Me {
   is_admin: boolean
   roles: string[]
   max_course: number
+  /** Switched by the super admin: "on", "premium" (needs Premium) or "off". */
+  features: Record<string, FeatureAccess>
+  is_premium: boolean
+  premium_until: string | null
 }
+
+export type FeatureAccess = 'on' | 'premium' | 'off'
+
 
 export interface NotificationSettings {
   event_reminders: boolean
@@ -307,4 +314,28 @@ export interface DownloadLink {
   url: string
   filename: string
   expires_in: number
+}
+
+export interface PremiumPlan {
+  id: string
+  title: string
+  description: string | null
+  stars: number
+  days: number
+}
+
+export interface PremiumStatus {
+  is_premium: boolean
+  until: string | null
+  store_open: boolean
+  donations_open: boolean
+  plans: PremiumPlan[]
+  donation_amounts: number[]
+  premium_features: { code: string; title: string; description: string }[]
+}
+
+export interface EventFeedback {
+  rating: number
+  comment: string | null
+  updated_at: string
 }

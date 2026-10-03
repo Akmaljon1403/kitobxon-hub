@@ -15,8 +15,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot import keyboards, summaries, texts
-from app.bot.access import is_admin
+from app.bot import access, keyboards, summaries, texts
 from app.bot.filters import ActiveMember
 from app.bot.states import AttendanceCode
 from app.core.errors import NotFoundError
@@ -38,7 +37,7 @@ _CODE = re.compile(r"^[2-9A-HJ-NP-Z]{6}$")
 async def home(message: Message, db: AsyncSession, member: User, text: str | None = None) -> None:
     await message.answer(
         text or texts.WELCOME_BACK.format(first_name=html.escape(member.first_name)),
-        reply_markup=keyboards.main_menu(is_admin=await is_admin(db, member)),
+        reply_markup=await access.menu(db, member),
     )
 
 
@@ -70,6 +69,9 @@ async def _answer_section(message: Message, state: FSMContext, db: AsyncSession,
         return
     if label == texts.BTN_ATTENDANCE:
         await _attendance(message, state, db, member)
+        return
+    code = access.SECTION_FEATURES.get(label)
+    if code and await access.gate(message, db, member, code):
         return
     if label == texts.BTN_PASSPORT:
         await _passport(message, db, member)
@@ -126,6 +128,8 @@ async def _passport(message: Message, db: AsyncSession, member: User) -> None:
 
 @router.callback_query(F.data == "pp:file")
 async def passport_file(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    if await access.gate(callback, db, member, "passport"):
+        return
     try:
         await delivery.send_passport(callback.bot, db, member, as_file=True)
     except Exception:
@@ -137,6 +141,8 @@ async def passport_file(callback: CallbackQuery, db: AsyncSession, member: User)
 
 @router.callback_query(F.data == "cert:list")
 async def certificate_list(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    if await access.gate(callback, db, member, "certificates"):
+        return
     items = await certificate_service.member_certificates(db, member.id)
     await callback.answer()
     if not isinstance(callback.message, Message):
@@ -152,6 +158,8 @@ async def certificate_list(callback: CallbackQuery, db: AsyncSession, member: Us
 
 @router.callback_query(F.data.startswith("cert:get:"))
 async def certificate_file(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    if await access.gate(callback, db, member, "certificates"):
+        return
     try:
         certificate_id = uuid.UUID((callback.data or "").removeprefix("cert:get:"))
         certificate = await certificate_service.get_own(db, user_id=member.id, certificate_id=certificate_id)

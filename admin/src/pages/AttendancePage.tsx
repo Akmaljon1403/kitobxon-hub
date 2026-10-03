@@ -194,7 +194,7 @@ export function AttendancePage({ eventId }: { eventId: string }) {
               <Card className="flex flex-col gap-3 p-5">
                 <h2 className="font-semibold">Davomat yopiq</h2>
                 <p className="text-sm text-app-hint">
-                  Davomatni ochganingizda ekranda QR kod va 6 belgili kod paydo bo'ladi. Ular har 30 soniyada
+                  Davomatni ochganingizda ekranda QR kod va 6 belgili kod paydo bo'ladi. Ular har 10 soniyada
                   yangilanadi, shuning uchun suratga olib boshqaga yuborish deyarli foyda bermaydi.
                 </p>
                 {canManage && (
@@ -277,6 +277,7 @@ export function AttendancePage({ eventId }: { eventId: string }) {
       )}
       {state.status === 'loading' && !overview && <LoadingState />}
       {state.status === 'error' && !overview && <ErrorState message={state.error.message} onRetry={reload} />}
+      <FeedbackSummary eventId={eventId} />
       {adding && <ManualAddModal eventId={eventId} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); reload() }} />}
     </>
   )
@@ -376,5 +377,57 @@ function ManualAddModal({ eventId, onClose, onSaved }: { eventId: string; onClos
       </Field>
       <InlineError message={error} />
     </Modal>
+  )
+}
+
+
+interface Feedback {
+  count: number
+  average: number | null
+  distribution: Record<string, number>
+  comments: { rating: number; comment: string; name: string; updated_at: string }[]
+}
+
+/** ⭐ What members said after the event (the bot asks them 30 minutes after the end). */
+function FeedbackSummary({ eventId }: { eventId: string }) {
+  const { api } = useSession()
+  const { state } = useAsync((signal) => api<Feedback>(`/api/v1/admin/events/${eventId}/feedback`, { signal }), [eventId])
+  if (state.status !== 'success' || state.data.count === 0) return null
+  const feedback = state.data
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-semibold">⭐ A'zolar bahosi</h2>
+        <p className="text-sm text-app-hint">
+          <span className="text-2xl font-semibold text-app-text tabular-nums">{feedback.average}</span> / 5 · {feedback.count} ta baho
+        </p>
+      </div>
+      <div className="flex flex-col gap-1">
+        {['5', '4', '3', '2', '1'].map((stars) => {
+          const count = feedback.distribution[stars] ?? 0
+          return (
+            <div key={stars} className="flex items-center gap-2 text-sm">
+              <span className="w-8 tabular-nums">{stars}⭐</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-app-surface">
+                <div className="h-full rounded-full bg-amber-400" style={{ width: `${(count / feedback.count) * 100}%` }} />
+              </div>
+              <span className="w-6 text-right tabular-nums text-app-hint">{count}</span>
+            </div>
+          )
+        })}
+      </div>
+      {feedback.comments.length > 0 && (
+        <ul className="divide-y divide-app-border text-sm">
+          {feedback.comments.map((item, index) => (
+            <li key={index} className="py-2">
+              <p>{item.comment}</p>
+              <p className="text-xs text-app-hint">
+                {'⭐'.repeat(item.rating)} · {item.name} · {formatDateTime(item.updated_at)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   )
 }

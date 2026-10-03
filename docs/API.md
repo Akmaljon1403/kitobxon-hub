@@ -102,7 +102,7 @@ Blocking a user or removing admin rights has the same effect immediately.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/v1/me` | Own profile |
+| GET | `/api/v1/me` | Own profile, incl. `member_number`, `features` (code → `on` / `premium` / `off`), `is_premium`, `premium_until` |
 | PATCH | `/api/v1/me` | Correct own faculty, course, group (names are changed by admins) |
 | GET / PUT | `/api/v1/me/notification-settings` | Reminder preferences |
 | GET | `/api/v1/faculties` | Active faculties (public) |
@@ -136,6 +136,9 @@ Blocking a user or removing admin rights has the same effect immediately.
 | GET | `/api/v1/me/certificates/{id}/pdf` | Certificate PDF (A4 landscape) — only the owner |
 | POST | `/api/v1/me/certificates/{id}/send` | The bot sends the PDF to my chat |
 | POST | `/api/v1/me/downloads` | `{"kind": "passport" \| "certificate", "id"?}` → `{url, filename, expires_in}` for Telegram's `downloadFile` |
+| GET | `/api/v1/me/premium` | Premium status, plans on sale, donation amounts, which features are premium-only |
+| POST | `/api/v1/me/premium/invoice` | `{"plan_id"}` or `{"amount"}` (donation) → `{url}` for `Telegram.WebApp.openInvoice` (Telegram Stars, XTR); 403 `FEATURE_OFF` while the store is closed |
+| GET / PUT | `/api/v1/events/{id}/feedback` | My rating of an event I attended: `{"rating": 1-5, "comment"?}`; 409 `NOT_ATTENDED` otherwise |
 
 ### Admin: access control
 
@@ -230,7 +233,7 @@ Blocking a user or removing admin rights has the same effect immediately.
 | Method | Path | Required |
 |---|---|---|
 | GET | `/api/v1/admin/reports` | `REPORT_VIEW` |
-| POST | `/api/v1/admin/reports` | `REPORT_VIEW` + `REPORT_CREATE` — `{"event_id"}`; loads the facts snapshot (next version for that event) |
+| POST | `/api/v1/admin/reports` | `REPORT_VIEW` + `REPORT_CREATE` — `{"kind": "EVENT", "event_id"}` (next version for that event), `{"kind": "PERIOD", "period_start", "period_end"}` (dates inclusive, ≤ 400 days: events, attendances, new members, books, certificates, top 5, ratings) or `{"kind": "GENERAL", "title"}` (any topic: admin text and photos only); loads the facts snapshot |
 | GET / PATCH | `/api/v1/admin/reports/{id}` | `REPORT_VIEW` / `REPORT_CREATE` — admin fields and `body_text`; detail includes `facts`, `photos`, `number_issues`, `ai_available` |
 | POST | `/api/v1/admin/reports/{id}/refresh-facts` | `REPORT_CREATE` — reload facts (before approval) |
 | POST | `/api/v1/admin/reports/{id}/generate` | `REPORT_CREATE` — `{"use_ai": true}` Claude draft (503 `AI_NOT_CONFIGURED` without `AI_API_KEY`), `false` template draft |
@@ -240,6 +243,26 @@ Blocking a user or removing admin rights has the same effect immediately.
 | POST | `/api/v1/admin/reports/{id}/new-version` / `archive` | `REPORT_CREATE` / `REPORT_APPROVE` |
 | POST | `/api/v1/admin/reports/{id}/photos` | `REPORT_CREATE` — multipart `file` (JPG/PNG/WEBP ≤ 8 MB, max 8) + `caption` |
 | GET / DELETE | `/api/v1/admin/reports/{id}/photos/{photo_id}` | `REPORT_VIEW` / `REPORT_CREATE` |
+
+### Super admin: features and premium
+
+Member endpoints of a switched-off feature answer 403 `FEATURE_OFF`; of a premium-only feature 403
+`PREMIUM_REQUIRED` (passport, certificates, ranking, achievements, rewards). Payments: the bot answers
+Telegram's `pre_checkout_query` (plan on sale, price unchanged, payer is the member) and stores
+`successful_payment` once per `telegram_payment_charge_id`; buying again adds days after the current end.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/admin/features` | every feature with its mode (`OFF` / `ALL` / `PREMIUM`) and default |
+| PUT | `/api/v1/admin/features/{code}` | `{"mode", "announce"}` — switching on announces it to members ("Tabriklaymiz, bot yangilandi!"); premium-only: premium members get it, the others a teaser while the store is open |
+| GET | `/api/v1/admin/premium/overview` | premium members, Stars received (total, this month, premium, donations) |
+| GET / PATCH | `/api/v1/admin/premium/plans[/{id}]` | `stars`, `days`, `title`, `description`, `is_active` |
+| GET | `/api/v1/admin/premium/payments` | newest first |
+| POST | `/api/v1/admin/premium/payments/{id}/refund` | `refundStarPayment`, ends the period bought with it |
+| GET | `/api/v1/admin/premium/subscriptions?active=true` | premium periods |
+| POST | `/api/v1/admin/premium/grant` | `{"user_id", "days", "note"?}` — premium as a gift (audited, member notified) |
+| POST | `/api/v1/admin/premium/subscriptions/{id}/revoke` | `{"reason"}` |
+| GET | `/api/v1/admin/events/{id}/feedback` | `EVENT_VIEW` — average, distribution, comments with names |
 
 ### Admin: rewards (`REWARD_MANAGE`)
 

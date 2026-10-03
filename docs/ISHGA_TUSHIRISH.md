@@ -8,6 +8,9 @@ kompyuteringizga hech narsa o'rnatish shart emas — hammasi brauzerda.
 > **Admin panel → Sozlamalar → 🩺 Tizim holati**. U yerda ✅ — joyida, ⚠️ — e'tibor bering,
 > ❌ — tuzatish kerak. Muammo bo'lsa, Bosh sahifada ham ogohlantirish chiqadi.
 
+> 📘 Ishga tushgandan keyin kundalik boshqaruv (adminlar, sertifikatlar, hisobotlar, imkoniyatlarni
+> yoqish, Premium va daromad) — [BOSHQARUV_QOLLANMA.md](BOSHQARUV_QOLLANMA.md).
+
 ---
 
 ## 1-qadam. Render asosiy shoxdan (`main`) yangilansin

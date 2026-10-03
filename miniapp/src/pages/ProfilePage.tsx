@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Avatar } from '../components/Avatar'
+import { FeatureLocked } from '../components/FeatureGate'
 import { PassportCard } from '../components/PassportCard'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle, Toggle } from '../components/ui'
@@ -159,7 +160,22 @@ export function ProfilePage() {
         {me.is_admin && <Badge tone="info">Administrator</Badge>}
       </Card>
 
-      <PassportCard />
+      {me.features.premium !== 'off' && (
+        <button type="button" onClick={() => navigate('/premium')}>
+          <Card className="flex items-center justify-between gap-2 py-3 text-left">
+            <span className="text-[15px] font-medium">
+              💎 {me.is_premium ? `Premium a'zo — ${formatDate(me.premium_until)} gacha` : 'Premium obuna'}
+            </span>
+            <span className="text-app-link">→</span>
+          </Card>
+        </button>
+      )}
+
+      {me.features.passport === 'on' ? (
+        <PassportCard />
+      ) : (
+        me.features.passport === 'premium' && <FeatureLocked code="passport" access="premium" />
+      )}
 
       <SectionTitle>O'qish joyi</SectionTitle>
       {editing ? (
@@ -178,10 +194,12 @@ export function ProfilePage() {
 
       <div className="grid grid-cols-3 gap-2">
         {[
-          { route: '/certificates', label: '🎓 Sertifikatlar' },
-          { route: '/achievements', label: '🏅 Yutuqlar' },
-          { route: '/rewards', label: "🎁 Sovg'alar" },
-        ].map((item) => (
+          { route: '/certificates', label: '🎓 Sertifikatlar', feature: 'certificates' },
+          { route: '/achievements', label: '🏅 Yutuqlar', feature: 'achievements' },
+          { route: '/rewards', label: "🎁 Sovg'alar", feature: 'rewards' },
+        ]
+          .filter((item) => me.features[item.feature] !== 'off')
+          .map((item) => (
           <button key={item.route} type="button" onClick={() => navigate(item.route)}>
             <Card className="flex items-center justify-center py-3 text-sm font-medium">{item.label}</Card>
           </button>

@@ -13,9 +13,14 @@ from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Achievement, NotificationTemplate, Permission, Role, SystemSetting
+from app.models import Achievement, NotificationTemplate, Permission, PremiumPlan, Role, SystemSetting
 from app.security.permissions import PERMISSION_INFO
-from app.services.defaults import DEFAULT_ACHIEVEMENTS, DEFAULT_NOTIFICATION_TEMPLATES, SYSTEM_ROLES
+from app.services.defaults import (
+    DEFAULT_ACHIEVEMENTS,
+    DEFAULT_NOTIFICATION_TEMPLATES,
+    DEFAULT_PREMIUM_PLANS,
+    SYSTEM_ROLES,
+)
 from app.services.settings import SETTING_DEFINITIONS
 
 logger = logging.getLogger(__name__)
@@ -83,6 +88,25 @@ async def sync_reference_data(session: AsyncSession) -> None:
             ]
         )
         .on_conflict_do_nothing(index_elements=[NotificationTemplate.type])
+    )
+
+    # Premium plans: created once; prices and availability are then the super admin's.
+    await session.execute(
+        insert(PremiumPlan)
+        .values(
+            [
+                {
+                    "code": plan.code,
+                    "title": plan.title,
+                    "description": plan.description,
+                    "stars": plan.stars,
+                    "days": plan.days,
+                    "sort_order": index,
+                }
+                for index, plan in enumerate(DEFAULT_PREMIUM_PLANS, start=1)
+            ]
+        )
+        .on_conflict_do_nothing(index_elements=[PremiumPlan.code])
     )
     await session.commit()
     logger.info("Reference data synchronised")

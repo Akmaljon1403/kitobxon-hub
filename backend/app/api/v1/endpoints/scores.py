@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import CurrentUserDep, DbSession
+from app.api.deps import CurrentUserDep, DbSession, feature_required
 from app.schemas.score import FacultyRankingOut, MyRankingOut, MyScoresOut, RankingOut, RankingRowOut, ScoreEntryOut
 from app.services import ranking as ranking_service
 
@@ -42,7 +42,12 @@ async def my_scores(
     )
 
 
-@router.get("/me/ranking", response_model=MyRankingOut, summary="My position this week, this month and overall")
+@router.get(
+    "/me/ranking",
+    dependencies=[feature_required("ranking")],
+    response_model=MyRankingOut,
+    summary="My position this week, this month and overall",
+)
 async def my_ranking(current: CurrentUserDep, db: DbSession) -> MyRankingOut:
     result = {}
     for period in ("week", "month", "all"):
@@ -51,7 +56,7 @@ async def my_ranking(current: CurrentUserDep, db: DbSession) -> MyRankingOut:
     return MyRankingOut(**result)
 
 
-@router.get("/rankings", response_model=RankingOut, summary="Leaderboard")
+@router.get("/rankings", dependencies=[feature_required("ranking")], response_model=RankingOut, summary="Leaderboard")
 async def rankings(
     current: CurrentUserDep,
     db: DbSession,
@@ -69,7 +74,12 @@ async def rankings(
     )
 
 
-@router.get("/rankings/faculties", response_model=list[FacultyRankingOut], summary="Faculties by average points")
+@router.get(
+    "/rankings/faculties",
+    dependencies=[feature_required("ranking")],
+    response_model=list[FacultyRankingOut],
+    summary="Faculties by average points",
+)
 async def faculty_rankings(
     _: CurrentUserDep, db: DbSession, period: Literal["week", "month", "season", "all"] = "all"
 ) -> list[FacultyRankingOut]:

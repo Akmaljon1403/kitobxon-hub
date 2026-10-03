@@ -1,4 +1,4 @@
-"""Official event reports and their photos.
+"""Official reports (of an event, of a period, or on any topic) and their photos.
 
 ``facts_snapshot`` holds the statistics loaded from the database when the report was
 prepared (counts, percentages, names of responsible people). The AI draft may only use
@@ -8,15 +8,26 @@ those facts; every number in it is cross-checked before approval.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    Date,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
-from app.models.enums import ReportStatus
+from app.models.enums import ReportKind, ReportStatus
 
 
 class Report(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -24,10 +35,21 @@ class Report(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("event_id", "version"),
         CheckConstraint("version >= 1", name="version_positive"),
+        CheckConstraint("kind <> 'EVENT' OR event_id IS NOT NULL", name="event_required"),
+        CheckConstraint(
+            "kind <> 'PERIOD' OR (period_start IS NOT NULL AND period_end IS NOT NULL AND period_end >= period_start)",
+            name="period_required",
+        ),
         Index("ix_reports_status", "status"),
     )
 
-    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="RESTRICT"))
+    kind: Mapped[ReportKind] = mapped_column(
+        enum_column(ReportKind), default=ReportKind.EVENT, server_default=ReportKind.EVENT.value
+    )
+    # Set for EVENT reports; PERIOD reports cover period_start..period_end (dates, inclusive).
+    event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("events.id", ondelete="RESTRICT"))
+    period_start: Mapped[date | None] = mapped_column(Date)
+    period_end: Mapped[date | None] = mapped_column(Date)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default=text("1"))
     status: Mapped[ReportStatus] = mapped_column(
         enum_column(ReportStatus), default=ReportStatus.DRAFT, server_default=ReportStatus.DRAFT.value

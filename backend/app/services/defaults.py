@@ -171,12 +171,37 @@ DEFAULT_NOTIFICATION_TEMPLATES: tuple[TemplateSeed, ...] = (
         is_critical=True,
     ),
     TemplateSeed(NotificationType.PREMIUM, "Premium obuna", "💎 {message}", is_critical=True),
-    TemplateSeed(NotificationType.ANNOUNCEMENT, "Yangi imkoniyat", "🎉 {message}"),
+    TemplateSeed(
+        NotificationType.ANNOUNCEMENT,
+        "Yangi imkoniyat",
+        "🎉 <b>Tabriklaymiz, bot yangilandi!</b>\n\nEndi sizda yangi imkoniyat bor:\n{title} — {description}.",
+    ),
     TemplateSeed(
         NotificationType.FEEDBACK_REQUEST,
         "Tadbir haqida fikr",
         "💬 «{event_title}» tadbiri sizga yoqdimi? Bir bosishda baho bering — "
         "bu keyingi tadbirlarni yaxshilashga yordam beradi.",
     ),
-    TemplateSeed(NotificationType.DIGEST, "Haftalik xulosa", "{message}"),
+    TemplateSeed(
+        NotificationType.DIGEST,
+        "Haftalik xulosa",
+        "📊 <b>Haftalik xulosangiz</b>\n\n{message}\n\nYangi haftada omad! 📚",
+    ),
+)
+
+
+@dataclass(frozen=True)
+class PlanSeed:
+    code: str
+    title: str
+    description: str
+    stars: int
+    days: int
+
+
+# Starting prices in Telegram Stars; the super admin changes them in the Admin Panel.
+DEFAULT_PREMIUM_PLANS: tuple[PlanSeed, ...] = (
+    PlanSeed("month", "1 oy", "30 kunlik Premium", 100, 30),
+    PlanSeed("quarter", "3 oy", "90 kunlik Premium — 17% tejaysiz", 250, 90),
+    PlanSeed("year", "1 yil", "365 kunlik Premium — eng foydali", 900, 365),
 )

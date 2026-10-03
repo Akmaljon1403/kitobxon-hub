@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import ReportStatus
+from app.models.enums import ReportKind, ReportStatus
 
 
 class ReportCreateIn(BaseModel):
-    event_id: uuid.UUID
+    kind: ReportKind = ReportKind.EVENT
+    event_id: uuid.UUID | None = Field(default=None, description="Required for EVENT reports")
+    period_start: date | None = Field(default=None, description="PERIOD reports: first day (inclusive)")
+    period_end: date | None = Field(default=None, description="PERIOD reports: last day (inclusive)")
+    title: str | None = Field(default=None, min_length=3, max_length=255, description="Required for GENERAL reports")
 
 
 class ReportUpdateIn(BaseModel):
@@ -29,8 +33,9 @@ class GenerateIn(BaseModel):
 
 class ReportListItem(BaseModel):
     id: uuid.UUID
-    event_id: uuid.UUID
-    event_title: str
+    kind: ReportKind
+    event_id: uuid.UUID | None
+    event_title: str  # what the report is about: the event, the period or "Umumiy hisobot"
     version: int
     status: ReportStatus
     title: str
@@ -47,7 +52,10 @@ class ReportPhotoOut(BaseModel):
 
 class ReportDetailOut(BaseModel):
     id: uuid.UUID
-    event_id: uuid.UUID
+    kind: ReportKind
+    event_id: uuid.UUID | None
+    period_start: date | None
+    period_end: date | None
     version: int
     status: ReportStatus
     title: str

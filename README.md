@@ -46,13 +46,14 @@ Barcha 23 bosqich tayyor. Keyingi qadamlar:
 2. ✅ **Doimiy (24/7) ishga tushirish:** [docs/ISHGA_TUSHIRISH.md](docs/ISHGA_TUSHIRISH.md) — fayllar ombori,
    har kungi zaxira nusxa, kuzatuv, ikkinchi bosh administrator, yakuniy sinov.
 
-Har bir yangi kod GitHub'da avtomatik tekshiriladi (**Actions** bo'limi): 280 dan ortiq test, haqiqiy
+Har bir yangi kod GitHub'da avtomatik tekshiriladi (**Actions** bo'limi): 330 dan ortiq test, haqiqiy
 brauzerda a'zo va admin yo'llari, zaxira nusxadan tiklash sinovi. Yashil ✅ belgisi — hammasi o'tdi degani.
 
 ## Hujjatlar
 
 * [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — botni bepul serverga joylab sinash (egasi uchun)
 * [docs/ISHGA_TUSHIRISH.md](docs/ISHGA_TUSHIRISH.md) — doimiy ishga tushirish: zaxira, fayllar, kuzatuv (egasi uchun)
+* [docs/BOSHQARUV_QOLLANMA.md](docs/BOSHQARUV_QOLLANMA.md) — kundalik boshqaruv: adminlar, davomat, sertifikatlar, hisobotlar, imkoniyatlar, Premium (egasi uchun)
 * [docs/SETUP.md](docs/SETUP.md) — loyihani ishga tushirish (egasi va dasturchilar uchun)
 * [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — doimiy serverga joylash (dasturchilar uchun)
 * [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — muammolar va yechimlar

@@ -6,11 +6,11 @@ import uuid
 
 from fastapi import APIRouter
 
-from app.api.deps import CurrentUserDep, DbSession
+from app.api.deps import CurrentUserDep, DbSession, feature_required
 from app.schemas.reward import MemberRewardOut, RevealedCodeOut
 from app.services import rewards as reward_service
 
-router = APIRouter(tags=["rewards"])
+router = APIRouter(tags=["rewards"], dependencies=[feature_required("rewards")])
 
 
 def _out(row, reward, has_code: bool) -> MemberRewardOut:

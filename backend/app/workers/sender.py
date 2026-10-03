@@ -47,28 +47,30 @@ class SendReport:
         return self.sent + self.skipped + self.failed + self.retried
 
 
+def _button(spec: dict[str, Any]) -> InlineKeyboardButton | None:
+    settings = get_settings()
+    if spec.get("app_route") is not None and settings.webapp_url:
+        url = f"{settings.webapp_url}#/{spec['app_route']}" if spec["app_route"] else settings.webapp_url
+        return InlineKeyboardButton(text=spec["text"], web_app=WebAppInfo(url=url))
+    if spec.get("admin_route") is not None and settings.base_url:
+        # The Admin Panel opens inside Telegram and signs in with the admin's Telegram account.
+        url = f"{settings.base_url}/admin/#/{spec['admin_route']}"
+        return InlineKeyboardButton(text=spec["text"], web_app=WebAppInfo(url=url))
+    if spec.get("callback"):
+        return InlineKeyboardButton(text=spec["text"], callback_data=spec["callback"])
+    if spec.get("url"):
+        return InlineKeyboardButton(text=spec["text"], url=spec["url"])
+    return None
+
+
 def _markup(payload: dict[str, Any] | None) -> InlineKeyboardMarkup | None:
-    buttons = (payload or {}).get("buttons") or []
-    webapp_url = get_settings().webapp_url
+    """Inline buttons: each entry is one button on its own line, or {"row": [...]} for one line."""
     rows = []
-    admin_url = f"{get_settings().base_url}/admin/" if get_settings().base_url else None
-    for button in buttons:
-        if button.get("app_route") is not None and webapp_url:
-            url = f"{webapp_url}#/{button['app_route']}" if button["app_route"] else webapp_url
-            rows.append([InlineKeyboardButton(text=button["text"], web_app=WebAppInfo(url=url))])
-        elif button.get("admin_route") is not None and admin_url:
-            # The Admin Panel opens inside Telegram and signs in with the admin's Telegram account.
-            rows.append(
-                [
-                    InlineKeyboardButton(
-                        text=button["text"], web_app=WebAppInfo(url=f"{admin_url}#/{button['admin_route']}")
-                    )
-                ]
-            )
-        elif button.get("callback"):
-            rows.append([InlineKeyboardButton(text=button["text"], callback_data=button["callback"])])
-        elif button.get("url"):
-            rows.append([InlineKeyboardButton(text=button["text"], url=button["url"])])
+    for entry in (payload or {}).get("buttons") or []:
+        specs = entry["row"] if "row" in entry else [entry]
+        row = [button for button in (_button(spec) for spec in specs) if button is not None]
+        if row:
+            rows.append(row)
     return InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
 
 

@@ -5,7 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError, saveBlob } from '../services/api'
 import { useSession } from '../store/session'
-import type { AdminEvent, Page, ReportDetail, ReportListItem, ReportStatus } from '../types/api'
+import type { AdminEvent, Page, ReportDetail, ReportKind, ReportListItem, ReportStatus } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { navigate } from '../utils/router'
 
@@ -22,23 +22,51 @@ function StatusBadge({ status }: { status: ReportStatus }) {
   return <Badge tone={STATUS[status].tone}>{STATUS[status].label}</Badge>
 }
 
+const KINDS: { kind: ReportKind; icon: string; title: string; hint: string }[] = [
+  { kind: 'EVENT', icon: '📅', title: 'Tadbir hisoboti', hint: "Bitta tadbir: davomat, fakultetlar, test natijalari, baholar" },
+  { kind: 'PERIOD', icon: '🗓', title: 'Davr hisoboti', hint: "Oy yoki chorak: barcha tadbirlar, yangi a'zolar, eng faollar" },
+  { kind: 'GENERAL', icon: '📝', title: 'Umumiy hisobot', hint: "Istalgan mavzu: o'z matningiz va rasmlar asosida" },
+]
+
+function isoDate(value: Date): string {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+}
+
 function NewReportModal({ onClose }: { onClose: () => void }) {
   const { api } = useSession()
   const events = useAsync((signal) => api<Page<AdminEvent>>('/api/v1/admin/events?limit=200', { signal }))
+  const today = new Date()
+  const [kind, setKind] = useState<ReportKind>('EVENT')
   const [eventId, setEventId] = useState('')
+  const [start, setStart] = useState(isoDate(new Date(today.getFullYear(), today.getMonth(), 1)))
+  const [end, setEnd] = useState(isoDate(today))
+  const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const ready = kind === 'EVENT' ? Boolean(eventId) : kind === 'PERIOD' ? Boolean(start && end) : title.trim().length >= 3
 
   async function create() {
     setBusy(true)
     setError(null)
+    const body =
+      kind === 'EVENT'
+        ? { kind, event_id: eventId }
+        : kind === 'PERIOD'
+          ? { kind, period_start: start, period_end: end }
+          : { kind, title: title.trim() }
     try {
-      const report = await api<ReportDetail>('/api/v1/admin/reports', { method: 'POST', body: { event_id: eventId } })
+      const report = await api<ReportDetail>('/api/v1/admin/reports', { method: 'POST', body })
       navigate(`/reports/${report.id}`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Yaratib bo'lmadi.")
       setBusy(false)
     }
+  }
+
+  function lastMonth() {
+    setStart(isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 1)))
+    setEnd(isoDate(new Date(today.getFullYear(), today.getMonth(), 0)))
   }
 
   return (
@@ -50,23 +78,69 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
           <Button variant="secondary" onClick={onClose}>
             Bekor qilish
           </Button>
-          <Button loading={busy} disabled={!eventId} onClick={() => void create()}>
+          <Button loading={busy} disabled={!ready} onClick={() => void create()}>
             Yaratish
           </Button>
         </>
       }
     >
-      <Field label="Tadbir" hint="Ro'yxatdan o'tganlar, davomat, test natijalari shu tadbirdan avtomatik olinadi">
-        <Select value={eventId} onChange={(e) => setEventId(e.target.value)}>
-          <option value="">— Tadbirni tanlang —</option>
-          {events.state.status === 'success' &&
-            events.state.data.items.map((event) => (
-              <option key={event.id} value={event.id}>
-                {formatDateTime(event.starts_at)} — {event.title}
-              </option>
-            ))}
-        </Select>
-      </Field>
+      <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Hisobot turi">
+        {KINDS.map((item) => (
+          <button
+            key={item.kind}
+            type="button"
+            role="radio"
+            aria-checked={kind === item.kind}
+            onClick={() => setKind(item.kind)}
+            className={`flex flex-col gap-1 rounded-xl border p-3 text-left ${kind === item.kind ? 'border-app-button bg-app-button/10' : 'border-app-border'}`}
+          >
+            <span className="text-2xl">{item.icon}</span>
+            <span className="text-sm font-semibold">{item.title}</span>
+            <span className="text-xs text-app-hint">{item.hint}</span>
+          </button>
+        ))}
+      </div>
+      {kind === 'EVENT' && (
+        <Field label="Tadbir" hint="Ro'yxatdan o'tganlar, davomat, test natijalari shu tadbirdan avtomatik olinadi">
+          <Select value={eventId} onChange={(e) => setEventId(e.target.value)}>
+            <option value="">— Tadbirni tanlang —</option>
+            {events.state.status === 'success' &&
+              events.state.data.items.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {formatDateTime(event.starts_at)} — {event.title}
+                </option>
+              ))}
+          </Select>
+        </Field>
+      )}
+      {kind === 'PERIOD' && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Boshlanishi">
+              <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            </Field>
+            <Field label="Tugashi">
+              <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+            </Field>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => {
+              setStart(isoDate(new Date(today.getFullYear(), today.getMonth(), 1)))
+              setEnd(isoDate(today))
+            }}>
+              Shu oy
+            </Button>
+            <Button variant="secondary" onClick={lastMonth}>
+              O'tgan oy
+            </Button>
+          </div>
+        </>
+      )}
+      {kind === 'GENERAL' && (
+        <Field label="Hisobot mavzusi" hint="Masalan: «Kutubxonaga kitob topshirish aksiyasi». Keyin matn yozasiz va rasmlar yuklaysiz.">
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={255} placeholder="Hisobot mavzusi" />
+        </Field>
+      )}
       <InlineError message={error} />
     </Modal>
   )
@@ -81,14 +155,14 @@ export function ReportsPage() {
     <>
       <PageHeader
         title="Hisobotlar"
-        subtitle="Tadbir bo'yicha rasmiy PDF hisobot. Raqamlar bazadan olinadi; matnni AI yoki shablon tayyorlaydi, admin tekshirib tasdiqlaydi."
+        subtitle="Rasmiy PDF hisobot: tadbir, davr (masalan, oylik) yoki istalgan mavzu bo'yicha, rasmlar bilan. Raqamlar bazadan olinadi; matnni AI yoki shablon tayyorlaydi, admin tekshirib tasdiqlaydi."
         actions={can('REPORT_CREATE') && <Button onClick={() => setCreating(true)}>+ Yangi hisobot</Button>}
       />
       <Card>
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
         {state.status === 'success' && (
-          <Table head={['Hisobot', 'Tadbir', 'Holat', 'Yaratilgan', '']}>
+          <Table head={['Hisobot', 'Mavzu', 'Holat', 'Yaratilgan', '']}>
             {state.data.items.length === 0 && <EmptyRow colSpan={5} text="Hisobotlar hali yo'q" />}
             {state.data.items.map((report) => (
               <tr key={report.id}>
@@ -227,7 +301,7 @@ export function ReportEditorPage({ reportId }: { reportId: string }) {
     <>
       <PageHeader
         title={report.title}
-        subtitle={`${facts.event.title} · ${report.version}-versiya`}
+        subtitle={`${facts.event?.title ?? facts.period?.label ?? 'Umumiy hisobot'} · ${report.version}-versiya`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={report.status} />
@@ -290,7 +364,11 @@ export function ReportEditorPage({ reportId }: { reportId: string }) {
                 }} disabled={!editable} maxLength={255} />
             </Field>
             {FIELDS.map((field) => (
-              <Field key={field.key} label={field.label} hint={field.hint}>
+              <Field
+                key={field.key}
+                label={field.key === 'activity_description' && report.kind !== 'EVENT' ? 'Amalga oshirilgan ishlar' : field.label}
+                hint={field.hint}
+              >
                 <Textarea
                   rows={field.rows}
                   value={form[field.key] ?? ''}
@@ -409,24 +487,26 @@ export function ReportEditorPage({ reportId }: { reportId: string }) {
                 </Button>
               )}
             </div>
+            {report.kind === 'EVENT' && facts.event && (
+              <>
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
               <dt className="text-app-hint">Sana</dt>
               <dd>
-                {facts.event.date}, {facts.event.time}
+                {facts.event?.date}, {facts.event?.time}
               </dd>
               <dt className="text-app-hint">Joy</dt>
-              <dd>{facts.event.location ?? '—'}</dd>
+              <dd>{facts.event?.location ?? '—'}</dd>
               <dt className="text-app-hint">Kitob</dt>
-              <dd>{facts.event.book_title ? `${facts.event.book_author}. «${facts.event.book_title}»` : '—'}</dd>
+              <dd>{facts.event?.book_title ? `${facts.event?.book_author}. «${facts.event?.book_title}»` : '—'}</dd>
               <dt className="text-app-hint">Mas'ul</dt>
-              <dd>{facts.event.responsible ?? '—'}</dd>
+              <dd>{facts.event?.responsible ?? '—'}</dd>
             </dl>
             <div className="mt-1 grid grid-cols-2 gap-2">
               {[
-                ["Ro'yxatdan o'tgan", facts.attendance.registered],
-                ['Qatnashdi', facts.attendance.attended],
-                ['Davomat', facts.attendance.rate_percent != null ? `${facts.attendance.rate_percent}%` : '—'],
-                ["Ro'yxatsiz kelgan", facts.attendance.walk_ins],
+                ["Ro'yxatdan o'tgan", facts.attendance?.registered],
+                ['Qatnashdi', facts.attendance?.attended],
+                ['Davomat', facts.attendance?.rate_percent != null ? `${facts.attendance?.rate_percent}%` : '—'],
+                ["Ro'yxatsiz kelgan", facts.attendance?.walk_ins],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg bg-app-surface p-2">
                   <p className="text-xs text-app-hint">{label}</p>
@@ -434,14 +514,49 @@ export function ReportEditorPage({ reportId }: { reportId: string }) {
                 </div>
               ))}
             </div>
-            {facts.faculties.length > 0 && (
-              <p className="text-xs text-app-hint">{facts.faculties.map((row) => `${row.name}: ${row.attended}`).join(' · ')}</p>
+            {(facts.faculties ?? []).length > 0 && (
+              <p className="text-xs text-app-hint">{(facts.faculties ?? []).map((row) => `${row.name}: ${row.attended}`).join(' · ')}</p>
             )}
-            {facts.tests.map((test) => (
+            {(facts.tests ?? []).map((test) => (
               <p key={test.title} className="text-xs text-app-hint">
                 📝 {test.title}: {test.participants} ishtirokchi, o'rtacha {test.average_score}/{test.max_score}
               </p>
             ))}
+              </>
+            )}
+            {report.kind === 'PERIOD' && facts.summary && (
+              <>
+                <p className="font-medium">{facts.period?.label}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ['Tadbirlar', facts.summary.events],
+                    ['Qatnashuvlar', facts.summary.attendances],
+                    ["Turli a'zolar", facts.summary.participants],
+                    ["Yangi a'zolar", facts.summary.new_members],
+                    ["O'qilgan kitoblar", facts.summary.books_completed],
+                    ['Sertifikatlar', facts.summary.certificates],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-lg bg-app-surface p-2">
+                      <p className="text-xs text-app-hint">{label}</p>
+                      <p className="text-lg font-semibold tabular-nums">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                {(facts.top_members ?? []).length > 0 && (
+                  <p className="text-xs text-app-hint">
+                    🏆 {(facts.top_members ?? []).map((row) => `${row.place}. ${row.name} (${row.points})`).join(' · ')}
+                  </p>
+                )}
+              </>
+            )}
+            {report.kind === 'GENERAL' && (
+              <p className="text-app-hint">Umumiy hisobot sizning matningiz va rasmlaringizdan tuziladi — bazadan raqam olinmaydi.</p>
+            )}
+            {facts.feedback && facts.feedback.count > 0 && (
+              <p className="text-xs text-app-hint">
+                ⭐ Ishtirokchilar bahosi: {facts.feedback.average} / 5 ({facts.feedback.count} ta baho)
+              </p>
+            )}
             <p className="text-xs text-app-hint">Holat: {formatDateTime(facts.prepared_at)}. Bu raqamlarni AI o'zgartira olmaydi.</p>
           </Card>
 

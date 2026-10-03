@@ -27,3 +27,9 @@ class SupportReply(StatesGroup):
     """An administrator is answering a member (the ticket id is in the state data)."""
 
     waiting = State()
+
+
+class FeedbackComment(StatesGroup):
+    """A member is writing a comment about an event (the event id is in the state data)."""
+
+    waiting = State()

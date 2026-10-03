@@ -345,6 +345,11 @@ async def quote_of_day(session: AsyncSession, now: datetime | None = None) -> in
     )
     if quote is None:
         return 0
+    from app.services import features
+
+    members = await features.recipients(session, "quote_of_day")
+    if members is None:
+        return 0  # switched off: the quote stays scheduled and is sent if it is switched on today
     author = quote.author
     if not author and quote.book_id:
         book = await session.get(Book, quote.book_id)
@@ -359,6 +364,7 @@ async def quote_of_day(session: AsyncSession, now: datetime | None = None) -> in
         type_=NotificationType.QUOTE_OF_DAY,
         text=text,
         dedup_prefix=f"quote:{quote.id}",
+        members=members,
     )
 
 

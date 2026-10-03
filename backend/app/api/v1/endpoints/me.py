@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.deps import CurrentUserDep, DbSession
 from app.models import Faculty, UserNotificationSettings
 from app.schemas.user import FacultyOut, MeOut, MeUpdateIn, NotificationSettingsIn, NotificationSettingsOut
+from app.services import features, premium
 from app.services import users as user_service
 from app.services.passport import member_number
 from app.services.settings import get_setting
@@ -33,6 +34,9 @@ async def _me(current, db) -> MeOut:
         is_admin=current.is_admin,
         roles=sorted(current.roles),
         max_course=await get_setting(db, "registration.max_course"),
+        features=await features.access(db, user),
+        is_premium=await premium.is_premium(db, user.id),
+        premium_until=await premium.premium_until(db, user.id),
     )
 
 

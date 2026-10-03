@@ -9,16 +9,18 @@ import { EventCard } from './EventsPage'
 import { daysUntil, formatDate, formatEventDate } from '../utils/format'
 import { navigate } from '../utils/router'
 
-const SHORTCUTS = [
+const SHORTCUTS: { route: string; icon: string; label: string; feature?: string }[] = [
   { route: 'books', icon: '📚', label: 'Kitoblar' },
   { route: 'events', icon: '📅', label: 'Tadbirlar' },
   { route: 'checkin', icon: '✅', label: 'Davomat' },
   { route: 'tests', icon: '📝', label: 'Testlar' },
   { route: 'results', icon: '📊', label: 'Natijalarim' },
-  { route: 'ranking', icon: '🏆', label: 'Reyting' },
-  { route: 'achievements', icon: '🏅', label: 'Yutuqlar' },
+  { route: 'ranking', icon: '🏆', label: 'Reyting', feature: 'ranking' },
+  { route: 'achievements', icon: '🏅', label: 'Yutuqlar', feature: 'achievements' },
   { route: 'profile', icon: '🪪', label: 'Pasportim' },
-  { route: 'rewards', icon: '🎁', label: "Sovg'alar" },
+  { route: 'rewards', icon: '🎁', label: "Sovg'alar", feature: 'rewards' },
+  { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', feature: 'certificates' },
+  { route: 'premium', icon: '💎', label: 'Premium', feature: 'premium' },
 ]
 
 function deadlineText(deadline: string | null): string | null {
@@ -145,19 +147,27 @@ export function HomePage() {
 
       <SectionTitle>Bo'limlar</SectionTitle>
       <div className="grid grid-cols-3 gap-2">
-        {SHORTCUTS.map((item) => (
-          <button
-            key={item.route}
-            type="button"
-            onClick={() => navigate(`/${item.route}`)}
-            className="flex flex-col items-center gap-1 rounded-2xl bg-app-bg px-2 py-4 text-sm shadow-sm active:opacity-70"
-          >
-            <span aria-hidden className="text-2xl">
-              {item.icon}
-            </span>
-            {item.label}
-          </button>
-        ))}
+        {SHORTCUTS.filter((item) => !item.feature || me?.features?.[item.feature] !== 'off').map((item) => {
+          const locked = item.feature !== 'premium' && item.feature && me?.features?.[item.feature] === 'premium'
+          return (
+            <button
+              key={item.route}
+              type="button"
+              onClick={() => navigate(`/${item.route}`)}
+              className="relative flex flex-col items-center gap-1 rounded-2xl bg-app-bg px-2 py-4 text-sm shadow-sm active:opacity-70"
+            >
+              {locked && (
+                <span aria-label="Premium" className="absolute right-2 top-1.5 text-xs">
+                  💎
+                </span>
+              )}
+              <span aria-hidden className="text-2xl">
+                {item.icon}
+              </span>
+              {item.label}
+            </button>
+          )
+        })}
       </div>
     </>
   )

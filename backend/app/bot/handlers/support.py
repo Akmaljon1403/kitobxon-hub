@@ -15,7 +15,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import texts
-from app.bot.access import has_permission
+from app.bot.access import gate, has_permission
 from app.bot.filters import ActiveMember
 from app.bot.states import SupportCompose, SupportReply
 from app.models import User
@@ -28,7 +28,9 @@ router.callback_query.filter(ActiveMember())
 
 
 @router.callback_query(F.data == "sup:new")
-async def start_message(callback: CallbackQuery, state: FSMContext) -> None:
+async def start_message(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User) -> None:
+    if await gate(callback, db, member, "support"):
+        return
     await state.set_state(SupportCompose.waiting)
     await callback.answer()
     if isinstance(callback.message, Message):

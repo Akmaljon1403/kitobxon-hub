@@ -12,9 +12,11 @@ from app.models import AttendanceRecord, Event, EventRegistration
 from app.models.enums import AttendanceStatus, RegistrationStatus
 from app.schemas.common import Page
 from app.schemas.event import CheckInIn, CheckInOut, EventOut, LiveAttendanceOut
+from app.schemas.premium import FeedbackIn, FeedbackOut
 from app.security.rate_limit import RateLimit, enforce
 from app.services import attendance as attendance_service
 from app.services import events as event_service
+from app.services import feedback as feedback_service
 
 router = APIRouter(tags=["events"])
 CHECK_IN_LIMIT = RateLimit("check-in", limit=10, window_seconds=60)
@@ -102,3 +104,21 @@ async def verify_attendance(
         points=result.points,
         checked_in_at=result.record.checked_in_at,
     )
+
+
+@router.get("/events/{event_id}/feedback", response_model=FeedbackOut | None, summary="My rating of an event")
+async def my_feedback(event_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> FeedbackOut | None:
+    feedback = await feedback_service.my_feedback(db, user_id=current.user.id, event_id=event_id)
+    return (
+        FeedbackOut(rating=feedback.rating, comment=feedback.comment, updated_at=feedback.updated_at)
+        if feedback
+        else None
+    )
+
+
+@router.put("/events/{event_id}/feedback", response_model=FeedbackOut, summary="Rate an event I attended (1-5)")
+async def rate_event(event_id: uuid.UUID, payload: FeedbackIn, current: CurrentUserDep, db: DbSession) -> FeedbackOut:
+    feedback = await feedback_service.rate(
+        db, user=current.user, event_id=event_id, rating=payload.rating, comment=payload.comment or ""
+    )
+    return FeedbackOut(rating=feedback.rating, comment=feedback.comment, updated_at=feedback.updated_at)

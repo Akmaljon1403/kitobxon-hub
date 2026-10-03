@@ -20,6 +20,7 @@ import anthropic
 from app.core.config import get_settings
 from app.core.errors import ServiceUnavailableError
 from app.models import Report
+from app.models.enums import ReportKind
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ _FALLBACK_MODELS = ("claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "cla
 SYSTEM_PROMPT = """\
 Siz universitet kitobxonlar klubining rasmiy hisobotlarini yozuvchi yordamchisiz.
 Vazifa: berilgan FAKTLAR va ADMIN YOZUVLARI asosida o'zbek tilida (lotin yozuvida),
-rasmiy-ish uslubida tadbir hisobotining matnini yozish.
+rasmiy-ish uslubida hisobot matnini yozish (bitta tadbir, davr faoliyati yoki umumiy mavzu).
 
 Qat'iy qoidalar:
 - Faqat berilgan faktlar va admin yozuvlaridagi ma'lumotlardan foydalaning.
@@ -37,13 +38,7 @@ Qat'iy qoidalar:
   raqamni yozmang (masalan, foiz yoki sonni o'zingiz hisoblamang).
 - Biror bo'lim uchun ma'lumot berilmagan bo'lsa, umumiy va faktlarsiz bitta jumla yozing yoki
   bo'limni tashlab keting.
-- Matnni quyidagi sarlavhalar bilan yozing (har bir sarlavha alohida qatorda, "## " bilan):
-  ## Kirish
-  ## Tadbirning borishi
-  ## Ishtirok
-  ## Natijalar
-  ## Xulosa
-  ## Takliflar
+- Matnni so'rovda ko'rsatilgan sarlavhalar bilan yozing (har biri alohida qatorda, "## " bilan).
 - Sarlavhalardan tashqari belgilash (qalin, ro'yxat belgisi, jadval) ishlatmang; xatboshilarni
   bo'sh qator bilan ajrating.
 - Faqat hisobot matnini qaytaring: kirish so'zi yoki izohsiz."""
@@ -59,11 +54,18 @@ def is_configured() -> bool:
     return get_settings().ai_api_key is not None
 
 
+HEADINGS = {
+    ReportKind.EVENT: ("Kirish", "Tadbirning borishi", "Ishtirok", "Natijalar", "Xulosa", "Takliflar"),
+    ReportKind.PERIOD: ("Kirish", "Tadbirlar", "A'zolar va kitobxonlik", "Eng faol a'zolar", "Xulosa", "Takliflar"),
+    ReportKind.GENERAL: ("Kirish", "Amalga oshirilgan ishlar", "Natijalar", "Xulosa", "Takliflar"),
+}
+
+
 def build_prompt(report: Report) -> str:
     notes = {
         "hisobot_nomi": report.title,
         "maqsad": report.objective,
-        "tadbir_tavsifi": report.activity_description,
+        "faoliyat_tavsifi": report.activity_description,
         "natijalar": report.results,
         "xulosa": report.conclusion,
         "takliflar": report.recommendations,
@@ -73,6 +75,8 @@ def build_prompt(report: Report) -> str:
         + json.dumps(report.facts_snapshot or {}, ensure_ascii=False, indent=2, sort_keys=True)
         + "\n\nADMIN YOZUVLARI:\n"
         + json.dumps({key: value for key, value in notes.items() if value}, ensure_ascii=False, indent=2)
+        + "\n\nSARLAVHALAR:\n"
+        + "\n".join(f"## {heading}" for heading in HEADINGS[ReportKind(report.kind)])
         + "\n\nShu ma'lumotlar asosida hisobot matnini yozing."
     )
 

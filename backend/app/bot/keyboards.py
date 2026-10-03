@@ -37,8 +37,10 @@ MEMBER_ROWS = (
 MENU_BUTTONS = frozenset(label for row in MEMBER_ROWS for label in row) | {texts.BTN_ADMIN}
 
 
-def main_menu(*, is_admin: bool = False) -> ReplyKeyboardMarkup:
-    rows = [list(row) for row in MEMBER_ROWS]
+def main_menu(*, is_admin: bool = False, hidden: frozenset[str] = frozenset()) -> ReplyKeyboardMarkup:
+    """``hidden``: sections switched off by the super admin (the others close up two per row)."""
+    labels = [label for row in MEMBER_ROWS for label in row if label not in hidden]
+    rows = [labels[index : index + 2] for index in range(0, len(labels), 2)]
     if is_admin:
         rows.append([texts.BTN_ADMIN])
     return ReplyKeyboardMarkup(
@@ -147,11 +149,34 @@ def attendance(scan: bool) -> InlineKeyboardMarkup | None:
     return inline([app_button("checkin?scan=1", texts.BTN_SCAN_QR)] if scan else [app_button("events", texts.BTN_MORE)])
 
 
-def help_menu() -> InlineKeyboardMarkup | None:
+def help_menu(*, support: bool = True, premium: bool = False, donations: bool = False) -> InlineKeyboardMarkup | None:
     return inline(
-        [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")],
+        [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")] if support else [],
+        [InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")] if premium else [],
+        [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
         [app_button("", texts.BTN_OPEN_APP)],
     )
+
+
+def premium_offer() -> InlineKeyboardMarkup | None:
+    return inline([InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")])
+
+
+def premium_plans(plans: list[tuple[str, str]], *, donations: bool) -> InlineKeyboardMarkup | None:
+    """plans: (plan id hex, button text)."""
+    return inline(
+        *[[InlineKeyboardButton(text=label, callback_data=f"prem:buy:{plan_id}")] for plan_id, label in plans],
+        [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
+        [app_button("premium", texts.BTN_MORE)],
+    )
+
+
+def donation_amounts(amounts: list[int]) -> InlineKeyboardMarkup | None:
+    return inline([InlineKeyboardButton(text=f"{amount} ⭐", callback_data=f"don:{amount}") for amount in amounts])
+
+
+def feedback_comment(event_hex: str) -> InlineKeyboardMarkup | None:
+    return inline([InlineKeyboardButton(text=texts.BTN_FEEDBACK_COMMENT, callback_data=f"fbc:{event_hex}")])
 
 
 def settings_menu(settings: UserNotificationSettings) -> InlineKeyboardMarkup:
