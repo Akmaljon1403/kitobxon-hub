@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, PageHeader, Pagination, Table } from '../components/ui'
+import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHeader, Pagination, Table } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
@@ -17,6 +17,25 @@ interface Overview {
   premium_stars: number
   donation_stars: number
   payments: number
+  uzs_total: number
+  uzs_this_month: number
+  card_pending: number
+}
+
+interface CardPayment {
+  id: string
+  kind: 'PREMIUM' | 'DONATION'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  amount_uzs: number
+  plan_title: string | null
+  created_at: string
+  decided_at: string | null
+  reject_reason: string | null
+  member: Member
+}
+
+function uzs(amount: number): string {
+  return `${amount.toLocaleString('ru-RU').replace(/,/g, ' ')} so'm`
 }
 
 interface Plan {
@@ -26,6 +45,7 @@ interface Plan {
   description: string | null
   stars: number
   days: number
+  price_uzs: number | null
   is_active: boolean
 }
 
@@ -63,8 +83,9 @@ function PlanRow({ plan, onSaved }: { plan: Plan; onSaved: () => void }) {
   const { api } = useSession()
   const [stars, setStars] = useState(String(plan.stars))
   const [days, setDays] = useState(String(plan.days))
+  const [priceUzs, setPriceUzs] = useState(plan.price_uzs ? String(plan.price_uzs) : '')
   const [error, setError] = useState<string | null>(null)
-  const dirty = stars !== String(plan.stars) || days !== String(plan.days)
+  const dirty = stars !== String(plan.stars) || days !== String(plan.days) || priceUzs !== (plan.price_uzs ? String(plan.price_uzs) : '')
 
   async function save(changes: Record<string, unknown>) {
     setError(null)
@@ -88,8 +109,24 @@ function PlanRow({ plan, onSaved }: { plan: Plan; onSaved: () => void }) {
       <td className="px-4 py-2">
         <Input type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} className="w-20" aria-label="Kun" />
       </td>
+      <td className="px-4 py-2">
+        <Input
+          type="number"
+          min={1000}
+          step={1000}
+          value={priceUzs}
+          onChange={(e) => setPriceUzs(e.target.value)}
+          placeholder="sotilmaydi"
+          className="w-32"
+          aria-label="Karta narxi (so'm)"
+        />
+      </td>
       <td className="whitespace-nowrap px-4 py-2 text-right">
-        {dirty && <Button onClick={() => void save({ stars: Number(stars), days: Number(days) })}>Saqlash</Button>}
+        {dirty && (
+          <Button onClick={() => void save({ stars: Number(stars), days: Number(days), price_uzs: priceUzs ? Number(priceUzs) : null })}>
+            Saqlash
+          </Button>
+        )}
         <Button variant="ghost" onClick={() => void save({ is_active: !plan.is_active })}>
           {plan.is_active ? 'Sotuvdan olish' : 'Sotuvga qaytarish'}
         </Button>
@@ -149,13 +186,14 @@ export function PremiumPage() {
       {message && <p className="text-sm text-emerald-600">{message}</p>}
 
       {overview.state.status === 'success' && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           {[
             ["💎 Premium a'zolar", overview.state.data.premium_members],
             ['⭐ Jami tushum', overview.state.data.stars_total],
             ['⭐ Shu oy', overview.state.data.stars_this_month],
             ['⭐ Premiumdan', overview.state.data.premium_stars],
             ['❤️ Hissalardan', overview.state.data.donation_stars],
+            ['💳 Karta (shu oy)', uzs(overview.state.data.uzs_this_month)],
           ].map(([label, value]) => (
             <Card key={label} className="p-4">
               <p className="text-sm text-app-hint">{label}</p>
@@ -165,12 +203,14 @@ export function PremiumPage() {
         </div>
       )}
 
+      <CardPayments onChanged={reloadAll} />
+
       <Card className="p-4">
         <h2 className="mb-2 font-semibold">Tariflar</h2>
         {plans.state.status === 'loading' && <LoadingState />}
         {plans.state.status === 'error' && <ErrorState message={plans.state.error.message} onRetry={plans.reload} />}
         {plans.state.status === 'success' && (
-          <Table head={['Tarif', 'Narx (⭐)', 'Kun', '']}>
+          <Table head={['Tarif', 'Narx (⭐)', 'Kun', 'Karta narxi', '']}>
             {plans.state.data.map((plan) => (
               <PlanRow key={`${plan.id}-${plan.stars}-${plan.days}-${plan.is_active}`} plan={plan} onSaved={reloadAll} />
             ))}
@@ -178,6 +218,7 @@ export function PremiumPage() {
         )}
         <p className="mt-2 text-xs text-app-hint">
           1 ⭐ taxminan 0,013–0,02 AQSh dollari. Yig'ilgan Stars'ni Fragment orqali naqd pulga aylantirish mumkin (yo'riqnomada).
+          «Karta narxi» bo'sh bo'lsa, tarif karta orqali sotilmaydi. Karta raqami: Sozlamalar → 💳 Karta orqali to'lov.
         </p>
       </Card>
 
@@ -291,5 +332,118 @@ export function PremiumPage() {
         )}
       </Card>
     </>
+  )
+}
+
+
+function Receipt({ paymentId }: { paymentId: string }) {
+  const { download } = useSession()
+  const [src, setSrc] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    let url: string | null = null
+    download(`/api/v1/admin/premium/card-payments/${paymentId}/receipt`)
+      .then((blob) => {
+        url = URL.createObjectURL(blob)
+        setSrc(url)
+      })
+      .catch(() => setSrc(null))
+    return () => {
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [download, paymentId])
+  if (!src) return <span className="text-xs text-app-hint">Chek yuklanmoqda…</span>
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} aria-label="Chekni kattalashtirish">
+        <img src={src} alt="To'lov cheki" className="h-16 w-12 rounded border border-app-border object-cover" />
+      </button>
+      {open && (
+        <Modal title="To'lov cheki" onClose={() => setOpen(false)} wide>
+          <img src={src} alt="To'lov cheki" className="mx-auto max-h-[70vh] rounded" />
+        </Modal>
+      )}
+    </>
+  )
+}
+
+/** Receipts of payments to the club's card: confirm (Premium switches on) or reject with a reason. */
+function CardPayments({ onChanged }: { onChanged: () => void }) {
+  const { api } = useSession()
+  const [status, setStatus] = useState<'PENDING' | ''>('PENDING')
+  const { state, reload } = useAsync(
+    (signal) => api<Page<CardPayment>>(`/api/v1/admin/premium/card-payments?limit=50${status ? `&status=${status}` : ''}`, { signal }),
+    [status],
+  )
+  const [error, setError] = useState<string | null>(null)
+
+  async function decide(payment: CardPayment, approve: boolean) {
+    setError(null)
+    try {
+      if (approve) {
+        if (!window.confirm(`${payment.member.last_name} ${payment.member.first_name}: ${uzs(payment.amount_uzs)} tushganini tekshirdingizmi?`)) return
+        await api(`/api/v1/admin/premium/card-payments/${payment.id}/approve`, { method: 'POST' })
+      } else {
+        const reason = window.prompt('Rad etish sababi (a\u2018zo ko\u2018radi):')
+        if (!reason || reason.trim().length < 5) return
+        await api(`/api/v1/admin/premium/card-payments/${payment.id}/reject`, { method: 'POST', body: { reason } })
+      }
+      reload()
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
+        <h2 className="font-semibold">💳 Karta orqali to'lovlar</h2>
+        <div className="flex gap-1 text-sm">
+          <Button variant={status === 'PENDING' ? 'primary' : 'secondary'} onClick={() => setStatus('PENDING')}>
+            Kutilayotganlar
+          </Button>
+          <Button variant={status === '' ? 'primary' : 'secondary'} onClick={() => setStatus('')}>
+            Hammasi
+          </Button>
+        </div>
+      </div>
+      <div className="px-4">
+        <InlineError message={error} />
+      </div>
+      {state.status === 'success' && (
+        <Table head={["A'zo", 'Nima uchun', 'Summa', 'Chek', 'Sana', '']}>
+          {state.data.items.length === 0 && <EmptyRow colSpan={6} text="Tekshirilishi kerak bo'lgan to'lov yo'q" />}
+          {state.data.items.map((payment) => (
+            <tr key={payment.id}>
+              <td className="px-4 py-2">
+                {payment.member.last_name} {payment.member.first_name}
+                <p className="font-mono text-xs text-app-hint">{payment.member.member_number}</p>
+              </td>
+              <td className="px-4 py-2 text-sm">{payment.plan_title ? `💎 Premium ${payment.plan_title}` : '❤️ Hissa'}</td>
+              <td className="whitespace-nowrap px-4 py-2 tabular-nums">{uzs(payment.amount_uzs)}</td>
+              <td className="px-4 py-2">
+                <Receipt paymentId={payment.id} />
+              </td>
+              <td className="whitespace-nowrap px-4 py-2 text-sm">{formatDateTime(payment.created_at)}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-right">
+                {payment.status === 'PENDING' ? (
+                  <>
+                    <Button onClick={() => void decide(payment, true)}>✅ Tasdiqlash</Button>{' '}
+                    <Button variant="ghost" onClick={() => void decide(payment, false)}>
+                      Rad etish
+                    </Button>
+                  </>
+                ) : (
+                  <Badge tone={payment.status === 'APPROVED' ? 'success' : 'warning'}>
+                    {payment.status === 'APPROVED' ? 'Tasdiqlangan' : `Rad etilgan: ${payment.reject_reason ?? ''}`}
+                  </Badge>
+                )}
+              </td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Card>
   )
 }

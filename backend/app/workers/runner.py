@@ -13,6 +13,7 @@ from app.bot.setup import get_bot_runtime
 from app.core.config import get_settings
 from app.core.database import get_session_factory
 from app.services.notifications import wait_for_work
+from app.workers.channel_sender import send_channel_posts
 from app.workers.jobs import run_scheduled_jobs
 from app.workers.sender import send_due_notifications
 
@@ -36,6 +37,7 @@ async def run_worker(stop: asyncio.Event) -> None:
                     report = await send_due_notifications(factory, runtime.bot, limit=BATCH)
                     if report.total < BATCH:
                         break
+                await send_channel_posts(factory, runtime.bot)
         except Exception:
             logger.exception("Background worker iteration failed")
         if await _sleep_or_wake(stop, interval):

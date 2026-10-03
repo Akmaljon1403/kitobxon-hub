@@ -6,13 +6,16 @@ import uuid
 from typing import Annotated
 
 from aiogram.exceptions import TelegramAPIError
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 
 from app.api.deps import DbSession, SuperAdminDep
+from app.api.v1.endpoints.premium import card_payment_out
 from app.core.errors import ServiceUnavailableError
 from app.models import PremiumPlan, User
+from app.models.enums import CardPaymentStatus
 from app.schemas.common import Page, ReasonIn
 from app.schemas.premium import (
+    AdminCardPaymentOut,
     AdminPlanOut,
     FeatureModeIn,
     FeatureModeOut,
@@ -24,7 +27,7 @@ from app.schemas.premium import (
     PremiumOverviewOut,
     SubscriptionOut,
 )
-from app.services import delivery, features
+from app.services import card_payments, delivery, features
 from app.services import premium as premium_service
 from app.services.passport import member_number
 
@@ -45,6 +48,7 @@ def _plan(plan: PremiumPlan) -> AdminPlanOut:
         description=plan.description,
         stars=plan.stars,
         days=plan.days,
+        price_uzs=plan.price_uzs,
         is_active=plan.is_active,
         sort_order=plan.sort_order,
     )
@@ -186,3 +190,43 @@ async def revoke(
         db, actor_id=current.user.id, subscription_id=subscription_id, reason=payload.reason
     )
     return {"status": "REVOKED"}
+
+
+@router.get("/premium/card-payments", response_model=Page[AdminCardPaymentOut], summary="Card payments (receipts)")
+async def card_payment_list(
+    _: SuperAdminDep,
+    db: DbSession,
+    status: CardPaymentStatus | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> Page[AdminCardPaymentOut]:
+    rows, total = await card_payments.list_payments(db, status=status, limit=limit, offset=offset)
+    return Page(
+        items=[
+            AdminCardPaymentOut(**card_payment_out(payment, title).model_dump(), member=_member(user))
+            for payment, user, title in rows
+        ],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/premium/card-payments/{payment_id}/receipt", summary="The receipt image", response_class=Response)
+async def card_payment_receipt(payment_id: uuid.UUID, _: SuperAdminDep, db: DbSession) -> Response:
+    payment = await card_payments.get(db, payment_id)
+    return Response(content=await card_payments.receipt(db, payment), media_type="image/jpeg")
+
+
+@router.post("/premium/card-payments/{payment_id}/approve", response_model=dict[str, str], summary="Confirm")
+async def card_payment_approve(payment_id: uuid.UUID, current: SuperAdminDep, db: DbSession) -> dict[str, str]:
+    payment = await card_payments.approve(db, actor_id=current.user.id, payment_id=payment_id)
+    return {"status": str(payment.status)}
+
+
+@router.post("/premium/card-payments/{payment_id}/reject", response_model=dict[str, str], summary="Reject")
+async def card_payment_reject(
+    payment_id: uuid.UUID, payload: ReasonIn, current: SuperAdminDep, db: DbSession
+) -> dict[str, str]:
+    payment = await card_payments.reject(db, actor_id=current.user.id, payment_id=payment_id, reason=payload.reason)
+    return {"status": str(payment.status)}

@@ -8,10 +8,12 @@ import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
 import { BooksPage } from './pages/BooksPage'
 import { CertificatesPage } from './pages/CertificatesPage'
+import { ChannelPage } from './pages/ChannelPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsPage } from './pages/EventsPage'
 import { FacultiesPage } from './pages/FacultiesPage'
 import { FeaturesPage } from './pages/FeaturesPage'
+import { GiveawaysPage } from './pages/GiveawaysPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -37,10 +39,12 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   tests: TestsPage,
   scores: ScoresPage,
   notifications: NotificationsPage,
+  channel: ChannelPage,
   support: SupportPage,
   achievements: AchievementsPage,
   reports: ReportsPage,
   rewards: RewardsPage,
+  giveaways: GiveawaysPage,
   certificates: CertificatesPage,
   features: FeaturesPage,
   premium: PremiumPage,

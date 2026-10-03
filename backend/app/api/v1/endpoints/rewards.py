@@ -7,7 +7,9 @@ import uuid
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUserDep, DbSession, feature_required
+from app.schemas.giveaway import MemberGiveawaysOut
 from app.schemas.reward import MemberRewardOut, RevealedCodeOut
+from app.services import giveaways as giveaway_service
 from app.services import rewards as reward_service
 
 router = APIRouter(tags=["rewards"], dependencies=[feature_required("rewards")])
@@ -44,3 +46,8 @@ async def mark_redeemed(user_reward_id: uuid.UUID, current: CurrentUserDep, db: 
     row = await reward_service.mark_redeemed(db, user_id=current.user.id, user_reward_id=user_reward_id)
     reward = await reward_service.get_reward(db, row.reward_id)
     return _out(row, reward, row.reward_code_id is not None)
+
+
+@router.get("/me/giveaways", response_model=MemberGiveawaysOut, summary="Upcoming giveaways and recent winners")
+async def giveaways(_: CurrentUserDep, db: DbSession) -> MemberGiveawaysOut:
+    return MemberGiveawaysOut(**await giveaway_service.for_members(db))

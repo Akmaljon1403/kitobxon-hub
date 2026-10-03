@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, BadRequestError, ConflictError, NotFoundError
 from app.models import Payment, PremiumPlan, PremiumSubscription, User
 from app.models.enums import FeatureMode, NotificationType, PaymentKind, PaymentStatus, PremiumSource, UserStatus
+from app.services import card_payments
 from app.services.audit import record_audit
 from app.services.notifications import active_members, enqueue_notification, render
 from app.utils.timezone import format_date
@@ -436,9 +437,11 @@ async def member_status(session: AsyncSession, user: User) -> dict[str, Any]:
                 "description": plan.description,
                 "stars": plan.stars,
                 "days": plan.days,
+                "price_uzs": plan.price_uzs,
             }
             for plan in await list_plans(session)
         ],
+        "card": await card_payments.card_details(session),
         "donation_amounts": list(DONATION_AMOUNTS),
         "premium_features": premium_features,
         "perks": [dict(perk) for perk in PERKS],
@@ -471,6 +474,7 @@ async def overview(session: AsyncSession) -> dict[str, Any]:
         "premium_stars": await total(Payment.kind == PaymentKind.PREMIUM),
         "donation_stars": await total(Payment.kind == PaymentKind.DONATION),
         "payments": int(await session.scalar(select(func.count()).select_from(Payment)) or 0),
+        **await card_payments.totals(session),
     }
 
 

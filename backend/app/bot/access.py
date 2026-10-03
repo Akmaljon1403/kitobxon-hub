@@ -63,3 +63,7 @@ async def gate(event: Message | CallbackQuery, db: AsyncSession, member: User, c
     if isinstance(message, Message):
         await message.answer(text, reply_markup=markup)
     return True
+
+
+async def is_super_admin(db: AsyncSession, member: User | None) -> bool:
+    return member is not None and "SUPER_ADMIN" in await get_role_codes(db, member.id)

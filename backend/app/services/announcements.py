@@ -41,6 +41,7 @@ from app.models.enums import (
     TestStatus,
     UserStatus,
 )
+from app.services import channel
 from app.services.audit import record_audit
 from app.services.members import normalize_group
 from app.services.notifications import app_button, enqueue_for_members, enqueue_notification, render
@@ -74,6 +75,7 @@ def _daytime(now: datetime) -> bool:
 async def event_published(session: AsyncSession, event: Event) -> int:
     if event.status != EventStatus.PUBLISHED or event.starts_at <= datetime.now(UTC):
         return 0
+    await channel.event_announced(session, event)
     text = await render(
         session,
         NotificationType.EVENT_CREATED,
@@ -110,6 +112,7 @@ async def attendance_opened(session: AsyncSession, event: Event) -> int:
 async def book_published(session: AsyncSession, book: Book) -> int:
     if book.status != BookStatus.ACTIVE or book.deleted_at is not None:
         return 0
+    await channel.book_announced(session, book)
     text = await render(
         session,
         NotificationType.NEW_BOOK,
@@ -130,6 +133,7 @@ async def book_published(session: AsyncSession, book: Book) -> int:
 
 async def test_results(session: AsyncSession, test: Test, standings: list[dict[str, Any]]) -> int:
     """After a test closes: every participant gets their best score (and place, if any)."""
+    await channel.test_winners(session, test, standings)
     places = {row["user_id"]: row["place"] for row in standings}
     best: dict[Any, int] = {}
     for attempt in await session.scalars(
@@ -357,6 +361,7 @@ async def quote_of_day(session: AsyncSession, now: datetime | None = None) -> in
     text = await render(session, NotificationType.QUOTE_OF_DAY, quote_text=quote.text, quote_author=author or "—")
     quote.status = QuoteStatus.SENT
     quote.sent_at = now
+    await channel.quote_posted(session, quote, author)
     if text is None:
         return 0
     return await enqueue_for_members(

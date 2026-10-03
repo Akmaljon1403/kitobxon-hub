@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { CardPaymentSection } from '../components/CardPayment'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -163,6 +164,13 @@ export function PremiumPage() {
         </>
       )}
 
+      {status.card && (status.store_open || status.donations_open) && (
+        <>
+          <SectionTitle>💳 Karta orqali to'lash</SectionTitle>
+          <CardPaymentSection card={status.card} plans={status.store_open ? status.plans : []} onDone={reload} />
+        </>
+      )}
+
       {status.donations_open && (
         <>
           <SectionTitle>❤️ Klubni qo'llab-quvvatlash</SectionTitle>
@@ -209,7 +217,7 @@ export function PremiumPage() {
       )}
 
       <p className="px-2 text-center text-xs text-app-hint">
-        To'lov Telegram Stars orqali. Asosiy imkoniyatlar hamma uchun bepul. Savol bo'lsa — botda /paysupport.
+        To'lov Telegram Stars{status.card ? ' yoki klub kartasi' : ''} orqali. Asosiy imkoniyatlar hamma uchun bepul. Savol bo'lsa — botda /paysupport.
       </p>
     </div>
   )

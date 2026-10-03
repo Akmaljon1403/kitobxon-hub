@@ -138,6 +138,24 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
     SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
+    # ---- Card payments (Premium paid to the club's card, confirmed by the super admin) ----
+    SettingDefinition(
+        "payments.card_number", "", ShortText, "Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012"
+    ),
+    SettingDefinition("payments.card_holder", "", ShortText, "Karta egasining ismi (to'lovchi tekshirishi uchun)"),
+    # ---- Telegram channel (the bot posts there as an administrator) ----
+    SettingDefinition(
+        "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"
+    ),
+    SettingDefinition(
+        "channel.chat_id", "@FJSTIMutolaaxona", ShortText, "Kanal manzili: @username yoki -100... raqami"
+    ),
+    SettingDefinition("channel.post_events", True, bool, "Yangi tadbirlar va «ertaga ... o'qib kelamiz» eslatmalari"),
+    SettingDefinition("channel.post_books", True, bool, "Yangi kitoblar va «asarni tugatay deb qoldingizmi?» postlari"),
+    SettingDefinition("channel.post_quotes", True, bool, "Kun iqtibosi kanalga ham joylanadi"),
+    SettingDefinition("channel.post_results", True, bool, "Test g'oliblari, sovg'a o'yinlari va oy peshqadamlari"),
+    SettingDefinition("channel.post_invites", True, bool, "Har dushanba botga taklif posti"),
+    SettingDefinition("channel.stickers", True, bool, "Avtomatik postlardan keyin saqlangan stikerlardan biri"),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",

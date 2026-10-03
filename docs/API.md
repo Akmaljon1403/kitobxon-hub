@@ -142,6 +142,9 @@ Blocking a user or removing admin rights has the same effect immediately.
 | POST | `/api/v1/me/downloads` | `{"kind": "passport" \| "certificate", "id"?}` → `{url, filename, expires_in}` for Telegram's `downloadFile` |
 | GET | `/api/v1/me/premium` | Premium status, plans on sale, donation amounts, which features are premium-only |
 | POST | `/api/v1/me/premium/invoice` | `{"plan_id"}` or `{"amount"}` (donation) → `{url}` for `Telegram.WebApp.openInvoice` (Telegram Stars, XTR); 403 `FEATURE_OFF` while the store is closed |
+| POST | `/api/v1/me/premium/card-payments` | Paid to the club's card: multipart `file` (receipt screenshot ≤ 10 MB) and exactly one of `plan_id` (plan with a so'm price) or `amount_uzs` (donation ≥ 1 000). 409 `CARD_PAYMENTS_OFF`, 409 `TOO_MANY_PENDING` (3 waiting receipts). Super admins get the receipt in the bot |
+| GET | `/api/v1/me/premium/card-payments` | My card payments and their status (`PENDING` / `APPROVED` / `REJECTED` with the reason) |
+| GET | `/api/v1/me/giveaways` | Upcoming giveaways (`rewards` feature) and the winners of the last 60 days — public names only |
 | GET / PUT | `/api/v1/events/{id}/feedback` | My rating of an event I attended: `{"rating": 1-5, "comment"?}`; 409 `NOT_ATTENDED` otherwise |
 
 ### Admin: access control
@@ -267,6 +270,14 @@ Telegram's `pre_checkout_query` (plan on sale, price unchanged, payer is the mem
 | POST | `/api/v1/admin/premium/grant` | `{"user_id", "days", "note"?}` — premium as a gift (audited, member notified) |
 | POST | `/api/v1/admin/premium/subscriptions/{id}/revoke` | `{"reason"}` |
 | GET | `/api/v1/admin/events/{id}/feedback` | `EVENT_VIEW` — average, distribution, comments with names |
+| GET | `/api/v1/admin/premium/card-payments?status=PENDING` | card payments (receipts) with the member, plan and amount |
+| GET | `/api/v1/admin/premium/card-payments/{id}/receipt` | the receipt picture (JPEG) |
+| POST | `/api/v1/admin/premium/card-payments/{id}/approve` | Premium starts (source `CARD`, chained after the current end) or the donation is counted; the member is told; 409 when already decided |
+| POST | `/api/v1/admin/premium/card-payments/{id}/reject` | `{"reason"}` — the member gets the reason |
+
+Card payments: the super admin sets `payments.card_number` / `payments.card_holder` in Settings,
+switches on the `card_payments` feature and gives plans a `price_uzs`. Bots cannot give Telegram Stars
+to users, so a confirmed card payment activates Premium (or records a donation) instead.
 
 ### Admin: rewards (`REWARD_MANAGE`)
 
@@ -280,6 +291,46 @@ Telegram's `pre_checkout_query` (plan on sale, price unchanged, payer is the mem
 | POST | `/api/v1/admin/rewards/{id}/assign` | `{"user_id", "note"?, "idempotency_key"?}` — gives the next unused code; one active assignment per member and reward; audited; member notified |
 | GET | `/api/v1/admin/rewards/{id}/recipients` | |
 | POST | `/api/v1/admin/user-rewards/{id}/status` | `DELIVERED` / `REDEEMED` / `REVOKED` (a revoked code is never handed out again) |
+
+### Admin: giveaways (`REWARD_MANAGE`)
+
+Promo codes of a reward handed out by a rule over a period (dates in the club time zone):
+`RANDOM` (audience `ALL` / `ATTENDED` / `PREMIUM`; administrators never take part; premium members
+count twice with `premium_bonus`; the random seed is stored), `TEST_TOP` (most test points incl. place
+bonuses), `EVENT_PLACES` (places 1..N of the closed test of every event in the period, each event
+separately, attendees only, N ≤ 10) and `RANKING_TOP`. A giveaway with `scheduled_at` is drawn by the
+job `giveaways_due`; `repeat_monthly` schedules the same giveaway for the next month after the draw.
+A draw with no winners or too few codes changes nothing (409 `NO_WINNERS` / `NO_CODES_LEFT`; a
+scheduled one waits and the admins are told once). Winners get their code and a personal message;
+with `announce` all members (and the channel) see the winners.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET / POST | `/api/v1/admin/giveaways` | list (planned first) / create (`title`, `reward_id`, `rule`, `audience`, `winners_count`, `premium_bonus`, `period_start`, `period_end`, `scheduled_at`?, `announce`, `repeat_monthly`) |
+| PATCH | `/api/v1/admin/giveaways/{id}` | edit a draft or scheduled giveaway |
+| GET | `/api/v1/admin/giveaways/{id}/preview` | who would win now (`RANDOM`: how many take part), notes such as open tests or missing codes |
+| POST | `/api/v1/admin/giveaways/{id}/draw` | draw now and hand out the codes (once) |
+| POST | `/api/v1/admin/giveaways/{id}/cancel` | |
+
+### Admin: Telegram channel (`NOTIFICATION_SEND`)
+
+The bot posts in the club channel (setting `channel.chat_id`, default `@FJSTIMutolaaxona`) when
+`channel.enabled` is on and the bot is an administrator of the channel with the right to post.
+Automatic posts (each kind has its own `channel.post_*` switch): new events (with the book to read and
+its cover), reminders the day before and 3 hours before, new books, reading nudges halfway and 1–3 days
+before the deadline, the quote of the day, test winners, giveaway winners, the month's leaders, and a
+weekly invitation (Mondays). Every post has a «📲 Botga qo'shilish» button (`t.me/<bot>?start=channel`);
+posts never go out between 21:30 and 08:00 (they wait until 09:00). Stickers saved with the bot command
+`/stiker` follow automatic posts (`channel.stickers`). Telegram errors (e.g. no rights) mark the post
+failed and the super admins are told once a day.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/admin/channel` | status (enabled, address, queue, last post, last error), the 50 latest posts, saved stickers |
+| POST | `/api/v1/admin/channel/posts` | multipart: `text`, `photo`?, `sticker_id`?, `with_button`, `scheduled_at`? — the text is sent as plain text. Audited |
+| POST | `/api/v1/admin/channel/test` | a short test post to check the bot's rights |
+| POST | `/api/v1/admin/channel/posts/{id}/cancel` | a post not sent yet |
+| DELETE | `/api/v1/admin/channel/stickers/{id}` | forget a saved sticker |
 
 ### Admin: certificates (`REWARD_MANAGE`)
 

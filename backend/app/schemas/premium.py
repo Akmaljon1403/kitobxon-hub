@@ -5,7 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.enums import FeatureMode, PaymentKind, PaymentStatus, PremiumSource
+from app.models.enums import CardPaymentStatus, FeatureMode, PaymentKind, PaymentStatus, PremiumSource
 
 
 class PlanOut(BaseModel):
@@ -14,6 +14,12 @@ class PlanOut(BaseModel):
     description: str | None
     stars: int
     days: int
+    price_uzs: int | None = None
+
+
+class CardDetailsOut(BaseModel):
+    number: str
+    holder: str
 
 
 class PremiumFeatureOut(BaseModel):
@@ -37,6 +43,7 @@ class PremiumStatusOut(BaseModel):
     donation_amounts: list[int]
     premium_features: list[PremiumFeatureOut]
     perks: list[PerkOut]
+    card: CardDetailsOut | None = None
 
 
 class InvoiceIn(BaseModel):
@@ -87,6 +94,7 @@ class PlanUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=64)
     description: str | None = Field(default=None, max_length=500)
     stars: int | None = Field(default=None, ge=1, le=100_000)
+    price_uzs: int | None = Field(default=None, ge=1, le=100_000_000, description="Card price; null: not sold by card")
     days: int | None = Field(default=None, ge=1, le=3660)
     is_active: bool | None = None
 
@@ -98,6 +106,9 @@ class PremiumOverviewOut(BaseModel):
     premium_stars: int
     donation_stars: int
     payments: int
+    uzs_total: int = 0
+    uzs_this_month: int = 0
+    card_pending: int = 0
 
 
 class MemberBrief(BaseModel):
@@ -150,3 +161,18 @@ class FeedbackSummaryOut(BaseModel):
     average: float | None
     distribution: dict[str, int]
     comments: list[dict[str, object]]
+
+
+class CardPaymentOut(BaseModel):
+    id: uuid.UUID
+    kind: PaymentKind
+    status: CardPaymentStatus
+    amount_uzs: int
+    plan_title: str | None
+    created_at: datetime
+    decided_at: datetime | None
+    reject_reason: str | None
+
+
+class AdminCardPaymentOut(CardPaymentOut):
+    member: MemberBrief

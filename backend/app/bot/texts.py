@@ -322,3 +322,48 @@ FEEDBACK_ASK_COMMENT = "Xohlasangiz, tadbir haqida fikringizni yozing — nima y
 BTN_FEEDBACK_COMMENT = "✍️ Fikr yozish"
 FEEDBACK_COMMENT_SAVED = "✅ Fikringiz klub rahbariyatiga yetkazildi. Rahmat!"
 FEEDBACK_NOT_ALLOWED = "Bu tadbirga baho bera olmaysiz."
+
+
+# ---- Card payments ----
+BTN_PAY_CARD = "💳 Karta orqali to'lash"
+CARD_CHOOSE = (
+    "💳 <b>Karta orqali to'lov</b>\n\n"
+    "Telegram Stars bo'lmasa, Premiumni klub kartasiga to'lab olishingiz mumkin. Tarifni tanlang:"
+)
+CARD_PLAN = "{title} — {price}"
+CARD_DONATE = "❤️ Hissa (istalgan summa)"
+CARD_INSTRUCTIONS = (
+    "💳 <b>{what}</b> — <b>{price}</b>\n\n"
+    "Karta: <code>{number}</code>\n"
+    "{holder}"
+    "\n1) Shu summani kartaga o'tkazing (Click, Payme, bank ilovasi).\n"
+    "2) To'lov <b>chekini (skrinshot)</b> shu yerga rasm qilib yuboring.\n\n"
+    "Admin tekshirgach, Premium avtomatik yoqiladi. Bekor qilish: /cancel"
+)
+CARD_HOLDER = "Egasi: {holder}\n"
+CARD_DONATION_ASK = "❤️ Qancha hissa qo'shmoqchisiz? Summani so'mda yozing (masalan: 20000)."
+CARD_DONATION_INVALID = "Summani raqam bilan yozing, kamida 1 000 so'm (masalan: 20000)."
+CARD_RECEIPT_HINT = "Chekni rasm (skrinshot) qilib yuboring. Bekor qilish: /cancel"
+CARD_RECEIPT_OK = (
+    "✅ <b>Chek qabul qilindi!</b>\n\n"
+    "Admin tekshirib tasdiqlagach, sizga xabar keladi va Premium avtomatik yoqiladi. Rahmat!"
+)
+CARD_OFF = "💳 Karta orqali to'lov hozircha yoqilmagan."
+
+# ---- Card payments: the super admin's side ----
+CARD_ADMIN_ONLY = "Bu tugma faqat bosh administrator uchun."
+CARD_RECEIPT_CAPTION = "🧾 <b>{what}</b> — {price}\nA'zo: {name}\nHolat: {status}"
+CARD_APPROVED = "✅ Tasdiqlandi: {name} — {price}. A'zoga xabar yuborildi."
+CARD_REJECT_ASK = "❌ Rad etish sababini yozing (a'zo shuni ko'radi), masalan: «Summa to'liq emas»."
+CARD_REJECTED = "❌ Rad etildi. A'zoga sabab bilan xabar yuborildi."
+
+# ---- Channel stickers (/stiker, admins) ----
+STICKER_ASK = (
+    "🎨 <b>Kanal postlari uchun stikerlar</b>\n\n"
+    "Menga yoqqan stikerlaringizni birma-bir yuboring (oddiy yoki animatsion). Bot ularni saqlaydi va "
+    "kanaldagi avtomatik postlardan keyin bittasini tasodifiy qo'shadi.\n\nTugatgach — /tayyor"
+)
+STICKER_SAVED = "✅ Saqlandi. Jami stikerlar: {total} ta. Yana yuboring yoki /tayyor"
+STICKER_DUPLICATE = "Bu stiker allaqachon saqlangan (jami {total} ta). Boshqasini yuboring yoki /tayyor"
+STICKER_ONLY = "Stiker yuboring yoki /tayyor deb yozing."
+STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sahifasida ko'rasiz va keraksizini o'chirasiz."

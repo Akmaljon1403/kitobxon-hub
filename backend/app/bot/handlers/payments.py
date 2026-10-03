@@ -5,18 +5,20 @@ from __future__ import annotations
 import html
 import logging
 import uuid
+from typing import Any
 
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, PreCheckoutQuery
+from aiogram.types import BufferedInputFile, CallbackQuery, Message, PreCheckoutQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot import keyboards, texts
+from app.bot import access, keyboards, texts
+from app.bot.states import CardDonationAmount, CardReceipt, CardReject
 from app.core.errors import AppError
 from app.models import User
 from app.models.enums import FeatureMode, PaymentKind, UserStatus
-from app.services import features
+from app.services import card_payments, features
 from app.services import premium as premium_service
 from app.utils.timezone import format_date
 
@@ -56,6 +58,7 @@ async def show_premium(message: Message, db: AsyncSession, member: User) -> None
         reply_markup=keyboards.premium_plans(
             [(plan.id.hex, texts.PREMIUM_PLAN.format(title=plan.title, stars=plan.stars)) for plan in plans],
             donations=donations,
+            card=await card_payments.card_details(db) is not None,
         ),
     )
 
@@ -174,3 +177,205 @@ async def terms(message: Message) -> None:
 async def paysupport(message: Message, member: User | None) -> None:
     markup = keyboards.help_menu(support=True) if _active(member) else None
     await message.answer(texts.PAYSUPPORT, reply_markup=markup)
+
+
+# ---------------------------------------------------------------------------- card payments (member)
+
+
+@router.callback_query(F.data == "card:open")
+async def card_open(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    await callback.answer()
+    if not _active(member) or not isinstance(callback.message, Message):
+        return
+    if await card_payments.card_details(db) is None:
+        await callback.message.answer(texts.CARD_OFF)
+        return
+    plans = [plan for plan in await premium_service.list_plans(db) if plan.price_uzs]
+    await callback.message.answer(
+        texts.CARD_CHOOSE,
+        reply_markup=keyboards.card_plans(
+            [
+                (plan.id.hex, texts.CARD_PLAN.format(title=plan.title, price=card_payments.format_uzs(plan.price_uzs)))
+                for plan in plans
+                if plan.price_uzs
+            ]
+        ),
+    )
+
+
+async def _instructions(message: Message, db: AsyncSession, what: str, price: str) -> bool:
+    card = await card_payments.card_details(db)
+    if card is None:
+        await message.answer(texts.CARD_OFF)
+        return False
+    await message.answer(
+        texts.CARD_INSTRUCTIONS.format(
+            what=html.escape(what),
+            price=price,
+            number=html.escape(card["number"]),
+            holder=texts.CARD_HOLDER.format(holder=html.escape(card["holder"])) if card["holder"] else "",
+        )
+    )
+    return True
+
+
+@router.callback_query(F.data.startswith("card:plan:"))
+async def card_plan(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    await callback.answer()
+    if not _active(member) or not isinstance(callback.message, Message):
+        return
+    try:
+        plan = await premium_service.get_plan(db, uuid.UUID(hex=(callback.data or "").removeprefix("card:plan:")))
+    except (ValueError, AppError):
+        await callback.message.answer(texts.CARD_OFF)
+        return
+    if not plan.price_uzs:
+        await callback.message.answer(texts.CARD_OFF)
+        return
+    if await _instructions(callback.message, db, f"Premium {plan.title}", card_payments.format_uzs(plan.price_uzs)):
+        await state.set_state(CardReceipt.waiting)
+        await state.update_data(plan_id=plan.id.hex)
+
+
+@router.callback_query(F.data == "card:don")
+async def card_donation(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    await callback.answer()
+    if not _active(member) or not isinstance(callback.message, Message):
+        return
+    if await card_payments.card_details(db) is None:
+        await callback.message.answer(texts.CARD_OFF)
+        return
+    await state.set_state(CardDonationAmount.waiting)
+    await callback.message.answer(texts.CARD_DONATION_ASK)
+
+
+@router.message(StateFilter(CardDonationAmount.waiting), F.text, ~F.text.startswith("/"))
+async def card_donation_amount(message: Message, state: FSMContext, db: AsyncSession) -> None:
+    digits = "".join(char for char in message.text or "" if char.isdigit())
+    amount = int(digits) if digits and len(digits) <= 9 else 0
+    if amount < card_payments.MIN_DONATION_UZS:
+        await message.answer(texts.CARD_DONATION_INVALID)
+        return
+    if await _instructions(message, db, "Klubga hissa", card_payments.format_uzs(amount)):
+        await state.set_state(CardReceipt.waiting)
+        await state.update_data(amount_uzs=amount)
+
+
+@router.message(StateFilter(CardReceipt.waiting), F.photo | F.document)
+async def card_receipt(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    if not _active(member) or message.bot is None:
+        return
+    assert member is not None
+    if message.document is not None and not (message.document.mime_type or "").startswith("image/"):
+        await message.answer(texts.CARD_RECEIPT_HINT)
+        return
+    data = await state.get_data()
+    file_id = message.photo[-1].file_id if message.photo else message.document.file_id  # type: ignore[union-attr]
+    try:
+        telegram_file = await message.bot.get_file(file_id)
+        assert telegram_file.file_path is not None
+        buffer = await message.bot.download_file(telegram_file.file_path)
+        await card_payments.submit(
+            db,
+            member,
+            receipt=buffer.read() if buffer else b"",
+            plan_id=uuid.UUID(hex=data["plan_id"]) if data.get("plan_id") else None,
+            amount_uzs=data.get("amount_uzs"),
+        )
+    except AppError as exc:
+        await message.answer(exc.message)
+        return
+    await state.clear()
+    await message.answer(texts.CARD_RECEIPT_OK)
+
+
+@router.message(StateFilter(CardReceipt.waiting), F.text, ~F.text.startswith("/"))
+async def card_receipt_hint(message: Message) -> None:
+    await message.answer(texts.CARD_RECEIPT_HINT)
+
+
+# ---------------------------------------------------------------------------- card payments (super admin)
+
+
+async def _decision_target(callback: CallbackQuery, db: AsyncSession, member: User | None, prefix: str) -> Any:
+    if not await access.is_super_admin(db, member):
+        await callback.answer(texts.CARD_ADMIN_ONLY, show_alert=True)
+        return None
+    try:
+        return await card_payments.get(db, uuid.UUID(hex=(callback.data or "").removeprefix(prefix)))
+    except (ValueError, AppError):
+        await callback.answer(texts.FILE_FAILED, show_alert=True)
+        return None
+
+
+async def _describe(db: AsyncSession, payment: Any) -> tuple[str, str, str]:
+    user = await db.get(User, payment.user_id)
+    plan = await premium_service.get_plan(db, payment.plan_id, active=False) if payment.plan_id else None
+    what = f"Premium {plan.title}" if plan else "Hissa"
+    name = f"{user.last_name} {user.first_name}" if user else "—"
+    return what, name, card_payments.format_uzs(payment.amount_uzs)
+
+
+@router.callback_query(F.data.startswith("cp:view:"))
+async def card_view(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    payment = await _decision_target(callback, db, member, "cp:view:")
+    if payment is None or not isinstance(callback.message, Message):
+        return
+    await callback.answer()
+    what, name, price = await _describe(db, payment)
+    caption = texts.CARD_RECEIPT_CAPTION.format(
+        what=html.escape(what), price=price, name=html.escape(name), status=payment.status
+    )
+    image = await card_payments.receipt(db, payment)
+    await callback.message.answer_photo(
+        BufferedInputFile(image, filename="chek.jpg"),
+        caption=caption,
+        reply_markup=keyboards.card_decision(payment.id.hex) if payment.status == "PENDING" else None,
+    )
+
+
+@router.callback_query(F.data.startswith("cp:ok:"))
+async def card_approve(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    payment = await _decision_target(callback, db, member, "cp:ok:")
+    if payment is None:
+        return
+    assert member is not None
+    try:
+        await card_payments.approve(db, actor_id=member.id, payment_id=payment.id)
+    except AppError as exc:
+        await callback.answer(exc.message, show_alert=True)
+        return
+    _, name, price = await _describe(db, payment)
+    await callback.answer("✅")
+    if isinstance(callback.message, Message):
+        await callback.message.answer(texts.CARD_APPROVED.format(name=html.escape(name), price=price))
+
+
+@router.callback_query(F.data.startswith("cp:no:"))
+async def card_reject_start(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    payment = await _decision_target(callback, db, member, "cp:no:")
+    if payment is None:
+        return
+    await callback.answer()
+    await state.set_state(CardReject.waiting)
+    await state.update_data(payment_id=payment.id.hex)
+    if isinstance(callback.message, Message):
+        await callback.message.answer(texts.CARD_REJECT_ASK)
+
+
+@router.message(StateFilter(CardReject.waiting), F.text, ~F.text.startswith("/"))
+async def card_reject_reason(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    data = await state.get_data()
+    await state.clear()
+    if not await access.is_super_admin(db, member) or not data.get("payment_id"):
+        await message.answer(texts.CARD_ADMIN_ONLY)
+        return
+    assert member is not None
+    try:
+        await card_payments.reject(
+            db, actor_id=member.id, payment_id=uuid.UUID(hex=data["payment_id"]), reason=message.text or ""
+        )
+    except AppError as exc:
+        await message.answer(exc.message)
+        return
+    await message.answer(texts.CARD_REJECTED)
