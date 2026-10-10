@@ -12,6 +12,7 @@ Texts come from the admin-editable notification templates.
 from __future__ import annotations
 
 import html
+import re
 import uuid
 from datetime import UTC, datetime, time, timedelta
 from typing import Any
@@ -20,6 +21,7 @@ from sqlalchemy import Select, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.errors import BadRequestError
 from app.models import (
     AttendanceRecord,
     Book,
@@ -572,6 +574,46 @@ async def quote_of_day(session: AsyncSession, now: datetime | None = None) -> in
 # ---------------------------------------------------------------------------- admin broadcast
 
 
+MAX_BUTTONS = 8
+_BUTTON_URL = re.compile(r"^(https?://\S+|tg://\S+)$", re.IGNORECASE)
+
+
+def parse_buttons(text: str | None) -> list[dict[str, str]]:
+    """«Matn | https://havola» lines → link buttons (the admin writes them under the message)."""
+    buttons: list[dict[str, str]] = []
+    for number, raw in enumerate((text or "").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        title, separator, url = line.partition("|")
+        title, url = title.strip(), url.strip()
+        if url and not url.lower().startswith(("http://", "https://", "tg://")) and url.lower().startswith("t.me/"):
+            url = f"https://{url}"
+        if not separator or not title or not _BUTTON_URL.match(url):
+            raise BadRequestError(
+                "BUTTON_INVALID", f"{number}-qator: tugma «Matn | https://havola» ko'rinishida bo'lsin."
+            )
+        if len(title) > 64:
+            raise BadRequestError("BUTTON_INVALID", f"{number}-qator: tugma matni 64 belgidan oshmasin.")
+        buttons.append({"text": title, "url": url})
+    if len(buttons) > MAX_BUTTONS:
+        raise BadRequestError("TOO_MANY_BUTTONS", f"Ko'pi bilan {MAX_BUTTONS} ta tugma qo'shish mumkin.")
+    return buttons
+
+
+async def broadcast_message(
+    session: AsyncSession, *, message: str, buttons: str | None = None, with_app_button: bool = True
+) -> tuple[str, dict[str, Any] | None]:
+    """The text and buttons exactly as members will get them."""
+    text = await render(session, NotificationType.ADMIN_MESSAGE, message=message.strip())
+    if text is None:  # template switched off: send the admin's words as plain text
+        text = html.escape(message.strip(), quote=False)
+    specs: list[dict[str, Any]] = list(parse_buttons(buttons))
+    if with_app_button:
+        specs += app_button("")["buttons"]
+    return text, ({"buttons": specs} if specs else None)
+
+
 async def broadcast(
     session: AsyncSession,
     *,
@@ -581,9 +623,12 @@ async def broadcast(
     course: int | None = None,
     group_name: str | None = None,
     with_app_button: bool = True,
+    buttons: str | None = None,
     dry_run: bool = False,
+    only_to: Any | None = None,
 ) -> int:
-    """An admin's message to all active members or a part of them. Returns the recipient count."""
+    """An admin's message to all active members or a part of them. Returns the recipient count.
+    ``only_to``: a test send to the admin themself (to see it in the bot before everybody)."""
     conditions = []
     if faculty_id is not None:
         conditions.append(User.faculty_id == faculty_id)
@@ -592,19 +637,31 @@ async def broadcast(
     if group_name:
         conditions.append(User.group_name == normalize_group(group_name))
     members = _members(*conditions)
+    text, payload = await broadcast_message(
+        session, message=message, buttons=buttons, with_app_button=with_app_button
+    )  # checks the buttons even for a count
     if dry_run:
         return int(await session.scalar(select(func.count()).select_from(members.subquery())) or 0)
-    text = await render(session, NotificationType.ADMIN_MESSAGE, message=message.strip())
-    if text is None:  # template switched off: send the admin's words as plain text
-        text = html.escape(message.strip(), quote=False)
     broadcast_id = uuid.uuid4()
+    if only_to is not None:
+        await enqueue_notification(
+            session,
+            user_id=only_to,
+            type_=NotificationType.ADMIN_MESSAGE,
+            text="🧪 <b>Sinov</b> — a'zolar xabarni shunday ko'radi:\n\n" + text,
+            dedup_key=f"broadcast-test:{broadcast_id}",
+            payload=payload,
+            priority=1,
+        )
+        await session.commit()
+        return 1
     count = await enqueue_for_members(
         session,
         type_=NotificationType.ADMIN_MESSAGE,
         text=text,
         dedup_prefix=f"broadcast:{broadcast_id}",
         members=members,
-        payload=app_button("") if with_app_button else None,
+        payload=payload,
         priority=3,
     )
     record_audit(

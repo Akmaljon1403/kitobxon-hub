@@ -201,7 +201,8 @@ async def test_member_writes_admin_answers_in_the_bot(client: httpx.AsyncClient,
 
     harness = BotHarness(6103)
     await harness.send(texts.BTN_HELP)
-    assert harness.session.sent_messages()[-1].reply_markup.inline_keyboard[0][0].callback_data == "sup:new"
+    rows = harness.session.sent_messages()[-1].reply_markup.inline_keyboard
+    assert [row[0].callback_data for row in rows[:2]] == ["faq:list", "sup:new"]  # answers first, then write
     await harness.press("sup:new")
     assert harness.last_text() == texts.SUPPORT_ASK
     await harness.send("Test qachon ochiladi?")

@@ -76,6 +76,31 @@ async def restore_self(callback: CallbackQuery, db: AsyncSession, member: User |
     )
 
 
+@router.callback_query(F.data == "mem:back")
+async def come_back(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    await callback.answer()
+    if _left(member) and isinstance(callback.message, Message):
+        assert member is not None
+        await offer_return(callback.message, db, member)
+
+
+@router.callback_query(F.data == "mem:wipe")
+async def wipe_chat(callback: CallbackQuery, member: User | None) -> None:
+    """Delete what can be deleted in this chat (Telegram allows the last 48 hours), then say how to remove it."""
+    await callback.answer("🧹")
+    message = callback.message
+    if not _left(member) or not isinstance(message, Message) or callback.bot is None:
+        return
+    newest = message.message_id
+    for top in range(newest, max(newest - 500, 0), -100):
+        ids = list(range(max(top - 99, 1), top + 1))
+        try:
+            await callback.bot.delete_messages(chat_id=message.chat.id, message_ids=ids)
+        except Exception:  # older than 48 hours or already gone: nothing more to do
+            logger.debug("Some messages could not be deleted")
+    await callback.bot.send_message(message.chat.id, texts.LEFT_WIPED)
+
+
 @router.callback_query(F.data == "mem:request")
 async def restore_request(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
     await callback.answer()

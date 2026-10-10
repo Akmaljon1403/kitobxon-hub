@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+import uuid
+from datetime import datetime
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUserDep, DbSession
 from app.models import Faculty, UserNotificationSettings
@@ -107,3 +110,39 @@ async def update_notification_settings(
 @router.get("/referrals", response_model=ReferralsOut, summary="My invitation link and invited friends")
 async def my_referrals(current: CurrentUserDep, db: DbSession) -> ReferralsOut:
     return ReferralsOut(**await referrals.summary(db, current.user))
+
+
+class SupportMessageOut(BaseModel):
+    id: uuid.UUID
+    from_admin: bool
+    text: str
+    created_at: datetime
+
+
+class SupportIn(BaseModel):
+    text: str = Field(min_length=2, max_length=2000)
+    topic: Literal["general", "payment"] = "general"
+
+
+@router.get("/support", response_model=list[SupportMessageOut], summary="My conversation with the club")
+async def my_support(current: CurrentUserDep, db: DbSession) -> list[SupportMessageOut]:
+    from app.services import support
+
+    return [
+        SupportMessageOut(id=m.id, from_admin=m.from_admin, text=m.text, created_at=m.created_at)
+        for m in await support.member_thread(db, current.user.id)
+    ]
+
+
+@router.post(
+    "/support", response_model=list[SupportMessageOut], summary="Write to the club (the answer also comes in the bot)"
+)
+async def write_support(payload: SupportIn, current: CurrentUserDep, db: DbSession) -> list[SupportMessageOut]:
+    from app.services import support
+
+    await features.require(db, current.user, "support")
+    await support.member_message(
+        db, user=current.user, text=payload.text, topic="payment" if payload.topic == "payment" else None
+    )
+    await db.commit()
+    return await my_support(current, db)

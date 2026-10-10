@@ -51,6 +51,7 @@ COMMANDS = [
     BotCommand(command="taklif", description="Do'stni klubga taklif qilish"),
     BotCommand(command="help", description="Yordam va adminga yozish"),
     BotCommand(command="cancel", description="Joriy amalni bekor qilish"),
+    BotCommand(command="stop", description="Hamma jarayonni to'xtatish va menyuga qaytish"),
 ]
 
 

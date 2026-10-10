@@ -22,6 +22,7 @@ const SHORTCUTS: { route: string; icon: string; label: string; feature?: string 
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", feature: 'rewards' },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', feature: 'certificates' },
   { route: 'premium', icon: '💎', label: 'Premium', feature: 'premium' },
+  { route: 'help', icon: '❓', label: 'Yordam' },
 ]
 
 function deadlineText(deadline: string | null): string | null {

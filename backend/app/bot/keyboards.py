@@ -168,11 +168,46 @@ def attendance(scan: bool) -> InlineKeyboardMarkup | None:
 
 def help_menu(*, support: bool = True, premium: bool = False, donations: bool = False) -> InlineKeyboardMarkup | None:
     return inline(
+        [InlineKeyboardButton(text=texts.BTN_FAQ, callback_data="faq:list")],
         [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")] if support else [],
         [InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")] if premium else [],
         [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
         [app_button("", texts.BTN_OPEN_APP)],
     )
+
+
+def faq_topics(topics: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
+    """topics: (code, title), two per row."""
+    buttons = [InlineKeyboardButton(text=title, callback_data=f"faq:t:{code}") for code, title in topics]
+    return inline(
+        *[buttons[index : index + 2] for index in range(0, len(buttons), 2)],
+        [app_button("help", texts.BTN_FAQ_APP)],
+    )
+
+
+def faq_answer(*, support: bool) -> InlineKeyboardMarkup | None:
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_FAQ_BACK, callback_data="faq:list")],
+        [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")] if support else [],
+    )
+
+
+def limited_account() -> InlineKeyboardMarkup | None:
+    """A blocked or not yet approved member may still read the answers and write to the admins."""
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")],
+        [InlineKeyboardButton(text=texts.BTN_FAQ, callback_data="faq:list")],
+    )
+
+
+def left_member(bot_username: str | None) -> InlineKeyboardMarkup | None:
+    """A member who left: come back (sends /start by itself) or clear the chat."""
+    restore = (
+        InlineKeyboardButton(text=texts.BTN_LEFT_RESTORE, url=f"https://t.me/{bot_username}?start=qayta")
+        if bot_username
+        else InlineKeyboardButton(text=texts.BTN_LEFT_RESTORE, callback_data="mem:back")
+    )
+    return inline([restore], [InlineKeyboardButton(text=texts.BTN_LEFT_WIPE, callback_data="mem:wipe")])
 
 
 def premium_offer() -> InlineKeyboardMarkup | None:

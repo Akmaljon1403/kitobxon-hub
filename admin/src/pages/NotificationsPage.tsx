@@ -19,11 +19,20 @@ function Stat({ label, value, tone = '' }: { label: string; value: number; tone?
   )
 }
 
+/** Telegram HTML of the bot (already escaped by the server) shown safely: only simple formatting tags stay. */
+function telegramHtml(text: string): string {
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return escaped
+    .replace(/&amp;(amp|lt|gt|quot|#39);/g, '&$1;')
+    .replace(/&lt;(\/?)(b|i|u|s|code|pre|blockquote)&gt;/g, '<$1$2>')
+}
+
 export function NotificationsPage() {
   const { api } = useSession()
   const summary = useAsync((signal) => api<NotificationSummary>('/api/v1/admin/notifications/summary', { signal }))
   const faculties = useAsync((signal) => api<Faculty[]>('/api/v1/admin/faculties', { signal }))
-  const [form, setForm] = useState({ message: '', faculty_id: '', course: '', group_name: '', with_app_button: true })
+  const [form, setForm] = useState({ message: '', faculty_id: '', course: '', group_name: '', with_app_button: true, buttons: '' })
+  const [preview, setPreview] = useState<{ text: string; buttons: { text: string; url: string; kind: string }[]; recipients: number } | null>(null)
   const [recipients, setRecipients] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,6 +63,39 @@ export function NotificationsPage() {
     }
   }, [audienceKey, api])
 
+  const body = () => ({
+    message: form.message.trim(),
+    ...audience,
+    with_app_button: form.with_app_button,
+    buttons: form.buttons.trim() || null,
+  })
+
+  async function showPreview() {
+    setBusy(true)
+    setError(null)
+    try {
+      setPreview(await api('/api/v1/admin/notifications/broadcast/preview', { method: 'POST', body: body() }))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Ko'rsatib bo'lmadi.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function sendToMe() {
+    setBusy(true)
+    setError(null)
+    setDone(null)
+    try {
+      await api('/api/v1/admin/notifications/broadcast', { method: 'POST', body: { ...body(), test: true } })
+      setDone("✓ Sinov xabari sizga yuborildi — botda qanday ko'rinishini tekshiring.")
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Yuborib bo'lmadi.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function send() {
     if (!window.confirm(`Xabar ${recipients ?? ''} nafar a'zoga yuboriladi. Davom etasizmi?`)) return
     setBusy(true)
@@ -62,10 +104,11 @@ export function NotificationsPage() {
     try {
       const result = await api<{ recipients: number }>('/api/v1/admin/notifications/broadcast', {
         method: 'POST',
-        body: { message: form.message.trim(), ...audience, with_app_button: form.with_app_button },
+        body: body(),
       })
       setDone(`✓ Xabar ${result.recipients} nafar a'zoga navbatga qo'yildi. Bir necha daqiqada yetkaziladi.`)
-      setForm({ ...form, message: '' })
+      setForm({ ...form, message: '', buttons: '' })
+      setPreview(null)
       summary.reload()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Yuborib bo'lmadi.")
@@ -107,7 +150,10 @@ export function NotificationsPage() {
           <Field label="Xabar matni *" hint={`${form.message.length}/${MAX_LENGTH} belgi. Boshiga «📢» avtomatik qo'shiladi.`}>
             <Textarea
               value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, message: e.target.value })
+                setPreview(null)
+              }}
               maxLength={MAX_LENGTH}
               rows={6}
               placeholder="Masalan: Ertaga soat 15:00 da kutubxonada «O'tkan kunlar» muhokamasi bo'ladi."
@@ -147,15 +193,55 @@ export function NotificationsPage() {
             />
             Xabar ostiga «📱 Ilovada ochish» tugmasini qo'shish
           </label>
+          <Field
+            label="Qo'shimcha tugmalar (ixtiyoriy)"
+            hint="Har bir qatorda bitta tugma: «Matn | https://havola». Masalan: Ro'yxatdan o'tish | https://forms.gle/..."
+          >
+            <Textarea
+              value={form.buttons}
+              onChange={(e) => {
+                setForm({ ...form, buttons: e.target.value })
+                setPreview(null)
+              }}
+              rows={3}
+              maxLength={2000}
+              placeholder={'Test | https://kitob.uz\nKanalimiz | https://t.me/FJSTIMutolaaxona'}
+            />
+          </Field>
+          {preview && (
+            <div className="rounded-xl bg-app-surface p-3">
+              <p className="mb-2 text-xs text-app-hint">👀 A'zolar shunday ko'radi ({preview.recipients} nafar):</p>
+              <div className="max-w-md rounded-2xl rounded-bl-sm bg-app-bg p-3 text-sm shadow-sm">
+                <p className="whitespace-pre-line" dangerouslySetInnerHTML={{ __html: telegramHtml(preview.text) }} />
+              </div>
+              {preview.buttons.length > 0 && (
+                <div className="mt-1 flex max-w-md flex-col gap-1">
+                  {preview.buttons.map((button, index) => (
+                    <span key={index} className="rounded-lg bg-app-bg/80 py-1.5 text-center text-sm text-app-link shadow-sm" title={button.url}>
+                      {button.text} {button.kind === 'url' ? '↗' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <InlineError message={error} />
           {done && <p className="text-sm text-emerald-600">{done}</p>}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-app-hint">
               Qabul qiluvchilar: <span className="font-semibold text-app-text">{recipients ?? '…'}</span> nafar faol a'zo
             </p>
-            <Button loading={busy} disabled={form.message.trim().length < 3 || !recipients} onClick={() => void send()}>
-              📢 Yuborish
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" disabled={busy || form.message.trim().length < 3} onClick={() => void showPreview()}>
+                👀 Ko'rib chiqish
+              </Button>
+              <Button variant="secondary" disabled={busy || form.message.trim().length < 3} onClick={() => void sendToMe()}>
+                🧪 O'zimga sinov
+              </Button>
+              <Button loading={busy} disabled={form.message.trim().length < 3 || !recipients || !preview} onClick={() => void send()} title={preview ? undefined : "Avval «Ko'rib chiqish»ni bosing"}>
+                📢 Yuborish
+              </Button>
+            </div>
           </div>
         </Card>
 

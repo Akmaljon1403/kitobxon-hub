@@ -227,6 +227,10 @@ export function ProfilePage() {
       <SectionTitle>Bildirishnomalar</SectionTitle>
       <NotificationsCard />
 
+      <Button variant="secondary" onClick={() => navigate('/help')}>
+        ❓ Yordam, savol-javoblar va adminga yozish
+      </Button>
+
       {me.is_admin && (
         <Button variant="secondary" onClick={() => window.location.assign('/admin/')}>
           🛠 Admin panel

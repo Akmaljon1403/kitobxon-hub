@@ -97,6 +97,13 @@ async def handle_start(
     message: Message, state: FSMContext, db: AsyncSession, member: User | None, payload: str
 ) -> None:
     """/start (also after «✅ Obuna bo'ldim»): a QR check-in, a link from the channel, home or registration."""
+    if payload == "support" and member is not None and member.status != UserStatus.LEFT:
+        from app.bot.states import SupportCompose
+
+        await state.clear()
+        await state.set_state(SupportCompose.waiting)  # «Adminga yozish» from the app (also when blocked)
+        await message.answer(texts.SUPPORT_ASK)
+        return
     if payload.startswith(attendance_service.QR_PREFIX):
         await _check_in_from_qr(message, state, db, member, payload)
         return

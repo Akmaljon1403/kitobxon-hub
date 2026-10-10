@@ -521,6 +521,25 @@ PORTFOLIO_PREPARING = "🗂 Portfoliongiz tayyorlanmoqda…"
 
 # ---- Leaving and coming back ----
 ACCOUNT_LEFT = "Siz klubdan chiqqansiz. Qaytish uchun /start bosing."
+LEFT_RESTRICTED = (
+    "🚪 <b>A'zoligingiz bekor qilingan</b>\n\n"
+    "Shu sababli bot hozir buyruqlarni qabul qilmaydi. Ikki yo'l bor:\n"
+    "• «🔄 Qayta tiklash» — klubga qaytasiz (muddat o'tmagan bo'lsa, ballaringiz bilan);\n"
+    "• «🧹 Chatni tozalash» — bot yuborgan xabarlar o'chiriladi. Chatni butunlay o'chirish uchun: "
+    "chat tepasidagi ⋮ → «Chatni o'chirish»."
+)
+LEFT_WIPED = (
+    "🧹 Tozalandi. Chatni butunlay olib tashlash uchun: tepadagi ⋮ → «Chatni o'chirish». "
+    "Qaytmoqchi bo'lsangiz — /start. Sizni yana kutamiz! 📚"
+)
+BTN_LEFT_RESTORE = "🔄 Qayta tiklash"
+BTN_LEFT_WIPE = "🧹 Chatni tozalash"
+STOPPED = "⏹ To'xtatildi. Oldingi amal bekor qilindi — pastdagi menyudan davom eting."
+BTN_FAQ = "❓ Savol-javoblar"
+BTN_FAQ_APP = "📱 Barchasi ilovada"
+BTN_FAQ_BACK = "⬅️ Mavzular"
+FAQ_TOPICS = "❓ <b>Savol-javoblar</b>\n\nMavzuni tanlang — eng ko'p so'raladigan savollarga javob tayyor:"
+LIMITED_ACCOUNT_HINT = "\n\nSavolingiz bo'lsa — «✉️ Adminga yozish»."
 LEFT_BACK_SELF = (
     "👋 <b>Qaytganingizdan xursandmiz, {name}!</b>\n\n"
     "Siz {days} kun oldin klubdan chiqqansiz. Ma'lumotlaringiz — ballar, sertifikatlar, yutuqlar — hali "

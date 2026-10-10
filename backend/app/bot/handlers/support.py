@@ -17,21 +17,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import texts
 from app.bot.access import gate, has_permission
-from app.bot.filters import ActiveMember
+from app.bot.filters import ActiveMember, CanWriteToAdmins
 from app.bot.states import SupportCompose, SupportReply
 from app.models import User
+from app.models.enums import UserStatus
 from app.security.permissions import Perm
 from app.services import support as support_service
 
 router = Router(name="support")
-router.message.filter(ActiveMember())
-router.callback_query.filter(ActiveMember())
+# Members write to the club even when their account is blocked or waits for approval.
+router.message.filter(CanWriteToAdmins())
+router.callback_query.filter(CanWriteToAdmins())
 
 
 @router.callback_query(F.data.in_({"sup:new", "sup:new:pay"}))
 async def start_message(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User) -> None:
     payment = callback.data == "sup:new:pay"  # a payment question also goes to the payments chat
-    if not payment and await gate(callback, db, member, "support"):
+    active = member.status == UserStatus.ACTIVE
+    if active and not payment and await gate(callback, db, member, "support"):
         return
     await state.set_state(SupportCompose.waiting)
     await state.update_data(topic="payment" if payment else None)
@@ -61,7 +64,7 @@ async def member_message_unsupported(message: Message) -> None:
 # ---------------------------------------------------------------------------- administrators
 
 
-@router.callback_query(F.data.startswith("sup:ans:"))
+@router.callback_query(F.data.startswith("sup:ans:"), ActiveMember())
 async def start_reply(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User) -> None:
     if not await has_permission(db, member, Perm.SUPPORT_MANAGE):
         await callback.answer(texts.SUPPORT_NO_PERMISSION, show_alert=True)
@@ -94,7 +97,7 @@ async def start_reply(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
     await callback.answer("✍️")
 
 
-@router.message(StateFilter(SupportReply.waiting), F.text, ~F.text.startswith("/"))
+@router.message(StateFilter(SupportReply.waiting), F.text, ~F.text.startswith("/"), ActiveMember())
 async def admin_reply(message: Message, state: FSMContext, db: AsyncSession, member: User) -> None:
     if not await has_permission(db, member, Perm.SUPPORT_MANAGE):
         await state.clear()

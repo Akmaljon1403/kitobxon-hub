@@ -74,3 +74,21 @@ async def book_cover(book_id: uuid.UUID, db: DbSession) -> Response:
         raise NotFoundError("COVER_NOT_FOUND", "Muqova topilmadi.")
     data = await get_storage().get(book.cover_key)
     return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})
+
+
+class FaqItem(BaseModel):
+    q: str
+    a: str
+
+
+class FaqTopic(BaseModel):
+    code: str
+    title: str
+    items: list[FaqItem]
+
+
+@router.get("/faq", response_model=list[FaqTopic], summary="Questions and answers (the same as in the bot)")
+async def faq_list() -> list[FaqTopic]:
+    from app.services import faq
+
+    return [FaqTopic(**topic) for topic in faq.as_dicts()]

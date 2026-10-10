@@ -95,9 +95,15 @@ export function OutsideTelegramPage() {
 }
 
 export function AccountProblemPage({ message }: { message: string }) {
+  const { meta } = useAuth()
   return (
     <Shell icon="🔒" title="Kirish cheklangan">
       <p className="text-sm text-app-hint">{message}</p>
+      {meta?.bot_username && (
+        <Button variant="secondary" onClick={() => openBot(meta.bot_username, 'support')}>
+          ✉️ Adminga yozish
+        </Button>
+      )}
     </Shell>
   )
 }

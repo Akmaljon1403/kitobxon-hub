@@ -126,6 +126,20 @@ async def member_message(
     return ticket
 
 
+async def member_thread(session: AsyncSession, user_id: uuid.UUID, limit: int = 50) -> list[SupportMessage]:
+    """The member's conversation with the club (newest last), for the Mini App."""
+    rows = list(
+        await session.scalars(
+            select(SupportMessage)
+            .join(SupportTicket, SupportTicket.id == SupportMessage.ticket_id)
+            .where(SupportTicket.user_id == user_id)
+            .order_by(SupportMessage.created_at.desc())
+            .limit(limit)
+        )
+    )
+    return list(reversed(rows))
+
+
 async def _to_payments_chat(session: AsyncSession, text: str, ticket_id: uuid.UUID) -> None:
     """A copy of a payment question in the payments chat, with «✍️ Javob yozish»."""
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -163,7 +177,8 @@ async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: 
         type_=NotificationType.SUPPORT,
         text=f"📩 <b>Klub rahbariyatidan javob</b>\n\n{html.escape(body)}",
         dedup_key=f"support-reply:{message.id}",
-        payload={"buttons": [{"text": "✍️ Yana yozish", "callback": "sup:new"}]},
+        # A blocked member gets the answer too: writing to the club is how they sort it out.
+        payload={"buttons": [{"text": "✍️ Yana yozish", "callback": "sup:new"}], "deliver_to_inactive": True},
         priority=1,
     )
     record_audit(
