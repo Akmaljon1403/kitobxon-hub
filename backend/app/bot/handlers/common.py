@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot import access, keyboards, texts
 from app.models import User
 from app.models.enums import UserStatus
-from app.services import features
+from app.services import card_payments, features
 
 router = Router(name="common")
 
@@ -30,7 +30,8 @@ async def help_(message: Message, state: FSMContext, db: AsyncSession, member: U
     markup = keyboards.help_menu(
         support=available["support"] == "on",
         premium=available["premium"] != "off",
-        donations=available["donations"] != "off",
+        # «Klubni qo'llab-quvvatlash» is for everyone: Stars donations, or simply the club's card.
+        donations=available["donations"] != "off" or await card_payments.card_details(db) is not None,
     )
     await message.answer(texts.HELP, reply_markup=markup)
 

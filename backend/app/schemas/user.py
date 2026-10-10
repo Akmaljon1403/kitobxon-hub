@@ -14,6 +14,16 @@ class FacultyOut(BaseModel):
     short_name: str | None
 
 
+class SubscriptionChannelOut(BaseModel):
+    title: str
+    url: str
+
+
+class SubscriptionOut(BaseModel):
+    ok: bool
+    channels: list[SubscriptionChannelOut]
+
+
 class MeOut(BaseModel):
     """The signed-in member's own profile (only ever returned to that member)."""
 
@@ -38,6 +48,11 @@ class MeOut(BaseModel):
     premium_until: datetime | None
     premium_lifetime: bool = False
     passport_photo: bool  # the member uploaded their own passport photo
+    # Premium only thanks to the free trial: the app marks what belongs to Premium.
+    premium_trial: bool = False
+    premium_features: list[str] = []  # feature codes that need Premium
+    # Required channels the member has not joined (empty: nothing to do).
+    subscription_missing: list[SubscriptionChannelOut] = []
 
 
 class MeUpdateIn(BaseModel):

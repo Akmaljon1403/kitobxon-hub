@@ -36,7 +36,11 @@ router = APIRouter(prefix="/admin", tags=["admin: features and premium"])
 
 def _member(user: User) -> MemberBrief:
     return MemberBrief(
-        user_id=user.id, first_name=user.first_name, last_name=user.last_name, member_number=member_number(user)
+        user_id=user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        member_number=member_number(user),
+        telegram_username=user.telegram_username,
     )
 
 
@@ -239,6 +243,16 @@ async def card_payment_approve(payment_id: uuid.UUID, current: SuperAdminDep, db
 async def card_payment_delivered(payment_id: uuid.UUID, current: SuperAdminDep, db: DbSession) -> dict[str, str]:
     payment = await card_payments.mark_delivered(db, actor_id=current.user.id, payment_id=payment_id)
     return {"status": "DELIVERED" if payment.delivered_at else str(payment.status)}
+
+
+@router.post(
+    "/premium/card-payments/{payment_id}/undo",
+    response_model=dict[str, str],
+    summary="Undo a decision taken by mistake (within 48 hours): back to «waiting»",
+)
+async def card_payment_undo(payment_id: uuid.UUID, current: SuperAdminDep, db: DbSession) -> dict[str, str]:
+    payment = await card_payments.undo(db, actor_id=current.user.id, payment_id=payment_id)
+    return {"status": str(payment.status)}
 
 
 @router.post("/premium/card-payments/{payment_id}/reject", response_model=dict[str, str], summary="Reject")

@@ -157,7 +157,7 @@ async def send_due_notifications(
                     user,
                     report,
                     document,
-                    effect=stickers.EFFECTS.get(mood) if mood and await stickers.enabled(session) else None,
+                    effect=stickers.EFFECTS.get(mood) if mood else None,
                     sticker=await stickers.pick(session, mood) if mood else None,
                 )
                 if retry_after is not None:

@@ -99,6 +99,7 @@ def test_sticker_moods_and_sayings() -> None:
 
 async def test_wins_come_with_confetti_and_a_sticker(db: AsyncSession) -> None:
     member = await create_user(db, telegram_id=next(_ids))
+    await update_setting(db, key="notifications.stickers", value=True, actor_id=member.id)  # off by default
     await _sticker(db, "party", "🥳")
     await _sticker(db, "book", "📚")
     await enqueue_notification(
@@ -124,7 +125,7 @@ async def test_wins_come_with_confetti_and_a_sticker(db: AsyncSession) -> None:
     assert (await send_due_notifications(get_session_factory(), _bot(picky))).sent == 1
     assert [m.message_effect_id for m in picky.sent_messages()] == [None]
 
-    # Switched off in the settings: plain messages.
+    # Stickers switched off in the settings: the 🎉 effect stays, no separate sticker.
     await update_setting(db, key="notifications.stickers", value=False, actor_id=member.id)
     await enqueue_notification(
         db, user_id=member.id, type_=NotificationType.SYSTEM, text="Uchinchi", dedup_key="w3", payload=celebrate()
@@ -132,7 +133,7 @@ async def test_wins_come_with_confetti_and_a_sticker(db: AsyncSession) -> None:
     await db.commit()
     quiet = Telegram()
     await send_due_notifications(get_session_factory(), _bot(quiet))
-    assert quiet.sent_messages()[0].message_effect_id is None
+    assert quiet.sent_messages()[0].message_effect_id == stickers.EFFECT_CONFETTI
     assert not any(isinstance(r, SendSticker) for r in quiet.requests)
 
 
@@ -276,6 +277,8 @@ async def test_review_can_be_switched_off_and_used_in_the_panel(client: httpx.As
 async def test_welcome_message_has_a_saying_and_a_sticker(db: AsyncSession) -> None:
     from app.models.enums import UserStatus
 
+    owner = await create_user(db, telegram_id=next(_ids))
+    await update_setting(db, key="notifications.stickers", value=True, actor_id=owner.id)  # off by default
     await _sticker(db, "hello", "👋")
     harness = BotHarness(next(_ids))
     await harness.send("/start")

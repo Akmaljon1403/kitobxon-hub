@@ -53,6 +53,17 @@ export interface Me {
   premium_until: string | null
   premium_lifetime?: boolean
   passport_photo: boolean
+  /** Premium only thanks to the free trial: Premium features carry a 💎 mark. */
+  premium_trial?: boolean
+  /** Feature codes that need Premium. */
+  premium_features?: string[]
+  /** Required channels not joined yet (empty: all good). */
+  subscription_missing?: SubscriptionChannel[]
+}
+
+export interface SubscriptionChannel {
+  title: string
+  url: string
 }
 
 export type FeatureAccess = 'on' | 'premium' | 'off'

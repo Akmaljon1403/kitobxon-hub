@@ -19,10 +19,11 @@ from app.bot import access, keyboards, texts
 from app.bot.handlers.events import open_link
 from app.bot.states import Registration
 from app.core.errors import ConflictError
-from app.models import User
+from app.models import PremiumSubscription, User
 from app.models.enums import StickerMood, UserStatus
 from app.services import attendance as attendance_service
 from app.services import literary, referrals, stickers
+from app.services import premium as premium_service
 from app.services.members import (
     RegistrationData,
     after_registration,
@@ -36,6 +37,7 @@ from app.services.members import (
     validate_course,
 )
 from app.services.settings import get_setting
+from app.utils.timezone import format_date
 
 router = Router(name="registration")
 
@@ -88,7 +90,13 @@ async def _begin(
 async def start(
     message: Message, state: FSMContext, db: AsyncSession, member: User | None, command: CommandObject
 ) -> None:
-    payload = command.args or ""
+    await handle_start(message, state, db, member, command.args or "")
+
+
+async def handle_start(
+    message: Message, state: FSMContext, db: AsyncSession, member: User | None, payload: str
+) -> None:
+    """/start (also after «✅ Obuna bo'ldim»): a QR check-in, a link from the channel, home or registration."""
     if payload.startswith(attendance_service.QR_PREFIX):
         await _check_in_from_qr(message, state, db, member, payload)
         return
@@ -273,6 +281,7 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         await db.commit()
     await state.clear()
     await callback.answer()
+    trial = await after_registration(db, user.id)  # the free Premium trial switches on by itself
     if isinstance(callback.message, Message):
         await callback.message.edit_reply_markup(reply_markup=None)
         if user.status == UserStatus.ACTIVE:
@@ -283,11 +292,39 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
                 reply_markup=await access.menu(db, user),
             )
             await stickers.send(db, callback.message, StickerMood.WELCOME)
+            await _onboarding(callback.message, db, user, trial)
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
-    await after_registration(db, user.id)
     if data.get("after") and user.status == UserStatus.ACTIVE and isinstance(callback.message, Message):
         await open_link(callback.message, db, user, data["after"])
+
+
+async def _onboarding(message: Message, db: AsyncSession, user: User, trial: PremiumSubscription | None) -> None:
+    """A short tour of the club for a new member, then what Premium gives (and the trial they just got)."""
+    await message.answer(
+        texts.ONBOARDING_TOUR, reply_markup=keyboards.inline([keyboards.app_button("", texts.BTN_ONBOARDING_APP)])
+    )
+    status = await premium_service.member_status(db, user)
+    if not status["store_open"]:
+        return
+    perks = [
+        texts.PREMIUM_PERK.format(title=f["title"], description=f["description"]) for f in status["premium_features"]
+    ]
+    perks += [
+        texts.PREMIUM_PERK.format(title=f"{perk['icon']} {perk['title']}", description=perk["description"])
+        for perk in status["perks"]
+    ]
+    if not perks:
+        return
+    if trial is not None:
+        text = texts.ONBOARDING_TRIAL.format(
+            days=(trial.ends_at - trial.starts_at).days, until=format_date(trial.ends_at), perks="\n".join(perks)
+        )
+    else:
+        text = texts.ONBOARDING_PREMIUM.format(perks="\n".join(perks))
+    await message.answer(
+        text, reply_markup=keyboards.inline([keyboards.app_button("premium", texts.BTN_ONBOARDING_PREMIUM)])
+    )
 
 
 @router.callback_query(F.data == "reg:restart")

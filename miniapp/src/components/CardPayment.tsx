@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { CardPayment, PremiumPlan } from '../types/api'
+import type { CardPayment } from '../types/api'
 import { formatDate } from '../utils/format'
 import { haptic } from '../utils/telegram'
 import { Button, Card } from './ui'
@@ -28,56 +28,69 @@ function itemStatus(item: CardPayment): string {
   return STATUS[item.status]
 }
 
+export const PENDING_TEXT =
+  "⏳ Chekingiz administratorga tekshirish uchun yuborildi. Odatda bir kun ichida ko'rib chiqiladi — natijasini botda xabar qilamiz."
+
+/** The club's card number with a copy button. */
+export function CardNumber({ card, label }: { card: { number: string; holder: string }; label?: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(card.number.replace(/\s/g, ''))
+      haptic('success')
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // the clipboard is not available in every webview; the number is still visible
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1 rounded-xl bg-app-surface p-3">
+      {label && <span className="text-xs text-app-hint">{label}</span>}
+      <button type="button" onClick={() => void copy()} className="flex items-center justify-between gap-2 text-left">
+        <span className="font-mono text-lg tracking-wider">{card.number}</span>
+        <span className="shrink-0 text-sm text-app-link">{copied ? '✓ Nusxalandi' : '📋 Nusxa'}</span>
+      </button>
+      {card.holder && <span className="text-sm text-app-hint">Egasi: {card.holder}</span>}
+    </div>
+  )
+}
+
 /**
- * Pay to the club's card and send the receipt: Premium (switches on after the super admin confirms),
- * Telegram Stars (the admin gifts them in Telegram) or a donation.
+ * Paying one chosen thing to the club's card: transfer the price, then send the receipt.
+ * Premium switches on after the super admin confirms; Stars are gifted to the member in Telegram.
  */
-export function CardPaymentSection({
+export function CardCheckout({
   card,
-  plans,
-  stars = [],
+  price,
+  what,
+  form,
   onDone,
 }: {
   card: { number: string; holder: string }
-  plans: PremiumPlan[]
-  stars?: { stars: number; price_uzs: number }[]
+  price: number
+  what: string
+  /** The fields that say what is paid for (plan_id or stars). */
+  form: Record<string, string>
   onDone: () => void
 }) {
-  const { api, upload } = useAuth()
-  const cardPlans = plans.filter((plan) => plan.price_uzs)
-  const [choice, setChoice] = useState<string>(cardPlans[0]?.id ?? (stars[0] ? `stars:${stars[0].stars}` : 'donation'))
-  const [amount, setAmount] = useState('20000')
+  const { upload } = useAuth()
   const [busy, setBusy] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const history = useAsync((signal) => api<CardPayment[]>('/api/v1/me/premium/card-payments', { signal }))
-
-  const plan = cardPlans.find((item) => item.id === choice)
-  const pack = stars.find((item) => `stars:${item.stars}` === choice)
-  const price = plan
-    ? plan.price_uzs_now ?? plan.price_uzs ?? 0
-    : pack
-      ? pack.price_uzs
-      : Number(amount.replace(/\D/g, '')) || 0
 
   async function send(file: File) {
     setBusy(true)
     setNotice(null)
     try {
-      const form = new FormData()
-      form.append('file', file)
-      if (plan) form.append('plan_id', plan.id)
-      else if (pack) form.append('stars', String(pack.stars))
-      else form.append('amount_uzs', String(price))
-      await upload('/api/v1/me/premium/card-payments', form, 'POST')
+      const body = new FormData()
+      body.append('file', file)
+      for (const [key, value] of Object.entries(form)) body.append(key, value)
+      await upload('/api/v1/me/premium/card-payments', body, 'POST')
       haptic('success')
-      setNotice({
-        text: pack
-          ? `✅ Chek qabul qilindi! Admin tekshirgach, ${pack.stars} ⭐ Telegram'da sizga sovg'a qilib yuboriladi.`
-          : '✅ Chek qabul qilindi! Admin tekshirgach, sizga xabar keladi.',
-      })
-      history.reload()
+      setNotice({ text: PENDING_TEXT })
       onDone()
     } catch (error) {
       haptic('error')
@@ -87,85 +100,11 @@ export function CardPaymentSection({
     }
   }
 
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(card.number.replace(/\s/g, ''))
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard is not available in every webview; the number is still visible
-    }
-  }
-
   return (
-    <Card className="flex flex-col gap-3">
-      <p className="text-sm text-app-hint">
-        Telegram Stars'ingiz bo'lmasa yoki ularni qanday olishni bilmasangiz — klub kartasiga to'lang. 💎 Premium tasdiqlangach o'zi yoqiladi, ⭐
-        Stars esa Telegram'da sizga sovg'a qilib yuboriladi.
-      </p>
-
-      <div className="flex flex-col gap-1.5">
-        {cardPlans.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setChoice(item.id)}
-            className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-left ${choice === item.id ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
-          >
-            <span className="font-medium">💎 Premium {item.title}</span>
-            <span className="tabular-nums">
-              {item.price_uzs_now && item.price_uzs_now !== item.price_uzs && (
-                <span className="mr-1.5 text-xs text-app-hint line-through">{formatUzs(item.price_uzs ?? 0)}</span>
-              )}
-              {formatUzs(item.price_uzs_now ?? item.price_uzs ?? 0)}
-            </span>
-          </button>
-        ))}
-        {stars.length > 0 && (
-          <div className="grid grid-cols-2 gap-1.5">
-            {stars.map((item) => (
-              <button
-                key={item.stars}
-                type="button"
-                onClick={() => setChoice(`stars:${item.stars}`)}
-                className={`flex flex-col rounded-xl px-3 py-2 text-left ${choice === `stars:${item.stars}` ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
-              >
-                <span className="font-medium">⭐ {item.stars} Stars</span>
-                <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setChoice('donation')}
-          className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-left ${choice === 'donation' ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
-        >
-          <span className="font-medium">❤️ Hissa</span>
-          <span className="text-app-hint">istalgan summa</span>
-        </button>
-        {choice === 'donation' && (
-          <input
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 9))}
-            inputMode="numeric"
-            aria-label="Hissa summasi (so'm)"
-            className="w-full rounded-xl bg-app-surface px-3 py-2.5 text-[15px] outline-none"
-          />
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1 rounded-xl bg-app-surface p-3">
-        <span className="text-xs text-app-hint">1) {formatUzs(price)} ni shu kartaga o'tkazing</span>
-        <button type="button" onClick={() => void copy()} className="flex items-center justify-between gap-2 text-left">
-          <span className="font-mono text-lg tracking-wider">{card.number}</span>
-          <span className="text-sm text-app-link">{copied ? '✓ Nusxalandi' : '📋 Nusxa'}</span>
-        </button>
-        {card.holder && <span className="text-sm text-app-hint">Egasi: {card.holder}</span>}
-      </div>
-
-      <Button loading={busy} disabled={busy || price < 1000} onClick={() => fileInput.current?.click()}>
-        🧾 2) Chekni (skrinshot) yuborish
+    <div className="flex flex-col gap-3">
+      <CardNumber card={card} label={`1) ${what}: ${formatUzs(price)} ni shu kartaga o'tkazing (Click, Payme yoki bank ilovasi)`} />
+      <Button loading={busy} disabled={busy} onClick={() => fileInput.current?.click()}>
+        🧾 2) To'lov chekini (skrinshot) yuborish
       </Button>
       <input
         ref={fileInput}
@@ -180,30 +119,38 @@ export function CardPaymentSection({
         }}
       />
       {notice && (
-        <p role={notice.error ? 'alert' : 'status'} className={`text-center text-sm ${notice.error ? 'text-app-danger' : 'text-app-link'}`}>
+        <p role={notice.error ? 'alert' : 'status'} className={`rounded-xl px-3 py-2 text-sm ${notice.error ? 'text-app-danger' : 'bg-app-button/10 text-app-text'}`}>
           {notice.text}
         </p>
       )}
+    </div>
+  )
+}
 
-      {history.state.status === 'success' && history.state.data.length > 0 && (
-        <div className="flex flex-col gap-1 border-t border-app-hint/15 pt-2 text-sm">
-          <span className="text-xs font-medium text-app-hint">Mening to'lovlarim</span>
-          {history.state.data.map((item) => (
-            <div key={item.id} className="flex flex-col">
-              <span className="flex justify-between gap-2">
-                <span>
-                  {itemTitle(item)} · {formatUzs(item.amount_uzs)}
-                </span>
-                <span className="shrink-0">{itemStatus(item)}</span>
-              </span>
-              <span className="text-xs text-app-hint">
-                {formatDate(item.created_at)}
-                {item.reject_reason && ` · ${item.reject_reason}`}
-              </span>
-            </div>
-          ))}
+/** «Mening to'lovlarim»: the member's card payments and where each one is. */
+export function MyCardPayments({ version }: { version: number }) {
+  const { api } = useAuth()
+  const history = useAsync((signal) => api<CardPayment[]>('/api/v1/me/premium/card-payments', { signal }), [version])
+  if (history.state.status !== 'success' || history.state.data.length === 0) return null
+  const waiting = history.state.data.some((item) => item.status === 'PENDING')
+  return (
+    <Card className="flex flex-col gap-1 text-sm">
+      <span className="text-xs font-medium text-app-hint">Mening to'lovlarim</span>
+      {waiting && <p className="text-xs text-app-hint">{PENDING_TEXT}</p>}
+      {history.state.data.map((item) => (
+        <div key={item.id} className="flex flex-col">
+          <span className="flex justify-between gap-2">
+            <span>
+              {itemTitle(item)} · {formatUzs(item.amount_uzs)}
+            </span>
+            <span className="shrink-0">{itemStatus(item)}</span>
+          </span>
+          <span className="text-xs text-app-hint">
+            {formatDate(item.created_at)}
+            {item.reject_reason && ` · ${item.reject_reason}`}
+          </span>
         </div>
-      )}
+      ))}
     </Card>
   )
 }

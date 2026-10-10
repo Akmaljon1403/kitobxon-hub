@@ -15,7 +15,7 @@ import pytest
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.methods import AnswerPreCheckoutQuery, CreateInvoiceLink, GetFile
+from aiogram.methods import AnswerPreCheckoutQuery, CreateInvoiceLink, EditMessageText, GetFile
 from aiogram.methods.base import TelegramMethod
 from aiogram.types import File, PreCheckoutQuery, SuccessfulPayment, Update
 from PIL import Image
@@ -271,8 +271,8 @@ async def test_free_trial_once_and_a_reminder_before_the_end(client: httpx.Async
     harness = _harness(9603)
     await harness.send("/premium")
     buttons = [b.callback_data for row in harness.session.sent_messages()[-1].reply_markup.inline_keyboard for b in row]
-    assert buttons[0] == "prem:trial"
-    await harness.press("prem:trial")
+    assert "prem:trial" not in buttons  # the trial starts by itself at registration now
+    await harness.press("prem:trial")  # a button of an older message still works once
     assert "Bepul Premium boshlandi" in harness.last_text()
     assert await premium_service.is_premium(db, member_id)
     again = await client.post("/api/v1/me/premium/trial", headers=headers)
@@ -409,7 +409,8 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
     boss = _harness(9610)
     await boss.press(f"cp:ok:{payment_id.hex}")
     steps = boss.session.sent_messages()[-1]
-    assert "100 Stars'ni sovg'a qiling" in steps.text and "@nodir_reads" in steps.text
+    # The Stars are bought on Fragment for the member's current Telegram username.
+    assert "100 Stars'ni yuboring" in steps.text and "fragment.com" in steps.text and "@akmal_reader" in steps.text
     assert "tg://user?id=9611" in steps.text
     assert steps.reply_markup.inline_keyboard[0][0].callback_data == f"cp:sent:{payment_id.hex}"
 
@@ -418,7 +419,8 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
     ).json()
     assert waiting["total"] == 1 and waiting["items"][0]["kind"] == "STARS"  # confirmed, not yet gifted
     await boss.press(f"cp:sent:{payment_id.hex}")
-    assert "100 ⭐ yuborildi" in boss.last_text()
+    sent = next(r for r in reversed(boss.session.requests) if isinstance(r, EditMessageText))
+    assert "Stars yuborildi" in sent.text
     await boss.press(f"cp:sent:{payment_id.hex}")
     assert "allaqachon" in boss.session.alerts()[-1]
     messages = list(

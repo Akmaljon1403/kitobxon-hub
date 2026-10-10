@@ -11,7 +11,7 @@ import pytest
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.methods import GetFile, SendPhoto
+from aiogram.methods import EditMessageReplyMarkup, EditMessageText, GetFile, SendPhoto
 from aiogram.methods.base import TelegramMethod
 from aiogram.types import File
 from PIL import Image
@@ -207,14 +207,15 @@ async def test_card_payment_in_the_bot(db: AsyncSession) -> None:
     payment = await db.scalar(select(CardPayment).where(CardPayment.user_id == member_id))
     assert payment.status == CardPaymentStatus.PENDING
 
-    # Donation of any amount.
+    # A donation needs no receipt: the card number, then a sincere thank-you.
     await student.press("card:don")
-    await student.send("abc")
-    assert student.last_text() == texts.CARD_DONATION_INVALID
-    await student.send("50 000")
-    assert "50 000 so'm" in student.last_text()
+    assert "8600 1234 5678 9012" in student.last_text()
+    await student.press("don:done")
+    assert student.last_text() == texts.DONATE_THANKS
+    await student.press(f"card:plan:{plan.id.hex}")
     await student.send_photo("receipt-2")
     assert student.last_text() == texts.CARD_RECEIPT_OK
+    second = await db.scalar(select(CardPayment).where(CardPayment.user_id == member_id, CardPayment.id != payment.id))
 
     # Only the super admin can decide.
     outsider = _harness(9303)
@@ -228,16 +229,29 @@ async def test_card_payment_in_the_bot(db: AsyncSession) -> None:
         "Bobur" in photo.caption and photo.reply_markup.inline_keyboard[0][0].callback_data == f"cp:ok:{payment.id.hex}"
     )
     await boss.press(f"cp:ok:{payment.id.hex}")
-    assert "Tasdiqlandi" in boss.last_text()
+    edited = next(r for r in reversed(boss.session.requests) if isinstance(r, EditMessageText))
+    assert "Tasdiqlandi" in edited.text
+    assert edited.reply_markup.inline_keyboard[-1][0].callback_data == f"cp:undo:{payment.id.hex}"
     assert await premium_service.is_premium(db, member_id)
 
-    donation = await db.scalar(
-        select(CardPayment).where(CardPayment.user_id == member_id, CardPayment.status == CardPaymentStatus.PENDING)
-    )
-    await boss.press(f"cp:no:{donation.id.hex}")
-    assert boss.last_text() == texts.CARD_REJECT_ASK
+    # A mistake: «↩️ Qaytarish» takes the Premium back and the receipt waits again.
+    await boss.press(f"cp:undo:{payment.id.hex}")
+    await db.refresh(payment)
+    assert payment.status == CardPaymentStatus.PENDING
+    assert not await premium_service.is_premium(db, member_id)
+
+    # Rejecting: a ready reason, or one typed in the private chat.
+    await boss.press(f"cp:no:{second.id.hex}")
+    markup = next(r for r in reversed(boss.session.requests) if isinstance(r, EditMessageReplyMarkup))
+    assert markup.reply_markup.inline_keyboard[0][0].callback_data == f"cp:nr:{second.id.hex}:0"
+    await boss.press(f"cp:nr:{second.id.hex}:1")
+    await db.refresh(second)
+    assert second.status == CardPaymentStatus.REJECTED and second.reject_reason == texts.CARD_REJECT_REASONS[1]
+    await boss.press(f"cp:undo:{second.id.hex}")
+    await boss.press(f"cp:nw:{second.id.hex}")
+    assert "rad etish sababini" in boss.last_text()
     await boss.send("Chek boshqa odamniki")
     assert boss.last_text() == texts.CARD_REJECTED
-    await db.refresh(donation)
-    assert donation.status == CardPaymentStatus.REJECTED and donation.reject_reason == "Chek boshqa odamniki"
+    await db.refresh(second)
+    assert second.status == CardPaymentStatus.REJECTED and second.reject_reason == "Chek boshqa odamniki"
     assert card_payments.format_uzs(1234567) == "1 234 567 so'm"

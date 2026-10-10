@@ -251,7 +251,10 @@ async def test_premium_purchase_in_the_bot(db: AsyncSession) -> None:
     assert "Kitobxon Premium" in message.text and "Haftalik xulosa" in message.text
     plan = await _plan(db)
     callbacks = [b.callback_data for row in message.reply_markup.inline_keyboard for b in row]
-    assert f"prem:buy:{plan.id.hex}" in callbacks and "don:open" in callbacks
+    assert "prem:stars" in callbacks and "don:open" in callbacks  # first how to pay, then the plans
+    await harness.press("prem:stars")
+    plans = [b.callback_data for row in harness.session.sent_messages()[-1].reply_markup.inline_keyboard for b in row]
+    assert f"prem:buy:{plan.id.hex}" in plans
 
     await harness.press(f"prem:buy:{plan.id.hex}")
     invoice = next(r for r in reversed(harness.session.requests) if isinstance(r, SendInvoice))

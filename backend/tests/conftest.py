@@ -100,3 +100,18 @@ async def client(app: FastAPI, db: AsyncSession) -> AsyncIterator[httpx.AsyncCli
 async def _dispose_engine_at_end() -> AsyncIterator[None]:
     yield
     await dispose_engine()
+
+
+@pytest.fixture(autouse=True)
+def _no_required_subscription(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The channel subscription check would ask Telegram; tests marked «subscription» keep it."""
+    from app.services import subscription
+
+    subscription.forget()
+    if request.node.get_closest_marker("subscription"):
+        return
+
+    async def nothing_required(session: AsyncSession) -> list[tuple[str, str]]:
+        return []
+
+    monkeypatch.setattr(subscription, "configured", nothing_required)

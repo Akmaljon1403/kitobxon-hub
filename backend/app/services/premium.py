@@ -13,6 +13,7 @@ Periods follow each other: buying again while premium adds the days after the cu
 
 from __future__ import annotations
 
+import logging
 import re
 import secrets
 import uuid
@@ -42,6 +43,8 @@ from app.services.audit import record_audit
 from app.services.notifications import active_members, enqueue_notification, render
 from app.services.settings import get_setting
 from app.utils.timezone import format_date, local_tz
+
+logger = logging.getLogger(__name__)
 
 CURRENCY = "XTR"
 # What every premium member gets in addition to the features the super admin made premium-only.
@@ -289,6 +292,72 @@ async def trial_days(session: AsyncSession, user: User) -> int:
         return 0
     had = await session.scalar(select(exists().where(PremiumSubscription.user_id == user.id)))
     return 0 if had else days
+
+
+async def cancel_period(session: AsyncSession, subscription_id: uuid.UUID) -> None:
+    """Take back one Premium period (a card payment confirmed by mistake); later periods move up.
+    The caller commits."""
+    period = await session.get(PremiumSubscription, subscription_id)
+    if period is None or period.revoked_at is not None:
+        return
+    now = _now()
+    period.revoked_at = now
+    unused = period.ends_at - max(period.starts_at, now)
+    if unused <= timedelta(0):
+        return
+    later = await session.scalars(
+        select(PremiumSubscription).where(
+            PremiumSubscription.user_id == period.user_id,
+            PremiumSubscription.id != period.id,
+            PremiumSubscription.revoked_at.is_(None),
+            PremiumSubscription.starts_at >= period.ends_at - timedelta(seconds=1),
+        )
+    )
+    for item in later:
+        item.starts_at -= unused
+        item.ends_at -= unused
+
+
+async def on_trial(session: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Premium right now only thanks to the free trial (the app marks Premium features for them)."""
+    now = _now()
+    sources = set(
+        await session.scalars(
+            select(PremiumSubscription.source).where(
+                PremiumSubscription.user_id == user_id,
+                PremiumSubscription.revoked_at.is_(None),
+                PremiumSubscription.starts_at <= now,
+                PremiumSubscription.ends_at > now,
+            )
+        )
+    )
+    return sources == {PremiumSource.TRIAL} and not await is_lifetime(session, user_id)
+
+
+async def welcome_trial(session: AsyncSession, user: User) -> PremiumSubscription | None:
+    """The free trial switches on by itself when a member joins (the welcome message tells about it).
+    Never breaks the registration: returns None when there is no trial to give."""
+    try:
+        await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"trial:{user.id}"))))
+        days = await trial_days(session, user)
+        if not days:
+            await session.commit()  # releases the lock; nothing was changed
+            return None
+        subscription = await _extend(session, user_id=user.id, days=days, source=PremiumSource.TRIAL, note="sinov")
+        record_audit(
+            session,
+            actor_id=None,
+            action="PREMIUM_TRIAL",
+            entity_type="premium_subscription",
+            entity_id=subscription.id,
+            after={"days": days, "automatic": True},
+        )
+        await session.commit()
+        return subscription
+    except Exception:
+        await session.rollback()
+        logger.exception("The welcome trial could not be started")
+        return None
 
 
 async def start_trial(session: AsyncSession, user: User) -> PremiumSubscription:

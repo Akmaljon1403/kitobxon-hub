@@ -3,24 +3,25 @@
 from __future__ import annotations
 
 import contextlib
+import html
 import uuid
 
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import keyboards, summaries, texts
 from app.bot.access import has_permission, is_admin
-from app.bot.states import ChannelPostEdit, ChannelStickers
+from app.bot.states import ChannelPostEdit, ChannelStickers, CustomEmojiCollect
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.models import User
 from app.models.enums import UserStatus
 from app.security.permissions import Perm
-from app.services import channel
+from app.services import channel, custom_emoji
 from app.services.auth import NotAdminError, admin_login_url, create_admin_login_link
 
 router = Router(name="admin")
@@ -99,6 +100,68 @@ async def sticker_save(message: Message, db: AsyncSession, member: User | None) 
 @router.message(ChannelStickers.waiting)
 async def sticker_expected(message: Message) -> None:
     await message.answer(texts.STICKER_ONLY)
+
+
+# ---------------------------------------------------------------------------- premium emoji in messages
+
+
+async def _emoji_overview(db: AsyncSession) -> str:
+    rows = await custom_emoji.list_all(db)
+    items = "".join(
+        f'\n{html.escape(row.fallback)} → <tg-emoji emoji-id="{html.escape(row.custom_emoji_id)}">'
+        f"{html.escape(row.fallback)}</tg-emoji>"
+        for row in rows[:40]
+    )
+    text = texts.EMOJI_ASK.format(count=len(rows), items=items)
+    return text + (texts.EMOJI_PAUSED if custom_emoji.paused() else "")
+
+
+@router.message(Command("emoji"))
+async def emoji_start(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    if not await _allowed(db, member) or not await has_permission(db, member, Perm.NOTIFICATION_SEND):
+        await message.answer(texts.ADMIN_ONLY)
+        return
+    await state.set_state(CustomEmojiCollect.waiting)
+    has_any = bool(await custom_emoji.list_all(db))
+    markup = (
+        keyboards.inline([InlineKeyboardButton(text=texts.BTN_EMOJI_CLEAR, callback_data="emj:clear")])
+        if has_any
+        else None
+    )
+    await message.answer(await _emoji_overview(db), reply_markup=markup)
+
+
+@router.message(CustomEmojiCollect.waiting, Command("tayyor"))
+async def emoji_done(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    await message.answer(texts.EMOJI_DONE)
+
+
+@router.message(CustomEmojiCollect.waiting)
+async def emoji_save(message: Message, db: AsyncSession, member: User | None) -> None:
+    if member is None:
+        return
+    pairs = custom_emoji.pairs_from_message(message.text or message.caption or "", message.entities or [])
+    if not pairs:
+        await message.answer(texts.EMOJI_NONE_FOUND)
+        return
+    total = await custom_emoji.save(db, actor_id=member.id, pairs=pairs)
+    shown = ", ".join(
+        f'{html.escape(emoji)} → <tg-emoji emoji-id="{html.escape(custom_id)}">{html.escape(fallback)}</tg-emoji>'
+        for emoji, custom_id, fallback in pairs
+    )
+    await message.answer(texts.EMOJI_SAVED.format(pairs=shown, total=total))
+
+
+@router.callback_query(F.data == "emj:clear")
+async def emoji_clear(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    if not await _allowed(db, member) or not await has_permission(db, member, Perm.NOTIFICATION_SEND):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    await custom_emoji.clear(db)
+    await callback.answer("🗑")
+    if isinstance(callback.message, Message):
+        await callback.message.answer(texts.EMOJI_CLEARED)
 
 
 # ---------------------------------------------------------------------------- channel posts: admins look first

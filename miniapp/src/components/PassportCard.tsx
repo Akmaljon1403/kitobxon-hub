@@ -149,7 +149,14 @@ export function PassportCard() {
 
       {themeList.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">🎨 Dizayn {!premium && <span className="text-app-hint">— 💎 Premium</span>}</p>
+          <p className="text-sm font-medium">
+            🎨 Dizayn{' '}
+            {!premium ? (
+              <span className="text-app-hint">— 💎 Premium</span>
+            ) : (
+              me?.premium_trial && <span className="text-xs text-amber-600 dark:text-amber-300">💎 Premium — sinov davrida ochiq</span>
+            )}
+          </p>
           <div className="grid grid-cols-4 gap-2">
             {themeList.map((theme) => {
               const locked = theme.premium && !premium

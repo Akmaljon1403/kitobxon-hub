@@ -120,9 +120,10 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("notifications.quote_of_day_time", "09:00", ClockTime, "Kun iqtibosi yuboriladigan vaqt"),
     SettingDefinition(
         "notifications.stickers",
-        True,
+        False,
         bool,
-        "Tabrik xabarlarida (g'alaba, sertifikat, yutuq) stiker va 🎉 animatsiya. Stikerlar botda /stiker orqali",
+        "Tabrik xabarlaridan keyin alohida stiker ham yuborilsin (odatda o'chiq: premium emojilar xabar ichida "
+        "— botda /emoji). 🎉 animatsiya baribir qoladi",
     ),
     # ---- Organisation (used in official reports) ----
     SettingDefinition(
@@ -162,6 +163,14 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition("payments.card_holder", "", ShortText, "Karta egasining ismi (to'lovchi tekshirishi uchun)"),
     SettingDefinition(
+        "payments.chat_id",
+        "",
+        ShortText,
+        "To'lovlar guruhi yoki kanali: barcha cheklar (Premium, Stars, hissa) tugmalari bilan va to'lov "
+        "bo'yicha murojaatlar shu yerga keladi. @username yoki -100… raqami; bot u yerda admin bo'lsin "
+        "(bo'sh — bosh administratorlarga botda)",
+    ),
+    SettingDefinition(
         "payments.stars_packages",
         [50, 100, 250, 500],
         Annotated[list[Annotated[int, Field(ge=1, le=100_000)]], Field(max_length=8)],
@@ -198,6 +207,21 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         5,
         Annotated[int, Field(ge=0, le=100)],
         "Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz)",
+    ),
+    # ---- Required subscription ----
+    SettingDefinition(
+        "subscription.required",
+        True,
+        bool,
+        "Botdan va ilovadan foydalanish uchun kanal(lar)ga obuna majburiy (adminlardan so'ralmaydi; bot o'sha "
+        "kanallarda administrator bo'lishi kerak, aks holda tekshiruv o'tkazib yuboriladi)",
+    ),
+    SettingDefinition(
+        "subscription.channels",
+        "",
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)],
+        "Obuna bo'lish shart bo'lgan kanallar, vergul bilan: @kanal, https://t.me/kanal yoki yopiq kanal uchun "
+        "-100…=https://t.me/+taklif (bo'sh — faqat klub kanali)",
     ),
     # ---- Telegram channel (the bot posts there as an administrator) ----
     SettingDefinition(
@@ -300,4 +324,8 @@ async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_i
         after={"value": validated},
     )
     await session.commit()
+    if key.startswith("subscription.") or key == "channel.chat_id":
+        from app.services import subscription
+
+        subscription.forget()  # the channel list changed: everybody is checked again
     return validated

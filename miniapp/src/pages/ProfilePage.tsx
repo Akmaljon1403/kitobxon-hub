@@ -212,7 +212,14 @@ export function ProfilePage() {
           .filter((item) => me.features[item.feature] !== 'off')
           .map((item) => (
           <button key={item.route} type="button" onClick={() => navigate(item.route)}>
-            <Card className="flex items-center justify-center py-3 text-sm font-medium">{item.label}</Card>
+            <Card className="relative flex items-center justify-center py-3 text-sm font-medium">
+              {item.label}
+              {me.premium_trial && me.premium_features?.includes(item.feature) && (
+                <span aria-label="Premium" className="absolute right-1.5 top-1 text-[10px]">
+                  💎
+                </span>
+              )}
+            </Card>
           </button>
         ))}
       </div>

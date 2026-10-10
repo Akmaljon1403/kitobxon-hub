@@ -47,12 +47,6 @@ class CardReceipt(StatesGroup):
     waiting = State()
 
 
-class CardDonationAmount(StatesGroup):
-    """A member is typing how much they donate by card."""
-
-    waiting = State()
-
-
 class CardReject(StatesGroup):
     """The super admin is writing why a card payment is rejected (payment id in the data)."""
 
@@ -67,5 +61,11 @@ class ChannelPostEdit(StatesGroup):
 
 class ChannelStickers(StatesGroup):
     """An admin is sending stickers to be used in the channel posts (/stiker)."""
+
+    waiting = State()
+
+
+class CustomEmojiCollect(StatesGroup):
+    """An admin is sending premium emoji to use inside the bot's messages (/emoji)."""
 
     waiting = State()

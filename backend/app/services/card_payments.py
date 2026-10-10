@@ -6,9 +6,13 @@ receipt (a screenshot). The super admin checks it and confirms in the bot or the
 
 * Premium switches on by itself (a personal discount, if any, lowers the price);
 * Stars: Telegram does not let bots hand out Stars, so after confirming the bot shows the admin
-  the member's profile and the steps to gift the Stars in Telegram (Telegram charges the admin's
-  card and the Stars go to the member), then «✅ Yuborildi» tells the member;
+  the steps to buy the Stars on Fragment for the member's @username (that is why a username is
+  required), then «✅ Yuborildi» tells the member;
 * a donation is recorded with thanks.
+
+Every receipt goes to the payments chat (a private group or channel set by the super admin) with
+the decision buttons, or — when no chat is set — to the super admins in the bot. A decision taken by
+mistake can be undone for two days («↩️ Qaytarish»).
 
 Nothing is charged by the bot: it only records.
 """
@@ -17,8 +21,9 @@ from __future__ import annotations
 
 import asyncio
 import io
+import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -33,9 +38,17 @@ from app.services.notifications import enqueue_for_members, enqueue_notification
 from app.services.settings import get_setting
 from app.services.storage import get_storage
 
+logger = logging.getLogger(__name__)
+
 MAX_RECEIPT_BYTES = 10 * 1024 * 1024
 MAX_PENDING = 3
 MIN_DONATION_UZS = 1_000
+UNDO_HOURS = 48
+STARS_NEED_USERNAME = (
+    "⭐ Stars'ni sizga sovg'a qilish uchun Telegram profilingizda username bo'lishi kerak: Telegram → "
+    "Sozlamalar → «Foydalanuvchi nomi» (Username). Nom qo'ygach, qayta urinib ko'ring. Premium'ni esa "
+    "username'siz ham karta orqali olish mumkin."
+)
 
 
 def format_uzs(amount: int) -> str:
@@ -123,6 +136,8 @@ async def submit(
         discount = await active_discount(session, user.id)
         kind, amount = PaymentKind.PREMIUM, discounted_uzs(plan.price_uzs, discount.percent if discount else None)
     elif stars is not None:
+        if not user.telegram_username:
+            raise ConflictError("STARS_NEED_USERNAME", STARS_NEED_USERNAME)
         package = next((item for item in await stars_offer(session) if item["stars"] == stars), None)
         if package is None:
             raise NotFoundError("STARS_PACKAGE_NOT_FOUND", "Bunday Stars to'plami sotilmaydi.")
@@ -154,26 +169,69 @@ async def submit(
         entity_id=payment.id,
         after={"kind": str(kind), "amount_uzs": amount},
     )
-    await _tell_admins(session, payment, user, plan)
     await session.commit()
+    await _tell_admins(session, payment, user, plan)
     return payment
+
+
+def staff_text(payment: CardPayment, user: User, plan_title: str | None) -> str:
+    """The receipt's caption for the admins (HTML)."""
+    import html
+
+    if payment.kind == PaymentKind.PREMIUM:
+        what = f"💎 Premium «{html.escape(plan_title or '—')}»"
+    elif payment.kind == PaymentKind.STARS:
+        what = f"⭐ {payment.stars} Telegram Stars"
+    else:
+        what = "❤️ Hissa"
+    return (
+        f"💳 <b>Yangi karta to'lovi</b>\n\n{what} — <b>{format_uzs(payment.amount_uzs)}</b>\n"
+        f"A'zo: {html.escape(user.last_name)} {html.escape(user.first_name)}"
+        + (f" (@{html.escape(user.telegram_username)})" if user.telegram_username else "")
+        + "\n\nChekni ko'rib, tasdiqlang yoki rad eting."
+    )
+
+
+def decision_markup(payment: CardPayment, *, with_receipt: bool = False) -> Any:
+    from app.bot import keyboards
+
+    return keyboards.card_decision(payment.id.hex, view=with_receipt)
+
+
+async def payments_chat(session: AsyncSession) -> str | None:
+    chat = str(await get_setting(session, "payments.chat_id")).strip()
+    return chat or None
+
+
+async def _send_to_chat(session: AsyncSession, payment: CardPayment, text: str) -> bool:
+    """The receipt with its buttons in the payments chat. False when there is no chat or it failed."""
+    from aiogram.types import BufferedInputFile
+
+    from app.services.delivery import optional_bot
+
+    chat = await payments_chat(session)
+    bot = optional_bot() if chat else None
+    if chat is None or bot is None:
+        return False
+    try:
+        await bot.send_photo(
+            chat,
+            BufferedInputFile(await receipt(session, payment), filename="chek.jpg"),
+            caption=text,
+            reply_markup=decision_markup(payment),
+        )
+    except Exception:
+        logger.warning("The payments chat could not be reached; the super admins are told in the bot")
+        return False
+    return True
 
 
 async def _tell_admins(session: AsyncSession, payment: CardPayment, user: User, plan: PremiumPlan | None) -> None:
     from app.services.rbac import super_admins
 
-    if plan:
-        what = f"💎 Premium «{plan.title}»"
-    elif payment.kind == PaymentKind.STARS:
-        what = f"⭐ {payment.stars} Telegram Stars"
-    else:
-        what = "❤️ Hissa"
-    text = (
-        f"💳 <b>Yangi karta to'lovi</b>\n\n{what} — <b>{format_uzs(payment.amount_uzs)}</b>\n"
-        f"A'zo: {user.last_name} {user.first_name}"
-        + (f" (@{user.telegram_username})" if user.telegram_username else "")
-        + "\n\nChekni ko'rib, tasdiqlang yoki rad eting."
-    )
+    text = staff_text(payment, user, plan.title if plan else None)
+    if await _send_to_chat(session, payment, text):
+        return
     await enqueue_for_members(
         session,
         type_=NotificationType.PREMIUM,
@@ -193,6 +251,7 @@ async def _tell_admins(session: AsyncSession, payment: CardPayment, user: User, 
         },
         priority=2,
     )
+    await session.commit()
 
 
 async def get(session: AsyncSession, payment_id: uuid.UUID) -> CardPayment:
@@ -214,6 +273,11 @@ async def _member_message(session: AsyncSession, user_id: uuid.UUID, message: st
             payload={"buttons": [{"text": "💎 Premium", "app_route": "premium"}]},
             priority=2,
         )
+
+
+def _stamp(payment: CardPayment) -> int:
+    """Makes the member's message keys unique again after a decision was undone and taken anew."""
+    return int((payment.decided_at or datetime.now(UTC)).timestamp() * 1_000_000)
 
 
 async def approve(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID) -> CardPayment:
@@ -261,27 +325,27 @@ async def approve(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uui
     record_audit(
         session, actor_id=actor_id, action="CARD_PAYMENT_APPROVE", entity_type="card_payment", entity_id=payment.id
     )
-    await _member_message(session, payment.user_id, message, f"card-payment:{payment.id}:approved")
+    await _member_message(session, payment.user_id, message, f"card-payment:{payment.id}:approved:{_stamp(payment)}")
     await session.commit()
     return payment
 
 
 def gift_steps(payment: CardPayment, user: User) -> str:
-    """What the admin does in Telegram after confirming a Stars purchase (HTML)."""
+    """What the admin does after confirming a Stars purchase: buy them on Fragment for the member (HTML)."""
     import html
 
     who = f'<a href="tg://user?id={user.telegram_id}">{html.escape(user.last_name)} {html.escape(user.first_name)}</a>'
-    if user.telegram_username:
-        who += f" (@{html.escape(user.telegram_username)})"
+    username = f"@{html.escape(user.telegram_username)}" if user.telegram_username else "—"
     return (
-        f"⭐ <b>Endi {payment.stars} Stars'ni sovg'a qiling</b>\n\n"
-        f"Kimga: {who}\n\n"
-        "1. Ismni bosib, a'zoning profilini oching (yoki qidiruvda @username).\n"
-        "2. Profil menyusi (⋮) → <b>🎁 Sovg'a yuborish</b> → <b>⭐ Stars</b> "
-        f"(yoki Sozlamalar → Telegram Stars → «Stars sovg'a qilish») → <b>{payment.stars} ⭐</b>.\n"
-        "3. Telegram to'lovni kartangizdan oladi, Stars esa to'g'ridan-to'g'ri a'zoning hisobiga tushadi.\n"
+        f"⭐ <b>Endi {payment.stars} Stars'ni yuboring</b>\n\n"
+        f"Kimga: {who}\nUsername: <code>{username}</code>\n\n"
+        '1. <a href="https://fragment.com/stars/buy">fragment.com/stars/buy</a> sahifasini oching '
+        "(Telegram yoki TON hamyoningiz bilan kiring).\n"
+        f"2. «Recipient» maydoniga <code>{username}</code> ni yozing, miqdor — <b>{payment.stars}</b>.\n"
+        "3. To'lovni tasdiqlang: Stars bir necha daqiqada a'zoning Telegram hisobiga tushadi.\n"
         "4. So'ng pastdagi <b>«✅ Stars yuborildi»</b> tugmasini bosing — a'zoga xabar boradi.\n\n"
-        "Bot buni o'zi qila olmaydi: Telegram botlarga Stars berishga ruxsat bermaydi."
+        "Fragment ishlamasa: a'zo profilida ⋮ → 🎁 Sovg'a yuborish → ⭐ Stars ham bo'ladi. Bot buni o'zi "
+        "qila olmaydi: Telegram botlarga Stars berishga ruxsat bermaydi."
     )
 
 
@@ -332,7 +396,56 @@ async def reject(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid
         session,
         payment.user_id,
         f"To'lovingiz tasdiqlanmadi. Sabab: {payment.reject_reason}\nSavol bo'lsa — botda /paysupport.",
-        f"card-payment:{payment.id}:rejected",
+        f"card-payment:{payment.id}:rejected:{_stamp(payment)}",
+    )
+    await session.commit()
+    return payment
+
+
+async def undo(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID) -> CardPayment:
+    """«↩️ Qaytarish»: a decision taken by mistake goes back to «waiting» (for two days).
+    A confirmed Premium is taken back; Stars already gifted cannot be taken back."""
+    from app.services.premium import cancel_period
+
+    payment = await get(session, payment_id)
+    await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"card-payment:{payment.id}"))))
+    await session.refresh(payment)
+    if payment.status == CardPaymentStatus.PENDING:
+        raise ConflictError("CARD_PAYMENT_PENDING", "Bu to'lov hali ko'rib chiqilmagan.")
+    if payment.decided_at is not None and payment.decided_at < datetime.now(UTC) - timedelta(hours=UNDO_HOURS):
+        raise ConflictError("UNDO_TOO_LATE", f"Qarorga {UNDO_HOURS} soatdan oshdi — endi qaytarib bo'lmaydi.")
+    if payment.delivered_at is not None:
+        raise ConflictError("STARS_DELIVERED", "Stars allaqachon yuborilgan — qarorni qaytarib bo'lmaydi.")
+    previous = payment.status
+    if previous == CardPaymentStatus.APPROVED and payment.subscription_id is not None:
+        await cancel_period(session, payment.subscription_id)
+        payment.subscription_id = None
+        if payment.discount_id is not None:
+            from app.models import PremiumDiscount
+
+            discount = await session.get(PremiumDiscount, payment.discount_id)
+            if discount is not None and discount.used_for == f"card:{payment.id}":
+                discount.used_at = None
+                discount.used_for = None
+    stamp = _stamp(payment)
+    payment.status = CardPaymentStatus.PENDING
+    payment.decided_at = None
+    payment.decided_by = None
+    payment.reject_reason = None
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="CARD_PAYMENT_UNDO",
+        entity_type="card_payment",
+        entity_id=payment.id,
+        before={"status": str(previous)},
+    )
+    await _member_message(
+        session,
+        payment.user_id,
+        "↩️ Avvalgi xabarimiz xato edi — kechirasiz! Chekingiz qayta tekshirilmoqda, natijasini tez orada "
+        "shu yerda xabar qilamiz.",
+        f"card-payment:{payment.id}:undo:{stamp}",
     )
     await session.commit()
     return payment

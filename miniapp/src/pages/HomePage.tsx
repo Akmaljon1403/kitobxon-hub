@@ -150,6 +150,7 @@ export function HomePage() {
       <div className="grid grid-cols-3 gap-2">
         {SHORTCUTS.filter((item) => !item.feature || me?.features?.[item.feature] !== 'off').map((item) => {
           const locked = item.feature !== 'premium' && item.feature && me?.features?.[item.feature] === 'premium'
+          const trial = Boolean(item.feature && me?.premium_trial && me.premium_features?.includes(item.feature))
           return (
             <button
               key={item.route}
@@ -157,8 +158,8 @@ export function HomePage() {
               onClick={() => navigate(`/${item.route}`)}
               className="relative flex flex-col items-center gap-1 rounded-2xl bg-app-bg px-2 py-4 text-sm shadow-sm active:opacity-70"
             >
-              {locked && (
-                <span aria-label="Premium" className="absolute right-2 top-1.5 text-xs">
+              {(locked || trial) && (
+                <span aria-label="Premium" title={trial ? 'Premium — sinov davrida ochiq' : 'Premium'} className="absolute right-2 top-1.5 text-xs">
                   💎
                 </span>
               )}

@@ -75,12 +75,49 @@ REGISTERED = (
     "• «📊 Natijalarim» — ballaringiz va o'rningiz;\n"
     "• «🪪 Pasportim» — kitobxon pasportingiz."
 )
+ONBOARDING_TOUR = (
+    "🧭 <b>Qisqa sayohat: bu yerda nimalar bor?</b>\n\n"
+    "📚 <b>Kitoblar</b> — klub o'qiyotgan asarlar va muddatlar. «O'qib tugatdim» deb belgilang — ball olasiz.\n"
+    "📅 <b>Tadbirlar</b> — davra suhbatlari. «✅ Qatnashaman» bilan joy band qiling, tadbir kuni "
+    "«✅ Davomat» bilan kelganingizni qayd eting.\n"
+    "📝 <b>Testlar</b> — o'qilgan kitob bo'yicha bilim sinovi. G'oliblarga sertifikat va sovg'alar.\n"
+    "🏆 <b>Reyting va yutuqlar</b> — har bir faollik ball, ballar esa nishon va o'rinlarga aylanadi.\n"
+    "🪪 <b>Kitobxon pasporti</b> — QR kodli shaxsiy a'zolik kartangiz.\n"
+    "🎁 <b>Sovg'alar</b> — promokodlar va sovg'a o'yinlari.\n\n"
+    "Savol tug'ilsa — «❓ Yordam». Hammasi chiroyli ko'rinishda ilovada 👇"
+)
+ONBOARDING_TRIAL = (
+    "🎁 <b>Sizga sovg'a — {days} kunlik Premium!</b>\n\n"
+    "Klubga qo'shilganingiz sharafiga Premium o'zi yoqildi: <b>{until}</b> gacha bepul, hech narsa "
+    "to'lamaysiz. Shu kunlarda sinab ko'ring:\n\n{perks}\n\n"
+    "Ilovada bu imkoniyatlar yonida 💎 belgisi turadi — sinovdan keyin qaysilari Premium ekanini "
+    "bilasiz. Yoqsa, Premium'ni bank kartasi yoki Telegram Stars orqali davom ettirish mumkin."
+)
+ONBOARDING_PREMIUM = (
+    "💎 <b>Premium haqida bir og'iz</b>\n\n"
+    "Klub hamma uchun bepul. Premium esa qo'shimcha qulayliklar beradi:\n\n{perks}\n\n"
+    "To'lov bank kartasi yoki Telegram Stars orqali; tushgan mablag' kitoblar va sovg'alarga sarflanadi."
+)
+BTN_ONBOARDING_APP = "📱 Ilovani ochish"
+BTN_ONBOARDING_PREMIUM = "💎 Premium imkoniyatlari"
 REGISTERED_PENDING = (
     "✅ Arizangiz qabul qilindi, {first_name}!\n\nKlub rahbariyati ko'rib chiqqach, shu yerda xabar beramiz."
 )
 REGISTRATION_CANCELLED = "Ro'yxatdan o'tish to'xtatildi. Qayta boshlash uchun /start ni bosing."
 REGISTRATION_EXPIRED = "Bu tugma eskirgan. Davom etish uchun /start ni bosing."
 REGISTRATION_TEXT_ONLY = "Iltimos, savolga matn bilan javob bering yoki /cancel ni bosing."
+
+# ---- Required channel subscription ----
+SUBSCRIBE_REQUIRED = (
+    "📢 <b>Bir qadam qoldi!</b>\n\n"
+    "Kitobxon Hub'dan foydalanish uchun klubimiz kanaliga obuna bo'ling: yangi kitoblar, tadbirlar, "
+    "test natijalari va sovg'alar haqidagi xabarlar avval o'sha yerda chiqadi.\n\n"
+    "1️⃣ Pastdagi kanal tugmasini bosib, «Obuna bo'lish»ni bosing.\n"
+    "2️⃣ So'ng shu yerga qaytib, «✅ Obuna bo'ldim» tugmasini bosing."
+)
+SUBSCRIBE_STILL_MISSING = "Hali obuna ko'rinmayapti: {channels}. Obuna bo'lib, yana bir bor bosing 🙂"
+SUBSCRIBE_THANKS = "✅ Rahmat, obuna tasdiqlandi! Davom etamiz 👇"
+BTN_SUBSCRIBED = "✅ Obuna bo'ldim"
 
 # ---- Registered members ----
 WELCOME_BACK = "Assalomu alaykum, {first_name}! 👋\nPastdagi menyudan kerakli bo'limni tanlang."
@@ -215,6 +252,12 @@ SUPPORT_ASK = (
     "Savol, taklif yoki muammoingizni bitta xabarda yozing. Rasm ham yuborishingiz mumkin.\n\n"
     "Bekor qilish: /cancel"
 )
+SUPPORT_ASK_PAYMENT = (
+    "💳 <b>To'lov bo'yicha savol</b>\n\n"
+    "Muammoni bitta xabarda yozing: qachon, qancha va nima uchun to'laganingiz. Chek rasmini ham "
+    "yuborishingiz mumkin — to'lovlar bilan shug'ullanadigan admin javob beradi.\n\nBekor qilish: /cancel"
+)
+BTN_WRITE_PAYMENT = "✉️ To'lov bo'yicha yozish"
 SUPPORT_SENT = "✅ Xabaringiz yuborildi. Javob shu yerga keladi."
 SUPPORT_ONLY_TEXT = "Iltimos, matn yoki rasm yuboring. Bekor qilish: /cancel"
 SUPPORT_REPLY_ASK = (
@@ -276,8 +319,18 @@ PREMIUM_INFO = (
     "💎 <b>Kitobxon Premium</b>\n\n"
     "{status}\n\n"
     "<b>Premium bilan:</b>\n{perks}\n\n"
-    "To'lov Telegram Stars (⭐) orqali — xavfsiz va bir zumda. "
+    "<b>Qanday to'laysiz?</b>\n"
+    "💳 <b>Bank kartasi</b> (Uzcard, Humo — Click, Payme yoki bank ilovasi orqali) — eng oson yo'l: "
+    "summani klub kartasiga o'tkazasiz, chekni yuborasiz, admin tasdiqlagach Premium o'zi yoqiladi.\n"
+    "⭐ <b>Telegram Stars</b> — Telegram ichidagi to'lov, bir zumda yoqiladi.\n\n"
     "Tushgan mablag' klub tadbirlari, kitoblar va sovg'alarga sarflanadi."
+)
+BTN_PAY_STARS = "⭐ Telegram Stars orqali"
+BTN_BACK_TO_METHODS = "⬅️ To'lov usullari"
+PREMIUM_STARS_CHOOSE = (
+    "⭐ <b>Telegram Stars orqali</b>\n\nTarifni tanlang — to'lov Telegram ichida bir zumda o'tadi va "
+    "Premium darhol yoqiladi.\n\nStars'ingiz yo'qmi? «⬅️ To'lov usullari» → «💳 Bank kartasi» — "
+    "u yerda Stars'ni ham karta orqali olish mumkin."
 )
 PREMIUM_STATUS_LIFETIME = "♾ Sizda <b>umrbod Premium</b> bor — barcha imkoniyatlar doim ochiq."
 PREMIUM_STATUS_ON = "✅ Siz Premium a'zosiz — <b>{until}</b> gacha. Muddatni uzaytirish mumkin."
@@ -293,9 +346,23 @@ TRIAL_STARTED = (
     "statistika va boshqalar. Sinov {until} gacha — hech qanday to'lov yechilmaydi."
 )
 DONATE_INFO = (
-    "❤️ <b>Klubni qo'llab-quvvatlash</b>\n\n"
-    "Har qanday hissa kitoblar sotib olish, tadbirlar va g'oliblarga sovg'alar uchun ishlatiladi. "
-    "Miqdorni tanlang:"
+    "🤝 <b>Klubni qo'llab-quvvatlash</b>\n\n"
+    "Kitobxonlar klubi talabalar tashabbusi bilan yashaydi: yangi kitoblar, davra suhbatlari va "
+    "g'oliblarga sovg'alar. Klub sizga yoqsa va imkoningiz bo'lsa, istalgan miqdorda hissa qo'shishingiz "
+    "mumkin. Bu mutlaqo ixtiyoriy — botdagi barcha asosiy imkoniyatlar baribir hamma uchun ochiq. 💛\n\n"
+    "Qulay usulni tanlang:"
+)
+BTN_DONATE_CARD = "💳 Bank kartasiga o'tkazish"
+DONATE_CARD = (
+    "💳 <b>Klub kartasi</b>\n\n<code>{number}</code>\n{holder}\n"
+    "Raqamni bosib nusxa oling va xohlagan summani o'tkazing (Click, Payme yoki bank ilovasi). "
+    "Chek yuborish shart emas — bu sizning sovg'angiz. 🙏"
+)
+BTN_DONATE_DONE = "💛 O'tkazdim"
+DONATE_THANKS = (
+    "💛 <b>Chin dildan rahmat!</b>\n\n"
+    "Hissangiz yangi kitoblarga, qiziqarli tadbirlarga va g'oliblarning quvonchiga aylanadi. "
+    "Klubimizni birga rivojlantirayotganingiz uchun minnatdormiz! 📚✨"
 )
 DONATE_CLOSED = "❤️ Hozircha hissa qabul qilinmayapti. Rahmat!"
 PAYMENT_PREMIUM_OK = (
@@ -320,8 +387,8 @@ TERMS = (
 )
 PAYSUPPORT = (
     "🧾 <b>To'lov bo'yicha yordam</b>\n\n"
-    "To'lov, Premium yoki qaytarish (refund) haqida savolingizni «✉️ Adminga yozish» orqali yuboring — "
-    "klub rahbariyati tez orada javob beradi."
+    "Karta yoki Stars to'lovi, Premium yoki qaytarish (refund) haqida savolingizni pastdagi tugma orqali "
+    "yozing — to'lovlar bilan shug'ullanadigan admin tez orada javob beradi."
 )
 
 # ---- Event feedback ----
@@ -333,12 +400,14 @@ FEEDBACK_NOT_ALLOWED = "Bu tadbirga baho bera olmaysiz."
 
 
 # ---- Card payments ----
-BTN_PAY_CARD = "💳 Karta orqali (Premium yoki ⭐ Stars)"
+BTN_PAY_CARD = "💳 Bank kartasi orqali (Uzcard / Humo)"
 CARD_CHOOSE = (
-    "💳 <b>Karta orqali to'lov</b>\n\n"
-    "Telegram Stars'ingiz bo'lmasa yoki ularni qanday olishni bilmasangiz — klub kartasiga to'lang:\n"
-    "• <b>💎 Premium</b> — tasdiqlangach o'zi yoqiladi;\n"
-    "• <b>⭐ Stars</b> — tanlagan miqdoringiz Telegram'da sizga sovg'a qilib yuboriladi.\n\nTanlang:"
+    "💳 <b>Bank kartasi orqali</b>\n\n"
+    "1️⃣ Pastdan tarifni tanlang.\n"
+    "2️⃣ Summani klub kartasiga o'tkazing (Click, Payme yoki bank ilovasi).\n"
+    "3️⃣ To'lov chekini (skrinshot) shu yerga yuboring — admin tasdiqlagach Premium o'zi yoqiladi.\n\n"
+    "⭐ Telegram Stars kerakmi? Pastdagi Stars to'plamlarini tanlang — ular Telegram'da sizga sovg'a "
+    "qilib yuboriladi (buning uchun profilingizda username bo'lishi kerak)."
 )
 CARD_PLAN = "💎 {title} — {price}"
 CARD_STARS = "⭐ {stars} Stars — {price}"
@@ -358,8 +427,9 @@ CARD_DONATION_ASK = "❤️ Qancha hissa qo'shmoqchisiz? Summani so'mda yozing (
 CARD_DONATION_INVALID = "Summani raqam bilan yozing, kamida 1 000 so'm (masalan: 20000)."
 CARD_RECEIPT_HINT = "Chekni rasm (skrinshot) qilib yuboring. Bekor qilish: /cancel"
 CARD_RECEIPT_OK = (
-    "✅ <b>Chek qabul qilindi!</b>\n\n"
-    "Admin tekshirib tasdiqlagach, sizga xabar keladi va Premium avtomatik yoqiladi. Rahmat!"
+    "⏳ <b>Chekingiz administratorga tekshirish uchun yuborildi.</b>\n\n"
+    "Odatda bir kun ichida ko'rib chiqiladi — natijasini shu yerda xabar qilamiz, Premium esa o'zi "
+    "yoqiladi. Savol bo'lsa: /paysupport. Rahmat!"
 )
 CARD_OFF = "💳 Karta orqali to'lov hozircha yoqilmagan."
 
@@ -368,7 +438,23 @@ CARD_ADMIN_ONLY = "Bu tugma faqat bosh administrator uchun."
 CARD_RECEIPT_CAPTION = "🧾 <b>{what}</b> — {price}\nA'zo: {name}\nHolat: {status}"
 CARD_APPROVED = "✅ Tasdiqlandi: {name} — {price}. A'zoga xabar yuborildi."
 CARD_REJECT_ASK = "❌ Rad etish sababini yozing (a'zo shuni ko'radi), masalan: «Summa to'liq emas»."
+CARD_REJECT_ASK_PRIVATE = "❌ «{what}» ({name}) to'lovini rad etish sababini shu yerga yozing — a'zo shuni ko'radi."
+CARD_REJECT_PICK = "Rad etish sababini tanlang (a'zo shuni ko'radi):"
+CARD_REJECT_REASONS = (
+    "Chek o'qilmayapti yoki to'liq emas",
+    "Summa tarif narxiga mos emas",
+    "To'lov kartaga kelib tushmagan",
+)
 CARD_REJECTED = "❌ Rad etildi. A'zoga sabab bilan xabar yuborildi."
+CARD_DM_FIRST = "Avval botga shaxsiy yozing (/start), so'ng qayta bosing."
+CARD_LINE_APPROVED = "✅ Tasdiqlandi — {admin}, {time}"
+CARD_LINE_REJECTED = "❌ Rad etildi — {admin}, {time}. Sabab: {reason}"
+CARD_LINE_UNDONE = "↩️ Qaytarildi — {admin}, {time}: qayta ko'rib chiqing"
+CARD_LINE_SENT = "⭐ Stars yuborildi — {admin}, {time}"
+BTN_UNDO = "↩️ Qaytarish"
+BTN_VIEW_RECEIPT = "🧾 Chekni ko'rish"
+BTN_REJECT_OTHER = "✍️ Boshqa sabab"
+BTN_BACK = "⬅️ Orqaga"
 
 # ---- Channel stickers (/stiker, admins) ----
 STICKER_ASK = (
@@ -396,6 +482,26 @@ CHANNEL_POST_EDIT_KEPT = "Matn o'zgarmadi: post 30 daqiqadan keyin avvalgi holid
 CHANNEL_POST_TEXT_ONLY = "Iltimos, post matnini oddiy xabar qilib yuboring yoki /cancel"
 STICKER_DUPLICATE = "Bu stiker allaqachon saqlangan (jami {total} ta). Boshqasini yuboring yoki /tayyor"
 STICKER_ONLY = "Stiker yuboring yoki /tayyor deb yozing."
+EMOJI_ASK = (
+    "✨ <b>Premium emojilar</b>\n\n"
+    "Bot xabarlaridagi oddiy emojilar o'rniga klubning premium emojilari chiqadi (masalan «Salom ✋» dagi ✋). "
+    "Menga premium emojilarni yuboring:\n"
+    "• shunchaki premium emoji — u o'zining oddiy ko'rinishi o'rniga ishlatiladi;\n"
+    "• yoki juftlik: <code>✋ =</code> [premium emoji] — aynan shu oddiy emoji o'rniga.\n"
+    "Bir xabarda bir nechtasini yuborish mumkin. Tugatish: /tayyor\n\n"
+    "Hozir: {count} ta.{items}\n\n"
+    "<i>Telegram premium emojini faqat Fragment'da qo'shimcha username olingan botlarga ruxsat beradi. "
+    "Ruxsat bo'lmasa, bot o'zi oddiy emojidan foydalanadi — xabarlar baribir yetib boradi.</i>"
+)
+EMOJI_SAVED = "✅ Saqlandi: {pairs}\nJami: {total} ta. Yana yuboring yoki /tayyor."
+EMOJI_NONE_FOUND = "Bu xabarda premium emoji topilmadi. Premium emojini yuboring (Telegram Premium kerak) yoki /tayyor."
+EMOJI_DONE = "✨ Tayyor! Endi bot xabarlaridagi shu emojilar premium ko'rinishda chiqadi."
+EMOJI_CLEARED = "🗑 Barcha premium emojilar o'chirildi — xabarlarda oddiy emojilar."
+EMOJI_PAUSED = (
+    "\n\n⚠️ Telegram hozir botning premium emojilarini qabul qilmadi (Fragment username kerak) — "
+    "vaqtincha oddiy emojilar ishlatilmoqda."
+)
+BTN_EMOJI_CLEAR = "🗑 Hammasini o'chirish"
 STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sahifasida ko'rasiz va keraksizini o'chirasiz."
 
 # ---- Portfolio ----

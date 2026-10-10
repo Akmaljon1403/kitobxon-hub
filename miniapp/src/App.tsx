@@ -23,6 +23,7 @@ import {
   NotRegisteredPage,
   OutsideTelegramPage,
   StartupErrorPage,
+  SubscribePage,
 } from './pages/StatusPages'
 import { AuthProvider, useAuth } from './store/auth'
 import { useRoute } from './utils/router'
@@ -66,6 +67,8 @@ function Gate() {
       return <NotRegisteredPage />
     case 'blocked':
       return <AccountProblemPage message={status.message} />
+    case 'subscribe':
+      return <SubscribePage channels={status.channels} />
     case 'error':
       return <StartupErrorPage message={status.message} />
     case 'ready':

@@ -10,13 +10,15 @@ export class ApiError extends Error {
   readonly code: string
   readonly status: number
   readonly requestId?: string
+  readonly details?: unknown
 
-  constructor(code: string, message: string, status: number, requestId?: string) {
+  constructor(code: string, message: string, status: number, requestId?: string, details?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.code = code
     this.status = status
     this.requestId = requestId
+    this.details = details
   }
 }
 
@@ -70,6 +72,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       body?.error?.message ?? "So'rovni bajarib bo'lmadi. Keyinroq urinib ko'ring.",
       response.status,
       body?.error?.request_id ?? requestId,
+      body?.error?.details,
     )
   }
   return payload as T

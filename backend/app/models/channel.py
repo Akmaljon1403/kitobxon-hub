@@ -1,4 +1,5 @@
-"""Posts of the bot in the club's Telegram channel, and stickers admins picked for them."""
+"""Posts of the bot in the club's Telegram channel, stickers admins picked for them, and the premium
+(custom) emoji the bot puts into its messages."""
 
 from __future__ import annotations
 
@@ -59,5 +60,18 @@ class ChannelSticker(UUIDPrimaryKeyMixin, Base):
     mood: Mapped[StickerMood] = mapped_column(
         enum_column(StickerMood), default=StickerMood.ANY, server_default=StickerMood.ANY.value
     )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class CustomEmoji(Base):
+    """«✋ → premium ✋»: an ordinary emoji in the bot's messages is shown as this custom emoji
+    (set by an admin with /emoji)."""
+
+    __tablename__ = "custom_emojis"
+
+    emoji: Mapped[str] = mapped_column(String(16), primary_key=True)  # without the U+FE0F variation mark
+    custom_emoji_id: Mapped[str] = mapped_column(String(64))
+    fallback: Mapped[str] = mapped_column(String(16))  # shown where custom emoji are not available
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

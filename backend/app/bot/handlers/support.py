@@ -11,6 +11,7 @@ import uuid
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,21 +28,26 @@ router.message.filter(ActiveMember())
 router.callback_query.filter(ActiveMember())
 
 
-@router.callback_query(F.data == "sup:new")
+@router.callback_query(F.data.in_({"sup:new", "sup:new:pay"}))
 async def start_message(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User) -> None:
-    if await gate(callback, db, member, "support"):
+    payment = callback.data == "sup:new:pay"  # a payment question also goes to the payments chat
+    if not payment and await gate(callback, db, member, "support"):
         return
     await state.set_state(SupportCompose.waiting)
+    await state.update_data(topic="payment" if payment else None)
     await callback.answer()
     if isinstance(callback.message, Message):
-        await callback.message.answer(texts.SUPPORT_ASK)
+        await callback.message.answer(texts.SUPPORT_ASK_PAYMENT if payment else texts.SUPPORT_ASK)
 
 
 @router.message(StateFilter(SupportCompose.waiting), F.text, ~F.text.startswith("/"))
 @router.message(StateFilter(SupportCompose.waiting), F.photo)
 async def member_message(message: Message, state: FSMContext, db: AsyncSession, member: User) -> None:
     photo = message.photo[-1].file_id if message.photo else None
-    await support_service.member_message(db, user=member, text=message.text or message.caption, photo_file_id=photo)
+    topic = (await state.get_data()).get("topic")
+    await support_service.member_message(
+        db, user=member, text=message.text or message.caption, photo_file_id=photo, topic=topic
+    )
     await db.commit()
     await state.clear()
     await message.answer(texts.SUPPORT_SENT)
@@ -66,11 +72,26 @@ async def start_reply(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
         await callback.answer()
         return
     await support_service.get_ticket(db, ticket_id)
-    await state.set_state(SupportReply.waiting)
-    await state.update_data(ticket_id=str(ticket_id))
-    await callback.answer()
-    if isinstance(callback.message, Message):
+    if isinstance(callback.message, Message) and callback.message.chat.type == "private":
+        await state.set_state(SupportReply.waiting)
+        await state.update_data(ticket_id=str(ticket_id))
+        await callback.answer()
         await callback.message.answer(texts.SUPPORT_REPLY_ASK)
+        return
+    # Pressed in the payments group: the answer is typed in the admin's private chat with the bot.
+    assert callback.bot is not None
+    private = FSMContext(
+        storage=state.storage,
+        key=StorageKey(bot_id=callback.bot.id, chat_id=callback.from_user.id, user_id=callback.from_user.id),
+    )
+    try:
+        await callback.bot.send_message(callback.from_user.id, texts.SUPPORT_REPLY_ASK)
+    except Exception:
+        await callback.answer(texts.CARD_DM_FIRST, show_alert=True)
+        return
+    await private.set_state(SupportReply.waiting)
+    await private.update_data(ticket_id=str(ticket_id))
+    await callback.answer("✍️")
 
 
 @router.message(StateFilter(SupportReply.waiting), F.text, ~F.text.startswith("/"))

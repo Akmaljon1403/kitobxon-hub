@@ -5,7 +5,7 @@ import { useAuth } from '../store/auth'
 import { saveDocument } from '../utils/files'
 import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
-import { useFeature } from './FeatureGate'
+import { TrialBadge, useFeature } from './FeatureGate'
 import { Button, Card } from './ui'
 
 /** «Kitobxonlik portfoliosi»: books, certificates, tests, events and achievements in one PDF. */
@@ -38,7 +38,9 @@ export function PortfolioCard() {
           🗂
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">Kitobxonlik portfoliosi</p>
+          <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+            Kitobxonlik portfoliosi <TrialBadge code="portfolio" />
+          </p>
           <p className="text-sm text-app-hint">
             O'qigan kitoblaringiz, sertifikatlar, test natijalari va yutuqlar — bitta chiroyli PDF. Rezyume va grantlar uchun.
           </p>
