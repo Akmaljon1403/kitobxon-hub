@@ -6,7 +6,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from typing import Annotated, Any
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,11 +43,39 @@ class CurrentUser:
         return permission.value in self.permissions
 
 
+# Reachable without the required channel subscription: the profile (it says what is missing) and the check.
+SUBSCRIPTION_FREE_PATHS = frozenset({"/api/v1/me", "/api/v1/me/subscription"})
+
+
+async def _require_subscription(request: Request, db: AsyncSession, user: User, roles: set[str]) -> None:
+    from app.services import subscription
+
+    if request.url.path in SUBSCRIPTION_FREE_PATHS or is_admin_role_set(roles):
+        return
+    channels = await subscription.missing(db, user.telegram_id)
+    if channels:
+        raise ForbiddenError(
+            "SUBSCRIPTION_REQUIRED",
+            "Ilovadan foydalanish uchun klub kanaliga obuna bo'ling.",
+            details={"channels": subscription.as_dicts(channels)},
+        )
+
+
+def _require_licence(roles: set[str]) -> None:
+    """A rented copy whose licence ended: members wait, administrators keep full access (and their data)."""
+    from app.core import licence
+
+    if licence.status().blocks_members and not is_admin_role_set(roles):
+        raise ForbiddenError("LICENCE_EXPIRED", licence.MEMBER_MESSAGE)
+
+
 async def get_current_user(
+    request: Request,
     db: DbSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> CurrentUser:
-    """Authenticated, active member. 401 without a valid token, 403 for blocked/inactive accounts."""
+    """Authenticated, active member. 401 without a valid token, 403 for blocked/inactive accounts
+    and for members not subscribed to the required channel(s)."""
     if credentials is None or credentials.scheme.lower() != "bearer" or not credentials.credentials:
         raise UnauthorizedError()
     claims = decode_access_token(credentials.credentials)
@@ -57,6 +85,8 @@ async def get_current_user(
         raise TokenInvalidError()
     ensure_user_can_sign_in(user)
     roles = await get_role_codes(db, user.id)
+    _require_licence(roles)
+    await _require_subscription(request, db, user, roles)
     return CurrentUser(user=user, scope=claims.scope, roles=roles)
 
 

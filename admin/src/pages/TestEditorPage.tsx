@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { CertificateDesignBox } from '../components/CertificateDesign'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, Field, InlineError, Input, PageHeader, Select, Textarea } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { AdminQuestion, AdminTestDetail, Book, Page, QuestionType } from '../types/api'
+import type { AdminQuestion, AdminTestDetail, Book, Page, QuestionImport, QuestionType } from '../types/api'
 import { formatDateTime, fromLocalInput, toLocalInput } from '../utils/format'
 import { navigate } from '../utils/router'
 import { TestStateBadge } from './TestsPage'
@@ -166,7 +167,84 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
   )
 }
 
+/** A question's picture: shown from storage, replaced or removed (saved with the questions). */
+function QuestionImage({
+  testId,
+  imageKey,
+  readOnly,
+  onChange,
+}: {
+  testId: string
+  imageKey: string | null | undefined
+  readOnly: boolean
+  onChange: (key: string | null) => void
+}) {
+  const { api, download } = useSession()
+  const [src, setSrc] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const input = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!imageKey) {
+      setSrc(null)
+      return
+    }
+    let url: string | null = null
+    let cancelled = false
+    download(`/api/v1/admin/tests/${testId}/question-images?key=${encodeURIComponent(imageKey)}`)
+      .then((blob) => {
+        if (cancelled) return
+        url = URL.createObjectURL(blob)
+        setSrc(url)
+      })
+      .catch(() => setSrc(null))
+    return () => {
+      cancelled = true
+      if (url) URL.revokeObjectURL(url)
+    }
+  }, [download, imageKey, testId])
+
+  async function upload(file: File | undefined) {
+    if (!file) return
+    setBusy(true)
+    setError(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const result = await api<{ image_key: string }>(`/api/v1/admin/tests/${testId}/question-images`, { method: 'POST', body: form })
+      onChange(result.image_key)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Rasmni yuklab bo'lmadi.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (readOnly && !imageKey) return null
+  return (
+    <div className="flex flex-wrap items-start gap-3">
+      {src && <img src={src} alt="Savol rasmi" className="max-h-48 rounded-lg border border-app-border" />}
+      {!readOnly && (
+        <div className="flex flex-col gap-1">
+          <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+          <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>
+            🖼 {imageKey ? 'Rasmni almashtirish' : "Rasm qo'shish"}
+          </Button>
+          {imageKey && (
+            <Button variant="ghost" className="text-app-danger" onClick={() => onChange(null)}>
+              Rasmni olib tashlash
+            </Button>
+          )}
+          <InlineError message={error} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function QuestionEditor({
+  testId,
   index,
   question,
   total,
@@ -175,6 +253,7 @@ function QuestionEditor({
   onMove,
   onRemove,
 }: {
+  testId: string
   index: number
   question: AdminQuestion
   total: number
@@ -226,6 +305,7 @@ function QuestionEditor({
         maxLength={2000}
         disabled={readOnly}
       />
+      <QuestionImage testId={testId} imageKey={question.image_key} readOnly={readOnly} onChange={(key) => onChange({ ...question, image_key: key })} />
       <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
         <Field label="Turi">
           <Select value={question.type} onChange={(e) => setType(e.target.value as QuestionType)} disabled={readOnly}>
@@ -305,6 +385,8 @@ export function TestEditorPage({ testId }: { testId: string }) {
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [warnings, setWarnings] = useState<string[]>([])
+  const importInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (state.status === 'success' && !dirty) setQuestions(state.data.questions)
@@ -336,6 +418,29 @@ export function TestEditorPage({ testId }: { testId: string }) {
     }
   }
 
+  async function importFile(file: File | undefined) {
+    if (!file) return
+    setBusy('import')
+    setError(null)
+    setWarnings([])
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const result = await api<QuestionImport>(`/api/v1/admin/tests/${test.id}/import`, { method: 'POST', body: form })
+      const replace =
+        questions.length === 0 ||
+        window.confirm(
+          `Fayldan ${result.questions.length} ta savol o'qildi.\n\nOK — hozirgi ${questions.length} ta savol o'rniga qo'yiladi.\nBekor qilish — oxiriga qo'shiladi.`,
+        )
+      update((replace ? result.questions : [...questions, ...result.questions]).slice(0, 200))
+      setWarnings(result.warnings)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Faylni o'qib bo'lmadi.")
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const saveQuestions = () =>
     run('save', async () => {
       await api(`/api/v1/admin/tests/${test.id}/questions`, {
@@ -347,6 +452,7 @@ export function TestEditorPage({ testId }: { testId: string }) {
             points: q.points,
             explanation: q.explanation?.trim() || null,
             options: q.options.map((o) => ({ text: o.text.trim(), is_correct: o.is_correct })),
+            image_key: q.image_key ?? null,
           })),
         },
       })
@@ -418,19 +524,78 @@ export function TestEditorPage({ testId }: { testId: string }) {
       />
       <InlineError message={error} />
       <SettingsForm key={test.id + test.status} test={test} readOnlyScores={locked} onSaved={reload} />
+      {can('TEST_EDIT') && (
+        <Card className="p-4">
+          {test.event_id && !test.certificate_background && (
+            <p className="mb-2 text-xs text-app-hint">Test tadbirga bog'langan: bu yerda rasm yuklanmasa, tadbirning sertifikat dizayni ishlatiladi.</p>
+          )}
+          <CertificateDesignBox base={`/api/v1/admin/tests/${test.id}`} hasBackground={test.certificate_background} onChanged={reload} />
+        </Card>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Savollar ({questions.length})</h2>
+        {!readOnly && (
+          <>
+            <input
+              ref={importInput}
+              type="file"
+              accept=".txt,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="hidden"
+              onChange={(e) => {
+                void importFile(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
+            <Button variant="secondary" loading={busy === 'import'} onClick={() => importInput.current?.click()}>
+              📥 Fayldan yuklash (TXT, Word, PDF)
+            </Button>
+          </>
+        )}
         {locked && (
           <p className="text-sm text-app-hint">🔒 A'zolar testni boshlagan — savollarni o'zgartirib bo'lmaydi (natijalar adolatli qolishi uchun).</p>
         )}
       </div>
+      {warnings.length > 0 && (
+        <Card className="border-amber-400 p-4 text-sm">
+          <p className="mb-1 font-medium">⚠️ Fayl o'qildi — tekshirib chiqing:</p>
+          <ul className="list-disc pl-5">
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      {!readOnly && (
+        <details className="rounded-xl border border-app-border p-3 text-sm">
+          <summary className="cursor-pointer font-medium">📄 Fayl qanday tayyorlanadi?</summary>
+          <pre className="mt-2 whitespace-pre-wrap rounded bg-app-surface p-3 text-xs">{`1. «O'tkan kunlar» romani muallifi kim? (2 ball)
+A) Cho'lpon
+*B) Abdulla Qodiriy
+C) Oybek
+Izoh: Roman 1922–1925-yillarda yozilgan.
+
+2. Qaysilari shoir?
+A) Navoiy
+B) Bobur
+C) Qodiriy
+Javob: A, B`}</pre>
+          <ul className="mt-2 list-disc pl-5 text-app-hint">
+            <li>Savol raqam bilan boshlanadi («1.» yoki «1)»), variantlar — «A)», «B.» ...</li>
+            <li>To'g'ri javob: oldiga yoki oxiriga «*» («+», «#»), yoki «Javob: B» qatori; Word'da qalin (bold) yozilsa ham bo'ladi.</li>
+            <li>«Izoh: ...» — test yopilgach ko'rinadigan tushuntirish; «(2 ball)» — savol bali.</li>
+            <li>Word yoki PDF'da savol tagidagi rasm o'sha savolga biriktiriladi.</li>
+            <li>Savollar avval tahrirlovchida ko'rinadi — tekshirib, «Savollarni saqlash»ni bosing.</li>
+          </ul>
+        </details>
+      )}
       {questions.length === 0 && (
-        <Card className="p-6 text-center text-sm text-app-hint">Hali savol yo'q. «+ Savol qo'shish» tugmasini bosing.</Card>
+        <Card className="p-6 text-center text-sm text-app-hint">Hali savol yo'q. «+ Savol qo'shish» yoki «📥 Fayldan yuklash» tugmasini bosing.</Card>
       )}
       {questions.map((question, index) => (
         <QuestionEditor
           key={question.id ?? `new-${index}`}
+          testId={test.id}
           index={index}
           total={questions.length}
           question={question}

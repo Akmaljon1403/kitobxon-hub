@@ -12,28 +12,37 @@ Texts come from the admin-editable notification templates.
 from __future__ import annotations
 
 import html
+import re
 import uuid
 from datetime import UTC, datetime, time, timedelta
 from typing import Any
 
-from sqlalchemy import Select, and_, func, select
+from sqlalchemy import Select, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.errors import BadRequestError
 from app.models import (
+    AttendanceRecord,
     Book,
     BookQuote,
     BookRead,
+    ChannelPost,
     Event,
     EventRegistration,
+    EventShift,
+    Notification,
     Test,
     TestAttempt,
     User,
 )
 from app.models.enums import (
     AttemptStatus,
+    AttendanceStatus,
     BookStatus,
+    ChannelPostStatus,
     EventStatus,
+    NotificationStatus,
     NotificationType,
     QuoteStatus,
     ReadingStatus,
@@ -41,7 +50,7 @@ from app.models.enums import (
     TestStatus,
     UserStatus,
 )
-from app.services import channel, literary
+from app.services import channel, event_times, literary
 from app.services.audit import record_audit
 from app.services.members import normalize_group
 from app.services.notifications import (
@@ -63,11 +72,36 @@ def _members(*conditions: Any) -> Select[tuple[Any]]:
     return select(User.id).where(User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), *conditions)
 
 
-def _registered_for(event_id: Any) -> Select[tuple[Any]]:
+def _registered_for(event_id: Any, shift: EventShift | None = None) -> Select[tuple[Any]]:
+    """Members registered for the event (for a shift: that shift, plus those who chose none for the first)."""
+    conditions = [EventRegistration.event_id == event_id, EventRegistration.status == RegistrationStatus.REGISTERED]
+    if shift is not None:
+        conditions.append(
+            or_(
+                EventRegistration.shift_id == shift.id,
+                and_(EventRegistration.shift_id.is_(None), shift.position == 1),
+            )
+        )
+    registered = select(EventRegistration.user_id).where(*conditions)
+    return _members(User.id.in_(registered))
+
+
+def _involved(event_id: Any) -> Select[tuple[Any]]:
+    """Registered members and everyone whose attendance was recorded."""
     registered = select(EventRegistration.user_id).where(
         EventRegistration.event_id == event_id, EventRegistration.status == RegistrationStatus.REGISTERED
     )
-    return _members(User.id.in_(registered))
+    attended = select(AttendanceRecord.user_id).where(
+        AttendanceRecord.event_id == event_id,
+        AttendanceRecord.status.in_((AttendanceStatus.VERIFIED, AttendanceStatus.SUSPICIOUS)),
+    )
+    return _members(or_(User.id.in_(registered), User.id.in_(attended)))
+
+
+async def _shifts(session: AsyncSession, event_id: Any) -> list[EventShift]:
+    return list(
+        await session.scalars(select(EventShift).where(EventShift.event_id == event_id).order_by(EventShift.position))
+    )
 
 
 def _daytime(now: datetime) -> bool:
@@ -100,17 +134,150 @@ async def event_published(session: AsyncSession, event: Event) -> int:
     )
 
 
-async def attendance_opened(session: AsyncSession, event: Event) -> int:
+async def attendance_opened(session: AsyncSession, event: Event, shift: EventShift | None = None) -> int:
+    """Registered members (of this shift) learn that they can check in now."""
     text = await render(session, NotificationType.ATTENDANCE_OPEN, event_title=event.title)
     if text is None:
         return 0
+    if shift is not None:
+        text = f"{text}\n🕒 {event_times.shift_text(shift)}"
     return await enqueue_for_members(
         session,
         type_=NotificationType.ATTENDANCE_OPEN,
         text=text,
-        dedup_prefix=f"attendance_open:{event.id}",
-        members=_registered_for(event.id),
+        dedup_prefix=f"attendance_open:{event.id}" + (f":{shift.position}" if shift else ""),
+        members=_registered_for(event.id, shift),
         payload=app_button(f"events/{event.id}", "✅ Davomatni belgilash"),
+        priority=2,
+    )
+
+
+async def _release_keys(session: AsyncSession, event: Event) -> None:
+    """The event moved: reminders already queued or sent for the old time give way to new ones."""
+    suffix = "~" + event_times.stamp(datetime.now(UTC))
+    for prefix in (f"event_reminder:{event.id}:", f"attendance_open:{event.id}"):
+        await session.execute(
+            update(Notification)
+            .where(Notification.dedup_key.like(f"{prefix}%"), ~Notification.dedup_key.contains("~"))
+            .values(
+                dedup_key=Notification.dedup_key + suffix,
+                status=func.coalesce(
+                    func.nullif(Notification.status, NotificationStatus.PENDING.value),
+                    NotificationStatus.SKIPPED.value,
+                ),
+            )
+        )
+    await session.execute(
+        update(ChannelPost)
+        .where(ChannelPost.dedup_key.like(f"event_reminder:{event.id}:%"), ~ChannelPost.dedup_key.contains("~"))
+        .values(
+            dedup_key=ChannelPost.dedup_key + suffix,
+            status=func.coalesce(
+                func.nullif(ChannelPost.status, ChannelPostStatus.PENDING.value), ChannelPostStatus.CANCELLED.value
+            ),
+        )
+    )
+
+
+async def event_changed(session: AsyncSession, event: Event, shifts: list[EventShift]) -> int:
+    """New time or place of a published event: posts and reminders follow, registered members are told."""
+    await _release_keys(session, event)
+    await channel.event_changed(session, event, shifts)
+    place = f"\n📍 {html.escape(event.location)}" if event.location else ""
+    message = (
+        f"🔔 <b>O'zgarish!</b> «{html.escape(event.title)}» tadbiri endi:\n"
+        f"🗓 {event_times.when_text(event, shifts)}{place}\n\n"
+        "Ro'yxatingiz saqlanib qoldi — eslatmani yangi vaqtga yuboramiz."
+    )
+    return await enqueue_for_members(
+        session,
+        type_=NotificationType.SYSTEM,
+        text=await render(session, NotificationType.SYSTEM, message=message) or message,
+        dedup_prefix=f"event_change:{event.id}:{event_times.stamp(event.starts_at)}",
+        members=_registered_for(event.id),
+        payload=app_button(f"events/{event.id}"),
+        priority=2,
+    )
+
+
+async def event_cancelled(session: AsyncSession, event: Event) -> int:
+    await channel.event_cancelled(session, event)
+    await _release_keys(session, event)
+    message = (
+        f"❌ «{html.escape(event.title)}» tadbiri bekor qilindi. "
+        "Noqulaylik uchun uzr — yangi uchrashuvni albatta e'lon qilamiz."
+    )
+    return await enqueue_for_members(
+        session,
+        type_=NotificationType.SYSTEM,
+        text=await render(session, NotificationType.SYSTEM, message=message) or message,
+        dedup_prefix=f"event_cancel:{event.id}",
+        members=_registered_for(event.id),
+        priority=2,
+    )
+
+
+async def event_finished(session: AsyncSession, event: Event) -> int:
+    """The event is over: the super admins are reminded about the report; when ratings are switched
+    off, the members who came get a thank-you (otherwise the rating request thanks them)."""
+    from app.services import features
+    from app.services.rbac import super_admins
+
+    attended = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(AttendanceRecord)
+            .where(
+                AttendanceRecord.event_id == event.id,
+                AttendanceRecord.status.in_((AttendanceStatus.VERIFIED, AttendanceStatus.SUSPICIOUS)),
+            )
+        )
+        or 0
+    )
+    message = (
+        f"🏁 <b>«{html.escape(event.title)}» tadbiri yakunlandi</b>\n\nQatnashdi: {attended} nafar a'zo.\n"
+        "Hisobotini tayyorlab qo'yamizmi? Rasmlarni yuklasangiz, kanalga chiroyli post ham chiqadi 📸"
+    )
+    queued = await enqueue_for_members(
+        session,
+        type_=NotificationType.SYSTEM,
+        text=message,
+        dedup_prefix=f"event_done:{event.id}",
+        members=super_admins(),
+        payload={"buttons": [{"text": "📝 Hisobot tayyorlash", "admin_route": f"reports?event={event.id}"}]},
+        priority=3,
+    )
+    if attended and await features.recipients(session, "event_feedback") is None:
+        thanks = (
+            f"✅ Siz «{html.escape(event.title)}» tadbirida qatnashdingiz! Ballaringiz hisobga olindi. "
+            "Keyingi uchrashuvda ko'rishguncha — mutolaa davom etsin 📚"
+        )
+        attendees = select(AttendanceRecord.user_id).where(
+            AttendanceRecord.event_id == event.id,
+            AttendanceRecord.status.in_((AttendanceStatus.VERIFIED, AttendanceStatus.SUSPICIOUS)),
+        )
+        queued += await enqueue_for_members(
+            session,
+            type_=NotificationType.SYSTEM,
+            text=await render(session, NotificationType.SYSTEM, message=thanks) or thanks,
+            dedup_prefix=f"event_thanks:{event.id}",
+            members=_members(User.id.in_(attendees)),
+            priority=6,
+        )
+    return queued
+
+
+async def event_stopped(session: AsyncSession, event: Event) -> int:
+    """The super admin stopped the event early: everyone involved is told it is over."""
+    message = (
+        f"⏹ «{html.escape(event.title)}» tadbiri yakunlandi. Kelganingiz uchun rahmat — keyingi uchrashuvgacha! 📚"
+    )
+    return await enqueue_for_members(
+        session,
+        type_=NotificationType.SYSTEM,
+        text=await render(session, NotificationType.SYSTEM, message=message) or message,
+        dedup_prefix=f"event_stopped:{event.id}",
+        members=_involved(event.id),
         priority=2,
     )
 
@@ -138,9 +305,18 @@ async def book_published(session: AsyncSession, book: Book) -> int:
 
 
 async def test_results(session: AsyncSession, test: Test, standings: list[dict[str, Any]]) -> int:
-    """After a test closes: every participant gets their best score (and place, if any)."""
-    await channel.test_winners(session, test, standings)
-    places = {row["user_id"]: row["place"] for row in standings}
+    """After a test closes: every participant gets their best score (and place, if any).
+
+    ``standings`` may carry ``official_place`` (a test of an event: only members who attended take
+    prize places); a strong result without attendance gets a kind note instead of a place."""
+    official = [
+        {**row, "place": row.get("official_place", row["place"])}
+        for row in standings
+        if row.get("official_place", row["place"]) is not None
+    ]
+    await channel.test_winners(session, test, official)
+    places = {row["user_id"]: row["place"] for row in official}
+    missed = {row["user_id"] for row in standings if row.get("attended") is False and row["place"] <= 3}
     best: dict[Any, int] = {}
     for attempt in await session.scalars(
         select(TestAttempt).where(
@@ -160,6 +336,11 @@ async def test_results(session: AsyncSession, test: Test, standings: list[dict[s
         place = places.get(user_id)
         if place is not None and place <= len(bonuses) and bonuses[place - 1] > 0:
             text += f"\n🏅 Siz {place}-o'rinni egalladingiz: +{bonuses[place - 1]} bonus ball!"
+        elif user_id in missed:
+            text += (
+                "\n👏 Natijangiz sovrinli o'rinlar darajasida! Ammo tadbirda davomat qilinmagani uchun o'rinlar "
+                "hisobiga kirmadi — keyingi safar tadbirga keling, sovg'a sizni kutadi."
+            )
         text += "\n\nTo'g'ri javoblarni ilovada ko'rishingiz mumkin."
         await enqueue_notification(
             session,
@@ -199,34 +380,40 @@ async def event_reminders(session: AsyncSession, now: datetime | None = None) ->
             select(Event).where(
                 Event.deleted_at.is_(None),
                 Event.status == EventStatus.PUBLISHED,
-                Event.starts_at > now,
+                Event.ends_at > now,  # a later shift may still be ahead
                 Event.starts_at <= horizon,
             )
         )
     )
     queued = 0
     for event in events:
-        for minutes in offsets:
-            due = event.starts_at - timedelta(minutes=minutes)
-            if not (due <= now < due + reminder_window(minutes)):
-                continue
-            text = await render(
-                session,
-                NotificationType.EVENT_REMINDER,
-                event_title=event.title,
-                starts_at=format_human(event.starts_at),
-                location=event.location or "—",
-            )
-            if text is None:
-                return queued
-            queued += await enqueue_for_members(
-                session,
-                type_=NotificationType.EVENT_REMINDER,
-                text=text,
-                dedup_prefix=f"event_reminder:{event.id}:{minutes}",
-                members=_registered_for(event.id),
-                payload=app_button(f"events/{event.id}"),
-            )
+        shifts = await _shifts(session, event.id)
+        sessions: list[EventShift | None] = list(shifts) or [None]
+        for shift in sessions:
+            starts_at = shift.starts_at if shift else event.starts_at
+            for minutes in offsets:
+                due = starts_at - timedelta(minutes=minutes)
+                if not (due <= now < due + reminder_window(minutes)) or starts_at <= now:
+                    continue
+                text = await render(
+                    session,
+                    NotificationType.EVENT_REMINDER,
+                    event_title=event.title,
+                    starts_at=format_human(starts_at),
+                    location=event.location or "—",
+                )
+                if text is None:
+                    return queued
+                if shift is not None:
+                    text = f"{text}\n🕒 Sizning smenangiz: {event_times.shift_text(shift)}"
+                queued += await enqueue_for_members(
+                    session,
+                    type_=NotificationType.EVENT_REMINDER,
+                    text=text,
+                    dedup_prefix=f"event_reminder:{event.id}:" + (f"{shift.position}:" if shift else "") + f"{minutes}",
+                    members=_registered_for(event.id, shift),
+                    payload=app_button(f"events/{event.id}"),
+                )
     return queued
 
 
@@ -387,6 +574,46 @@ async def quote_of_day(session: AsyncSession, now: datetime | None = None) -> in
 # ---------------------------------------------------------------------------- admin broadcast
 
 
+MAX_BUTTONS = 8
+_BUTTON_URL = re.compile(r"^(https?://\S+|tg://\S+)$", re.IGNORECASE)
+
+
+def parse_buttons(text: str | None) -> list[dict[str, str]]:
+    """«Matn | https://havola» lines → link buttons (the admin writes them under the message)."""
+    buttons: list[dict[str, str]] = []
+    for number, raw in enumerate((text or "").splitlines(), start=1):
+        line = raw.strip()
+        if not line:
+            continue
+        title, separator, url = line.partition("|")
+        title, url = title.strip(), url.strip()
+        if url and not url.lower().startswith(("http://", "https://", "tg://")) and url.lower().startswith("t.me/"):
+            url = f"https://{url}"
+        if not separator or not title or not _BUTTON_URL.match(url):
+            raise BadRequestError(
+                "BUTTON_INVALID", f"{number}-qator: tugma «Matn | https://havola» ko'rinishida bo'lsin."
+            )
+        if len(title) > 64:
+            raise BadRequestError("BUTTON_INVALID", f"{number}-qator: tugma matni 64 belgidan oshmasin.")
+        buttons.append({"text": title, "url": url})
+    if len(buttons) > MAX_BUTTONS:
+        raise BadRequestError("TOO_MANY_BUTTONS", f"Ko'pi bilan {MAX_BUTTONS} ta tugma qo'shish mumkin.")
+    return buttons
+
+
+async def broadcast_message(
+    session: AsyncSession, *, message: str, buttons: str | None = None, with_app_button: bool = True
+) -> tuple[str, dict[str, Any] | None]:
+    """The text and buttons exactly as members will get them."""
+    text = await render(session, NotificationType.ADMIN_MESSAGE, message=message.strip())
+    if text is None:  # template switched off: send the admin's words as plain text
+        text = html.escape(message.strip(), quote=False)
+    specs: list[dict[str, Any]] = list(parse_buttons(buttons))
+    if with_app_button:
+        specs += app_button("")["buttons"]
+    return text, ({"buttons": specs} if specs else None)
+
+
 async def broadcast(
     session: AsyncSession,
     *,
@@ -396,9 +623,12 @@ async def broadcast(
     course: int | None = None,
     group_name: str | None = None,
     with_app_button: bool = True,
+    buttons: str | None = None,
     dry_run: bool = False,
+    only_to: Any | None = None,
 ) -> int:
-    """An admin's message to all active members or a part of them. Returns the recipient count."""
+    """An admin's message to all active members or a part of them. Returns the recipient count.
+    ``only_to``: a test send to the admin themself (to see it in the bot before everybody)."""
     conditions = []
     if faculty_id is not None:
         conditions.append(User.faculty_id == faculty_id)
@@ -407,19 +637,31 @@ async def broadcast(
     if group_name:
         conditions.append(User.group_name == normalize_group(group_name))
     members = _members(*conditions)
+    text, payload = await broadcast_message(
+        session, message=message, buttons=buttons, with_app_button=with_app_button
+    )  # checks the buttons even for a count
     if dry_run:
         return int(await session.scalar(select(func.count()).select_from(members.subquery())) or 0)
-    text = await render(session, NotificationType.ADMIN_MESSAGE, message=message.strip())
-    if text is None:  # template switched off: send the admin's words as plain text
-        text = html.escape(message.strip(), quote=False)
     broadcast_id = uuid.uuid4()
+    if only_to is not None:
+        await enqueue_notification(
+            session,
+            user_id=only_to,
+            type_=NotificationType.ADMIN_MESSAGE,
+            text="🧪 <b>Sinov</b> — a'zolar xabarni shunday ko'radi:\n\n" + text,
+            dedup_key=f"broadcast-test:{broadcast_id}",
+            payload=payload,
+            priority=1,
+        )
+        await session.commit()
+        return 1
     count = await enqueue_for_members(
         session,
         type_=NotificationType.ADMIN_MESSAGE,
         text=text,
         dedup_prefix=f"broadcast:{broadcast_id}",
         members=members,
-        payload=app_button("") if with_app_button else None,
+        payload=payload,
         priority=3,
     )
     record_audit(

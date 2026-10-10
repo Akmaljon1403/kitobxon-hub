@@ -69,6 +69,9 @@ export interface Book {
   completed_count: number
   created_at: string
   updated_at: string
+  /** The cover shown to members: the uploaded picture or the cover link. */
+  cover_image?: string | null
+  cover_uploaded?: boolean
 }
 
 export interface Reader {
@@ -144,7 +147,26 @@ export interface Statistics {
 }
 
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED'
-export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED'
+export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED' | 'PENDING'
+
+export interface EventShift {
+  id: string
+  position: number
+  starts_at: string
+  ends_at: string
+  attendance_opens_at: string
+  attendance_closes_at: string
+  capacity: number | null
+  registered_count: number
+}
+
+export interface TopEvent {
+  event_id: string
+  title: string
+  starts_at: string
+  average: number
+  ratings: number
+}
 
 export interface AdminEvent {
   id: string
@@ -165,6 +187,11 @@ export interface AdminEvent {
   attended_count: number
   attendance_open: boolean
   created_at: string
+  shifts: EventShift[]
+  rating: number | null
+  ratings_count: number
+  pending_requests: number
+  certificate_background: boolean
 }
 
 export interface AttendanceRecord {
@@ -180,12 +207,15 @@ export interface AttendanceRecord {
   checked_in_at: string
   suspicious_reason: string | null
   note: string | null
+  requested_by_name: string | null
 }
 
 export interface AttendanceOverview {
   event_id: string
   is_open: boolean
   closes_at: string | null
+  shift: number | null
+  can_approve: boolean
   registered_count: number
   attended_count: number
   records: AttendanceRecord[]
@@ -266,6 +296,8 @@ export interface AdminTest {
   published_at: string | null
   rank_bonus_awarded: boolean
   created_at: string
+  event_id: string | null
+  certificate_background: boolean
 }
 
 export interface AdminQuestion {
@@ -275,6 +307,13 @@ export interface AdminQuestion {
   points: number
   explanation: string | null
   options: { id?: string; text: string; is_correct: boolean }[]
+  /** A picture for the question (stored file). */
+  image_key?: string | null
+}
+
+export interface QuestionImport {
+  questions: AdminQuestion[]
+  warnings: string[]
 }
 
 export interface AdminTestDetail extends AdminTest {
@@ -300,6 +339,10 @@ export interface TestResultRow {
   duration_seconds: number | null
   signals: number
   place: number | null
+  /** A test of an event: was the member at the event? (null: the test has no event) */
+  attended?: boolean | null
+  /** The place counted for prizes (attendees only). */
+  prize_place?: number | null
 }
 
 export interface TestResults {

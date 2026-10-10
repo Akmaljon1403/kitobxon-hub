@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
 
+import { QuestionImage } from '../components/QuestionImage'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { AttemptResult, ClubTest, RunningAttempt, TestReview } from '../types/api'
+import type { AttemptResult, ClubTest, RunningAttempt, TestReview, TestStandings } from '../types/api'
 import { formatEventDate } from '../utils/format'
 import { navigate } from '../utils/router'
 import { confirmAction, haptic } from '../utils/telegram'
@@ -39,6 +40,48 @@ function ResultCard({ result, test }: { result: AttemptResult; test: ClubTest })
   )
 }
 
+const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
+
+/** The places of a closed test: everybody in order, «davomatsiz» for members who missed the event. */
+function Standings({ testId }: { testId: string }) {
+  const { api } = useAuth()
+  const { state } = useAsync((signal) => api<TestStandings>(`/api/v1/tests/${testId}/standings`, { signal }), [testId])
+  if (state.status !== 'success' || state.data.rows.length === 0) return null
+  const table = state.data
+  return (
+    <>
+      <SectionTitle>🏆 O'rinlar</SectionTitle>
+      <Card className="flex flex-col gap-1.5">
+        {table.rows.map((row) => (
+          <div key={`${row.place}-${row.name}`} className={`flex items-center justify-between gap-2 text-sm ${row.me ? 'font-semibold' : ''}`}>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="w-7 shrink-0 text-right tabular-nums text-app-hint">{row.place}.</span>
+              <span className="truncate">
+                {row.prize_place ? `${MEDALS[row.prize_place]} ` : ''}
+                {row.name}
+                {row.me && ' (siz)'}
+              </span>
+              {row.attended === false && (
+                <span className="shrink-0 rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
+                  davomatsiz
+                </span>
+              )}
+            </span>
+            <span className="shrink-0 tabular-nums">
+              {row.score}/{table.max_score}
+            </span>
+          </div>
+        ))}
+        {table.event_test && (
+          <p className="mt-1 text-xs text-app-hint">
+            Tadbir testi: sovrinli o'rinlar (🥇🥈🥉), sertifikat va sovg'alar faqat tadbirda davomat qilganlarga beriladi.
+          </p>
+        )}
+      </Card>
+    </>
+  )
+}
+
 function Review({ testId }: { testId: string }) {
   const { api } = useAuth()
   const { state, reload } = useAsync((signal) => api<TestReview>(`/api/v1/tests/${testId}/review`, { signal }), [testId])
@@ -55,6 +98,7 @@ function Review({ testId }: { testId: string }) {
         {review.place && (
           <p className="text-sm text-app-hint">
             {review.place}-o'rin · {review.participants} ishtirokchi
+            {review.attended === false && ' · davomatsiz (sovrinli o‘rinlarga kirmaydi)'}
           </p>
         )}
       </Card>
@@ -64,6 +108,7 @@ function Review({ testId }: { testId: string }) {
             {index + 1}-savol · {question.is_correct ? `✅ +${question.points_awarded}` : '❌ 0'} ball
           </p>
           <p className="whitespace-pre-line font-medium">{question.text}</p>
+          {question.has_image && <QuestionImage testId={review.test_id} questionId={question.id} />}
           <ul className="flex flex-col gap-1.5">
             {question.options.map((option) => (
               <li
@@ -208,6 +253,7 @@ function Overview({
       {test.state === 'CLOSED' && finished.length === 0 && (
         <Card className="text-center text-sm text-app-hint">Bu test yopilgan. Siz unda qatnashmagansiz.</Card>
       )}
+      {test.state === 'CLOSED' && <Standings testId={test.id} />}
     </>
   )
 }

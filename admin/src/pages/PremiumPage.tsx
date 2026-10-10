@@ -61,6 +61,7 @@ interface Member {
   first_name: string
   last_name: string
   member_number: string
+  telegram_username?: string | null
 }
 
 interface Payment {
@@ -410,6 +411,24 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
     }
   }
 
+  async function undo(payment: CardPayment) {
+    setError(null)
+    if (!window.confirm("Qarorni qaytarasizmi? To'lov yana «kutilmoqda» bo'ladi (tasdiqlangan Premium bekor qilinadi), a'zoga xabar boradi.")) return
+    try {
+      await api(`/api/v1/admin/premium/card-payments/${payment.id}/undo`, { method: 'POST' })
+      reload()
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    }
+  }
+
+  const canUndo = (payment: CardPayment) =>
+    payment.status !== 'PENDING' &&
+    !payment.delivered_at &&
+    payment.decided_at !== null &&
+    Date.now() - new Date(payment.decided_at).getTime() < 48 * 3600 * 1000
+
   async function delivered(payment: CardPayment) {
     setError(null)
     if (!window.confirm(`${payment.member.last_name} ${payment.member.first_name} ga ${payment.stars} ⭐ yubordingizmi?`)) return
@@ -464,18 +483,29 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
                 ) : payment.kind === 'STARS' && payment.status === 'APPROVED' && !payment.delivered_at ? (
                   <>
                     <p className="mb-1 max-w-xs whitespace-normal text-xs text-app-hint">
-                      Telegram'da a'zoga {payment.stars} ⭐ sovg'a qiling (profil → 🎁 Sovg'a yuborish → Stars), so'ng belgilang:
+                      fragment.com/stars/buy → Recipient: @{payment.member.telegram_username ?? '—'} → {payment.stars} ⭐ sotib oling, so'ng
+                      belgilang:
                     </p>
-                    <Button onClick={() => void delivered(payment)}>⭐ Stars yuborildi</Button>
+                    <Button onClick={() => void delivered(payment)}>⭐ Stars yuborildi</Button>{' '}
+                    <Button variant="ghost" onClick={() => void undo(payment)}>
+                      ↩️ Qaytarish
+                    </Button>
                   </>
                 ) : (
-                  <Badge tone={payment.status === 'APPROVED' ? 'success' : 'warning'}>
-                    {payment.status === 'APPROVED'
-                      ? payment.kind === 'STARS'
-                        ? 'Stars yuborilgan'
-                        : 'Tasdiqlangan'
-                      : `Rad etilgan: ${payment.reject_reason ?? ''}`}
-                  </Badge>
+                  <>
+                    <Badge tone={payment.status === 'APPROVED' ? 'success' : 'warning'}>
+                      {payment.status === 'APPROVED'
+                        ? payment.kind === 'STARS'
+                          ? 'Stars yuborilgan'
+                          : 'Tasdiqlangan'
+                        : `Rad etilgan: ${payment.reject_reason ?? ''}`}
+                    </Badge>
+                    {canUndo(payment) && (
+                      <Button variant="ghost" className="ml-1" onClick={() => void undo(payment)} title="Xato qaror bo'lsa — 48 soat ichida">
+                        ↩️ Qaytarish
+                      </Button>
+                    )}
+                  </>
                 )}
               </td>
             </tr>

@@ -38,3 +38,8 @@ class Certificate(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     revoked_at: Mapped[datetime | None] = mapped_column()
     revoke_reason: Mapped[str | None] = mapped_column(Text)
     file_key: Mapped[str | None] = mapped_column(String(512))
+    # One of app.services.certificate_designs (taken in turn), or "custom" for an uploaded background.
+    design: Mapped[str | None] = mapped_column(String(32))
+    background_key: Mapped[str | None] = mapped_column(String(512))  # the uploaded background, if any
+    downloads: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    design_changes: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")

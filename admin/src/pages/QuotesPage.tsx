@@ -36,6 +36,24 @@ export function QuotesPage() {
         subtitle="«Rejalashtirilgan» iqtibos belgilangan kuni «Kun iqtibosi» sifatida yuboriladi. Iqtiboslarni o'ylab topmang — faqat kitobdan aynan oling."
         actions={can('BOOK_CREATE') && <Button onClick={() => setEditing('new')}>+ Yangi iqtibos</Button>}
       />
+      <details className="rounded-xl border border-app-border bg-app-bg p-3 text-sm">
+        <summary className="cursor-pointer font-medium">ℹ️ Holatlar nimani bildiradi?</summary>
+        <ul className="mt-2 flex flex-col gap-1 text-app-hint">
+          <li>
+            <b className="text-app-text">Qoralama</b> — saqlangan, lekin hech kimga yuborilmaydi. Tahrir qilib turish uchun.
+          </li>
+          <li>
+            <b className="text-app-text">Rejalashtirilgan</b> — sana belgilangan: o'sha kuni Sozlamalardagi vaqtda (odatda 09:00) «💬 Kun
+            iqtibosi» bo'lib a'zolarga va kanalga chiqadi. Sana qo'yilmasa, yuborilmaydi.
+          </li>
+          <li>
+            <b className="text-app-text">Yuborilgan</b> — allaqachon yuborilgan; kitob sahifasida ko'rinishda qoladi.
+          </li>
+          <li>
+            <b className="text-app-text">Arxiv</b> — yashirilgan: yuborilmaydi va ilovada ko'rinmaydi, lekin o'chirilmagan.
+          </li>
+        </ul>
+      </details>
       <Card>
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}

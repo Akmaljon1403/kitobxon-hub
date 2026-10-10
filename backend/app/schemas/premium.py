@@ -134,6 +134,7 @@ class MemberBrief(BaseModel):
     first_name: str
     last_name: str
     member_number: str
+    telegram_username: str | None = None
 
 
 class PaymentOut(BaseModel):

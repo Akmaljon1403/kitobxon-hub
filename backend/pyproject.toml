@@ -28,13 +28,14 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 addopts = "-ra"
+markers = ["subscription: keep the required channel subscription check on (it is off in other tests)"]
 filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 
 [tool.coverage.run]
 source = ["app"]
 # SQLAlchemy's async mode runs on greenlets; without this, lines after a database call are missed.
 concurrency = ["greenlet", "thread"]
-omit = ["app/cli.py", "app/workers/__main__.py", "app/bot/polling.py"]
+omit = ["app/cli.py", "app/workers/__main__.py", "app/bot/polling.py", "app/load_test.py"]
 
 [tool.coverage.report]
 skip_covered = true

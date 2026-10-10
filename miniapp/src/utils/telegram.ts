@@ -29,6 +29,13 @@ export function openExternalLink(url: string): void {
   else window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+/** A t.me link (a channel) inside Telegram, without closing the app. */
+export function openTelegramLink(url: string): void {
+  const webApp = getWebApp()
+  if (webApp) webApp.openTelegramLink(url)
+  else window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 export function openBot(username: string | null, start = ''): void {
   if (!username) return
   const url = `https://t.me/${username}${start ? `?start=${start}` : ''}`

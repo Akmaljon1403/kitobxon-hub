@@ -58,6 +58,7 @@ async def _points(db: AsyncSession, user_id: uuid.UUID, category: ScoreCategory)
 
 async def test_first_attendance_unlocks_first_event(client: httpx.AsyncClient, db: AsyncSession) -> None:
     admin = await _admin(db)
+    await grant_role(db, admin, "SUPER_ADMIN")  # counts at once (an admin's addition waits for approval)
     member = await create_user(db)
     event = await create_event(db)
     await db.commit()

@@ -327,7 +327,209 @@ akkauntlardan himoya qiladi. Bir a'zo oyiga 5 tagacha mukofot oladi.
 Sozlash: **⚙️ Sozlamalar → 👥 Do'stlarni taklif qilish** (ball, Premium kunlar, oylik chegara); butunlay
 o'chirish — **🧩 Imkoniyatlar → 👥 Do'stlarni taklif qilish**.
 
-## 15. Kundalik ish — qisqa ro'yxat
+## 15. Tadbirlar: smenalar, qo'lda davomat, vaqtni o'zgartirish
+
+- **Smenalar**: bir tadbir bir necha vaqtda o'tsa (masalan, 1-smena 10:00, 2-smena 14:00), tadbirga
+  smenalar qo'shing. A'zo o'z smenasini tanlab ro'yxatdan o'tadi, davomat har smenada alohida ochiladi.
+  Qaysi smenaga kelmasin — **ball bir marta** beriladi, tadbir testi ham **bir marta** ishlanadi.
+- **Qo'lda davomat**: kodni skanerlay olmagan a'zoni admin sababini yozib qo'shadi. Oddiy admin
+  qo'shgan yozuv **bosh administrator tasdiqlagandan** keyin ball beradi (tasdiqlash so'rovi botga
+  tugmalar bilan keladi); bosh administrator qo'shsa — darhol.
+- **Vaqt yoki joy o'zgarsa**: tadbirni tahrirlang — davomat oynasi tadbir bilan birga suriladi,
+  ro'yxatdan o'tganlarga xabar o'zi boradi, eslatmalar va kanal postlari yangi vaqtga moslashadi.
+- Tadbir vaqti tugagach **o'zi «o'tkazildi»** bo'ladi; 30 daqiqadan keyin qatnashchilardan ⭐ baho
+  so'raladi. Baholar bo'yicha tadbirlar reytingi **📈 Tahlillar** da.
+- Hisobot tasdiqlangach, uni rasmlari bilan kanalga **post** qilish mumkin.
+
+## 16. Sertifikat dizaynlari
+
+12 ta tayyor dizayn bor, ular navbat bilan almashadi (bir xil sertifikatlar ketma-ket chiqmaydi).
+**🎓 Sertifikatlar → Dizaynlar** da hammasini ko'rasiz. Tadbir yoki test uchun **o'z fon rasmingizni**
+yuklasangiz (tahrirlash sahifasida «Sertifikat dizayni»), ism, matn, sana va QR kod shu rasm ustiga
+yoziladi.
+
+- A'zo sertifikatini ilovada ko'radi; **yuklab olish**: Premiumsiz — har sertifikat uchun
+  `certificates.free_downloads` marta (odatda 1), Premium — cheklovsiz.
+- Premium a'zo dizaynni `certificates.design_changes` marta (odatda 3) almashtira oladi; QR kod va
+  raqam o'zgarmaydi.
+- Imzo egasi: **Sozlamalar** → `certificates.signer_title`, `certificates.signer_name`.
+
+## 17. Majburiy obuna
+
+Bot va ilovadan faqat klub kanaliga obuna bo'lganlar foydalanadi (adminlardan so'ralmaydi).
+Obuna bo'lmagan kishiga kanal tugmasi va **«✅ Obuna bo'ldim»** chiqadi — bosgach, to'xtagan joyidan
+davom etadi.
+
+- Qaysi kanallar: **Sozlamalar** → `subscription.channels` (vergul bilan: `@kanal`, yopiq kanal uchun
+  `-100…=https://t.me/+taklif`). Bo'sh bo'lsa — klub kanali.
+- **Bot o'sha kanallarda administrator bo'lishi shart**, aks holda tekshiruv o'tkazib yuboriladi
+  (a'zolar to'xtab qolmasligi uchun).
+- O'chirish: `subscription.required` → o'chiq.
+
+## 18. Yangi a'zolar: tanishuv va bepul Premium sinov
+
+Ro'yxatdan o'tgach, bot qisqa tanishuv ko'rsatadi (davomat, testlar, kitoblar, ilova) va har bir
+a'zoga **bir marta** `premium.trial_days` kunlik (odatda 7) bepul Premium beradi. Sinovdagi
+imkoniyatlar ilovada 💎 belgisi bilan ko'rinadi. Tasdiqlash yoqilgan bo'lsa, sinov admin
+tasdiqlagan kundan boshlanadi.
+
+## 19. To'lovlar guruhi, cheklar va premium emojilar
+
+**To'lovlar guruhi** — barcha cheklar (Premium, Stars, hissa) va to'lov savollari bitta joyga
+kelishi uchun:
+
+1. Telegram'da yopiq guruh yarating, botni va to'lovlarni tekshiruvchi adminlarni qo'shing,
+   botni guruhda **administrator** qiling.
+2. **Sozlamalar** → `payments.chat_id` — guruh @username'i yoki `-100…` raqami.
+
+Chek kelganda: **✅ Tasdiqlash** yoki **❌ Rad etish** → tayyor sabablardan birini tanlaysiz
+(«Chek o'qilmayapti yoki to'liq emas», «Summa tarif narxiga mos emas», «To'lov kartaga kelib
+tushmagan») yoki **✍️ Boshqa sabab** ni yozasiz. Adashib bosilgan qarorni **48 soat ichida**
+**↩️ Qaytarish** bilan bekor qilasiz. Guruh sozlanmagan bo'lsa, cheklar bosh
+administratorlarga botda keladi. Hissa (donat) uchun chek so'ralmaydi.
+
+**Premium emojilar** — bot xabarlaridagi oddiy emojilarni Telegram premium (animatsion) emojilariga
+almashtirish: botga `/emoji` yozing va premium emojili xabar yuboring — bot ularni eslab qoladi.
+
+> ⚠️ Cheklov (Telegram qoidasi): bot premium emojini xabarda faqat **Fragment'da sotib olingan
+> username**ga ega bo'lsa ko'rsata oladi. Aks holda Telegram xatosi chiqadi — bot buni sezib, xabarni
+> oddiy emojilar bilan yuboradi va bir soat urinmaydi. Ya'ni hech narsa buzilmaydi.
+
+## 20. Testlar: fayldan yuklash, rasmli savollar, natijalar
+
+**Fayldan yuklash** — test sahifasida **Fayldan yuklash (TXT, Word, PDF)**, 15 MB gacha:
+
+```
+1. «O'tkan kunlar» romani muallifi kim?
+A) Cho'lpon
+*B) Abdulla Qodiriy
+C) Oybek
+Izoh: Roman 1922–1925-yillarda yozilgan.
+```
+
+- To'g'ri javob: oldiga yoki oxiriga `*` (yoki `+`, `#`), yoki alohida `Javob: B` qatori; Word'da
+  **qalin** yoki rang bilan belgilansa ham bo'ladi.
+- `(2 ball)` — savolga 2 ball; `Izoh:` — testdan keyin ko'rinadigan izoh.
+- Word yoki PDF'da savol tagidagi **rasm** o'sha savolga biriktiriladi. Rasmni qo'lda ham qo'shish
+  mumkin.
+- Hech narsa darhol saqlanmaydi: savollar tahrirlovchiga tushadi, ogohlantirishlarni o'qib,
+  tekshirib, **Saqlash** ni bosasiz.
+
+**Natijalar**: tadbirga bog'langan testda davomatdan o'tmagan a'zolar ham ro'yxatda turadi, lekin
+**«davomatsiz»** belgisi bilan — sovrinli o'rin, bonus ball va sertifikat faqat davomatdan
+o'tganlarga. Testni bir marta ishlash mumkin (smenalar bo'lsa ham).
+
+**Promokodlarni tarqatish**: **🎁 Sovg'alar** → **🎟 Promokodlarni test g'oliblariga tarqatish**: davr
+va testlarni tanlaysiz, avval reja ko'rsatiladi (1-o'rinlar birinchi, bir a'zoga bitta kod, oldin
+olganlar chiqarib tashlanadi), keyin bitta tugma bilan tarqatiladi va g'oliblarga xabar boradi.
+
+## 21. Kitoblar
+
+- **Muqova**: kitob tahririda rasm yuklang (yoki havola). Ilova va kanal postlarida ko'rinadi.
+- **Muddat**: kitobni muddatdan keyin o'qib tugatgan a'zo «kech o'qildi» deb belgilanadi va **ball
+  olmaydi** (o'qiganligi tarixda qoladi).
+- Tadbirga kitob biriktirilgan bo'lsa, tadbirga kelgan a'zo kitobni o'qigan hisoblanadi.
+
+## 22. Yordam, /stop va tugmali xabarlar
+
+- **Savol-javoblar**: botda **💬 Yordam → ❓ Savol-javoblar** va ilovada **Yordam** sahifasi —
+  ball, tadbir, test, kitob, hujjat, Premium, hisob mavzulari bo'yicha. Topa olmasa — **✉️ Adminga
+  yozish** (bloklangan yoki klubdan chiqqan a'zo ham yoza oladi).
+- **/stop** — a'zo istalgan jarayonni (ro'yxatdan o'tish, to'lov, murojaat) to'xtatib, menyuga
+  qaytadi.
+- **📢 Xabarlar** (e'lon): matn ostiga **havola tugmalari** qo'shish mumkin — har qatorga bittadan:
+  `Ro'yxatdan o'tish | https://havola`. **👀 Ko'rib chiqish** — a'zolar xabarni qanday ko'rishini va
+  necha kishiga borishini ko'rasiz, **🧪 O'zimga sinov** — avval o'zingizga keladi. «Yuborish»
+  faqat ko'rib chiqilgandan keyin ochiladi.
+
+## 23. 🗂 Hujjatlar markazi
+
+**Admin panel → 🗂 Hujjatlar**: talabalar ro'yxati va faolligi, statistika (QR kodlar ilovasi bilan),
+davomat, test natijalari, a'zolar, sertifikatlar, kitoblar, tadbir hisoboti — **Excel, Word yoki
+PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlanadi.
+
+- Kompyuterda — **📥** (yuklab olish); telefonda — **📨 Botga** (fayl bot chatingizga keladi).
+- Har bir hujjat faqat tegishli huquqi bor adminga ko'rinadi.
+- A'zo o'zi ham ilovada portfolio kartasidagi **Ma'lumotnoma (PDF / Word)** tugmasi bilan o'z
+  faoliyati haqida ma'lumotnoma oladi (bot chatiga keladi).
+
+## 24. O'quv yillari va faol bo'lmagan a'zolar (o'zi ishlaydi)
+
+- **Har yili 1-sentabr**: faol a'zolarning kursi bittaga oshadi (oxirgi kurs o'zgarmaydi),
+  **«2027–2028 o'quv yili»** mavsumi boshlanadi va a'zolarga xabar boradi. Reyting va hisobotlar
+  yillar bo'yicha aralashmaydi; a'zolar, ballar tarixi, kitoblar, sertifikatlar joyida qoladi.
+  Sozlamalar: `academic.year_start` (boshlanish kuni), `academic.promote_courses`,
+  `academic.auto_season`.
+- **Uzoq vaqt kirmagan a'zo** (`membership.inactive_days`, odatda 365 kun): avval «👋 Sizni ancha
+  vaqtdan beri ko'rmadik» eslatmasi va **✋ Men shu yerdaman** tugmasi; 7 kundan keyin hisob
+  **«faol emas»** bo'ladi — xabarlar to'xtaydi, hech narsa o'chmaydi. Botga yoki ilovaga kirsa,
+  **o'zi faollashadi**. Adminlarga tegilmaydi. `0` — o'chiq.
+- **Eski yozuvlar** (yetkazilgan xabarlar, test signallari, eski bot holatlari) har kecha
+  tozalanadi — baza yillar o'tib ham tez ishlaydi. Audit jurnali hech qachon o'chmaydi.
+
+## 25. 🔍 Qidiruv
+
+Admin panel tepasidagi qidiruv qatoriga yozing (masalan **«stiker»**, a'zo familiyasi, telefon,
+KH-raqam, kitob, tadbir, test): a'zolar, kitoblar, tadbirlar, testlar, sovg'alar, panel bo'limlari,
+sozlamalar va **bot buyruqlari** bitta ro'yxatda chiqadi. Natijani bosing — kerakli joy ochiladi
+(sozlama bo'lsa, o'sha qatorga olib boradi). Har kim faqat ruxsati bor narsani ko'radi.
+
+## 26. Boshqa tashkilotlarga ijaraga berish (litsenziya)
+
+Kitobxon Hub'ni boshqa institut, kollej yoki maktabga ijaraga berish mumkin. Har bir tashkilot
+**o'z nusxasini** oladi: o'z serveri (yoki Render), o'z bazasi, o'z boti, o'z bosh administratori —
+ma'lumotlari sizniki bilan hech qachon aralashmaydi.
+
+Litsenziya kalitini **faqat siz** chiqarasiz (maxfiy kalit sizning kompyuteringizda):
+
+```bash
+cd backend
+python -m app.licence_tool keygen owner-key.pem          # bir marta; owner-key.pem ni hech kimga bermang
+python -m app.licence_tool issue owner-key.pem "Namuna kolleji" 2027-12-31 --members 2000
+```
+
+Ijarachi nusxasiga `LICENCE_REQUIRED=true`, `LICENCE_PUBLIC_KEY=…` va `LICENCE_KEY=…` qo'yiladi.
+
+- Muddat tugashiga 30 kun qolganda admin panel bosh sahifasida ogohlantirish chiqadi.
+- Muddat tugagach **7 kun** imtiyoz; keyin a'zolar uchun xizmat to'xtaydi («vaqtincha to'xtatilgan»
+  xabari), xabarlar yuborilmaydi. **Adminlar ishlashda davom etadi** va hamma hujjatlarni yuklab
+  oladi. Yangi kalit qo'yilishi bilan hammasi joyidan davom etadi.
+- `--members` — a'zolar chegarasi (to'lsa, yangi ro'yxatdan o'tish to'xtaydi).
+- O'z klubingiz serverida litsenziya **kerak emas** (`LICENCE_REQUIRED` o'chiq).
+
+**Narx taklifi** (bitta tashkilot uchun, server xarajati alohida):
+
+| Tarif | A'zolar | Yillik | Oylik |
+|---|---|---|---|
+| Kichik (maktab, kollej) | 300 gacha | 3 000 000 so'm | 300 000 so'm |
+| O'rta (institut) | 1 500 gacha | 6 000 000 so'm | 600 000 so'm |
+| Katta (universitet) | cheklovsiz | 12 000 000 so'm | 1 200 000 so'm |
+
+O'rnatish va sozlash bir martalik 1 500 000 so'm; birinchi oy sinov uchun bepul. Yillik to'lovda
+2 oy chegirma (jadvaldagi yillik narx shuni hisobga olgan).
+
+## 27. Bot buyruqlari
+
+| Buyruq | Kim uchun | Nima qiladi |
+|---|---|---|
+| `/start` | hamma | Boshlash, ro'yxatdan o'tish, menyu |
+| `/menu` | a'zo | Bosh menyu |
+| `/help` | hamma | Yordam, savol-javoblar, adminga yozish |
+| `/davomat` | a'zo | Tadbirda davomat |
+| `/pasport` | a'zo | Kitobxon pasporti |
+| `/premium` | a'zo | Premium va klubni qo'llab-quvvatlash |
+| `/taklif` | a'zo | Do'stni taklif qilish havolasi |
+| `/portfolio` | a'zo | Kitobxonlik portfoliosi (PDF va Word) |
+| `/cancel` | hamma | Joriy amalni bekor qilish |
+| `/stop` | hamma | Hamma jarayonni to'xtatib, menyuga qaytish |
+| `/paysupport` | hamma | To'lov bo'yicha yordam |
+| `/terms` | hamma | To'lov shartlari |
+| `/myid` | hamma | Telegram ID ni bilish |
+| `/admin` | admin | Qisqa holat va admin panel havolasi |
+| `/stiker` | admin | Kanal va tabriklar uchun stikerlarni saqlash (tugatish — `/tayyor`) |
+| `/emoji` | admin | Premium emojilarni o'rgatish (tugatish — `/tayyor`) |
+
+## 28. Kundalik ish — qisqa ro'yxat
 
 
 
@@ -338,5 +540,6 @@ o'chirish — **🧩 Imkoniyatlar → 👥 Do'stlarni taklif qilish**.
 - Kanal posti haqida xabar kelsa — ko'zdan kechiring (javob bermasangiz ham o'zi chiqadi).
 - Tiklash so'rovlari kelsa — ✅ yoki ❌.
 - Haftada bir: **📨 Murojaatlar**, **⭐ baholar**, **📈 Tahlillar**, **📣 Telegram kanal** (xato yo'qmi).
+- Oyda bir: **Sozlamalar → 🩺 Tizim holati** (hammasi ✅ mi), bosh sahifadagi ogohlantirishlar.
 - Oy boshida: **🗓 Davr hisoboti** → PDF → institut rahbariyatiga; **🎲 Sovg'a o'yinlari** — kodlar
   yetarlimi.

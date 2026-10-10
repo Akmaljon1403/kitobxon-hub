@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { FeatureLocked, useFeature } from '../components/FeatureGate'
+import { FeatureLocked, TrialBadge, useFeature } from '../components/FeatureGate'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -170,7 +170,9 @@ export function RankingPage() {
   const isFree = period === 'week' && scope === 'all'
   return (
     <>
-      <h1 className="px-1 pt-1 text-xl font-semibold">🏆 Reyting</h1>
+      <h1 className="flex items-center gap-2 px-1 pt-1 text-xl font-semibold">
+        🏆 Reyting <TrialBadge code="ranking_full" />
+      </h1>
       {periods.length > 1 && (
         <Segmented options={periods} value={period} onChange={setPeriod} locked={full === 'premium' ? ['month', 'all'] : []} />
       )}

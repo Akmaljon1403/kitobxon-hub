@@ -65,6 +65,27 @@ The test database is wiped and rebuilt by the suite — never point `TEST_DATABA
 At the start of a run the schema is built by the real Alembic migrations (upgrade → downgrade →
 upgrade), and before every test all tables are truncated and reference data is re-seeded.
 
+## Load test
+
+`backend/app/load_test.py` simulates many members opening the Mini App at once (profile, books,
+events, tests, rankings). Run it against a throw-away copy — it adds made-up members:
+
+```bash
+cd backend
+export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost/kitobxon_load SECRET_KEY=<any 32+ chars>
+alembic upgrade head
+uvicorn app.main:app --port 8000 &          # same DATABASE_URL and SECRET_KEY
+python -m app.load_test --seed 3000 --concurrency 100 --requests 4000
+```
+
+It refuses to run with `ENVIRONMENT=production` and prints the median / 95th percentile / slowest
+answer time and the errors for every screen. Reference result (4 vCPU, server, PostgreSQL and the
+load generator on one machine, 3,000 members, 450k score ledger rows): one server process
+~120 requests/s, 15–20 ms per request without queueing. The rankings are computed once per period
+and kept for 30 s per process (cleared at once by new points written in that process); settings
+are kept for 10 s. Both caches are off under `ENVIRONMENT=test`, except in the tests that exercise
+them.
+
 ## Test organisation
 
 | File | Covers |

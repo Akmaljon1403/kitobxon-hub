@@ -16,8 +16,26 @@ from aiogram.utils.token import TokenValidationError, validate_token
 
 from app.bot import texts
 from app.bot.errors import on_error
-from app.bot.handlers import admin, common, fallback, feedback, membership, payments, registration, sections, support
-from app.bot.middlewares import DbSessionMiddleware, FloodMiddleware, MemberMiddleware
+from app.bot.handlers import (
+    admin,
+    common,
+    events,
+    fallback,
+    feedback,
+    membership,
+    payments,
+    registration,
+    sections,
+    support,
+)
+from app.bot.middlewares import (
+    DbSessionMiddleware,
+    FloodMiddleware,
+    GroupMiddleware,
+    LicenceMiddleware,
+    MemberMiddleware,
+    SubscriptionMiddleware,
+)
 from app.bot.storage import PostgresStorage
 from app.core.config import Settings, get_settings
 from app.security.crypto import derive_key
@@ -34,6 +52,7 @@ COMMANDS = [
     BotCommand(command="taklif", description="Do'stni klubga taklif qilish"),
     BotCommand(command="help", description="Yordam va adminga yozish"),
     BotCommand(command="cancel", description="Joriy amalni bekor qilish"),
+    BotCommand(command="stop", description="Hamma jarayonni to'xtatish va menyuga qaytish"),
 ]
 
 
@@ -59,12 +78,21 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.update.outer_middleware(FloodMiddleware())
     dispatcher.update.outer_middleware(DbSessionMiddleware())
     dispatcher.update.outer_middleware(MemberMiddleware())
+    # In the payments group only the admins' payment buttons work; members must be subscribed to the
+    # club channel(s) — both are checked before any handler runs.
+    dispatcher.message.outer_middleware(GroupMiddleware())
+    dispatcher.callback_query.outer_middleware(GroupMiddleware())
+    dispatcher.message.outer_middleware(LicenceMiddleware())
+    dispatcher.callback_query.outer_middleware(LicenceMiddleware())
+    dispatcher.message.outer_middleware(SubscriptionMiddleware())
+    dispatcher.callback_query.outer_middleware(SubscriptionMiddleware())
     # Order matters: free-text handlers (support messages) come after the menu buttons.
     # Payments first: Telegram's payment updates must never be taken by a waiting-for-text state.
     dispatcher.include_routers(
         payments.router,
         membership.router,
         registration.router,
+        events.router,
         common.router,
         admin.router,
         sections.router,
@@ -78,7 +106,11 @@ def create_dispatcher() -> Dispatcher:
 
 
 def create_bot(token: str) -> Bot:
-    return Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    from app.bot.emoji import CustomEmojiMiddleware
+
+    bot = Bot(token=token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot.session.middleware(CustomEmojiMiddleware())  # the club's premium emoji in every message
+    return bot
 
 
 @dataclass

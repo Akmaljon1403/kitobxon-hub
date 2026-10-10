@@ -71,12 +71,15 @@ class BookBaseOut(BaseModel):
 class BookAdminOut(BookBaseOut):
     created_at: datetime
     updated_at: datetime
+    cover_image: str | None = None  # what is shown: the uploaded cover, or the cover link
+    cover_uploaded: bool = False
 
 
 class MyReading(BaseModel):
     status: ReadingStatus
     started_at: datetime
     completed_at: datetime | None
+    late: bool = False  # finished after the deadline: in the portfolio, without points
     verified: bool
     # True when book points are only awarded after verification (setting).
     verification_required: bool = True

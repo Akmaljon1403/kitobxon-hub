@@ -4,7 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
 import type { PassportTheme } from '../types/api'
-import { saveDocument, sendToChat } from '../utils/files'
+import { saveDocument } from '../utils/files'
 import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
 import { Button, Card } from './ui'
@@ -97,28 +97,13 @@ export function PassportCard() {
           loading={busy === 'save'}
           disabled={busy !== null}
           onClick={() =>
-            void run('save', async () =>
-              (await saveDocument(api, { kind: 'passport' })) === 'dialog'
-                ? '✅ Saqlash oynasi ochildi.'
-                : '✅ Pasport bot chatiga yuborildi.',
-            )
-          }
-        >
-          📥 Yuklab olish
-        </Button>
-        <Button
-          variant="secondary"
-          className="whitespace-nowrap px-2 text-sm"
-          loading={busy === 'send'}
-          disabled={busy !== null}
-          onClick={() =>
-            void run('send', async () => {
-              await sendToChat(api, { kind: 'passport' })
-              return '✅ Pasport bot chatiga yuborildi — u yerdan ulashishingiz mumkin.'
+            void run('save', async () => {
+              await saveDocument(api, { kind: 'passport' })
+              return '✅ Pasport bot chatiga yuborildi — u yerdan saqlang yoki ulashing.'
             })
           }
         >
-          📤 Chatga yuborish
+          📥 Botga yuborish
         </Button>
         <Button
           variant="secondary"
@@ -164,7 +149,14 @@ export function PassportCard() {
 
       {themeList.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">🎨 Dizayn {!premium && <span className="text-app-hint">— 💎 Premium</span>}</p>
+          <p className="text-sm font-medium">
+            🎨 Dizayn{' '}
+            {!premium ? (
+              <span className="text-app-hint">— 💎 Premium</span>
+            ) : (
+              me?.premium_trial && <span className="text-xs text-amber-600 dark:text-amber-300">💎 Premium — sinov davrida ochiq</span>
+            )}
+          </p>
           <div className="grid grid-cols-4 gap-2">
             {themeList.map((theme) => {
               const locked = theme.premium && !premium

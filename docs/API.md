@@ -423,6 +423,52 @@ Aggregates only. Groups with fewer than 3 members are left out of group statisti
 | POST | `/api/v1/admin/faculties` | `SETTINGS_MANAGE` |
 | PATCH | `/api/v1/admin/faculties/{faculty_id}` | `SETTINGS_MANAGE` — rename, reorder, deactivate (no hard delete) |
 
+### Added in rounds E1–E15
+
+Member endpoints need a member token; admin endpoints need an admin session and the permission
+the Admin Panel page uses (checked in the service layer). Members must be subscribed to the
+required channels (`403 SUBSCRIPTION_REQUIRED` with `details.channels`; `/me` and
+`/me/subscription` stay reachable). On a rented copy whose licence ended, member requests answer
+`403 LICENCE_EXPIRED`; admins keep full access.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/meta/faq` | Questions and answers (same as in the bot), public |
+| GET | `/api/v1/meta/certificate-designs` | Standard certificate designs in the order they take turns; pictures at `/api/v1/meta/certificate-designs/{code}.png` |
+| GET | `/api/v1/meta/book-covers/{book_id}.jpg` | Uploaded book cover, public |
+| GET | `/api/v1/me/subscription?fresh=` | Missing required channels (`fresh=true` checks Telegram again) |
+| GET / POST | `/api/v1/me/support` | The member's conversation with the club / write (`{"text","topic"}`) |
+| GET | `/api/v1/me/passport` | Kitobxon passport (PNG) |
+| GET | `/api/v1/me/certificates/{id}`, `/preview.png` | One certificate; a watermarked picture to look at in the app |
+| PUT | `/api/v1/me/certificates/{id}/design` | Premium: change the design of one's copy (`certificates.design_changes` times) |
+| GET | `/api/v1/me/certificate-designs` | Designs to choose from |
+| POST | `/api/v1/me/statement/send` | `{"format":"pdf"\|"docx"}` — the bot sends the member's activity statement for the study year |
+| GET | `/api/v1/tests/{test_id}/questions/{question_id}/image` | Question picture (after the member started the test, or once it is closed) |
+| GET | `/api/v1/tests/{test_id}/standings` | Closed test: top 20 and the member; `attended=false` marks «davomatsiz» |
+| POST | `/api/v1/admin/tests/{test_id}/import` | Multipart file (TXT/DOCX/PDF, ≤ 15 MB) → questions and warnings; nothing is saved |
+| POST / GET | `/api/v1/admin/tests/{test_id}/question-images` | Upload a question picture (→ `image_key`) / fetch it by `?key=` |
+| POST | `/api/v1/admin/tests/{test_id}/unpublish` | Back to draft while nobody has started |
+| GET | `/api/v1/admin/tests/{test_id}/results.csv` | Results for Excel |
+| PUT / DELETE | `/api/v1/admin/{events\|tests}/{id}/certificate-background` | Own certificate background / back to the standard designs |
+| GET | `/api/v1/admin/{events\|tests}/{id}/certificate-preview.png` | Sample of the winners' certificate |
+| POST | `/api/v1/admin/events/{event_id}/finish` | Super admin: end a running event now |
+| POST | `/api/v1/admin/events/{event_id}/attendance/close` | Close check-in |
+| POST | `/api/v1/admin/attendance/{record_id}/approve`, `/reject` | Super admin: decide on a member added by hand |
+| GET | `/api/v1/admin/events/top-rated` | Events by members' ratings |
+| PUT / DELETE | `/api/v1/admin/books/{book_id}/cover` | Upload / remove the cover picture |
+| DELETE | `/api/v1/admin/users/{user_id}/passport-photo` | Remove an unsuitable passport photo |
+| POST | `/api/v1/admin/notifications/broadcast/preview` | Rendered message, link buttons and recipient count; `broadcast` accepts `buttons` («Matn \| https://…» lines) and `test` (send only to oneself) |
+| POST | `/api/v1/admin/reports/{report_id}/archive` | Archive an approved report |
+| GET | `/api/v1/admin/rewards/distribution-plan?days=60&reward_id=` | Who would get codes from the tests of the last `days` days: 1st places first, one per member, earlier holders left out |
+| POST | `/api/v1/admin/rewards/{reward_id}/distribute-test-places` | Add codes (one per line) and give them out by the plan |
+| GET / PATCH | `/api/v1/admin/premium/plans`, `/plans/{plan_id}` | All Premium plans / change price or length |
+| POST | `/api/v1/admin/premium/card-payments/{payment_id}/undo` | Undo a decision within 48 hours |
+| GET | `/api/v1/admin/documents` | Document templates this admin may prepare |
+| GET | `/api/v1/admin/documents/{code}/file?format=xlsx\|docx\|pdf&date_from&date_to&faculty_id&course&group_name&event_id&test_id&report_id` | Download a document |
+| POST | `/api/v1/admin/documents/{code}/send` | Same parameters in the body: the bot sends the file to the admin |
+| GET | `/api/v1/admin/search?q=` | Members, books, events, tests, rewards, sections, settings and bot commands (≥ 2 characters), filtered by the admin's permissions |
+| GET | `/api/v1/admin/system/licence` | Licence of this copy: organisation, end date, member limit, days left, whether members are paused |
+
 ### Telegram
 
 | Method | Path | Notes |

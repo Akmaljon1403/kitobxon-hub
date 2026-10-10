@@ -7,6 +7,8 @@ value is validated against the declared type before it is stored.
 
 from __future__ import annotations
 
+import copy
+import time
 import uuid
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
@@ -120,9 +122,10 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("notifications.quote_of_day_time", "09:00", ClockTime, "Kun iqtibosi yuboriladigan vaqt"),
     SettingDefinition(
         "notifications.stickers",
-        True,
+        False,
         bool,
-        "Tabrik xabarlarida (g'alaba, sertifikat, yutuq) stiker va 🎉 animatsiya. Stikerlar botda /stiker orqali",
+        "Tabrik xabarlaridan keyin alohida stiker ham yuborilsin (odatda o'chiq: premium emojilar xabar ichida "
+        "— botda /emoji). 🎉 animatsiya baribir qoladi",
     ),
     # ---- Organisation (used in official reports) ----
     SettingDefinition(
@@ -144,11 +147,31 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
     SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
+    SettingDefinition(
+        "certificates.free_downloads",
+        1,
+        Annotated[int, Field(ge=0, le=20)],
+        "Premiumsiz a'zo har bir sertifikatini necha marta bepul yuklab oladi (Premium — cheklovsiz)",
+    ),
+    SettingDefinition(
+        "certificates.design_changes",
+        3,
+        Annotated[int, Field(ge=0, le=50)],
+        "Premium a'zo bitta sertifikat dizaynini necha marta almashtira oladi",
+    ),
     # ---- Card payments (Premium paid to the club's card, confirmed by the super admin) ----
     SettingDefinition(
         "payments.card_number", "", ShortText, "Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012"
     ),
     SettingDefinition("payments.card_holder", "", ShortText, "Karta egasining ismi (to'lovchi tekshirishi uchun)"),
+    SettingDefinition(
+        "payments.chat_id",
+        "",
+        ShortText,
+        "To'lovlar guruhi yoki kanali: barcha cheklar (Premium, Stars, hissa) tugmalari bilan va to'lov "
+        "bo'yicha murojaatlar shu yerga keladi. @username yoki -100… raqami; bot u yerda admin bo'lsin "
+        "(bo'sh — bosh administratorlarga botda)",
+    ),
     SettingDefinition(
         "payments.stars_packages",
         [50, 100, 250, 500],
@@ -187,6 +210,53 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=100)],
         "Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz)",
     ),
+    # ---- Study years ----
+    SettingDefinition(
+        "academic.year_start",
+        "09-01",
+        Annotated[str, StringConstraints(pattern=r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")],
+        "O'quv yili boshlanadigan kun (OO-KK): shu kuni kurslar bittaga oshadi va yangi mavsum boshlanadi",
+    ),
+    SettingDefinition(
+        "academic.promote_courses",
+        True,
+        bool,
+        "Yangi o'quv yilida faol a'zolarning kursi avtomatik bittaga oshirilsin (oxirgi kursdan oshmaydi)",
+    ),
+    SettingDefinition(
+        "academic.auto_season",
+        True,
+        bool,
+        "Har o'quv yili uchun alohida mavsum (reyting va hisobotlar yillar bo'yicha aralashmaydi)",
+    ),
+    SettingDefinition(
+        "academic.current_year",
+        0,
+        Annotated[int, Field(ge=0, le=2200)],
+        "Joriy o'quv yili boshlangan yil (avtomatik yoziladi; 0 — hali aniqlanmagan)",
+    ),
+    SettingDefinition(
+        "membership.inactive_days",
+        365,
+        Annotated[int, Field(ge=0, le=3650)],
+        "Shuncha kun botga ham, ilovaga ham kirmagan a'zo eslatmadan 7 kun keyin «faol emas» bo'ladi "
+        "(ma'lumotlari saqlanadi, qaytsa o'zi tiklanadi; 0 — o'chiq)",
+    ),
+    # ---- Required subscription ----
+    SettingDefinition(
+        "subscription.required",
+        True,
+        bool,
+        "Botdan va ilovadan foydalanish uchun kanal(lar)ga obuna majburiy (adminlardan so'ralmaydi; bot o'sha "
+        "kanallarda administrator bo'lishi kerak, aks holda tekshiruv o'tkazib yuboriladi)",
+    ),
+    SettingDefinition(
+        "subscription.channels",
+        "",
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)],
+        "Obuna bo'lish shart bo'lgan kanallar, vergul bilan: @kanal, https://t.me/kanal yoki yopiq kanal uchun "
+        "-100…=https://t.me/+taklif (bo'sh — faqat klub kanali)",
+    ),
     # ---- Telegram channel (the bot posts there as an administrator) ----
     SettingDefinition(
         "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"
@@ -199,6 +269,18 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("channel.post_quotes", True, bool, "Kun iqtibosi kanalga ham joylanadi"),
     SettingDefinition("channel.post_results", True, bool, "Test g'oliblari, sovg'a o'yinlari va oy peshqadamlari"),
     SettingDefinition("channel.post_invites", True, bool, "Har dushanba botga taklif posti"),
+    SettingDefinition(
+        "channel.post_reports",
+        True,
+        bool,
+        "Tadbir hisoboti tasdiqlanganda rasmlari bilan «... davra suhbati bo'lib o'tdi» posti",
+    ),
+    SettingDefinition(
+        "channel.more_photos_url",
+        "",
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=255, pattern=r"^(|https://\S+)$")],
+        "Hisobot postidagi «📸 Boshqa rasmlar» tugmasi havolasi (masalan, rasmlar kanali: https://t.me/...)",
+    ),
     SettingDefinition("channel.stickers", True, bool, "Avtomatik postlardan keyin saqlangan stikerlardan biri"),
     SettingDefinition(
         "channel.review_minutes",
@@ -227,10 +309,39 @@ def get_definition(key: str) -> SettingDefinition:
         raise NotFoundError("SETTING_NOT_FOUND", "Bunday sozlama mavjud emas.") from exc
 
 
+# Every request reads a few settings; they change rarely. One process keeps the stored values for
+# a few seconds (a change made here is seen at once; other processes catch up within seconds).
+SETTINGS_SECONDS = 10.0
+_stored_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def forget_cache() -> None:
+    global _stored_cache
+    _stored_cache = None
+
+
+def _cache_seconds() -> float:
+    from app.core.config import get_settings
+
+    return 0.0 if get_settings().environment == "test" else SETTINGS_SECONDS
+
+
+async def _stored_value(session: AsyncSession, key: str) -> Any:
+    global _stored_cache
+    seconds = _cache_seconds()
+    if not seconds:
+        return await session.scalar(select(SystemSetting.value).where(SystemSetting.key == key))
+    now = time.monotonic()
+    if _stored_cache is None or now - _stored_cache[0] >= seconds:
+        rows = (await session.execute(select(SystemSetting.key, SystemSetting.value))).all()
+        _stored_cache = (now, {row[0]: row[1] for row in rows})
+    return copy.deepcopy(_stored_cache[1].get(key))
+
+
 async def get_setting(session: AsyncSession, key: str) -> Any:
     """Current value of a setting, falling back to its default (and validating stored data)."""
     definition = get_definition(key)
-    stored = await session.scalar(select(SystemSetting.value).where(SystemSetting.key == key))
+    stored = await _stored_value(session, key)
     if stored is None:
         return definition.default
     try:
@@ -276,4 +387,9 @@ async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_i
         after={"value": validated},
     )
     await session.commit()
+    forget_cache()
+    if key.startswith("subscription.") or key == "channel.chat_id":
+        from app.services import subscription
+
+        subscription.forget()  # the channel list changed: everybody is checked again
     return validated

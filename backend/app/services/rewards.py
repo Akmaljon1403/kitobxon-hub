@@ -473,7 +473,13 @@ async def test_winners(session: AsyncSession, *, days: int = 60) -> list[dict[st
 
 
 async def assign_test_place(
-    session: AsyncSession, *, actor_id: uuid.UUID, reward_id: uuid.UUID, test_id: uuid.UUID, place: int
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    reward_id: uuid.UUID,
+    test_id: uuid.UUID,
+    place: int,
+    message: str | None = None,
 ) -> UserReward:
     """Give the reward to the member who took ``place`` in the test — once per place."""
     from app.models import Test
@@ -506,4 +512,108 @@ async def assign_test_place(
         # A revoked earlier gift keeps its key; the new one gets a fresh suffix.
         idempotency_key=key if revoked is None else f"{key}:{uuid.uuid4().hex[:8]}",
         allow_repeat=True,
+        message=message,
     )
+
+
+def place_message(first_name: str, test_title: str, place: int, reward_title: str, usage: str | None) -> str:
+    text = (
+        f"🎁 Tabriklaymiz, {first_name}! «{test_title}» testida {place}-o'rinni egallaganingiz uchun sizga "
+        f"«{reward_title}» promokodi sovg'a qilindi."
+    )
+    if usage and usage.strip():
+        text += f"\n\n📍 Qayerda ishlatiladi: {usage.strip()}"
+    return text + "\n\nKodni ilovadagi «🎁 Sovg'alarim» bo'limida ko'rasiz. Omad! 🍀"
+
+
+async def distribution_plan(
+    session: AsyncSession,
+    *,
+    test_ids: list[uuid.UUID] | None = None,
+    days: int = 60,
+    reward_id: uuid.UUID | None = None,
+) -> list[dict[str, Any]]:
+    """Who gets a code, in order: every 1st place first (older tests first), then 2nd places, then 3rd.
+    Places already rewarded are skipped, and a member gets one code of a reward even with several places.
+    For a test of an event only members who attended hold places."""
+    winners = await test_winners(session, days=days)
+    if test_ids:
+        wanted = set(test_ids)
+        winners = [test for test in winners if test["test_id"] in wanted]
+    slots = [
+        {
+            "test_id": test["test_id"],
+            "test_title": test["title"],
+            "closed_at": test["closed_at"],
+            "place": place["place"],
+            "user_id": place["user_id"],
+            "name": place["name"],
+        }
+        for test in winners
+        for place in test["places"]
+        if place["given_reward"] is None
+    ]
+    slots.sort(key=lambda slot: (slot["place"], slot["closed_at"]))
+    plan: list[dict[str, Any]] = []
+    seen: set[uuid.UUID] = set()
+    if reward_id is not None:  # members who already hold this reward get no second code
+        seen = set(
+            await session.scalars(
+                select(UserReward.user_id).where(
+                    UserReward.reward_id == reward_id, UserReward.status.in_(ACTIVE_ASSIGNMENT)
+                )
+            )
+        )
+    for slot in slots:
+        if slot["user_id"] in seen:
+            continue
+        seen.add(slot["user_id"])
+        plan.append(slot)
+    return plan
+
+
+async def distribute_test_places(
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    reward_id: uuid.UUID,
+    codes: list[str],
+    usage: str | None,
+    test_ids: list[uuid.UUID] | None = None,
+    days: int = 60,
+) -> dict[str, Any]:
+    """Add the codes (one per line) and hand them out by :func:`distribution_plan` until they run out."""
+    reward = await get_reward(session, reward_id)
+    reward_title = reward.title  # a rollback below would expire the object
+    added = duplicates = 0
+    if any(code.strip() for code in codes):
+        added, duplicates = await add_codes(
+            session, actor_id=actor_id, reward_id=reward_id, codes=codes, expires_at=None
+        )
+    plan = await distribution_plan(session, test_ids=test_ids, days=days, reward_id=reward_id)
+    given: list[dict[str, Any]] = []
+    waiting: list[dict[str, Any]] = []
+    for slot in plan:
+        member = await session.get(User, slot["user_id"])
+        try:
+            await assign_test_place(
+                session,
+                actor_id=actor_id,
+                reward_id=reward_id,
+                test_id=slot["test_id"],
+                place=slot["place"],
+                message=place_message(
+                    member.first_name if member else "", slot["test_title"], slot["place"], reward_title, usage
+                ),
+            )
+        except ConflictError as error:
+            await session.rollback()
+            if error.code == "NO_CODES_LEFT":
+                waiting = [slot, *plan[plan.index(slot) + 1 :]]
+                break
+            continue
+        except BadRequestError:  # the member left the club meanwhile
+            await session.rollback()
+            continue
+        given.append(slot)
+    return {"codes_added": added, "duplicates": duplicates, "given": given, "waiting": waiting}

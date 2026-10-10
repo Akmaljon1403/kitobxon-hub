@@ -6,6 +6,9 @@ database and, for report photos and PDFs, S3-compatible object storage. Redis is
 
 * Free test hosting for the project owner (Render + Neon): [TEST_HOSTING.md](TEST_HOSTING.md)
 * Going live 24/7, step by step for the owner (Uzbek): [ISHGA_TUSHIRISH.md](ISHGA_TUSHIRISH.md)
+* Moving to the institute's own server (Uzbek, ready Docker Compose bundle in `infra/institute/`:
+  PostgreSQL, the app and Caddy with automatic HTTPS, plus an encrypted daily backup script):
+  [INSTITUT_SERVERI.md](INSTITUT_SERVERI.md)
 * This page: production deployment for developers.
 
 ## 1. Recommended production setup (low cost, 24/7)
@@ -19,7 +22,13 @@ database and, for report photos and PDFs, S3-compatible object storage. Redis is
 | Redis | Only if you run more than one app container | optional |
 
 500–2,000 members fit comfortably on a single container. The design allows horizontal scaling
-later (see §6).
+later (see §6). Load test (`python -m app.load_test`, see [TESTING.md](TESTING.md)): one process
+answers ~120 requests/s with 3,000 members and three years of score history (450k ledger rows);
+`WEB_CONCURRENCY` starts more processes (`start.sh`).
+
+Copies rented to other organisations run with a signed licence (`LICENCE_REQUIRED`,
+`LICENCE_PUBLIC_KEY`, `LICENCE_KEY`; keys are issued with `python -m app.licence_tool`). The
+club's own deployment needs none.
 
 ## 2. Configuration
 

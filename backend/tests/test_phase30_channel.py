@@ -103,7 +103,7 @@ async def test_new_event_and_book_posts(db: AsyncSession) -> None:
     assert "«Kitob kechasi»" in event_post.text and "«O'tkan kunlar»</b> — Abdulla Qodiriy asarini o'qib kelamiz" in (
         event_post.text
     )
-    assert event_post.photo_key == "covers/otkan.jpg" and event_post.buttons == [channel.JOIN_BUTTON]
+    assert event_post.photo_key == "covers/otkan.jpg" and event_post.buttons == [channel.event_button(event)]
     assert event_post.scheduled_at.astimezone(local_tz()).time() >= channel.DAYTIME[0]
     assert "O'qish muddati" in book_post.text
 

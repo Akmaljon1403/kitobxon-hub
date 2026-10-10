@@ -151,7 +151,7 @@ async def test_attendance_opens_by_itself_and_code_can_be_typed(client: httpx.As
     assert await db.scalar(select(func.count()).select_from(AttendanceRecord)) == 1
 
     await harness.send(texts.BTN_ATTENDANCE)
-    assert "qayd etilgansiz" in harness.last_text()
+    assert "qatnashyapsiz" in harness.last_text()
     open_now = await client.get("/api/v1/attendance/open", headers=member_headers(await db.get(User, member_id)))
     assert open_now.json()[0]["checked_in"] is True
 
@@ -201,7 +201,8 @@ async def test_member_writes_admin_answers_in_the_bot(client: httpx.AsyncClient,
 
     harness = BotHarness(6103)
     await harness.send(texts.BTN_HELP)
-    assert harness.session.sent_messages()[-1].reply_markup.inline_keyboard[0][0].callback_data == "sup:new"
+    rows = harness.session.sent_messages()[-1].reply_markup.inline_keyboard
+    assert [row[0].callback_data for row in rows[:2]] == ["faq:list", "sup:new"]  # answers first, then write
     await harness.press("sup:new")
     assert harness.last_text() == texts.SUPPORT_ASK
     await harness.send("Test qachon ochiladi?")

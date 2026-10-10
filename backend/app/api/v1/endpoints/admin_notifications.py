@@ -10,7 +10,13 @@ from sqlalchemy import select
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.core.config import get_settings
 from app.models import AuditLog, User
-from app.schemas.notification import BroadcastHistoryItem, BroadcastIn, BroadcastOut, NotificationSummaryOut
+from app.schemas.notification import (
+    BroadcastHistoryItem,
+    BroadcastIn,
+    BroadcastOut,
+    BroadcastPreviewOut,
+    NotificationSummaryOut,
+)
 from app.security.permissions import Perm
 from app.services import announcements
 from app.services.notifications import queue_summary
@@ -59,6 +65,33 @@ async def broadcast(payload: BroadcastIn, current: Sender, db: DbSession) -> Bro
         course=payload.course,
         group_name=payload.group_name,
         with_app_button=payload.with_app_button,
+        buttons=payload.buttons,
         dry_run=payload.dry_run,
+        only_to=current.user.id if payload.test else None,
     )
     return BroadcastOut(recipients=recipients, queued=not payload.dry_run)
+
+
+@router.post(
+    "/broadcast/preview", response_model=BroadcastPreviewOut, summary="How the message will look, and to how many"
+)
+async def broadcast_preview(payload: BroadcastIn, _: Sender, db: DbSession) -> BroadcastPreviewOut:
+    text, buttons = await announcements.broadcast_message(
+        db, message=payload.message, buttons=payload.buttons, with_app_button=payload.with_app_button
+    )
+    recipients = await announcements.broadcast(
+        db,
+        actor_id=None,
+        message=payload.message,
+        faculty_id=payload.faculty_id,
+        course=payload.course,
+        group_name=payload.group_name,
+        with_app_button=payload.with_app_button,
+        buttons=payload.buttons,
+        dry_run=True,
+    )
+    shown = [
+        {"text": spec["text"], "url": spec.get("url") or "", "kind": "url" if spec.get("url") else "app"}
+        for spec in (buttons or {}).get("buttons", [])
+    ]
+    return BroadcastPreviewOut(text=text, buttons=shown, recipients=recipients)

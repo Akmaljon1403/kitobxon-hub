@@ -10,6 +10,7 @@ snapshot, never from the draft.
 
 from __future__ import annotations
 
+import html
 import io
 import re
 import uuid
@@ -39,6 +40,7 @@ from app.models.enums import (
     AttemptStatus,
     AttendanceStatus,
     EventStatus,
+    NotificationType,
     ReadingStatus,
     RegistrationStatus,
     ReportKind,
@@ -92,7 +94,10 @@ async def build_facts(session: AsyncSession, event: Event) -> dict[str, Any]:
             select(AttendanceRecord.user_id, AttendanceRecord.status, Faculty.name, User.course)
             .join(User, User.id == AttendanceRecord.user_id)
             .outerjoin(Faculty, Faculty.id == User.faculty_id)
-            .where(AttendanceRecord.event_id == event.id, AttendanceRecord.status != AttendanceStatus.REVOKED)
+            .where(
+                AttendanceRecord.event_id == event.id,
+                AttendanceRecord.status.in_((AttendanceStatus.VERIFIED, AttendanceStatus.SUSPICIOUS)),
+            )
         )
     ).all()
     verified = [row for row in attended_rows if row.status == AttendanceStatus.VERIFIED]
@@ -672,9 +677,29 @@ async def approve(session: AsyncSession, *, actor_id: uuid.UUID, report_id: uuid
         entity_id=report.id,
         after=_snapshot(report),
     )
+    if report.kind == ReportKind.EVENT:
+        from app.services import channel
+
+        await channel.report_posted(session, report)
+    await _tell_approved(session, report, actor_id)
     await session.commit()
     await store_pdf(session, report)
     return report
+
+
+async def _tell_approved(session: AsyncSession, report: Report, actor_id: uuid.UUID) -> None:
+    """The admin who approved gets a short confirmation in the bot (the report stays in the panel)."""
+    from app.services.notifications import enqueue_notification
+
+    await enqueue_notification(
+        session,
+        user_id=actor_id,
+        type_=NotificationType.SYSTEM,
+        text=f"✅ «{html.escape(report.title)}» hisoboti muvaffaqiyatli yaratildi va bazada saqlandi.",
+        dedup_key=f"report_ready:{report.id}",
+        payload={"buttons": [{"text": "📄 Hisobotlar", "admin_route": "reports"}]},
+        priority=3,
+    )
 
 
 async def store_pdf(session: AsyncSession, report: Report) -> bytes:

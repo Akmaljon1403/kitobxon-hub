@@ -54,7 +54,7 @@ FEATURES: tuple[Feature, ...] = (
     Feature(
         "certificate_pdf",
         "📄 Sertifikat PDF",
-        "sertifikatni PDF shaklida yuklab olish, chatga yuborish va chop etish",
+        "sertifikatni PDF shaklida cheksiz yuklab olish va 12 ta dizayndan birini tanlash",
         FeatureMode.PREMIUM,
         "certificates",
     ),

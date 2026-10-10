@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-import { CardPaymentSection } from '../components/CardPayment'
+import { CardCheckout, CardNumber, MyCardPayments, formatUzs } from '../components/CardPayment'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -16,28 +16,38 @@ const FREE_FOR_ALL = ['📚 Kitoblar va iqtiboslar', '📅 Tadbirlar va davomat'
 
 const FAQ: [string, string][] = [
   [
-    'Telegram Stars (⭐) nima?',
-    "Telegram'ning ichki to'lov birligi. Uni Telegram ilovasida sotib olasiz — «Sozlamalar → Telegram Stars». Qiyin bo'lsa, pastdagi «💳 Karta orqali» bo'limida so'mda to'lab, Stars'ni bizdan sovg'a sifatida oling.",
+    "Qanday to'lash eng oson?",
+    "Bank kartasi orqali: tarifni tanlang, summani klub kartasiga Click, Payme yoki bank ilovasidan o'tkazing va chekni (skrinshot) yuboring. Admin tekshirgach Premium o'zi yoqiladi.",
   ],
-  ['Bepul sinov bormi?', "Ha — har bir a'zo Premium'ni bir marta bir necha kun bepul sinab ko'ra oladi. Pul yechilmaydi, muddat tugagach o'zi to'xtaydi."],
+  [
+    'Telegram Stars (⭐) nima?',
+    "Telegram'ning ichki to'lov birligi. Stars bilan to'lov bir zumda o'tadi. Stars'ingiz yo'q bo'lsa — pastdagi «⭐ Stars sotib olish» bo'limida ularni karta orqali oling (profilingizda username bo'lishi kerak).",
+  ],
+  ['Bepul sinov bormi?', "Ha — ro'yxatdan o'tganingizda 7 kunlik Premium o'zi yoqiladi. Pul yechilmaydi, muddat tugagach o'zi to'xtaydi."],
   ["Muddat tugasa nima bo'ladi?", "Premium o'z-o'zidan uzaytirilmaydi, pul yechilmaydi. Xohlasangiz yana sotib olasiz — muddat oxiridan davom etadi."],
   ["Asosiy imkoniyatlar pullikmi?", "Yo'q. Kitob, tadbir, davomat, test, reyting va sertifikatlar hamma uchun bepul. Premium — qo'shimcha imkoniyatlar va klubga yordam."],
-  ['Muammo bo‘lsa?', "Botda /paysupport yoki «✉️ Adminga yozish». Xato to'lov bo'lsa Stars qaytariladi."],
+  ['Muammo bo‘lsa?', "Botda /paysupport — to'lovlar bilan shug'ullanadigan admin javob beradi. Xato to'lov bo'lsa pul qaytariladi."],
 ]
 
 function perMonth(plan: PremiumPlan): number {
   return Math.round((plan.stars / plan.days) * 30)
 }
 
-/** «💎 Premium»: what it gives, plans paid with Telegram Stars, and donations. */
+/** «💎 Premium»: what it gives, then step by step — the plan, how to pay (the bank card first), paying.
+ * Below: buying Stars with the card and a gentle «support the club». */
 export function PremiumPage() {
-  const { api, refreshMe } = useAuth()
+  const { api, refreshMe, me } = useAuth()
   const goBack = useCallback(() => navigate('/profile'), [])
   useBackButton(goBack)
   const { state, reload } = useAsync((signal) => api<PremiumStatus>('/api/v1/me/premium', { signal }))
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [planId, setPlanId] = useState<string | null>(null)
+  const [method, setMethod] = useState<'card' | 'stars' | null>(null)
+  const [starsPack, setStarsPack] = useState<number | null>(null)
+  const [version, setVersion] = useState(0)
+  const [donated, setDonated] = useState(false)
 
   async function pay(key: string, body: { plan_id?: string; amount?: number }) {
     const webApp = getWebApp()
@@ -71,27 +81,14 @@ export function PremiumPage() {
     }
   }
 
-  async function trial() {
-    setBusy('trial')
-    setNotice(null)
-    try {
-      await api('/api/v1/me/premium/trial', { method: 'POST' })
-      haptic('success')
-      setNotice({ text: "🎉 Bepul Premium boshlandi! Barcha imkoniyatlar ochiq." })
-      reload()
-      void refreshMe()
-    } catch (error) {
-      haptic('error')
-      setNotice({ text: error instanceof ApiError ? error.message : "Boshlab bo'lmadi.", error: true })
-    } finally {
-      setBusy(null)
-    }
-  }
-
   if (state.status === 'loading') return <LoadingState />
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   const status = state.data
   const cheapest = status.plans.length ? Math.min(...status.plans.map(perMonth)) : null
+  const cheapestUzs = status.card ? Math.min(...status.plans.map((plan) => plan.price_uzs_now ?? plan.price_uzs ?? Infinity)) : Infinity
+  const selectedPlan = status.plans.find((plan) => plan.id === planId) ?? null
+  const selectedPlanUzs = selectedPlan ? selectedPlan.price_uzs_now ?? selectedPlan.price_uzs : null
+  const selectedPack = (status.stars_packages ?? []).find((item) => item.stars === starsPack) ?? null
   const perks = [
     ...status.premium_features.map((feature) => ({ icon: feature.title.split(' ')[0], title: feature.title.split(' ').slice(1).join(' '), description: feature.description })),
     ...status.perks,
@@ -111,7 +108,11 @@ export function PremiumPage() {
         ) : (
           <p className="max-w-xs text-sm text-emerald-100">
             Qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa
-            {cheapest !== null && status.store_open && <> — oyiga {cheapest} ⭐ dan</>}
+            {status.store_open && Number.isFinite(cheapestUzs) ? (
+              <> — {formatUzs(cheapestUzs)} dan</>
+            ) : (
+              cheapest !== null && status.store_open && <> — oyiga {cheapest} ⭐ dan</>
+            )}
           </p>
         )}
       </Card>
@@ -122,15 +123,10 @@ export function PremiumPage() {
         </p>
       )}
 
-      {!status.is_premium && (status.trial_days ?? 0) > 0 && (
-        <Card className="flex flex-col items-center gap-2 py-4 text-center ring-1 ring-app-button/40">
-          <p className="font-semibold">🎁 {status.trial_days} kun bepul sinab ko'ring</p>
-          <p className="text-sm text-app-hint">Barcha Premium imkoniyatlari ochiladi. To'lov yechilmaydi, muddat tugagach o'zi to'xtaydi.</p>
-          <div className="w-full max-w-xs">
-            <Button loading={busy === 'trial'} disabled={busy !== null} onClick={() => void trial()}>
-              Bepul boshlash
-            </Button>
-          </div>
+      {me?.premium_trial && status.is_premium && (
+        <Card className="py-3 text-center text-sm ring-1 ring-app-button/40">
+          🎁 Sizda sovg'a — <b>sinov Premium</b>, {formatDate(status.until)} gacha. 💎 belgili imkoniyatlar shu sinov tufayli ochiq;
+          yoqqan bo'lsa, quyida davom ettiring.
         </Card>
       )}
 
@@ -160,37 +156,95 @@ export function PremiumPage() {
             ))}
           </div>
 
-          <SectionTitle>{status.is_premium ? 'Muddatni uzaytirish' : 'Tarifni tanlang'}</SectionTitle>
+          <SectionTitle>1. {status.is_premium ? 'Muddatni uzaytirish — tarif' : 'Tarifni tanlang'}</SectionTitle>
           <div className="flex flex-col gap-2">
             {status.plans.map((plan, index) => {
               const badge = index === status.plans.length - 1 && status.plans.length > 1 ? '🔥 Eng foydali' : index === 1 ? '⭐ Ommabop' : null
+              const uzs = plan.price_uzs_now ?? plan.price_uzs
+              const selected = plan.id === planId
               return (
-                <Card key={plan.id} className={`flex items-center justify-between gap-3 ${badge ? 'ring-1 ring-app-button/40' : ''}`}>
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => {
+                    setPlanId(plan.id)
+                    setMethod(status.card && uzs ? 'card' : 'stars')
+                  }}
+                  className={`flex items-center justify-between gap-3 rounded-2xl bg-app-section p-4 text-left ${selected ? 'ring-2 ring-app-button' : badge ? 'ring-1 ring-app-button/40' : ''}`}
+                >
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 font-semibold">
-                      {plan.title}
+                      {selected ? '🔘' : '⚪️'} {plan.title}
                       {badge && <span className="rounded-full bg-app-button/10 px-2 py-0.5 text-[11px] text-app-button">{badge}</span>}
                     </p>
                     <p className="text-sm text-app-hint">{plan.description ?? `${plan.days} kun`}</p>
-                    {plan.days > 31 && <p className="text-xs text-app-hint">≈ {perMonth(plan)} ⭐ / oy</p>}
                   </div>
-                  <div className="w-28 shrink-0">
-                    <Button
-                      className="whitespace-nowrap px-2"
-                      loading={busy === plan.id}
-                      disabled={busy !== null}
-                      onClick={() => void pay(plan.id, { plan_id: plan.id })}
-                    >
-                      {plan.stars_now ?? plan.stars} ⭐
-                    </Button>
-                    {plan.stars_now != null && plan.stars_now !== plan.stars && (
-                      <p className="mt-0.5 text-center text-xs text-app-hint line-through">{plan.stars} ⭐</p>
+                  <div className="shrink-0 text-right">
+                    {status.card && uzs ? (
+                      <>
+                        <p className="font-semibold tabular-nums">{formatUzs(uzs)}</p>
+                        <p className="text-xs text-app-hint">yoki {plan.stars_now ?? plan.stars} ⭐</p>
+                      </>
+                    ) : (
+                      <p className="font-semibold">{plan.stars_now ?? plan.stars} ⭐</p>
                     )}
+                    {plan.stars_now != null && plan.stars_now !== plan.stars && <p className="text-xs text-app-hint line-through">{plan.stars} ⭐</p>}
                   </div>
-                </Card>
+                </button>
               )
             })}
           </div>
+
+          {selectedPlan && (
+            <>
+              <SectionTitle>2. To'lov usuli</SectionTitle>
+              <div className="flex flex-col gap-2">
+                {status.card && selectedPlanUzs ? (
+                  <button
+                    type="button"
+                    onClick={() => setMethod('card')}
+                    className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'card' ? 'bg-app-button/10 ring-2 ring-app-button' : 'bg-app-section'}`}
+                  >
+                    <span className="flex items-center justify-between gap-2 font-semibold">
+                      💳 Bank kartasi (Uzcard, Humo)
+                      <span className="rounded-full bg-app-button px-2 py-0.5 text-[11px] text-app-button-text">Tavsiya etiladi</span>
+                    </span>
+                    <span className="text-sm text-app-hint">Click, Payme yoki bank ilovasidan o'tkazasiz — eng oson yo'l. {formatUzs(selectedPlanUzs)}</span>
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setMethod('stars')}
+                  className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'stars' ? 'bg-app-button/10 ring-2 ring-app-button' : 'bg-app-section'}`}
+                >
+                  <span className="font-semibold">⭐ Telegram Stars</span>
+                  <span className="text-sm text-app-hint">
+                    Telegram ichida bir zumda — {selectedPlan.stars_now ?? selectedPlan.stars} ⭐. Stars'ingiz bo'lsa qulay.
+                  </span>
+                </button>
+              </div>
+
+              <SectionTitle>3. To'lash</SectionTitle>
+              <Card>
+                {method === 'card' && status.card && selectedPlanUzs ? (
+                  <CardCheckout
+                    key={selectedPlan.id}
+                    card={status.card}
+                    price={selectedPlanUzs}
+                    what={`Premium ${selectedPlan.title}`}
+                    form={{ plan_id: selectedPlan.id }}
+                    onDone={() => setVersion((value) => value + 1)}
+                  />
+                ) : (
+                  <Button loading={busy === selectedPlan.id} disabled={busy !== null} onClick={() => void pay(selectedPlan.id, { plan_id: selectedPlan.id })}>
+                    {selectedPlan.stars_now ?? selectedPlan.stars} ⭐ bilan to'lash
+                  </Button>
+                )}
+              </Card>
+            </>
+          )}
+
+          <MyCardPayments version={version} />
 
           <SectionTitle>Bepul va Premium</SectionTitle>
           <Card className="text-sm">
@@ -209,25 +263,80 @@ export function PremiumPage() {
         </>
       )}
 
-      {status.card && (status.store_open || status.donations_open || (status.stars_packages ?? []).length > 0) && (
+      {status.card && (status.stars_packages ?? []).length > 0 && (
         <>
-          <SectionTitle>💳 Karta orqali: Premium yoki ⭐ Stars</SectionTitle>
-          <CardPaymentSection
-            card={status.card}
-            plans={status.store_open ? status.plans : []}
-            stars={status.stars_packages ?? []}
-            onDone={reload}
-          />
+          <SectionTitle>⭐ Telegram Stars sotib olish (karta orqali)</SectionTitle>
+          <Card className="flex flex-col gap-3">
+            <p className="text-sm text-app-hint">
+              Stars'ni so'mda oling: to'laysiz, chekni yuborasiz — admin ularni Telegram'da sizga sovg'a qilib yuboradi.
+            </p>
+            {!me?.telegram_username ? (
+              <p className="rounded-xl bg-app-surface px-3 py-2 text-sm">
+                ⚠️ Buning uchun Telegram profilingizda <b>username</b> bo'lishi kerak: Telegram → Sozlamalar → «Foydalanuvchi nomi». Qo'ygach,
+                ilovani qayta oching.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(status.stars_packages ?? []).map((item) => (
+                    <button
+                      key={item.stars}
+                      type="button"
+                      onClick={() => setStarsPack(item.stars)}
+                      className={`flex flex-col rounded-xl px-3 py-2 text-left ${starsPack === item.stars ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
+                    >
+                      <span className="font-medium">⭐ {item.stars} Stars</span>
+                      <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedPack && (
+                  <CardCheckout
+                    key={selectedPack.stars}
+                    card={status.card}
+                    price={selectedPack.price_uzs}
+                    what={`${selectedPack.stars} Stars`}
+                    form={{ stars: String(selectedPack.stars) }}
+                    onDone={() => setVersion((value) => value + 1)}
+                  />
+                )}
+              </>
+            )}
+          </Card>
         </>
       )}
 
-      {status.donations_open && (
+      {(status.donations_open || status.card) && (
         <>
-          <SectionTitle>❤️ Klubni qo'llab-quvvatlash</SectionTitle>
+          <SectionTitle>🤝 Klubni qo'llab-quvvatlash</SectionTitle>
           <Card className="flex flex-col gap-3">
-            <p className="text-sm text-app-hint">Har qanday hissa kitoblar, tadbirlar va g'oliblarga sovg'alar uchun ishlatiladi.</p>
+            <p className="text-sm text-app-hint">
+              Klub talabalar tashabbusi bilan yashaydi: yangi kitoblar, davra suhbatlari, g'oliblarga sovg'alar. Klub sizga yoqsa va imkoningiz
+              bo'lsa, istalgan miqdorda hissa qo'shishingiz mumkin — bu mutlaqo ixtiyoriy. 💛
+            </p>
+            {status.card && (
+              <>
+                <CardNumber card={status.card} label="Istalgan summani shu kartaga o'tkazing — chek yuborish shart emas" />
+                {donated ? (
+                  <p role="status" className="rounded-xl bg-app-button/10 px-3 py-2 text-sm">
+                    💛 <b>Chin dildan rahmat!</b> Hissangiz yangi kitoblar, qiziqarli tadbirlar va g'oliblarning quvonchiga aylanadi.
+                  </p>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      haptic('success')
+                      setDonated(true)
+                    }}
+                  >
+                    💛 O'tkazdim
+                  </Button>
+                )}
+              </>
+            )}
+            {status.donations_open && <p className="text-xs text-app-hint">{status.card ? 'yoki ' : ''}Telegram Stars bilan:</p>}
             <div className="grid grid-cols-4 gap-2">
-              {status.donation_amounts.map((amount) => (
+              {(status.donations_open ? status.donation_amounts : []).map((amount) => (
                 <Button
                   key={amount}
                   variant="secondary"
@@ -267,7 +376,7 @@ export function PremiumPage() {
       )}
 
       <p className="px-2 text-center text-xs text-app-hint">
-        To'lov Telegram Stars{status.card ? ' yoki klub kartasi' : ''} orqali. Asosiy imkoniyatlar hamma uchun bepul. Savol bo'lsa — botda /paysupport.
+        To'lov {status.card ? 'bank kartasi yoki ' : ''}Telegram Stars orqali. Asosiy imkoniyatlar hamma uchun bepul. Savol bo'lsa — botda /paysupport.
       </p>
     </div>
   )

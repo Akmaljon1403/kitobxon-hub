@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
 from app.api.deps import CurrentAdminDep, CurrentUser, DbSession, require_permissions
 from app.schemas.settings import SettingOut, SettingUpdateIn
@@ -65,3 +66,50 @@ async def system_status_view(
     _: Annotated[CurrentUser, Depends(require_permissions(Perm.SETTINGS_MANAGE))], db: DbSession
 ) -> dict[str, Any]:
     return await system_status.collect(db)
+
+
+class SearchItem(BaseModel):
+    kind: str
+    title: str
+    subtitle: str | None
+    route: str | None
+
+
+@router.get("/search", response_model=list[SearchItem], summary="Search everything: members, books, settings, pages")
+async def search_everything(
+    current: CurrentAdminDep, db: DbSession, q: Annotated[str, Query(min_length=1, max_length=64)]
+) -> list[SearchItem]:
+    from app.services import search
+
+    return [
+        SearchItem(**item) for item in await search.search(db, q, permissions=current.permissions, roles=current.roles)
+    ]
+
+
+class LicenceOut(BaseModel):
+    required: bool
+    valid: bool
+    organization: str | None
+    expires: str | None
+    max_members: int | None
+    days_left: int | None
+    members_paused: bool
+    problem: str | None
+
+
+@router.get("/system/licence", response_model=LicenceOut, summary="Licence of this copy (rented copies only)")
+async def licence_view(_: CurrentAdminDep) -> LicenceOut:
+    from app.core import licence
+
+    current = licence.status()
+    info = current.licence
+    return LicenceOut(
+        required=current.required,
+        valid=current.valid,
+        organization=info.organization if info else None,
+        expires=info.expires.isoformat() if info else None,
+        max_members=info.max_members if info else None,
+        days_left=current.days_left,
+        members_paused=current.blocks_members,
+        problem=current.problem,
+    )

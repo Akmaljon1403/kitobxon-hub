@@ -15,7 +15,7 @@ import pytest
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.methods import AnswerPreCheckoutQuery, CreateInvoiceLink, GetFile, SendDocument
+from aiogram.methods import AnswerPreCheckoutQuery, CreateInvoiceLink, EditMessageText, GetFile
 from aiogram.methods.base import TelegramMethod
 from aiogram.types import File, PreCheckoutQuery, SuccessfulPayment, Update
 from PIL import Image
@@ -196,7 +196,7 @@ async def test_ranking_week_is_free_the_rest_premium(client: httpx.AsyncClient, 
     assert (await client.get("/api/v1/rankings?period=all", headers=member_headers(other))).status_code == 200
 
 
-async def test_certificate_pdf_is_premium(client: httpx.AsyncClient, db: AsyncSession) -> None:
+async def test_certificate_pdf_is_premium_or_limited(client: httpx.AsyncClient, db: AsyncSession) -> None:
     admin = await _super_admin(db)
     member = await create_user(db, telegram_id=9602)
     await db.commit()
@@ -211,39 +211,33 @@ async def test_certificate_pdf_is_premium(client: httpx.AsyncClient, db: AsyncSe
     )
     await db.commit()
     note = await db.scalar(select(Notification).where(Notification.dedup_key == f"certificate:{certificate.id}"))
-    assert "certificate_id" not in note.payload  # no PDF attached for a free member
-    assert "Premium" in note.text and "https://kitobxon.example.org/v/" in note.text
-    assert {"text": "💎 Premium", "app_route": "premium"} in note.payload["buttons"]
+    assert "certificate_id" not in note.payload  # the bot never attaches it: the app shows it
+    assert "https://kitobxon.example.org/v/" in note.text
 
     headers = member_headers(member)
     listed = (await client.get("/api/v1/me/certificates", headers=headers)).json()
     assert listed[0]["verify_url"].startswith("https://kitobxon.example.org/v/")  # sharing the check link is free
+    assert listed[0]["rights"]["downloads_left"] == 1 and listed[0]["rights"]["can_change_design"] is False
+    pdf = await client.get(f"/api/v1/me/certificates/{certificate.id}/pdf", headers=headers)
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")  # one free download
     pdf = await client.get(f"/api/v1/me/certificates/{certificate.id}/pdf", headers=headers)
     assert pdf.status_code == 403 and pdf.json()["error"]["code"] == "PREMIUM_REQUIRED"
     link = await client.post(
         "/api/v1/me/downloads", json={"kind": "certificate", "id": str(certificate.id)}, headers=headers
     )
     assert link.status_code == 403
-    harness = _harness(9602)
-    await harness.press(f"cert:get:{certificate.id}")
-    assert "Premium" in harness.last_text()
-    assert not any(isinstance(r, SendDocument) for r in harness.session.requests)
+    design = await client.put(
+        f"/api/v1/me/certificates/{certificate.id}/design", json={"design": "ocean"}, headers=headers
+    )
+    assert design.status_code == 403  # changing the design is Premium
 
     await premium_service.grant(db, actor_id=admin.id, user_id=member_id, days=7, note=None)
-    pdf = await client.get(f"/api/v1/me/certificates/{certificate.id}/pdf", headers=headers)
-    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
-    second = await certificates.issue(
-        db,
-        user_id=member_id,
-        kind=CertificateKind.MANUAL,
-        title="Eng faol",
-        description="Faol ishtiroki uchun taqdim etiladi.",
-        dedup_key="pdf-test-2",
-    )
-    await db.commit()
-    note = await db.scalar(select(Notification).where(Notification.dedup_key == f"certificate:{second.id}"))
-    assert note.payload["certificate_id"] == str(second.id)
-    assert await db.scalar(select(Certificate.id).where(Certificate.id == second.id))
+    for _ in range(2):
+        pdf = await client.get(f"/api/v1/me/certificates/{certificate.id}/pdf", headers=headers)
+        assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")  # Premium: unlimited
+    detail = (await client.get(f"/api/v1/me/certificates/{certificate.id}", headers=headers)).json()
+    assert detail["rights"]["downloads_left"] is None and detail["rights"]["design_changes_left"] == 3
+    assert await db.scalar(select(Certificate.id).where(Certificate.id == certificate.id))
 
 
 async def test_portfolio_pdf(client: httpx.AsyncClient, db: AsyncSession) -> None:
@@ -277,8 +271,8 @@ async def test_free_trial_once_and_a_reminder_before_the_end(client: httpx.Async
     harness = _harness(9603)
     await harness.send("/premium")
     buttons = [b.callback_data for row in harness.session.sent_messages()[-1].reply_markup.inline_keyboard for b in row]
-    assert buttons[0] == "prem:trial"
-    await harness.press("prem:trial")
+    assert "prem:trial" not in buttons  # the trial starts by itself at registration now
+    await harness.press("prem:trial")  # a button of an older message still works once
     assert "Bepul Premium boshlandi" in harness.last_text()
     assert await premium_service.is_premium(db, member_id)
     again = await client.post("/api/v1/me/premium/trial", headers=headers)
@@ -415,7 +409,8 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
     boss = _harness(9610)
     await boss.press(f"cp:ok:{payment_id.hex}")
     steps = boss.session.sent_messages()[-1]
-    assert "100 Stars'ni sovg'a qiling" in steps.text and "@nodir_reads" in steps.text
+    # The Stars are bought on Fragment for the member's current Telegram username.
+    assert "100 Stars'ni yuboring" in steps.text and "fragment.com" in steps.text and "@akmal_reader" in steps.text
     assert "tg://user?id=9611" in steps.text
     assert steps.reply_markup.inline_keyboard[0][0].callback_data == f"cp:sent:{payment_id.hex}"
 
@@ -424,7 +419,8 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
     ).json()
     assert waiting["total"] == 1 and waiting["items"][0]["kind"] == "STARS"  # confirmed, not yet gifted
     await boss.press(f"cp:sent:{payment_id.hex}")
-    assert "100 ⭐ yuborildi" in boss.last_text()
+    sent = next(r for r in reversed(boss.session.requests) if isinstance(r, EditMessageText))
+    assert "Stars yuborildi" in sent.text
     await boss.press(f"cp:sent:{payment_id.hex}")
     assert "allaqachon" in boss.session.alerts()[-1]
     messages = list(

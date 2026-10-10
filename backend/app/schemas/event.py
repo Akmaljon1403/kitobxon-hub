@@ -9,6 +9,25 @@ from pydantic import AwareDatetime, BaseModel, Field, model_validator
 from app.models.enums import AttendanceMethod, AttendanceStatus, EventStatus
 
 
+class ShiftIn(BaseModel):
+    starts_at: AwareDatetime
+    ends_at: AwareDatetime
+    attendance_opens_at: AwareDatetime | None = Field(default=None, description="Default: 10 minutes before start")
+    attendance_closes_at: AwareDatetime | None = Field(default=None, description="Default: 20 minutes after start")
+    capacity: int | None = Field(default=None, ge=1, le=100_000)
+
+
+class ShiftOut(BaseModel):
+    id: uuid.UUID
+    position: int
+    starts_at: datetime
+    ends_at: datetime
+    attendance_opens_at: datetime
+    attendance_closes_at: datetime
+    capacity: int | None
+    registered_count: int = 0
+
+
 class EventCreateIn(BaseModel):
     title: str = Field(min_length=2, max_length=255)
     description: str | None = Field(default=None, max_length=5000)
@@ -22,6 +41,9 @@ class EventCreateIn(BaseModel):
     capacity: int | None = Field(default=None, ge=1, le=100_000)
     responsible_admin_id: uuid.UUID | None = None
     status: Literal["DRAFT", "PUBLISHED"] = "DRAFT"
+    shifts: list[ShiftIn] | None = Field(
+        default=None, max_length=6, description="Two or more shifts on the same day (each opens attendance itself)"
+    )
 
     @model_validator(mode="after")
     def _times(self) -> EventCreateIn:
@@ -43,6 +65,7 @@ class EventUpdateIn(BaseModel):
     capacity: int | None = Field(default=None, ge=1, le=100_000)
     responsible_admin_id: uuid.UUID | None = None
     status: EventStatus | None = None
+    shifts: list[ShiftIn] | None = Field(default=None, max_length=6, description="Replaces the shifts ([] = none)")
 
 
 class EventBaseOut(BaseModel):
@@ -61,18 +84,36 @@ class EventBaseOut(BaseModel):
     status: EventStatus
     registered_count: int
     attended_count: int
+    shifts: list[ShiftOut] = []
+    rating: float | None = None
+    ratings_count: int = 0
 
 
 class EventAdminOut(EventBaseOut):
+    certificate_background: bool = False
     attendance_points_override: int | None
     responsible_admin_id: uuid.UUID | None
     attendance_open: bool
     created_at: datetime
+    pending_requests: int = 0
 
 
 class EventOut(EventBaseOut):
     is_registered: bool
     my_attendance: AttendanceStatus | None
+    my_shift_id: uuid.UUID | None = None
+
+
+class RegisterIn(BaseModel):
+    shift_id: uuid.UUID | None = Field(default=None, description="Required when the event has shifts")
+
+
+class TopEventOut(BaseModel):
+    event_id: uuid.UUID
+    title: str
+    starts_at: datetime
+    average: float
+    ratings: int
 
 
 class RegistrationOut(BaseModel):
@@ -82,6 +123,7 @@ class RegistrationOut(BaseModel):
     group_name: str | None
     status: str
     registered_at: datetime
+    shift: int | None = None
 
 
 class CheckInIn(BaseModel):
@@ -132,12 +174,15 @@ class AttendanceRecordOut(BaseModel):
     checked_in_at: datetime
     suspicious_reason: str | None
     note: str | None
+    requested_by_name: str | None = None
 
 
 class AttendanceOverviewOut(BaseModel):
     event_id: uuid.UUID
     is_open: bool
     closes_at: datetime | None
+    shift: int | None = None
+    can_approve: bool = False
     registered_count: int
     attended_count: int
     records: list[AttendanceRecordOut]
@@ -146,6 +191,10 @@ class AttendanceOverviewOut(BaseModel):
 class ManualCheckInIn(BaseModel):
     user_id: uuid.UUID
     note: str = Field(min_length=5, max_length=1000, description="Why the member is added manually")
+
+
+class RejectIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000)
 
 
 class RecordStatusIn(BaseModel):

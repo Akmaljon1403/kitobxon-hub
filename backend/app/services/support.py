@@ -8,6 +8,7 @@ the member signed by "Klub rahbariyati" — never with the administrator's name 
 from __future__ import annotations
 
 import html
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -26,6 +27,8 @@ MAX_TEXT = 3000
 # A member may send at most this many messages per hour (protects admins from floods).
 HOURLY_LIMIT = 10
 PREVIEW = 300
+
+logger = logging.getLogger(__name__)
 
 
 def _clean(text: str | None) -> str:
@@ -50,9 +53,15 @@ async def _open_ticket(session: AsyncSession, user_id: uuid.UUID) -> SupportTick
 
 
 async def member_message(
-    session: AsyncSession, *, user: User, text: str | None, photo_file_id: str | None = None
+    session: AsyncSession,
+    *,
+    user: User,
+    text: str | None,
+    photo_file_id: str | None = None,
+    topic: str | None = None,
 ) -> SupportTicket:
-    """Store a member's message and tell the administrators. The caller commits."""
+    """Store a member's message and tell the administrators (a payment question also goes to the
+    payments chat). The caller commits."""
     body = _clean(text)
     if not body and not photo_file_id:
         raise BadRequestError("SUPPORT_EMPTY", "Xabar bo'sh. Savolingizni matn ko'rinishida yozing.")
@@ -96,10 +105,14 @@ async def member_message(
         if part
     )
     preview = html.escape(body[:PREVIEW] + ("…" if len(body) > PREVIEW else "")) if body else "📷 Rasm yubordi"
+    title = "💳 <b>To'lov bo'yicha murojaat</b>" if topic == "payment" else "📨 <b>Yangi murojaat</b>"
+    text = f"{title}\n👤 {who}" + (f" · {details}" if details else "") + f"\n\n{preview}"
+    if topic == "payment":
+        await _to_payments_chat(session, text, ticket.id)
     await enqueue_for_members(
         session,
         type_=NotificationType.SUPPORT,
-        text=(f"📨 <b>Yangi murojaat</b>\n👤 {who}" + (f" · {details}" if details else "") + f"\n\n{preview}"),
+        text=text,
         dedup_prefix=f"support:{message.id}",
         members=admins_with_permission(Perm.SUPPORT_MANAGE),
         payload={
@@ -111,6 +124,40 @@ async def member_message(
         priority=2,
     )
     return ticket
+
+
+async def member_thread(session: AsyncSession, user_id: uuid.UUID, limit: int = 50) -> list[SupportMessage]:
+    """The member's conversation with the club (newest last), for the Mini App."""
+    rows = list(
+        await session.scalars(
+            select(SupportMessage)
+            .join(SupportTicket, SupportTicket.id == SupportMessage.ticket_id)
+            .where(SupportTicket.user_id == user_id)
+            .order_by(SupportMessage.created_at.desc())
+            .limit(limit)
+        )
+    )
+    return list(reversed(rows))
+
+
+async def _to_payments_chat(session: AsyncSession, text: str, ticket_id: uuid.UUID) -> None:
+    """A copy of a payment question in the payments chat, with «✍️ Javob yozish»."""
+    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+    from app.services.card_payments import payments_chat
+    from app.services.delivery import optional_bot
+
+    chat = await payments_chat(session)
+    bot = optional_bot() if chat else None
+    if chat is None or bot is None:
+        return
+    markup = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:ans:{ticket_id}")]]
+    )
+    try:
+        await bot.send_message(chat, text, reply_markup=markup)
+    except Exception:
+        logger.warning("The payments chat could not be reached with a payment question")
 
 
 async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: uuid.UUID, text: str) -> SupportMessage:
@@ -130,7 +177,8 @@ async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: 
         type_=NotificationType.SUPPORT,
         text=f"📩 <b>Klub rahbariyatidan javob</b>\n\n{html.escape(body)}",
         dedup_key=f"support-reply:{message.id}",
-        payload={"buttons": [{"text": "✍️ Yana yozish", "callback": "sup:new"}]},
+        # A blocked member gets the answer too: writing to the club is how they sort it out.
+        payload={"buttons": [{"text": "✍️ Yana yozish", "callback": "sup:new"}], "deliver_to_inactive": True},
         priority=1,
     )
     record_audit(

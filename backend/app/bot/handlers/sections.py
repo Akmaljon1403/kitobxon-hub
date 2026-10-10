@@ -6,7 +6,6 @@ from __future__ import annotations
 import html
 import logging
 import re
-import uuid
 from urllib.parse import urlencode
 
 from aiogram import F, Router
@@ -19,10 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bot import access, keyboards, summaries, texts
 from app.bot.filters import ActiveMember
 from app.bot.states import AttendanceCode, PassportPhoto
-from app.core.errors import AppError, NotFoundError
+from app.core.errors import AppError
 from app.models import User, UserNotificationSettings
 from app.services import attendance as attendance_service
-from app.services import certificates as certificate_service
 from app.services import delivery, referrals
 from app.services import passport as passport_service
 from app.services import premium as premium_service
@@ -221,42 +219,17 @@ async def passport_file(callback: CallbackQuery, db: AsyncSession, member: User)
 
 
 @router.callback_query(F.data == "cert:list")
-async def certificate_list(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+@router.callback_query(F.data.startswith("cert:get:"))
+async def certificates_in_app(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
+    """Buttons of older messages: certificates are seen and downloaded in the Mini App now."""
     if await access.gate(callback, db, member, "certificates"):
         return
-    items = await certificate_service.member_certificates(db, member.id)
     await callback.answer()
-    if not isinstance(callback.message, Message):
-        return
-    if not items:
-        await callback.message.answer(texts.CERTIFICATES_NONE, reply_markup=keyboards.section_more("certificates"))
-        return
-    await callback.message.answer(
-        texts.CERTIFICATES.format(count=len(items)),
-        reply_markup=keyboards.certificates([(str(item.id), item.title) for item in items]),
-    )
-
-
-@router.callback_query(F.data.startswith("cert:get:"))
-async def certificate_file(callback: CallbackQuery, db: AsyncSession, member: User) -> None:
-    if await access.gate(callback, db, member, "certificates") or await access.gate(
-        callback, db, member, "certificate_pdf"
-    ):
-        return
-    try:
-        certificate_id = uuid.UUID((callback.data or "").removeprefix("cert:get:"))
-        certificate = await certificate_service.get_own(db, user_id=member.id, certificate_id=certificate_id)
-    except (ValueError, NotFoundError):
-        await callback.answer(texts.FILE_FAILED, show_alert=True)
-        return
-    try:
-        await delivery.send_certificate(callback.bot, db, member, certificate)
-        await db.commit()
-    except Exception:
-        logger.exception("Certificate file failed for %s", certificate.id)
-        await callback.answer(texts.FILE_FAILED, show_alert=True)
-        return
-    await callback.answer(texts.FILE_SENT)
+    if isinstance(callback.message, Message):
+        await callback.message.answer(
+            texts.CERTIFICATES_IN_APP,
+            reply_markup=keyboards.inline([keyboards.app_button("certificates", texts.BTN_CERTIFICATES)]),
+        )
 
 
 @router.message(Command("portfolio"))

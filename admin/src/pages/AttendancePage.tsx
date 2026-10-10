@@ -11,15 +11,17 @@ import { formatDateTime, formatTime } from '../utils/format'
 import { navigate } from '../utils/router'
 
 const METHOD_LABELS = { QR: 'QR', CODE: 'Kod', MANUAL: 'Admin' } as const
-const STATUS_TONE: Record<AttendanceStatus, 'success' | 'warning' | 'danger'> = {
+const STATUS_TONE: Record<AttendanceStatus, 'success' | 'warning' | 'danger' | 'info'> = {
   VERIFIED: 'success',
   SUSPICIOUS: 'warning',
   REVOKED: 'danger',
+  PENDING: 'info',
 }
 const STATUS_LABELS: Record<AttendanceStatus, string> = {
   VERIFIED: 'Tasdiqlangan',
   SUSPICIOUS: 'Shubhali',
   REVOKED: 'Bekor qilingan',
+  PENDING: '⏳ Tasdiq kutilmoqda',
 }
 
 /** Polls the server for the current rotating token and renders it as a large QR code. */
@@ -232,6 +234,7 @@ export function AttendancePage({ eventId }: { eventId: string }) {
                   + Qo'lda qo'shish
                 </Button>
               )}
+              {overview.shift && <p className="w-full text-xs text-app-hint">Hozir ochiq: {overview.shift}-smena davomati</p>}
             </div>
             <Table head={["A'zo", 'Vaqt', 'Usul', 'Holat', '']}>
               {overview.records.length === 0 && <EmptyRow colSpan={5} text="Hali hech kim qayd etilmagan" />}
@@ -247,14 +250,33 @@ export function AttendancePage({ eventId }: { eventId: string }) {
                   <td className="px-4 py-2">{METHOD_LABELS[record.method]}</td>
                   <td className="px-4 py-2">
                     <Badge tone={STATUS_TONE[record.status]}>{STATUS_LABELS[record.status]}</Badge>
+                    {record.status === 'PENDING' && (
+                      <p className="mt-1 max-w-56 text-xs text-app-hint">
+                        {record.requested_by_name ?? 'Admin'} qo'shdi: {record.note}
+                      </p>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-right">
+                    {record.status === 'PENDING' && overview.can_approve && (
+                      <>
+                        <Button variant="ghost" onClick={() => void run(() => api(`/api/v1/admin/attendance/${record.id}/approve`, { method: 'POST' }))}>
+                          ✅ Tasdiqlash
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="text-app-danger"
+                          onClick={() => void run(() => api(`/api/v1/admin/attendance/${record.id}/reject`, { method: 'POST', body: {} }))}
+                        >
+                          Rad etish
+                        </Button>
+                      </>
+                    )}
                     {canManage && record.status === 'VERIFIED' && (
                       <Button variant="ghost" onClick={() => void changeStatus(record, 'SUSPICIOUS', 'Shubhali deb belgilaysizmi?')}>
                         Shubhali
                       </Button>
                     )}
-                    {canManage && record.status !== 'REVOKED' && (
+                    {canManage && record.status !== 'REVOKED' && record.status !== 'PENDING' && (
                       <Button
                         variant="ghost"
                         className="text-app-danger"
@@ -263,7 +285,7 @@ export function AttendancePage({ eventId }: { eventId: string }) {
                         Bekor qilish
                       </Button>
                     )}
-                    {canManage && record.status !== 'VERIFIED' && (
+                    {canManage && record.status !== 'VERIFIED' && record.status !== 'PENDING' && (
                       <Button variant="ghost" onClick={() => void changeStatus(record, 'VERIFIED', 'Davomatni tasdiqlaysizmi?')}>
                         Tasdiqlash
                       </Button>
@@ -278,12 +300,22 @@ export function AttendancePage({ eventId }: { eventId: string }) {
       {state.status === 'loading' && !overview && <LoadingState />}
       {state.status === 'error' && !overview && <ErrorState message={state.error.message} onRetry={reload} />}
       <FeedbackSummary eventId={eventId} />
-      {adding && <ManualAddModal eventId={eventId} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); reload() }} />}
+      {adding && (
+        <ManualAddModal
+          eventId={eventId}
+          direct={Boolean(overview?.can_approve)}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false)
+            reload()
+          }}
+        />
+      )}
     </>
   )
 }
 
-function ManualAddModal({ eventId, onClose, onSaved }: { eventId: string; onClose: () => void; onSaved: () => void }) {
+function ManualAddModal({ eventId, direct, onClose, onSaved }: { eventId: string; direct: boolean; onClose: () => void; onSaved: () => void }) {
   const { api } = useSession()
   const [search, setSearch] = useState('')
   const [results, setResults] = useState<AdminUser[]>([])
@@ -345,6 +377,9 @@ function ManualAddModal({ eventId, onClose, onSaved }: { eventId: string; onClos
     >
       <p className="text-sm text-app-hint">
         Faqat a'zo tadbirda bo'lgani aniq bo'lsa foydalaning (masalan, telefoni ishlamay qolgan). Amal audit jurnaliga yoziladi.
+        {direct
+          ? ' Siz bosh administratorsiz — davomat darhol hisoblanadi.'
+          : " So'rov bosh administratorga yuboriladi: u tasdiqlagachgina a'zoga ball beriladi."}
       </p>
       {member ? (
         <div className="flex items-center justify-between rounded-lg border border-app-border px-3 py-2 text-sm">
@@ -356,7 +391,7 @@ function ManualAddModal({ eventId, onClose, onSaved }: { eventId: string; onClos
           </Button>
         </div>
       ) : (
-        <Field label="A'zoni toping">
+        <Field label="A'zoni toping" hint="Ism, familiya, guruh yoki telefon raqami bo'yicha">
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ism yoki familiya…" />
           {results.length > 0 && (
             <ul className="mt-1 divide-y divide-app-border rounded-lg border border-app-border">

@@ -113,6 +113,14 @@ def inline(*rows: list[InlineKeyboardButton | None]) -> InlineKeyboardMarkup | N
     return InlineKeyboardMarkup(inline_keyboard=clean) if clean else None
 
 
+def subscribe(channels: list[tuple[str, str]], check_data: str) -> InlineKeyboardMarkup | None:
+    """channels: (title, link); the last button checks the subscription again."""
+    return inline(
+        *[[InlineKeyboardButton(text=f"📢 {title[:40]}", url=url)] for title, url in channels],
+        [InlineKeyboardButton(text=texts.BTN_SUBSCRIBED, callback_data=check_data)],
+    )
+
+
 def open_app(webapp_url: str | None, route: str = "") -> InlineKeyboardMarkup | None:
     if not webapp_url:
         return None
@@ -131,7 +139,7 @@ def passport(*, own_photo: bool = False) -> InlineKeyboardMarkup | None:
             InlineKeyboardButton(text=texts.BTN_PASSPORT_THEME, callback_data="pp:themes"),
             InlineKeyboardButton(text=texts.BTN_PASSPORT_FILE, callback_data="pp:file"),
         ],
-        [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [app_button("certificates", texts.BTN_CERTIFICATES)],
         [app_button("profile", texts.BTN_MORE)],
     )
 
@@ -147,21 +155,10 @@ def passport_themes(themes: list[tuple[str, str, bool]]) -> InlineKeyboardMarkup
 
 def achievements() -> InlineKeyboardMarkup | None:
     return inline(
-        [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [app_button("certificates", texts.BTN_CERTIFICATES)],
         [InlineKeyboardButton(text=texts.BTN_PORTFOLIO, callback_data="pf:get")],
         [InlineKeyboardButton(text=texts.BTN_INVITE, callback_data="ref:open")],
         [app_button("achievements", texts.BTN_MORE)],
-    )
-
-
-def certificates(items: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
-    """One button per certificate: (id, title)."""
-    return inline(
-        *[
-            [InlineKeyboardButton(text=f"📄 {title[:60]}", callback_data=f"cert:get:{cid}")]
-            for cid, title in items[:20]
-        ],
-        [app_button("certificates", texts.BTN_MORE)],
     )
 
 
@@ -171,6 +168,7 @@ def attendance(scan: bool) -> InlineKeyboardMarkup | None:
 
 def help_menu(*, support: bool = True, premium: bool = False, donations: bool = False) -> InlineKeyboardMarkup | None:
     return inline(
+        [InlineKeyboardButton(text=texts.BTN_FAQ, callback_data="faq:list")],
         [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")] if support else [],
         [InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")] if premium else [],
         [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
@@ -178,47 +176,119 @@ def help_menu(*, support: bool = True, premium: bool = False, donations: bool = 
     )
 
 
+def faq_topics(topics: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
+    """topics: (code, title), two per row."""
+    buttons = [InlineKeyboardButton(text=title, callback_data=f"faq:t:{code}") for code, title in topics]
+    return inline(
+        *[buttons[index : index + 2] for index in range(0, len(buttons), 2)],
+        [app_button("help", texts.BTN_FAQ_APP)],
+    )
+
+
+def faq_answer(*, support: bool) -> InlineKeyboardMarkup | None:
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_FAQ_BACK, callback_data="faq:list")],
+        [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")] if support else [],
+    )
+
+
+def limited_account() -> InlineKeyboardMarkup | None:
+    """A blocked or not yet approved member may still read the answers and write to the admins."""
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_WRITE_ADMIN, callback_data="sup:new")],
+        [InlineKeyboardButton(text=texts.BTN_FAQ, callback_data="faq:list")],
+    )
+
+
+def left_member(bot_username: str | None) -> InlineKeyboardMarkup | None:
+    """A member who left: come back (sends /start by itself) or clear the chat."""
+    restore = (
+        InlineKeyboardButton(text=texts.BTN_LEFT_RESTORE, url=f"https://t.me/{bot_username}?start=qayta")
+        if bot_username
+        else InlineKeyboardButton(text=texts.BTN_LEFT_RESTORE, callback_data="mem:back")
+    )
+    return inline([restore], [InlineKeyboardButton(text=texts.BTN_LEFT_WIPE, callback_data="mem:wipe")])
+
+
 def premium_offer() -> InlineKeyboardMarkup | None:
     return inline([InlineKeyboardButton(text=texts.BTN_PREMIUM, callback_data="prem:open")])
 
 
-def premium_plans(
-    plans: list[tuple[str, str]], *, donations: bool, card: bool = False, trial_days: int = 0
-) -> InlineKeyboardMarkup | None:
-    """plans: (plan id hex, button text)."""
+def premium_methods(*, card: bool, stars: bool, donations: bool) -> InlineKeyboardMarkup | None:
+    """The Premium section: first how to pay (the bank card first — most students have one), then the plans."""
     return inline(
-        [InlineKeyboardButton(text=texts.BTN_TRIAL.format(days=trial_days), callback_data="prem:trial")]
-        if trial_days
-        else [],
-        *[[InlineKeyboardButton(text=label, callback_data=f"prem:buy:{plan_id}")] for plan_id, label in plans],
         [InlineKeyboardButton(text=texts.BTN_PAY_CARD, callback_data="card:open")] if card else [],
+        [InlineKeyboardButton(text=texts.BTN_PAY_STARS, callback_data="prem:stars")] if stars else [],
         [InlineKeyboardButton(text=texts.BTN_DONATE, callback_data="don:open")] if donations else [],
         [app_button("premium", texts.BTN_MORE)],
     )
 
 
+def premium_plans(plans: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
+    """Plans paid with Telegram Stars: (plan id hex, button text)."""
+    return inline(
+        *[[InlineKeyboardButton(text=label, callback_data=f"prem:buy:{plan_id}")] for plan_id, label in plans],
+        [InlineKeyboardButton(text=texts.BTN_BACK_TO_METHODS, callback_data="prem:open")],
+    )
+
+
 def card_plans(plans: list[tuple[str, str]], stars: list[tuple[int, str]] | None = None) -> InlineKeyboardMarkup | None:
-    """plans: (plan id hex, button text); stars: (amount, button text); the last button is a donation."""
+    """plans: (plan id hex, button text); stars: (amount, button text) — Stars bought with the card."""
     star_buttons = [
         InlineKeyboardButton(text=label, callback_data=f"card:stars:{amount}") for amount, label in stars or []
     ]
     return inline(
         *[[InlineKeyboardButton(text=label, callback_data=f"card:plan:{plan_id}")] for plan_id, label in plans],
         *[star_buttons[index : index + 2] for index in range(0, len(star_buttons), 2)],
-        [InlineKeyboardButton(text=texts.CARD_DONATE, callback_data="card:don")],
+        [InlineKeyboardButton(text=texts.BTN_BACK_TO_METHODS, callback_data="prem:open")],
     )
+
+
+def donation_methods(*, card: bool, amounts: list[int]) -> InlineKeyboardMarkup | None:
+    """«Klubni qo'llab-quvvatlash»: to the club's card (no receipt needed) or with Telegram Stars."""
+    star_buttons = [InlineKeyboardButton(text=f"{amount} ⭐", callback_data=f"don:{amount}") for amount in amounts]
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_DONATE_CARD, callback_data="don:card")] if card else [],
+        star_buttons,
+    )
+
+
+def donation_done() -> InlineKeyboardMarkup | None:
+    return inline([InlineKeyboardButton(text=texts.BTN_DONATE_DONE, callback_data="don:done")])
 
 
 def stars_sent(payment_hex: str) -> InlineKeyboardMarkup | None:
     return inline([InlineKeyboardButton(text=texts.BTN_STARS_SENT, callback_data=f"cp:sent:{payment_hex}")])
 
 
-def card_decision(payment_hex: str) -> InlineKeyboardMarkup | None:
+def card_decision(payment_hex: str, *, view: bool = False) -> InlineKeyboardMarkup | None:
     return inline(
+        [InlineKeyboardButton(text=texts.BTN_VIEW_RECEIPT, callback_data=f"cp:view:{payment_hex}")] if view else [],
         [
             InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"cp:ok:{payment_hex}"),
             InlineKeyboardButton(text="❌ Rad etish", callback_data=f"cp:no:{payment_hex}"),
-        ]
+        ],
+    )
+
+
+def card_reject_reasons(payment_hex: str) -> InlineKeyboardMarkup | None:
+    return inline(
+        *[
+            [InlineKeyboardButton(text=f"• {reason}", callback_data=f"cp:nr:{payment_hex}:{index}")]
+            for index, reason in enumerate(texts.CARD_REJECT_REASONS)
+        ],
+        [InlineKeyboardButton(text=texts.BTN_REJECT_OTHER, callback_data=f"cp:nw:{payment_hex}")],
+        [InlineKeyboardButton(text=texts.BTN_BACK, callback_data=f"cp:back:{payment_hex}")],
+    )
+
+
+def card_decided(payment_hex: str, *, stars_to_send: bool) -> InlineKeyboardMarkup | None:
+    """After a decision: «Stars yuborildi» (when Stars are still to be gifted) and «↩️ Qaytarish»."""
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_STARS_SENT, callback_data=f"cp:sent:{payment_hex}")]
+        if stars_to_send
+        else [],
+        [InlineKeyboardButton(text=texts.BTN_UNDO, callback_data=f"cp:undo:{payment_hex}")],
     )
 
 

@@ -151,7 +151,18 @@ export function TestResultsPage({ testId }: { testId: string }) {
           {items.length === 0 && <EmptyRow colSpan={9} text="Hali hech kim qatnashmagan" />}
           {items.map((row) => (
             <tr key={row.attempt_id}>
-              <td className="px-4 py-2 tabular-nums">{row.place ? `${row.place}.` : '—'}</td>
+              <td className="px-4 py-2 tabular-nums">
+                {row.place ? `${row.place}.` : '—'}
+                {row.attended === false && (
+                  <span title="Tadbirda davomat qilmagan: sovrinli o'rinlar va sovg'alar hisobiga kirmaydi">
+                    {' '}
+                    <Badge tone="warning">davomatsiz</Badge>
+                  </span>
+                )}
+                {row.prize_place && row.prize_place <= 3 && row.attended !== null && row.attended !== undefined && (
+                  <p className="text-xs text-app-hint">sovrinli: {row.prize_place}-o'rin</p>
+                )}
+              </td>
               <td className="px-4 py-2">
                 <p className="font-medium">
                   {row.last_name} {row.first_name}

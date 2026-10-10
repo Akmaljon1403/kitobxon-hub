@@ -6,6 +6,7 @@ import { Button, Card, InlineError, Input, PageHeader, Select } from '../compone
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
+import { useRoute } from '../utils/router'
 import type { Setting } from '../types/api'
 
 const GROUP_TITLES: Record<string, string> = {
@@ -16,6 +17,7 @@ const GROUP_TITLES: Record<string, string> = {
   org: '🏛 Tashkilot (rasmiy hisobotlar uchun)',
   certificates: '🎓 Sertifikatlar',
   payments: "💳 Karta orqali to'lov",
+  subscription: "📢 Majburiy obuna",
   premium: '💎 Premium',
   referral: "👥 Do'stlarni taklif qilish",
   channel: '📣 Telegram kanal',
@@ -111,8 +113,15 @@ function SettingRow({ setting, canEdit }: { setting: Setting; canEdit: boolean }
     )
   }
 
+  const wanted = useRoute().query.get('key') === setting.key  // opened from the search box
   return (
-    <div className="grid gap-2 px-4 py-3 md:grid-cols-[1fr_16rem_auto] md:items-center">
+    <div
+      id={`setting-${setting.key}`}
+      ref={(node) => {
+        if (node && wanted) node.scrollIntoView({ block: 'center' })
+      }}
+      className={`grid gap-2 px-4 py-3 md:grid-cols-[1fr_16rem_auto] md:items-center ${wanted ? 'bg-amber-400/15' : ''}`}
+    >
       <div>
         <p className="text-sm font-medium">{setting.description}</p>
         <p className="text-xs text-app-hint">

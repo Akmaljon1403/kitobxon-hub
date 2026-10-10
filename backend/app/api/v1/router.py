@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     admin_books,
     admin_certificates,
     admin_channel,
+    admin_documents,
     admin_events,
     admin_faculties,
     admin_giveaways,
@@ -69,5 +70,6 @@ for module in (
     admin_premium,
     admin_analytics,
     admin_system,
+    admin_documents,
 ):
     api_router.include_router(module.router)

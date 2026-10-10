@@ -1,6 +1,10 @@
+import { useState } from 'react'
+
 import { Button, Card } from '../components/ui'
+import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import { openBot } from '../utils/telegram'
+import type { SubscriptionChannel } from '../types/api'
+import { haptic, openBot, openTelegramLink } from '../utils/telegram'
 
 function Shell({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
@@ -28,6 +32,56 @@ export function NotRegisteredPage() {
   )
 }
 
+/** Members use the app while subscribed to the club channel(s): subscribe, then check again. */
+export function SubscribePage({ channels }: { channels: SubscriptionChannel[] }) {
+  const { api, retry } = useAuth()
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function check() {
+    setBusy(true)
+    setMessage(null)
+    try {
+      const result = await api<{ ok: boolean; channels: SubscriptionChannel[] }>('/api/v1/me/subscription?fresh=true')
+      if (result.ok) {
+        haptic('success')
+        retry()
+        return
+      }
+      haptic('warning')
+      setMessage(`Hali obuna ko'rinmayapti: ${result.channels.map((channel) => channel.title).join(', ')}. Obuna bo'lib, qayta bosing.`)
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Tekshirib bo'lmadi. Qayta urinib ko'ring.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Shell icon="📢" title="Bir qadam qoldi!">
+      <p className="text-sm text-app-hint">
+        Kitobxon Hub'dan foydalanish uchun klubimiz kanaliga obuna bo'ling: yangi kitoblar, tadbirlar, test natijalari va sovg'alar haqidagi
+        xabarlar avval o'sha yerda chiqadi.
+      </p>
+      <div className="flex w-full flex-col gap-2">
+        {channels.map((channel) => (
+          <Button key={channel.url} variant="secondary" onClick={() => openTelegramLink(channel.url)}>
+            📢 {channel.title}
+          </Button>
+        ))}
+        <Button loading={busy} onClick={() => void check()}>
+          ✅ Obuna bo'ldim
+        </Button>
+      </div>
+      {message && (
+        <p role="alert" className="text-sm text-app-danger">
+          {message}
+        </p>
+      )}
+    </Shell>
+  )
+}
+
 export function OutsideTelegramPage() {
   const { meta } = useAuth()
   return (
@@ -41,9 +95,15 @@ export function OutsideTelegramPage() {
 }
 
 export function AccountProblemPage({ message }: { message: string }) {
+  const { meta } = useAuth()
   return (
     <Shell icon="🔒" title="Kirish cheklangan">
       <p className="text-sm text-app-hint">{message}</p>
+      {meta?.bot_username && (
+        <Button variant="secondary" onClick={() => openBot(meta.bot_username, 'support')}>
+          ✉️ Adminga yozish
+        </Button>
+      )}
     </Shell>
   )
 }

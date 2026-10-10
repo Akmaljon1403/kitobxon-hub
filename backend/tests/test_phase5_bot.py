@@ -72,8 +72,9 @@ async def test_full_registration(db: AsyncSession) -> None:
     assert "301-A" in summary
 
     await harness.press("reg:confirm")
-    assert "Tabriklaymiz" in harness.last_text()
-    assert isinstance(harness.session.sent_messages()[-1].reply_markup, ReplyKeyboardMarkup)
+    welcome = next(m for m in harness.session.sent_messages() if "Tabriklaymiz" in m.text)
+    assert isinstance(welcome.reply_markup, ReplyKeyboardMarkup)
+    assert "Qisqa sayohat" in harness.all_text()  # then a short tour of the club
 
     user = await _member(db, 5001)
     assert user is not None

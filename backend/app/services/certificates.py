@@ -25,7 +25,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.errors import AppError, ConflictError, NotFoundError
 from app.models import AttendanceRecord, Certificate, Event, Test, User
-from app.models.enums import AttendanceStatus, CertificateKind, NotificationType
+from app.models.enums import AttendanceStatus, CertificateKind, FeatureMode, NotificationType
+from app.services import certificate_designs as designs
 from app.services.audit import record_audit
 from app.services.notifications import enqueue_notification, render
 from app.services.settings import get_setting
@@ -62,6 +63,36 @@ def filename(certificate: Certificate) -> str:
 # ---------------------------------------------------------------------------- issuing
 
 
+async def _design_for(
+    session: AsyncSession, *, test_id: uuid.UUID | None, event_id: uuid.UUID | None, period: str | None
+) -> tuple[str, str | None]:
+    """(design, background_key): the club's own background for the event/test if one was uploaded;
+    else the design already used for the same test or month, else the next one in turn."""
+    test = await session.get(Test, test_id) if test_id else None
+    event = await session.get(Event, event_id) if event_id else None
+    background = (test.certificate_background_key if test else None) or (
+        event.certificate_background_key if event else None
+    )
+    if background:
+        return designs.CUSTOM, background
+    batch = None
+    if test_id is not None:
+        batch = Certificate.test_id == test_id
+    elif period is not None:
+        batch = Certificate.period == period
+    if batch is not None:
+        same = await session.scalar(select(Certificate.design).where(batch, Certificate.design.is_not(None)).limit(1))
+        if same:
+            return same, None
+    last = await session.scalar(
+        select(Certificate.design)
+        .where(Certificate.design.is_not(None), Certificate.design != designs.CUSTOM)
+        .order_by(Certificate.created_at.desc())
+        .limit(1)
+    )
+    return designs.next_after(last).code, None
+
+
 async def issue(
     session: AsyncSession,
     *,
@@ -76,7 +107,9 @@ async def issue(
     period: str | None = None,
     issued_by: uuid.UUID | None = None,
 ) -> Certificate | None:
-    """Create a certificate and queue it for the member. Returns None if it already exists."""
+    """Create a certificate and tell the member (it is seen and downloaded in the Mini App).
+    Returns None if it already exists."""
+    design, background = await _design_for(session, test_id=test_id, event_id=event_id, period=period)
     new_id = await session.scalar(
         insert(Certificate)
         .values(
@@ -92,6 +125,8 @@ async def issue(
             dedup_key=dedup_key,
             verify_code=new_code(),
             issued_by=issued_by,
+            design=design,
+            background_key=background,
         )
         .on_conflict_do_nothing(index_elements=[Certificate.dedup_key])
         .returning(Certificate.id)
@@ -100,42 +135,26 @@ async def issue(
         return None
     certificate = await session.get(Certificate, new_id)
     assert certificate is not None
-    with_pdf = await _pdf_allowed(session, user_id)
     details = f"Tekshirish kodi: {display_code(certificate.verify_code)}"
-    if with_pdf:
-        details = "📎 PDF nusxasi shu xabarga ilova qilingan — yuklab olib, chop etishingiz mumkin.\n" + details
-    else:
-        link = verify_url(certificate.verify_code)
-        details += "\n\n📄 PDF nusxasini yuklab olish va chop etish — 💎 Premium imkoniyati." + (
-            f"\nSertifikatingiz onlayn tasdiqlangan — ushbu havolani istalgan kishiga ko'rsating: {link}"
-            if link
-            else ""
-        )
+    link = verify_url(certificate.verify_code)
+    details += "\n\n📱 Sertifikatingizni ilovada ko'ring" + (
+        f"; uning haqiqiyligini istalgan kishi shu havola orqali tekshiradi: {link}" if link else "."
+    )
     text = await render(session, NotificationType.CERTIFICATE, title=title, details=details)
     if text is not None:
-        buttons: list[dict[str, Any]] = [{"text": "🎓 Sertifikatlarim", "app_route": "certificates"}]
-        if not with_pdf:
-            buttons.append({"text": "💎 Premium", "app_route": "premium"})
-        payload: dict[str, Any] = {"buttons": buttons, "mood": "CELEBRATE"}
-        if with_pdf:
-            payload["certificate_id"] = str(certificate.id)
         await enqueue_notification(
             session,
             user_id=user_id,
             type_=NotificationType.CERTIFICATE,
             text=text,
             dedup_key=f"certificate:{certificate.id}",
-            payload=payload,
+            payload={
+                "buttons": [{"text": "🎓 Sertifikatni ko'rish", "app_route": f"certificates/{certificate.id}"}],
+                "mood": "CELEBRATE",
+            },
             priority=2,
         )
     return certificate
-
-
-async def _pdf_allowed(session: AsyncSession, user_id: uuid.UUID) -> bool:
-    from app.services import features
-
-    user = await session.get(User, user_id)
-    return user is not None and await features.allowed(session, user, "certificate_pdf") == "on"
 
 
 async def _attended(session: AsyncSession, event_id: uuid.UUID) -> set[uuid.UUID]:
@@ -339,34 +358,153 @@ async def list_admin(
 # ---------------------------------------------------------------------------- the PDF
 
 
-async def render_pdf(session: AsyncSession, certificate: Certificate) -> bytes:
-    from weasyprint import HTML  # heavy import, only when a PDF is needed
-
+async def _template_values(session: AsyncSession, certificate: Certificate, design: str | None) -> dict[str, Any]:
     from app.services.passport import member_number
-    from app.services.report_pdf import TEMPLATES, _environment
 
     user = await session.get(User, certificate.user_id)
     assert user is not None
     url = verify_url(certificate.verify_code)
-    html = (
-        _environment()
-        .get_template("certificate.html")
-        .render(
-            organization=await get_setting(session, "org.organization_name"),
-            club=await get_setting(session, "org.club_name"),
-            name=f"{user.last_name} {user.first_name}",
-            place=certificate.place,
-            description=certificate.description,
-            issued_on=format_date(certificate.issued_at),
-            number=member_number(user),
-            signer_title=await get_setting(session, "certificates.signer_title"),
-            signer_name=await get_setting(session, "certificates.signer_name"),
-            code=display_code(certificate.verify_code),
-            qr=segno.make(url, error="m").svg_data_uri(dark="#14402c", border=0) if url else None,
-            revoked=certificate.revoked_at is not None,
-        )
-    )
+    code = design or certificate.design
+    custom = code == designs.CUSTOM and certificate.background_key is not None
+    background = None
+    if custom:
+        try:
+            background = designs.image_uri(await get_storage().get(certificate.background_key or ""))
+        except AppError:
+            custom = False  # the uploaded picture is gone: a standard design instead
+    chosen = designs.get(None if custom else code)
+    palette = designs.CUSTOM_PALETTE if custom else chosen.palette
+    return {
+        "organization": await get_setting(session, "org.organization_name"),
+        "club": await get_setting(session, "org.club_name"),
+        "name": f"{user.last_name} {user.first_name}",
+        "place": certificate.place,
+        "description": certificate.description,
+        "issued_on": format_date(certificate.issued_at),
+        "number": member_number(user),
+        "signer_title": await get_setting(session, "certificates.signer_title"),
+        "signer_name": await get_setting(session, "certificates.signer_name"),
+        "code": display_code(certificate.verify_code),
+        "qr": segno.make(url, error="m").svg_data_uri(dark="#14402c", border=0) if url else None,
+        "revoked": certificate.revoked_at is not None,
+        "design": designs.CUSTOM if custom else chosen.code,
+        "custom": custom,
+        "background": background or chosen.background_uri(),
+        "p": palette,
+    }
+
+
+async def render_pdf(session: AsyncSession, certificate: Certificate, design: str | None = None) -> bytes:
+    from weasyprint import HTML  # heavy import, only when a PDF is needed
+
+    from app.services.report_pdf import TEMPLATES, _environment
+
+    values = await _template_values(session, certificate, design)
+    html = _environment().get_template("certificate.html").render(**values)
     return await asyncio.to_thread(lambda: HTML(string=html, base_url=str(TEMPLATES)).write_pdf())
+
+
+def _to_png(pdf: bytes, *, width: int, watermark: bool) -> bytes:
+    """The first page as a PNG (for previews in the app); ``watermark`` marks it «ko'rish uchun»."""
+    import io
+
+    import pypdfium2
+    from PIL import Image, ImageDraw, ImageFont
+
+    document = pypdfium2.PdfDocument(pdf)
+    try:
+        page = document[0]
+        scale = width / page.get_width()
+        image = page.render(scale=scale).to_pil().convert("RGB")
+    finally:
+        document.close()
+    if watermark:
+        layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", max(18, image.width // 24))
+        except OSError:
+            font = ImageFont.load_default()
+        text = "KO'RISH UCHUN NUSXA"
+        box = draw.textbbox((0, 0), text, font=font)
+        tile = Image.new("RGBA", (box[2] + 40, box[3] + 30), (0, 0, 0, 0))
+        ImageDraw.Draw(tile).text((20, 10), text, font=font, fill=(150, 150, 150, 70))
+        tile = tile.rotate(18, expand=True)
+        for y in range(-tile.height, image.height, tile.height + image.height // 6):
+            for x in range(-tile.width // 2, image.width, tile.width + 30):
+                layer.alpha_composite(tile, (x, y))
+        image = Image.alpha_composite(image.convert("RGBA"), layer).convert("RGB")
+    output = io.BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
+
+
+async def preview_png(session: AsyncSession, certificate: Certificate, design: str | None = None) -> bytes:
+    """What the member sees in the app (free): a picture with a «ko'rish uchun» mark."""
+    pdf = await render_pdf(session, certificate, design)
+    return await asyncio.to_thread(_to_png, pdf, width=1200, watermark=True)
+
+
+async def sample_png(session: AsyncSession, sample: Certificate, *, width: int = 1000) -> bytes:
+    """A made-up certificate (for design pictures and the admins' preview of a background)."""
+    from weasyprint import HTML
+
+    from app.services.report_pdf import TEMPLATES, _environment
+
+    custom = sample.design == designs.CUSTOM and sample.background_key is not None
+    background = None
+    if custom:
+        try:
+            background = designs.image_uri(await get_storage().get(sample.background_key or ""))
+        except AppError:
+            custom = False
+    chosen = designs.get(None if custom else sample.design)
+    values = {
+        "organization": await get_setting(session, "org.organization_name"),
+        "club": await get_setting(session, "org.club_name"),
+        "name": "Karimova Aziza",
+        "place": sample.place,
+        "description": sample.description,
+        "issued_on": format_date(sample.issued_at),
+        "number": "KH-000042",
+        "signer_title": await get_setting(session, "certificates.signer_title"),
+        "signer_name": await get_setting(session, "certificates.signer_name"),
+        "code": display_code(sample.verify_code),
+        "qr": segno.make("https://example.org/v/NAMUNA2026", error="m").svg_data_uri(dark="#14402c", border=0),
+        "revoked": False,
+        "design": designs.CUSTOM if custom else chosen.code,
+        "custom": custom,
+        "background": background or chosen.background_uri(),
+        "p": designs.CUSTOM_PALETTE if custom else chosen.palette,
+    }
+    html = _environment().get_template("certificate.html").render(**values)
+    pdf = await asyncio.to_thread(lambda: HTML(string=html, base_url=str(TEMPLATES)).write_pdf())
+    return await asyncio.to_thread(_to_png, pdf, width=width, watermark=False)
+
+
+async def design_thumbnail(session: AsyncSession, code: str) -> bytes:
+    """A small sample of a design (cached in storage)."""
+    storage = get_storage()
+    key = f"certificates/designs/{code}-v1.png"
+    try:
+        return await storage.get(key)
+    except AppError:
+        pass
+    sample = Certificate(
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        kind=CertificateKind.MANUAL,
+        place=1,
+        title="Namuna",
+        description="«O'tkan kunlar» bilim testida 1-o'rinni egallagani uchun taqdim etiladi.",
+        dedup_key="sample",
+        verify_code="NAMUNA2026",
+        issued_at=datetime.now(UTC),
+        design=code,
+    )
+    image = await sample_png(session, sample, width=420)
+    await storage.put(key, image, "image/png")
+    return image
 
 
 async def pdf_bytes(session: AsyncSession, certificate: Certificate) -> bytes:
@@ -380,7 +518,74 @@ async def pdf_bytes(session: AsyncSession, certificate: Certificate) -> bytes:
         except AppError:
             pass  # lost file (e.g. a rebuilt free server): draw it again
     data = await render_pdf(session, certificate)
-    key = f"certificates/{certificate.id}.pdf"
+    key = f"certificates/{certificate.id}-{certificate.design or 'classic'}.pdf"
     await storage.put(key, data, "application/pdf")
     certificate.file_key = key
     return data
+
+
+# ---------------------------------------------------------------------------- the member's copy
+
+
+async def access(session: AsyncSession, user: User, certificate: Certificate) -> dict[str, Any]:
+    """What the member may do with their certificate: download (Premium: always; otherwise a few free
+    downloads) and change its design (Premium, a few times)."""
+    from app.services import features
+    from app.services.premium import is_premium
+
+    mode = await features.mode(session, "certificate_pdf")
+    premium = await is_premium(session, user.id)
+    free = int(await get_setting(session, "certificates.free_downloads"))
+    changes = int(await get_setting(session, "certificates.design_changes"))
+    if mode == FeatureMode.OFF:
+        can_download, left = False, 0
+    elif mode == FeatureMode.ALL or premium:
+        can_download, left = True, None
+    else:
+        left = max(free - certificate.downloads, 0)
+        can_download = left > 0
+    return {
+        "can_download": can_download,
+        "downloads_left": left,
+        "premium": premium,
+        "can_change_design": premium and certificate.design_changes < changes,
+        "design_changes_left": max(changes - certificate.design_changes, 0) if premium else 0,
+    }
+
+
+async def take_download(session: AsyncSession, user: User, certificate: Certificate) -> None:
+    """Count a download (or refuse it): the PDF itself is fetched or sent right after."""
+    rights = await access(session, user, certificate)
+    if not rights["can_download"]:
+        from app.services.features import PremiumRequiredError, get_feature
+
+        raise PremiumRequiredError(get_feature("certificate_pdf"))
+    if rights["downloads_left"] is not None:
+        certificate.downloads += 1
+    await session.commit()
+
+
+async def change_design(session: AsyncSession, user: User, certificate: Certificate, design: str) -> Certificate:
+    if design not in designs.BY_CODE and not (design == designs.CUSTOM and certificate.background_key):
+        raise NotFoundError("DESIGN_NOT_FOUND", "Bunday dizayn yo'q.")
+    if design == certificate.design:
+        return certificate
+    rights = await access(session, user, certificate)
+    if not rights["premium"]:
+        from app.services.features import PremiumRequiredError, get_feature
+
+        raise PremiumRequiredError(get_feature("certificate_pdf"))
+    if not rights["can_change_design"]:
+        raise ConflictError("DESIGN_LIMIT", "Bu sertifikat dizaynini almashtirish imkoniyati tugadi.")
+    certificate.design = design
+    certificate.design_changes += 1
+    certificate.file_key = None  # drawn again in the new design (same number and check code)
+    await session.commit()
+    return certificate
+
+
+def design_list(certificate: Certificate | None = None) -> list[dict[str, str]]:
+    items = [{"code": design.code, "title": design.title} for design in designs.DESIGNS]
+    if certificate is not None and certificate.background_key:
+        items.insert(0, {"code": designs.CUSTOM, "title": "Klub dizayni"})
+    return items

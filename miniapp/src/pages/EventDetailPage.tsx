@@ -167,12 +167,16 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
   const goBack = useCallback(() => navigate('/events'), [])
   useBackButton(goBack)
 
-  async function toggleRegistration(event: ClubEvent) {
-    if (event.is_registered && !(await confirmAction("Ro'yxatdan chiqasizmi?"))) return
+  async function toggleRegistration(event: ClubEvent, shiftId?: string) {
+    const leaving = event.is_registered && (!shiftId || shiftId === event.my_shift_id)
+    if (leaving && !(await confirmAction("Ro'yxatdan chiqasizmi?"))) return
     setBusy(true)
     setError(null)
     try {
-      await api(`/api/v1/events/${event.id}/register`, { method: event.is_registered ? 'DELETE' : 'POST' })
+      await api(`/api/v1/events/${event.id}/register`, {
+        method: leaving ? 'DELETE' : 'POST',
+        body: leaving ? undefined : { shift_id: shiftId ?? null },
+      })
       haptic('success')
       reload()
     } catch (err) {
@@ -209,9 +213,18 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
               📚 {event.book_title}
             </button>
           )}
-          <span>
-            🕒 {formatTime(event.starts_at)}–{formatTime(event.ends_at)}
-          </span>
+          {event.shifts.length > 0 ? (
+            event.shifts.map((shift) => (
+              <span key={shift.id}>
+                🕒 {shift.position}-smena: {formatTime(shift.starts_at)}–{formatTime(shift.ends_at)} · {shift.registered_count} kishi
+                {shift.id === event.my_shift_id && event.is_registered ? ' · ✅ sizniki' : ''}
+              </span>
+            ))
+          ) : (
+            <span>
+              🕒 {formatTime(event.starts_at)}–{formatTime(event.ends_at)}
+            </span>
+          )}
           <span>🏆 Qatnashganlik uchun {event.attendance_points} ball</span>
           <span>
             👥 {event.registered_count} kishi ro'yxatdan o'tgan
@@ -231,7 +244,7 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
       ) : (
         event.my_attendance === 'VERIFIED' && (
           <Card className="text-center">
-            <Badge tone="success">✅ Siz bu tadbirda qatnashdingiz</Badge>
+            <Badge tone="success">{ended ? '✅ Siz bu tadbirda qatnashdingiz' : '✅ Siz tadbirda qatnashyapsiz'}</Badge>
           </Card>
         )
       )}
@@ -250,16 +263,39 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
 
       {event.status === 'PUBLISHED' && !ended && !event.my_attendance && (
         <Card className="flex flex-col gap-2">
-          <Button
-            variant={event.is_registered ? 'secondary' : 'primary'}
-            loading={busy}
-            disabled={started && event.is_registered}
-            onClick={() => void toggleRegistration(event)}
-          >
-            {event.is_registered ? "✓ Ro'yxatdasiz — chiqish" : "Qatnashaman (ro'yxatdan o'tish)"}
-          </Button>
+          {event.shifts.length > 0 ? (
+            <>
+              <p className="text-sm font-medium">{event.is_registered ? 'Smenangiz (boshqasini tanlasangiz, o\'tkazamiz):' : 'Qaysi smenada kelasiz?'}</p>
+              {event.shifts
+                .filter((shift) => new Date(shift.ends_at).getTime() > now)
+                .map((shift) => {
+                  const mine = event.is_registered && shift.id === event.my_shift_id
+                  return (
+                    <Button
+                      key={shift.id}
+                      variant={mine ? 'secondary' : 'primary'}
+                      loading={busy}
+                      disabled={mine && started}
+                      onClick={() => void toggleRegistration(event, shift.id)}
+                    >
+                      {mine ? `✓ ${shift.position}-smena — chiqish` : `${shift.position}-smena · ${formatTime(shift.starts_at)}`}
+                    </Button>
+                  )
+                })}
+            </>
+          ) : (
+            <Button
+              variant={event.is_registered ? 'secondary' : 'primary'}
+              loading={busy}
+              disabled={started && event.is_registered}
+              onClick={() => void toggleRegistration(event)}
+            >
+              {event.is_registered ? "✓ Ro'yxatdasiz — chiqish" : "Qatnashaman (ro'yxatdan o'tish)"}
+            </Button>
+          )}
           <p className="text-center text-xs text-app-hint">
-            Ro'yxatdan o'tish — qatnashish niyatingiz. Davomat tadbirda QR kod orqali qayd etiladi.
+            Ro'yxatdan o'tsangiz, joylarni shunga qarab tayyorlaymiz va sizga tadbir oldidan hamda davomat ochilganda eslatma yuboramiz. Davomat
+            tadbirda QR kod orqali qayd etiladi.
           </p>
           {error && (
             <p role="alert" className="text-center text-sm text-app-danger">

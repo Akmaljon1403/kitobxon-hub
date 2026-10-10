@@ -5,7 +5,7 @@ from __future__ import annotations
 from aiogram import Router
 from aiogram.types import CallbackQuery, Message
 
-from app.bot import texts
+from app.bot import keyboards, texts
 from app.models import User
 from app.models.enums import UserStatus
 
@@ -26,7 +26,13 @@ def _reply_for(member: User | None) -> str:
 
 @router.message()
 async def anything(message: Message, member: User | None) -> None:
-    await message.answer(_reply_for(member))
+    if member is not None and member.status == UserStatus.LEFT:
+        from app.bot.setup import bot_username
+
+        await message.answer(texts.LEFT_RESTRICTED, reply_markup=keyboards.left_member(bot_username()))
+        return
+    limited = member is not None and member.status in _STATUS_TEXT
+    await message.answer(_reply_for(member), reply_markup=keyboards.limited_account() if limited else None)
 
 
 @router.callback_query()

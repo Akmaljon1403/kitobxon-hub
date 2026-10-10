@@ -125,6 +125,11 @@ class Settings(BaseSettings):
     storage_secret_key: SecretStr | None = None
     storage_bucket: str | None = None
 
+    # ---- Licence (only for copies rented to other organisations; the club's own server needs none) ----
+    licence_required: bool = False
+    licence_key: SecretStr | None = None
+    licence_public_key: str | None = None  # the owner's public key (base64); the private key never leaves the owner
+
     # ---- AI report drafting (optional) ----
     ai_api_key: SecretStr | None = None
     ai_model: str = "claude-opus-5-5"

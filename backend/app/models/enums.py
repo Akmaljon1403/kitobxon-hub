@@ -86,6 +86,7 @@ class AttendanceStatus(StrEnum):
     VERIFIED = "VERIFIED"
     SUSPICIOUS = "SUSPICIOUS"
     REVOKED = "REVOKED"
+    PENDING = "PENDING"  # added by an administrator, waits for the super administrator's approval
 
 
 class TestStatus(StrEnum):
@@ -295,6 +296,7 @@ class ChannelPostKind(StrEnum):
     RESULTS = "RESULTS"  # test winners, giveaway winners, the month's leaders
     INVITE = "INVITE"  # weekly invitation to join the bot
     MANUAL = "MANUAL"  # written by an admin
+    REPORT = "REPORT"  # «... davra suhbati bo'lib o'tdi» with the photos of an approved event report
 
 
 class ChannelPostStatus(StrEnum):

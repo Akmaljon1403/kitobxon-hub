@@ -374,15 +374,38 @@ async def test_manual_check_in(client: httpx.AsyncClient, db: AsyncSession) -> N
         f"/api/v1/admin/events/{event_id}/attendance/manual", json=body, headers=admin_headers(admin)
     )
     assert added.status_code == 204
-    assert await _points(db, member) == 30
+    # An ordinary admin's addition waits for the super admin: no points yet.
+    assert await _points(db, member) == 0
     again = await client.post(
         f"/api/v1/admin/events/{event_id}/attendance/manual", json=body, headers=admin_headers(admin)
     )
     assert again.status_code == 409
+    boss = await create_user(db)
+    await db.commit()
+    await grant_role(db, boss, "SUPER_ADMIN")
+    overview = (await client.get(f"/api/v1/admin/events/{event_id}/attendance", headers=admin_headers(boss))).json()
+    record = overview["records"][0]
+    assert record["status"] == "PENDING" and overview["can_approve"] is True and overview["attended_count"] == 0
+    refused = await client.post(f"/api/v1/admin/attendance/{record['id']}/approve", headers=admin_headers(admin))
+    assert refused.status_code == 403
+    approved = await client.post(f"/api/v1/admin/attendance/{record['id']}/approve", headers=admin_headers(boss))
+    assert approved.status_code == 204
+    assert await _points(db, member) == 30
     assert (
-        await db.scalar(select(func.count()).select_from(AuditLog).where(AuditLog.action == "ATTENDANCE_MANUAL_ADD"))
+        await db.scalar(
+            select(func.count()).select_from(AuditLog).where(AuditLog.action == "ATTENDANCE_MANUAL_APPROVE")
+        )
         == 1
     )
+    # The super admin's own addition counts at once.
+    other = await create_user(db)
+    await db.commit()
+    direct = await client.post(
+        f"/api/v1/admin/events/{event_id}/attendance/manual",
+        json={"user_id": str(other.id), "note": "Shaxsan ko'rdim, telefoni yo'q"},
+        headers=admin_headers(boss),
+    )
+    assert direct.status_code == 204 and await _points(db, other) == 30
 
 
 async def test_attendance_csv_export(client: httpx.AsyncClient, db: AsyncSession) -> None:

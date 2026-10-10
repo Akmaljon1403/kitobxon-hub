@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.errors import ConflictError, ValidationFailedError
-from app.models import Faculty, User, UserNotificationSettings
+from app.models import Faculty, PremiumSubscription, User, UserNotificationSettings
 from app.models.enums import UserStatus
 from app.services.audit import record_audit
 from app.services.rbac import ensure_bootstrap_super_admin
@@ -122,6 +122,10 @@ async def register_member(session: AsyncSession, data: RegistrationData) -> User
 
     requires_approval = await get_setting(session, "registration.require_approval")
     is_owner = data.telegram_id in get_settings().super_admin_telegram_ids
+    if not is_owner:
+        from app.core import licence
+
+        await licence.check_member_limit(session)
     user = User(
         telegram_id=data.telegram_id,
         telegram_username=data.telegram_username,
@@ -156,13 +160,20 @@ async def register_member(session: AsyncSession, data: RegistrationData) -> User
     return user
 
 
-async def after_registration(session: AsyncSession, user_id: uuid.UUID) -> None:
-    """Welcome gifts after a member registered: «first N members» giveaways (and friend invites).
-    Never breaks the registration itself."""
-    from app.services import giveaways
+async def after_registration(session: AsyncSession, user_id: uuid.UUID) -> PremiumSubscription | None:
+    """Welcome gifts after a member registered: the free Premium trial (switched on by itself), then
+    «first N members» giveaways. Never breaks the registration itself. Returns the trial, if given."""
+    from app.services import giveaways, premium
 
+    trial = None
+    user = await session.get(User, user_id)
+    if user is not None and user.status == UserStatus.ACTIVE:
+        trial = await premium.welcome_trial(session, user)
     try:
         await giveaways.on_member_joined(session, user_id)
     except Exception:
         await session.rollback()
         logger.exception("Welcome gifts failed for %s", user_id)
+    if user is not None:
+        await session.refresh(user)  # a failed gift rolled back and expired the member's data
+    return trial

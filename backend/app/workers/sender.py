@@ -105,6 +105,25 @@ def _finish(notification: Notification, status: NotificationStatus, error: str |
         notification.sent_at = datetime.now(UTC)
 
 
+async def _licence_staff(session: AsyncSession, user_ids: set[Any]) -> set[Any] | None:
+    """None normally; while a rented copy's licence has ended, the administrators among ``user_ids``
+    (only they still get messages)."""
+    from app.core import licence
+
+    if not licence.status().blocks_members:
+        return None
+    from app.models import Role, UserRole
+    from app.services.rbac import ADMIN_ROLES
+
+    return set(
+        await session.scalars(
+            select(UserRole.user_id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(UserRole.user_id.in_(user_ids), Role.code.in_(ADMIN_ROLES))
+        )
+    )
+
+
 async def send_due_notifications(
     session_factory: async_sessionmaker[AsyncSession], bot: Bot, *, limit: int = 100
 ) -> SendReport:
@@ -127,6 +146,7 @@ async def send_due_notifications(
             await session.scalars(select(NotificationTemplate.type).where(NotificationTemplate.is_critical.is_(True)))
         )
         now = datetime.now(UTC)
+        staff_only = await _licence_staff(session, set(users))
         for index, notification in enumerate(batch):
             user = users.get(notification.user_id)
             type_ = NotificationType(notification.type)
@@ -136,6 +156,9 @@ async def send_due_notifications(
             deliver_anyway = bool((notification.payload or {}).get("deliver_to_inactive"))
             if user is None or user.deleted_at is not None or (user.status != UserStatus.ACTIVE and not deliver_anyway):
                 _finish(notification, NotificationStatus.SKIPPED, "member is not active")
+                report.skipped += 1
+            elif staff_only is not None and user.id not in staff_only:
+                _finish(notification, NotificationStatus.SKIPPED, "licence expired")
                 report.skipped += 1
             elif (
                 not is_critical
@@ -157,7 +180,7 @@ async def send_due_notifications(
                     user,
                     report,
                     document,
-                    effect=stickers.EFFECTS.get(mood) if mood and await stickers.enabled(session) else None,
+                    effect=stickers.EFFECTS.get(mood) if mood else None,
                     sticker=await stickers.pick(session, mood) if mood else None,
                 )
                 if retry_after is not None:

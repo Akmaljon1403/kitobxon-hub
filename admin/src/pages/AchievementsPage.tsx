@@ -109,13 +109,20 @@ function EditModal({ achievement, onClose, onSaved }: { achievement: AdminAchiev
         <Textarea value={form.description} onChange={set('description')} maxLength={1000} rows={2} />
       </Field>
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Chegara" hint={form.criteria === 'MONTHLY_TOP_RANK' ? "Shu o'ringacha" : 'Nechta kerak'}>
+        <Field
+          label="Chegara"
+          hint={
+            form.criteria === 'MONTHLY_TOP_RANK'
+              ? "O'tgan oy reytingida shu o'ringacha bo'lganlar oladi (3 — birinchi uchtalik)"
+              : 'Yutuq uchun nechta kerak: masalan 5 — beshinchi kitob/tadbir/testdan keyin beriladi'
+          }
+        >
           <Input type="number" min={1} max={1000} value={form.threshold} onChange={set('threshold')} disabled={form.criteria === 'MANUAL'} />
         </Field>
         <Field label="Bonus ball" hint="0 — ballsiz">
           <Input type="number" min={0} max={1000} value={form.points} onChange={set('points')} />
         </Field>
-        <Field label="Tartib">
+        <Field label="Tartib" hint="Ilovadagi ro'yxatda o'rni: kichik son — yuqorida (10, 20, 30...)">
           <Input type="number" min={0} value={form.sort_order} onChange={set('sort_order')} />
         </Field>
       </div>

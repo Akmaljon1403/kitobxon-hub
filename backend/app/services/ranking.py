@@ -106,6 +106,91 @@ class Ranking:
     me: RankingRow | None
 
 
+@dataclass(frozen=True)
+class _Entry:
+    """One member's place in the full standings of a period (names are formatted when shown)."""
+
+    user_id: uuid.UUID
+    first_name: str
+    last_name: str
+    faculty_id: uuid.UUID | None
+    faculty: str | None
+    group_name: str | None
+    total: int
+    attendance: int
+    tests: int
+
+
+# The full standings of each period, kept for a short while: every opening of the app shows the
+# member's place, and after a few years the ledger has hundreds of thousands of rows. A new score
+# written by this process clears it at once (``forget``); other processes catch up within seconds.
+STANDINGS_SECONDS = 30.0
+_standings_cache: dict[tuple[Any, ...], tuple[float, tuple[_Entry, ...]]] = {}
+
+
+def forget() -> None:
+    _standings_cache.clear()
+
+
+def _cache_seconds() -> float:
+    from app.core.config import get_settings
+
+    return 0.0 if get_settings().environment == "test" else STANDINGS_SECONDS
+
+
+async def _standings(
+    session: AsyncSession, period: Period, between: tuple[datetime, datetime] | None
+) -> tuple[_Entry, ...]:
+    seconds = _cache_seconds() if between is None else 0.0
+    key: tuple[Any, ...] = ()
+    if seconds:
+        season = await current_season_id(session) if period == "season" else None
+        key = (period, period_start(period), season)
+        hit = _standings_cache.get(key)
+        if hit is not None and _monotonic() - hit[0] < seconds:
+            return hit[1]
+    aggregate = (await _aggregate(session, period, between)).subquery()
+    order = (
+        aggregate.c.total.desc(),
+        aggregate.c.attendance.desc(),
+        aggregate.c.tests.desc(),
+        aggregate.c.last_at.asc(),
+        User.registered_at.asc().nulls_last(),
+        User.id.asc(),
+    )
+    rows = await session.execute(
+        select(
+            User.id,
+            User.first_name,
+            User.last_name,
+            User.faculty_id,
+            Faculty.name,
+            User.group_name,
+            aggregate.c.total,
+            aggregate.c.attendance,
+            aggregate.c.tests,
+        )
+        .join(User, User.id == aggregate.c.user_id)
+        .outerjoin(Faculty, Faculty.id == User.faculty_id)
+        .where(User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), aggregate.c.total > 0)
+        .order_by(*order)
+    )
+    entries = tuple(
+        _Entry(row[0], row[1], row[2], row[3], row[4], row[5], int(row[6]), int(row[7]), int(row[8])) for row in rows
+    )
+    if seconds:
+        if len(_standings_cache) > 64:  # old weeks and months
+            _standings_cache.clear()
+        _standings_cache[key] = (_monotonic(), entries)
+    return entries
+
+
+def _monotonic() -> float:
+    import time as clock
+
+    return clock.monotonic()
+
+
 async def ranking(
     session: AsyncSession,
     *,
@@ -116,63 +201,42 @@ async def ranking(
     between: tuple[datetime, datetime] | None = None,
 ) -> Ranking:
     """``between`` ranks an explicit time window instead of the current period (e.g. last month)."""
-    aggregate = (await _aggregate(session, period, between)).subquery()
-    conditions = [User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), aggregate.c.total > 0]
+    entries = await _standings(session, period, between)
     if scope == "faculty" and viewer is not None:
-        conditions.append(User.faculty_id == viewer.faculty_id)
-    if scope == "group" and viewer is not None:
-        conditions.append(User.group_name == viewer.group_name)
-        conditions.append(User.faculty_id == viewer.faculty_id)
-    order = (
-        aggregate.c.total.desc(),
-        aggregate.c.attendance.desc(),
-        aggregate.c.tests.desc(),
-        aggregate.c.last_at.asc(),
-        User.registered_at.asc().nulls_last(),
-        User.id.asc(),
-    )
-    ranked = (
-        select(
-            func.row_number().over(order_by=order).label("rank"),
-            User.id.label("user_id"),
-            User.first_name,
-            User.last_name,
-            User.group_name,
-            Faculty.name.label("faculty"),
-            aggregate.c.total,
-            aggregate.c.attendance,
-            aggregate.c.tests,
+        entries = tuple(entry for entry in entries if entry.faculty_id == viewer.faculty_id)
+    elif scope == "group" and viewer is not None:
+        entries = tuple(
+            entry
+            for entry in entries
+            if entry.group_name == viewer.group_name and entry.faculty_id == viewer.faculty_id
         )
-        .join(User, User.id == aggregate.c.user_id)
-        .outerjoin(Faculty, Faculty.id == User.faculty_id)
-        .where(*conditions)
-    ).subquery()
-
+    top = list(enumerate(entries[: max(limit, 0)], start=1))
+    mine = None
+    if viewer is not None:
+        mine = next(
+            ((place, entry) for place, entry in enumerate(entries, start=1) if entry.user_id == viewer.id), None
+        )
+    shown = [entry.user_id for _, entry in top] + ([mine[1].user_id] if mine else [])
+    premium_ids = await _premium_among(session, shown) if shown else set()
     name_format = await get_setting(session, "ranking.public_name_format")
 
-    rows = (await session.execute(select(ranked).where(ranked.c.rank <= limit).order_by(ranked.c.rank))).all()
-    mine = (
-        (await session.execute(select(ranked).where(ranked.c.user_id == viewer.id))).first()
-        if viewer is not None
-        else None
-    )
-    premium_ids = await _premium_among(session, [row.user_id for row in rows] + ([mine.user_id] if mine else []))
-
-    def to_row(row: Any) -> RankingRow:
+    def to_row(place: int, entry: _Entry) -> RankingRow:
         return RankingRow(
-            rank=int(row.rank),
-            user_id=row.user_id,
-            name=display_name(row.first_name, row.last_name, name_format),
-            faculty=row.faculty,
-            group_name=row.group_name,
-            total=int(row.total),
-            attendance=int(row.attendance),
-            tests=int(row.tests),
-            premium=row.user_id in premium_ids,
+            rank=place,
+            user_id=entry.user_id,
+            name=display_name(entry.first_name, entry.last_name, name_format),
+            faculty=entry.faculty,
+            group_name=entry.group_name,
+            total=entry.total,
+            attendance=entry.attendance,
+            tests=entry.tests,
+            premium=entry.user_id in premium_ids,
         )
 
-    me = to_row(mine) if mine else None
-    return Ranking(period=period, scope=scope, starts_at=period_start(period), items=[to_row(r) for r in rows], me=me)
+    me = to_row(*mine) if mine else None
+    return Ranking(
+        period=period, scope=scope, starts_at=period_start(period), items=[to_row(*item) for item in top], me=me
+    )
 
 
 async def _premium_among(session: AsyncSession, user_ids: list[uuid.UUID]) -> set[uuid.UUID]:

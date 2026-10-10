@@ -175,6 +175,7 @@ function RewardDetail({ reward, onClose, onChanged }: { reward: AdminReward; onC
         {reward.codes_total > 0 && <p className="text-xs text-app-hint">Har bir a'zoga navbatdagi bo'sh kod avtomatik biriktiriladi.</p>}
       </Card>
 
+      <DistributeCodes reward={reward} onDone={(text) => void run(async () => text)} />
       <TestWinnersPicker reward={reward} onGiven={(text) => void run(async () => text)} />
 
       <div>
@@ -271,6 +272,122 @@ function RewardDetail({ reward, onClose, onChanged }: { reward: AdminReward; onC
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
 
 /** Places 1-3 of every recent test: give this reward to a place, once per place (any reward counts). */
+interface DistributionSlot {
+  test_id: string
+  test_title: string
+  place: number
+  user_id: string
+  name: string
+}
+
+interface Distribution {
+  codes_added: number
+  duplicates: number
+  given: DistributionSlot[]
+  waiting: DistributionSlot[]
+}
+
+/**
+ * Promo codes for test winners in one go: the codes (one per line) go to every 1st place first, then to
+ * 2nd places, then to 3rd — one code per member, and for an event's test only to those who attended.
+ */
+function DistributeCodes({ reward, onDone }: { reward: AdminReward; onDone: (text: string) => void }) {
+  const { api } = useSession()
+  const [open, setOpen] = useState(false)
+  const [codes, setCodes] = useState('')
+  const [usage, setUsage] = useState('')
+  const [plan, setPlan] = useState<DistributionSlot[] | null>(null)
+  const [result, setResult] = useState<Distribution | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const lines = codes.split('\n').filter((line) => line.trim()).length
+  const available = reward.codes_available + lines
+
+  async function preview() {
+    setBusy(true)
+    setError(null)
+    try {
+      setPlan((await api<Distribution>(`/api/v1/admin/rewards/distribution-plan?days=90&reward_id=${reward.id}`)).waiting)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function distribute() {
+    if (!window.confirm(`Kodlar ${Math.min(available, plan?.length ?? 0)} ta g'olibga yuborilsinmi? Har biriga xabar boradi.`)) return
+    setBusy(true)
+    setError(null)
+    try {
+      const done = await api<Distribution>(`/api/v1/admin/rewards/${reward.id}/distribute-test-places`, {
+        method: 'POST',
+        body: { codes, usage: usage.trim() || null, days: 90 },
+      })
+      setResult(done)
+      setPlan(null)
+      setCodes('')
+      onDone(`✓ ${done.given.length} ta g'olibga kod berildi${done.waiting.length ? `, ${done.waiting.length} tasiga kod yetmadi` : ''}.`)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open)
+    return (
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        🎟 Promokodlarni test g'oliblariga tarqatish
+      </Button>
+    )
+  return (
+    <Card className="flex flex-col gap-2 p-3">
+      <p className="text-sm font-medium">🎟 Promokodlarni tarqatish</p>
+      <p className="text-xs text-app-hint">
+        Kodlar avval barcha 1-o'rinlarga, keyin 2-o'rinlarga, keyin 3-o'rinlarga beriladi — har bir a'zoga bittadan. Tadbir testida faqat
+        davomat qilganlar hisobga olinadi. Sovg'a olgan o'rinlar o'tkazib yuboriladi.
+      </p>
+      <Field label="Kodlar — har biri alohida qatorda" hint={`Yangi: ${lines} ta · bazada bo'sh: ${reward.codes_available} ta`}>
+        <Textarea value={codes} onChange={(e) => setCodes(e.target.value)} rows={5} placeholder={'KITOB-1A2B\nKITOB-3C4D'} />
+      </Field>
+      <Field label="Kod qayerda ishlatiladi (g'oliblarga xabarda boradi)">
+        <Input value={usage} onChange={(e) => setUsage(e.target.value)} maxLength={300} placeholder="Masalan: Asaxiy.uz saytida to'lovda «Promokod» maydoniga kiriting" />
+      </Field>
+      <InlineError message={error} />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" loading={busy && plan === null} onClick={() => void preview()}>
+          👀 Kimlarga boradi?
+        </Button>
+        {plan !== null && (
+          <Button loading={busy} disabled={plan.length === 0 || available === 0} onClick={() => void distribute()}>
+            🎁 Tarqatish
+          </Button>
+        )}
+        <Button variant="ghost" onClick={() => setOpen(false)}>
+          Yopish
+        </Button>
+      </div>
+      {plan !== null && (
+        <ol className="flex flex-col gap-0.5 text-sm">
+          {plan.length === 0 && <li className="text-app-hint">Sovg'a kutayotgan g'olib yo'q.</li>}
+          {plan.map((slot, index) => (
+            <li key={`${slot.test_id}:${slot.place}`} className={index >= available ? 'text-app-hint line-through' : ''}>
+              {index + 1}. {MEDAL[slot.place]} {slot.name} — «{slot.test_title}»
+            </li>
+          ))}
+          {plan.length > available && <li className="text-xs text-amber-700">Kod yetmaydi: {plan.length - available} ta g'olib navbatda qoladi.</li>}
+        </ol>
+      )}
+      {result && (
+        <p className="text-sm text-emerald-700">
+          ✓ Qo'shildi: {result.codes_added} ta kod{result.duplicates ? ` (${result.duplicates} tasi takror)` : ''}. Berildi: {result.given.length} ta.
+        </p>
+      )}
+    </Card>
+  )
+}
+
 function TestWinnersPicker({ reward, onGiven }: { reward: AdminReward; onGiven: (text: string) => void }) {
   const { api } = useSession()
   const winners = useAsync((signal) => api<TestWinners[]>('/api/v1/admin/rewards/test-winners?days=90', { signal }))

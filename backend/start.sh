@@ -12,4 +12,5 @@ if [ "${SKIP_MIGRATIONS:-0}" != "1" ]; then
         exit 1
     fi
 fi
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --proxy-headers --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-*}"
+# WEB_CONCURRENCY: how many server processes (1 on small hosting; 2–4 on the institute server).
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --workers "${WEB_CONCURRENCY:-1}" --proxy-headers --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-*}"

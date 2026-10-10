@@ -6,13 +6,16 @@ import uuid
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
-from app.models import Test
+from app.core.errors import NotFoundError
+from app.models import Event, Test
 from app.schemas.common import Page
 from app.schemas.quiz import (
     AttemptDetailOut,
+    ImageKeyOut,
+    ImportOut,
     OptionAdminOut,
     QuestionAdminOut,
     QuestionsIn,
@@ -24,7 +27,9 @@ from app.schemas.quiz import (
     TestUpdateIn,
 )
 from app.security.permissions import Perm
+from app.services import certificate_backgrounds, test_import
 from app.services import quizzes as quiz_service
+from app.services.storage import get_storage
 
 router = APIRouter(prefix="/admin", tags=["admin: tests"])
 TestViewer = Annotated[CurrentUser, Depends(require_permissions(Perm.TEST_VIEW))]
@@ -61,6 +66,8 @@ async def _tests_out(db, tests: list[Test]) -> list[TestAdminOut]:
             published_at=test.published_at,
             rank_bonus_awarded=test.rank_bonus_awarded_at is not None,
             created_at=test.created_at,
+            event_id=test.event_id,
+            certificate_background=test.certificate_background_key is not None,
         )
         for test in tests
     ]
@@ -79,6 +86,7 @@ async def _detail(db, test: Test) -> TestAdminDetailOut:
                 points=question.points,
                 explanation=question.explanation,
                 options=[OptionAdminOut(id=o.id, text=o.text, is_correct=o.is_correct) for o in options],
+                image_key=question.image_key,
             )
             for question, options in questions
         ],
@@ -177,3 +185,86 @@ async def results_csv(test_id: uuid.UUID, _: TestViewer, db: DbSession) -> Respo
 @router.get("/test-attempts/{attempt_id}", response_model=AttemptDetailOut, summary="One attempt: answers and signals")
 async def attempt_detail(attempt_id: uuid.UUID, _: TestViewer, db: DbSession) -> AttemptDetailOut:
     return AttemptDetailOut(**await quiz_service.attempt_detail(db, attempt_id))
+
+
+# ---------------------------------------------------------------------------- import and question pictures
+
+
+@router.post(
+    "/tests/{test_id}/import",
+    response_model=ImportOut,
+    summary="Read questions from a TXT, Word or PDF file (not saved: the editor shows them first)",
+)
+async def import_questions(
+    test_id: uuid.UUID, _: TestEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> ImportOut:
+    test = await quiz_service.get_test(db, test_id)
+    data = await file.read(test_import.MAX_BYTES + 1)
+    questions, warnings = await test_import.import_file(test.id, file.filename or "", data)
+    return ImportOut(questions=questions, warnings=warnings)
+
+
+@router.post("/tests/{test_id}/question-images", response_model=ImageKeyOut, summary="Upload a question's picture")
+async def upload_question_image(
+    test_id: uuid.UUID, _: TestEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> ImageKeyOut:
+    test = await quiz_service.get_test(db, test_id)
+    data = await file.read(test_import.MAX_IMAGE_BYTES + 1)
+    prepared = test_import.prepare_image(data)
+    key = test_import.image_key(test.id)
+    await get_storage().put(key, prepared, "image/jpeg")
+    return ImageKeyOut(image_key=key)
+
+
+@router.get("/tests/{test_id}/question-images", summary="A question's picture", response_class=Response)
+async def question_image(test_id: uuid.UUID, key: str, _: TestViewer, db: DbSession) -> Response:
+    test = await quiz_service.get_test(db, test_id)
+    if not key.startswith(f"tests/{test.id}/") or ".." in key:
+        raise NotFoundError("IMAGE_NOT_FOUND", "Rasm topilmadi.")
+    return Response(content=await get_storage().get(key), media_type="image/jpeg")
+
+
+# ---------------------------------------------------------------------------- the test's own certificate design
+
+
+@router.put(
+    "/tests/{test_id}/certificate-background",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Upload the test's certificate design (admins until the start, the super admin until it ends)",
+)
+async def set_certificate_background(
+    test_id: uuid.UUID, current: TestEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> Response:
+    test = await quiz_service.get_test(db, test_id)
+    data = await file.read(certificate_backgrounds.MAX_BYTES + 1)
+    await certificate_backgrounds.set_background(
+        db, actor_id=current.user.id, super_admin="SUPER_ADMIN" in current.roles, target=test, data=data
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/tests/{test_id}/certificate-background",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Back to the standard designs (the event's design, if it has one)",
+)
+async def remove_certificate_background(test_id: uuid.UUID, current: TestEditor, db: DbSession) -> Response:
+    test = await quiz_service.get_test(db, test_id)
+    await certificate_backgrounds.set_background(
+        db, actor_id=current.user.id, super_admin="SUPER_ADMIN" in current.roles, target=test, data=None
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/tests/{test_id}/certificate-preview.png",
+    summary="How the winners' certificate of this test will look (a sample)",
+    response_class=Response,
+)
+async def certificate_preview(test_id: uuid.UUID, _: TestViewer, db: DbSession) -> Response:
+    test = await quiz_service.get_test(db, test_id)
+    if test.certificate_background_key is None and test.event_id is not None:
+        event = await db.get(Event, test.event_id)
+        if event is not None and event.certificate_background_key:
+            return Response(content=await certificate_backgrounds.preview(db, event), media_type="image/png")
+    return Response(content=await certificate_backgrounds.preview(db, test), media_type="image/png")

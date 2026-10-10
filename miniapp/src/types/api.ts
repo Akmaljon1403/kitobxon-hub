@@ -53,6 +53,17 @@ export interface Me {
   premium_until: string | null
   premium_lifetime?: boolean
   passport_photo: boolean
+  /** Premium only thanks to the free trial: Premium features carry a 💎 mark. */
+  premium_trial?: boolean
+  /** Feature codes that need Premium. */
+  premium_features?: string[]
+  /** Required channels not joined yet (empty: all good). */
+  subscription_missing?: SubscriptionChannel[]
+}
+
+export interface SubscriptionChannel {
+  title: string
+  url: string
 }
 
 export type FeatureAccess = 'on' | 'premium' | 'off'
@@ -71,6 +82,8 @@ export interface MyReading {
   status: ReadingStatus
   started_at: string
   completed_at: string | null
+  /** Finished after the deadline: in the portfolio, without points. */
+  late?: boolean
   verified: boolean
   verification_required: boolean
 }
@@ -124,6 +137,17 @@ export interface ClubEvent {
   attended_count: number
   is_registered: boolean
   my_attendance: AttendanceStatus | null
+  my_shift_id: string | null
+  shifts: EventShift[]
+}
+
+export interface EventShift {
+  id: string
+  position: number
+  starts_at: string
+  ends_at: string
+  capacity: number | null
+  registered_count: number
 }
 
 export interface CheckInResult {
@@ -226,6 +250,7 @@ export interface AttemptQuestion {
   text: string
   points: number
   options: { id: string; text: string }[]
+  has_image?: boolean
 }
 
 export interface RunningAttempt {
@@ -263,6 +288,7 @@ export interface TestReview {
   correct_count: number
   question_count: number
   place: number | null
+  attended?: boolean | null
   participants: number
   questions: {
     id: string
@@ -272,6 +298,7 @@ export interface TestReview {
     explanation: string | null
     is_correct: boolean
     points_awarded: number
+    has_image?: boolean
     options: { id: string; text: string; is_correct: boolean; selected: boolean }[]
   }[]
 }
@@ -312,6 +339,21 @@ export interface Certificate {
   issued_at: string
   code: string
   verify_url?: string | null
+  design?: string | null
+  rights?: CertificateRights
+}
+
+export interface CertificateRights {
+  can_download: boolean
+  downloads_left: number | null
+  premium: boolean
+  can_change_design: boolean
+  design_changes_left: number
+}
+
+export interface CertificateDesign {
+  code: string
+  title: string
 }
 
 export interface DownloadLink {
@@ -420,4 +462,13 @@ export interface Referrals {
   points: number
   premium_days: number
   monthly_limit: number
+}
+
+export interface TestStandings {
+  test_id: string
+  title: string
+  max_score: number
+  event_test: boolean
+  participants: number
+  rows: { place: number; prize_place: number | null; name: string; score: number; attended: boolean | null; me: boolean }[]
 }

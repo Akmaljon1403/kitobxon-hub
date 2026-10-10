@@ -8,6 +8,7 @@ import { CertificatesPage } from './pages/CertificatesPage'
 import { CheckInPage } from './pages/CheckInPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
+import { HelpPage } from './pages/HelpPage'
 import { HomePage } from './pages/HomePage'
 import { PremiumPage } from './pages/PremiumPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -23,6 +24,7 @@ import {
   NotRegisteredPage,
   OutsideTelegramPage,
   StartupErrorPage,
+  SubscribePage,
 } from './pages/StatusPages'
 import { AuthProvider, useAuth } from './store/auth'
 import { useRoute } from './utils/router'
@@ -44,8 +46,9 @@ function Routes() {
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
   else if (section === 'checkin') page = <CheckInPage />
-  else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage /></FeatureGate>
+  else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage certificateId={id} /></FeatureGate>
   else if (section === 'premium') page = <PremiumPage />
+  else if (section === 'help') page = <HelpPage />
   else if (section === 'stats') page = <FeatureGate code="personal_stats"><StatsPage /></FeatureGate>
   else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>
@@ -66,6 +69,8 @@ function Gate() {
       return <NotRegisteredPage />
     case 'blocked':
       return <AccountProblemPage message={status.message} />
+    case 'subscribe':
+      return <SubscribePage channels={status.channels} />
     case 'error':
       return <StartupErrorPage message={status.message} />
     case 'ready':

@@ -197,16 +197,28 @@ async def change_user_status(
         after={"status": status.value},
         reason=reason,
     )
+    await session.commit()
     if previous == UserStatus.PENDING and status == UserStatus.ACTIVE:
+        from app.services.premium import welcome_trial
+        from app.utils.timezone import format_date
+
+        text = "✅ Arizangiz tasdiqlandi! Endi Kitobxon Hub'dan to'liq foydalanishingiz mumkin."
+        trial = await welcome_trial(session, user)
+        await session.refresh(user)
+        if trial is not None:
+            text += (
+                f"\n\n🎁 Sovg'a: {(trial.ends_at - trial.starts_at).days} kunlik Premium yoqildi — "
+                f"{format_date(trial.ends_at)} gacha bepul. Imkoniyatlarni ilovada ko'ring."
+            )
         await enqueue_notification(
             session,
             user_id=user.id,
             type_=NotificationType.SYSTEM,
-            text="✅ Arizangiz tasdiqlandi! Endi Kitobxon Hub'dan to'liq foydalanishingiz mumkin. /start",
+            text=text + "\n\n/start",
             dedup_key=f"user_approved:{user.id}",
             priority=1,
         )
-    await session.commit()
+        await session.commit()
     return user
 
 

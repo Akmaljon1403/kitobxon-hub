@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
+import { GlobalSearch } from '../components/GlobalSearch'
 import { useSession } from '../store/session'
 import { navigate } from '../utils/router'
 
@@ -20,6 +21,12 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'tests', icon: '📝', label: 'Testlar', visible: (can) => can('TEST_VIEW') },
   { route: 'scores', icon: '🏆', label: 'Ballar va reyting', visible: (can) => can('SCORE_VIEW') },
   { route: 'reports', icon: '📄', label: 'Hisobotlar', visible: (can) => can('REPORT_VIEW') },
+  {
+    route: 'documents',
+    icon: '🗂',
+    label: 'Hujjatlar',
+    visible: (can) => can('ANALYTICS_VIEW') || can('ATTENDANCE_VIEW') || can('TEST_VIEW') || can('USER_VIEW') || can('REPORT_VIEW'),
+  },
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', visible: () => true },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", visible: (can) => can('REWARD_MANAGE') },
   { route: 'giveaways', icon: '🎲', label: "Sovg'a o'yinlari", visible: (can) => can('REWARD_MANAGE') },
@@ -117,7 +124,10 @@ export function AdminLayout({ section, children }: { section: string; children: 
             ☰
           </button>
           <p className="font-semibold lg:hidden">Kitobxon Hub</p>
-          <div className="ml-auto flex items-center gap-3 text-sm">
+          <div className="mx-2 flex min-w-0 flex-1 justify-center">
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-app-hint sm:inline">
               {admin?.first_name} {admin?.last_name}
               {admin?.is_super_admin ? ' · Bosh administrator' : ' · Administrator'}

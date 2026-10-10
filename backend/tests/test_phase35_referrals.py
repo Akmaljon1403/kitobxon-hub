@@ -17,7 +17,7 @@ from app.services import attendance, referrals
 from app.services.settings import update_setting
 from tests.bot_helpers import BotHarness
 from tests.factories import create_event, create_user
-from tests.helpers import member_headers
+from tests.helpers import grant_role, member_headers
 
 _ids = itertools.count(990_000)
 
@@ -48,6 +48,9 @@ async def _user(db: AsyncSession, harness: BotHarness) -> User:
 
 
 async def _visit(db: AsyncSession, admin: User, friend: User) -> None:
+    if not getattr(admin, "_boss", False):
+        await grant_role(db, admin, "SUPER_ADMIN")  # a super admin's manual check-in counts at once
+        admin._boss = True
     event = await create_event(db, title="Kitob kechasi", starts_at=datetime.now(UTC) - timedelta(minutes=10))
     await db.commit()
     await attendance.manual_check_in(db, actor_id=admin.id, event_id=event.id, user_id=friend.id, note="Kelgan")

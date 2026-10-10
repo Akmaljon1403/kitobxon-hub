@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { API_BASE } from '../services/api'
+
 const PALETTE = ['from-emerald-500 to-teal-700', 'from-sky-500 to-indigo-700', 'from-amber-500 to-orange-700', 'from-rose-500 to-fuchsia-700']
 
 /** Cover image, or a coloured placeholder with the title when there is no image (or it fails to load). */
@@ -8,7 +10,7 @@ export function BookCover({ url, title, className = '' }: { url: string | null; 
   if (url && !failed) {
     return (
       <img
-        src={url}
+        src={url.startsWith('/') ? `${API_BASE}${url}` : url}
         alt={title}
         loading="lazy"
         onError={() => setFailed(true)}

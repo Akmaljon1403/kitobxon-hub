@@ -16,12 +16,14 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import access, keyboards, texts
+from app.bot.handlers.events import open_link
 from app.bot.states import Registration
 from app.core.errors import ConflictError
-from app.models import User
+from app.models import PremiumSubscription, User
 from app.models.enums import StickerMood, UserStatus
 from app.services import attendance as attendance_service
 from app.services import literary, referrals, stickers
+from app.services import premium as premium_service
 from app.services.members import (
     RegistrationData,
     after_registration,
@@ -35,6 +37,7 @@ from app.services.members import (
     validate_course,
 )
 from app.services.settings import get_setting
+from app.utils.timezone import format_date
 
 router = Router(name="registration")
 
@@ -69,11 +72,15 @@ async def begin_registration(message: Message, state: FSMContext, db: AsyncSessi
     await _begin(message, state, db)
 
 
-async def _begin(message: Message, state: FSMContext, db: AsyncSession, *, referrer: int | None = None) -> None:
+async def _begin(
+    message: Message, state: FSMContext, db: AsyncSession, *, referrer: int | None = None, after: str | None = None
+) -> None:
     await state.clear()
     await state.set_state(Registration.first_name)
     if referrer is not None:
         await state.update_data(referrer=referrer)
+    if after:
+        await state.update_data(after=after)  # e.g. the event opened from a channel post
     steps = await _steps(db)
     await message.answer(texts.WELCOME_NEW, reply_markup=keyboards.remove())
     await message.answer(texts.ASK_FIRST_NAME.format(step=steps["first_name"]))
@@ -81,9 +88,29 @@ async def _begin(message: Message, state: FSMContext, db: AsyncSession, *, refer
 
 @router.message(CommandStart())
 async def start(
-    message: Message, state: FSMContext, db: AsyncSession, member: User | None, command: CommandObject
+    message: Message,
+    state: FSMContext,
+    db: AsyncSession,
+    member: User | None,
+    command: CommandObject,
+    woke_up: bool = False,
 ) -> None:
-    payload = command.args or ""
+    if woke_up:
+        await message.answer(texts.WELCOME_BACK_AFTER_BREAK)
+    await handle_start(message, state, db, member, command.args or "")
+
+
+async def handle_start(
+    message: Message, state: FSMContext, db: AsyncSession, member: User | None, payload: str
+) -> None:
+    """/start (also after «✅ Obuna bo'ldim»): a QR check-in, a link from the channel, home or registration."""
+    if payload == "support" and member is not None and member.status != UserStatus.LEFT:
+        from app.bot.states import SupportCompose
+
+        await state.clear()
+        await state.set_state(SupportCompose.waiting)  # «Adminga yozish» from the app (also when blocked)
+        await message.answer(texts.SUPPORT_ASK)
+        return
     if payload.startswith(attendance_service.QR_PREFIX):
         await _check_in_from_qr(message, state, db, member, payload)
         return
@@ -95,9 +122,17 @@ async def start(
         return
     if member is not None:
         await state.clear()
+        if member.status == UserStatus.ACTIVE and await open_link(message, db, member, payload):
+            return
         await send_member_home(message, member, db)
         return
-    await _begin(message, state, db, referrer=referrals.parse(payload))
+    await _begin(
+        message,
+        state,
+        db,
+        referrer=referrals.parse(payload),
+        after=payload if payload.startswith(("ev_", "bk_")) else None,
+    )
 
 
 async def _check_in_from_qr(
@@ -260,6 +295,7 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         await db.commit()
     await state.clear()
     await callback.answer()
+    trial = await after_registration(db, user.id)  # the free Premium trial switches on by itself
     if isinstance(callback.message, Message):
         await callback.message.edit_reply_markup(reply_markup=None)
         if user.status == UserStatus.ACTIVE:
@@ -270,9 +306,39 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
                 reply_markup=await access.menu(db, user),
             )
             await stickers.send(db, callback.message, StickerMood.WELCOME)
+            await _onboarding(callback.message, db, user, trial)
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
-    await after_registration(db, user.id)
+    if data.get("after") and user.status == UserStatus.ACTIVE and isinstance(callback.message, Message):
+        await open_link(callback.message, db, user, data["after"])
+
+
+async def _onboarding(message: Message, db: AsyncSession, user: User, trial: PremiumSubscription | None) -> None:
+    """A short tour of the club for a new member, then what Premium gives (and the trial they just got)."""
+    await message.answer(
+        texts.ONBOARDING_TOUR, reply_markup=keyboards.inline([keyboards.app_button("", texts.BTN_ONBOARDING_APP)])
+    )
+    status = await premium_service.member_status(db, user)
+    if not status["store_open"]:
+        return
+    perks = [
+        texts.PREMIUM_PERK.format(title=f["title"], description=f["description"]) for f in status["premium_features"]
+    ]
+    perks += [
+        texts.PREMIUM_PERK.format(title=f"{perk['icon']} {perk['title']}", description=perk["description"])
+        for perk in status["perks"]
+    ]
+    if not perks:
+        return
+    if trial is not None:
+        text = texts.ONBOARDING_TRIAL.format(
+            days=(trial.ends_at - trial.starts_at).days, until=format_date(trial.ends_at), perks="\n".join(perks)
+        )
+    else:
+        text = texts.ONBOARDING_PREMIUM.format(perks="\n".join(perks))
+    await message.answer(
+        text, reply_markup=keyboards.inline([keyboards.app_button("premium", texts.BTN_ONBOARDING_PREMIUM)])
+    )
 
 
 @router.callback_query(F.data == "reg:restart")
@@ -281,7 +347,8 @@ async def restart(callback: CallbackQuery, state: FSMContext, db: AsyncSession, 
     if member is not None or not isinstance(callback.message, Message):
         return
     await callback.message.edit_reply_markup(reply_markup=None)
-    await _begin(callback.message, state, db, referrer=(await state.get_data()).get("referrer"))
+    data = await state.get_data()
+    await _begin(callback.message, state, db, referrer=data.get("referrer"), after=data.get("after"))
 
 
 @router.callback_query(F.data.startswith("reg:"))

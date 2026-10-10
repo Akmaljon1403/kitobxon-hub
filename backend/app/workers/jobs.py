@@ -10,9 +10,10 @@ from collections.abc import Awaitable, Callable
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.services import achievements, announcements, channel, membership
+from app.services import achievements, announcements, channel, lifecycle, membership
 from app.services import attendance as attendance_service
 from app.services import certificates as certificate_service
+from app.services import events as event_service
 from app.services import feedback as feedback_service
 from app.services import giveaways as giveaway_service
 from app.services import premium as premium_service
@@ -22,6 +23,24 @@ logger = logging.getLogger(__name__)
 
 LOCK_NAMESPACE = 0x4B48  # "KH"
 Job = Callable[[AsyncSession], Awaitable[int]]
+
+
+def daily_at(hour: int, job: Callable[[AsyncSession], Awaitable[int]]) -> Job:
+    """Run a heavy daily job only during one hour of the club's day (cheap the rest of the time):
+    reminders in the daytime, cleaning up at night."""
+
+    async def run(session: AsyncSession) -> int:
+        from datetime import datetime
+
+        from app.utils.timezone import local_tz
+
+        if datetime.now(local_tz()).hour != hour:
+            return 0
+        return await job(session)
+
+    run.__name__ = getattr(job, "__name__", "daily_job")
+    return run
+
 
 JOBS: tuple[tuple[str, Job], ...] = (
     ("close_ended_tests", quiz_service.close_ended_tests),
@@ -41,13 +60,26 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("channel_posts", channel.scheduled_posts),
     ("premium_reminders", premium_service.remind_expiring),
     ("erase_left_members", membership.erase_expired),
+    ("complete_events", event_service.complete_finished),
+    ("new_study_year", lifecycle.new_study_year),
+    ("inactive_members", daily_at(11, lifecycle.inactive_members)),
+    ("cleanup_old_records", daily_at(4, lifecycle.cleanup)),
 )
+
+
+# While a rented copy's licence has ended, only these run (nothing is sent to members).
+HOUSEKEEPING = frozenset({"close_ended_tests", "complete_events", "erase_left_members", "cleanup_old_records"})
 
 
 async def run_scheduled_jobs(session_factory: async_sessionmaker[AsyncSession]) -> dict[str, int]:
     """Run every job once. A failing job is logged and does not stop the others."""
+    from app.core import licence
+
+    paused = licence.status().blocks_members
     results: dict[str, int] = {}
     for index, (name, job) in enumerate(JOBS):
+        if paused and name not in HOUSEKEEPING:
+            continue
         async with session_factory() as session:
             try:
                 locked = await session.scalar(select(func.pg_try_advisory_xact_lock(LOCK_NAMESPACE, index)))

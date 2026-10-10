@@ -82,6 +82,9 @@ async def authenticate_telegram(session: AsyncSession, init_data: str, scope: To
 
     # The bootstrap grant must happen before the status check so the owner can always get in.
     await ensure_bootstrap_super_admin(session, user)
+    from app.services.lifecycle import wake_up
+
+    await wake_up(session, user)  # back after a long break: active again
     ensure_user_can_sign_in(user)
 
     roles = await get_role_codes(session, user.id)

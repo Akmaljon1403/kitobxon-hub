@@ -9,9 +9,9 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import CurrentUser, CurrentUserDep, DbSession, get_current_user
 from app.models import AttendanceRecord, Event, EventRegistration
-from app.models.enums import AttendanceStatus, RegistrationStatus
+from app.models.enums import RegistrationStatus
 from app.schemas.common import Page
-from app.schemas.event import CheckInIn, CheckInOut, EventOut, LiveAttendanceOut
+from app.schemas.event import CheckInIn, CheckInOut, EventOut, LiveAttendanceOut, RegisterIn, ShiftOut
 from app.schemas.premium import FeedbackIn, FeedbackOut
 from app.security.rate_limit import RateLimit, enforce
 from app.services import attendance as attendance_service
@@ -22,30 +22,55 @@ router = APIRouter(tags=["events"])
 CHECK_IN_LIMIT = RateLimit("check-in", limit=10, window_seconds=60)
 
 
+async def member_events_out(
+    db, rows: list[tuple[Event, EventRegistration | None, AttendanceRecord | None]]
+) -> list[EventOut]:
+    """The events as a member sees them (a few queries for the whole list)."""
+    ids = [event.id for event, _, _ in rows]
+    counts = await event_service.counts(db, ids)
+    titles = await event_service.book_titles(db, {event.book_id for event, _, _ in rows if event.book_id})
+    shifts = await event_service.shifts_by_event(db, ids)
+    shift_counts = await event_service.shift_registrations(db, ids)
+    default_points = await event_service.default_points(db)
+    items = []
+    for event, registration, record in rows:
+        registered, attended = counts[event.id]
+        is_registered = registration is not None and registration.status == RegistrationStatus.REGISTERED
+        items.append(
+            EventOut(
+                id=event.id,
+                title=event.title,
+                description=event.description,
+                book_id=event.book_id,
+                book_title=titles.get(event.book_id) if event.book_id else None,
+                location=event.location,
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                attendance_opens_at=event.attendance_opens_at,
+                attendance_closes_at=event.attendance_closes_at,
+                attendance_points=event.attendance_points if event.attendance_points is not None else default_points,
+                capacity=event.capacity,
+                status=event.status,
+                registered_count=registered,
+                attended_count=attended,
+                shifts=[
+                    ShiftOut.model_validate(shift, from_attributes=True).model_copy(
+                        update={"registered_count": shift_counts.get(shift.id, 0)}
+                    )
+                    for shift in shifts[event.id]
+                ],
+                is_registered=is_registered,
+                my_shift_id=registration.shift_id if is_registered and registration else None,
+                my_attendance=record.status if record and record.status in event_service.COUNTED else None,
+            )
+        )
+    return items
+
+
 async def member_event_out(
     db, event: Event, registration: EventRegistration | None, record: AttendanceRecord | None
 ) -> EventOut:
-    registered, attended = (await event_service.counts(db, [event.id]))[event.id]
-    titles = await event_service.book_titles(db, {event.book_id} if event.book_id else set())
-    return EventOut(
-        id=event.id,
-        title=event.title,
-        description=event.description,
-        book_id=event.book_id,
-        book_title=titles.get(event.book_id) if event.book_id else None,
-        location=event.location,
-        starts_at=event.starts_at,
-        ends_at=event.ends_at,
-        attendance_opens_at=event.attendance_opens_at,
-        attendance_closes_at=event.attendance_closes_at,
-        attendance_points=await event_service.effective_points(db, event),
-        capacity=event.capacity,
-        status=event.status,
-        registered_count=registered,
-        attended_count=attended,
-        is_registered=registration is not None and registration.status == RegistrationStatus.REGISTERED,
-        my_attendance=record.status if record and record.status != AttendanceStatus.REVOKED else None,
-    )
+    return (await member_events_out(db, [(event, registration, record)]))[0]
 
 
 @router.get("/events", response_model=Page[EventOut], summary="Upcoming or past events")
@@ -59,8 +84,7 @@ async def list_events(
     rows, total = await event_service.list_member_events(
         db, user_id=current.user.id, scope=scope, limit=limit, offset=offset
     )
-    items = [await member_event_out(db, event, registration, record) for event, registration, record in rows]
-    return Page[EventOut](items=items, total=total, limit=limit, offset=offset)
+    return Page[EventOut](items=await member_events_out(db, rows), total=total, limit=limit, offset=offset)
 
 
 @router.get("/events/{event_id}", response_model=EventOut, summary="Event details")
@@ -69,9 +93,17 @@ async def get_event(event_id: uuid.UUID, current: CurrentUserDep, db: DbSession)
     return await member_event_out(db, event, registration, record)
 
 
-@router.post("/events/{event_id}/register", response_model=EventOut, summary="I intend to participate")
-async def register(event_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> EventOut:
-    await event_service.register(db, user_id=current.user.id, event_id=event_id)
+@router.post(
+    "/events/{event_id}/register",
+    response_model=EventOut,
+    summary="I intend to participate (choose the shift when the event has several)",
+)
+async def register(
+    event_id: uuid.UUID, current: CurrentUserDep, db: DbSession, payload: RegisterIn | None = None
+) -> EventOut:
+    await event_service.register(
+        db, user_id=current.user.id, event_id=event_id, shift_id=payload.shift_id if payload else None
+    )
     return await get_event(event_id, current, db)
 
 

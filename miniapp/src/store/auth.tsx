@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { ApiError, apiBlob, apiRequest, apiUpload, type RequestOptions } from '../services/api'
-import type { Me, PublicMeta, TokenResponse } from '../types/api'
+import type { Me, PublicMeta, SubscriptionChannel, TokenResponse } from '../types/api'
 import { getWebApp } from '../utils/telegram'
 
 type AuthStatus =
@@ -10,6 +10,7 @@ type AuthStatus =
   | { kind: 'outside_telegram' }
   | { kind: 'not_registered' }
   | { kind: 'blocked'; message: string }
+  | { kind: 'subscribe'; channels: SubscriptionChannel[] }
   | { kind: 'error'; message: string }
 
 interface AuthContextValue {
@@ -46,7 +47,12 @@ function storeToken(token: string | null): void {
   }
 }
 
-const ACCOUNT_ERRORS = new Set(['USER_BLOCKED', 'USER_PENDING', 'USER_INACTIVE'])
+const ACCOUNT_ERRORS = new Set(['USER_BLOCKED', 'USER_PENDING', 'USER_INACTIVE', 'LICENCE_EXPIRED'])
+
+function channelsOf(error: ApiError): SubscriptionChannel[] {
+  const details = error.details as { channels?: SubscriptionChannel[] } | undefined
+  return Array.isArray(details?.channels) ? details.channels : []
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>({ kind: 'loading' })
@@ -77,6 +83,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fresh = await signIn()
           return apiRequest<T>(path, { ...options, token: fresh })
         }
+        // Left the club channel while the app was open: show the «subscribe» screen.
+        if (error instanceof ApiError && error.code === 'SUBSCRIPTION_REQUIRED')
+          setStatus({ kind: 'subscribe', channels: channelsOf(error) })
+        // A rented copy whose licence ended while the app was open.
+        if (error instanceof ApiError && error.code === 'LICENCE_EXPIRED') setStatus({ kind: 'blocked', message: error.message })
         throw error
       }
     },
@@ -128,7 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = await api<Me>('/api/v1/me')
         if (cancelled) return
         setMe(profile)
-        setStatus({ kind: 'ready' })
+        if (profile.subscription_missing?.length) setStatus({ kind: 'subscribe', channels: profile.subscription_missing })
+        else setStatus({ kind: 'ready' })
       } catch (error) {
         if (cancelled) return
         if (error instanceof ApiError && error.code === 'USER_NOT_REGISTERED') setStatus({ kind: 'not_registered' })

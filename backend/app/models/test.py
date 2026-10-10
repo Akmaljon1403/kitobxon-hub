@@ -65,6 +65,8 @@ class Test(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     # Set once the 1st/2nd/3rd place bonuses have been awarded after the test closed.
     rank_bonus_awarded_at: Mapped[datetime | None] = mapped_column()
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # The club's own certificate design for this test's winners (an event's design is used otherwise).
+    certificate_background_key: Mapped[str | None] = mapped_column(String(512))
 
 
 class TestQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -85,6 +87,8 @@ class TestQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
     # Optional explanation shown to members only after the test has closed.
     explanation: Mapped[str | None] = mapped_column(Text)
+    # A picture for the question (a map, a portrait, a page of the book): a file in our storage.
+    image_key: Mapped[str | None] = mapped_column(String(512))
 
 
 class TestOption(UUIDPrimaryKeyMixin, Base):

@@ -25,7 +25,7 @@ def book_out(
         title=book.title,
         author=book.author,
         description=book.description,
-        cover_url=book.cover_url,
+        cover_url=book_service.cover_image(book),
         source_url=book.source_url,
         language=book.language,
         pages=book.pages,
@@ -38,6 +38,7 @@ def book_out(
             status=read.status,
             started_at=read.started_at,
             completed_at=read.completed_at,
+            late=book_service.finished_late(book, read),
             verified=read.verified_at is not None,
             verification_required=verification_required,
         )

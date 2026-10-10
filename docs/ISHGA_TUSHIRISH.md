@@ -87,6 +87,9 @@ Agar hali qilmagan bo'lsangiz ([TEST_HOSTING.md](TEST_HOSTING.md) dagi "serverni
 2. **New monitor** → **HTTP(s)** → URL: `https://SIZNING-MANZIL.onrender.com/health` → interval **5 daqiqa**.
 3. **Alert contacts** da emailingizni (xohlasangiz Telegram'ni ham) belgilang — server to'xtasa xabar keladi.
 
+Bepul Render server 15 daqiqa so'rov kelmasa «uxlaydi» — UptimeRobot har 5 daqiqada `/health` ni
+ochib, uni uyg'oq ushlab turadi (aks holda bot birinchi xabarga 30–60 soniyada javob beradi).
+
 ⚠️ `/health/db` manzilini bepul tarifda **5 daqiqalik** monitorga qo'ymang: u ma'lumotlar bazasini
 doim uyg'oq ushlab turadi va Neon'ning oylik bepul limiti tugab qoladi. Baza holatini
 **Tizim holati** sahifasida ko'rasiz.
@@ -159,8 +162,9 @@ Hammasi ishlasa — a'zolarga bot havolasini (`https://t.me/BOT_NOMI`) tarqatish
 **Qachon pullik tarifga o'tish kerak?** Faol a'zolar 300–500 dan oshsa, bot sekinlashsa yoki
 Tizim holati "Baza hajmi chegarasiga yaqin" desa. Eng oddiy qadam — Render'ning **Starter**
 tarifi (taxminan 7 $/oy): server umuman uxlamaydi; shunda `WORKER_INTERVAL_SECONDS` ni `60` ga
-o'zgartiring (eslatmalar har daqiqada tekshiriladi). Katta o'zgarishlar uchun loyihani
-professional dasturchiga topshirish mumkin — barcha texnik hujjatlar [DEPLOYMENT.md](DEPLOYMENT.md)
+o'zgartiring (eslatmalar har daqiqada tekshiriladi). Institutning o'z serveriga ko'chish —
+[INSTITUT_SERVERI.md](INSTITUT_SERVERI.md) (u yerda tekshiruv har daqiqada, server uxlamaydi).
+Katta o'zgarishlar uchun loyihani professional dasturchiga topshirish mumkin — barcha texnik hujjatlar [DEPLOYMENT.md](DEPLOYMENT.md)
 va [ARCHITECTURE.md](ARCHITECTURE.md) da.
 
 ---

@@ -215,15 +215,15 @@ async def test_bot_sends_the_passport_as_a_picture(db: AsyncSession) -> None:
     photo = next(r for r in reversed(harness.session.requests) if isinstance(r, SendPhoto))
     assert "Aziza" in photo.caption and "KH-" in photo.caption and "402" in photo.caption
     buttons = [b.callback_data or b.text for row in photo.reply_markup.inline_keyboard for b in row]
-    assert "pp:file" in buttons and "cert:list" in buttons
+    assert "pp:file" in buttons and texts.BTN_CERTIFICATES in buttons  # certificates open in the Mini App
 
     await harness.press("pp:file")
     document = next(r for r in reversed(harness.session.requests) if isinstance(r, SendDocument))
     assert document.document.filename.startswith("kitobxon-pasporti-KH-")
     assert harness.session.alerts()[-1] == texts.FILE_SENT
 
-    await harness.press("cert:list")
-    assert harness.last_text() == texts.CERTIFICATES_NONE
+    await harness.press("cert:list")  # a button of an older message
+    assert harness.last_text() == texts.CERTIFICATES_IN_APP
 
 
 async def test_bot_falls_back_to_text_when_drawing_fails(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -244,7 +244,7 @@ async def test_bot_falls_back_to_text_when_drawing_fails(db: AsyncSession, monke
 # ---------------------------------------------------------------------------- certificates
 
 
-async def test_test_winners_get_certificates_and_the_pdf_by_bot(db: AsyncSession) -> None:
+async def test_test_winners_get_certificates_seen_in_the_app(db: AsyncSession) -> None:
     members = [await create_user(db, telegram_id=7200 + i, first_name=f"Golib{i}") for i in range(5)]
     test = await create_test(db, title="O'tkan kunlar")
     test_id = test.id
@@ -271,21 +271,18 @@ async def test_test_winners_get_certificates_and_the_pdf_by_bot(db: AsyncSession
             Notification.type == NotificationType.CERTIFICATE, Notification.user_id == members[0].id
         )
     )
-    assert notification.payload["certificate_id"] == str(certificates[0].id)
+    assert "certificate_id" not in notification.payload  # no PDF in the bot: it is seen in the app
+    assert {"text": "🎓 Sertifikatni ko'rish", "app_route": f"certificates/{certificates[0].id}"} in (
+        notification.payload["buttons"]
+    )
     assert "Tabriklaymiz" in notification.text and "1-o'rin" in notification.text
+    assert len({c.design for c in certificates}) == 1  # one test, one design
 
     telegram = FakeTelegramSession()
     bot = Bot(token=BOT_TOKEN, session=telegram, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await send_due_notifications(get_session_factory(), bot)
-    documents = [r for r in telegram.requests if isinstance(r, SendDocument)]
-    assert len(documents) == 3
-    first = next(d for d in documents if d.chat_id == 7200)
-    assert first.document.filename.startswith("sertifikat-") and first.caption.startswith("🎓")
-    assert first.document.data.startswith(b"%PDF")
-    first_id = certificates[0].id
-    db.expire_all()
-    stored = await db.get(Certificate, first_id)
-    assert stored.file_key == f"certificates/{stored.id}.pdf"  # drawn once, then reused
+    assert not [r for r in telegram.requests if isinstance(r, SendDocument)]
+    assert {m.chat_id for m in telegram.sent_messages()} >= {7200, 7201, 7202}
 
 
 async def test_event_test_counts_only_members_who_attended(db: AsyncSession) -> None:
@@ -417,7 +414,7 @@ async def test_admin_issues_and_revokes_certificates(client: httpx.AsyncClient, 
     assert unknown.status_code == 404
 
 
-async def test_bot_lists_and_sends_certificates(db: AsyncSession) -> None:
+async def test_bot_points_certificates_to_the_app(db: AsyncSession) -> None:
     member = await create_user(db, telegram_id=7301)
     certificate = await certificate_service.issue(
         db,
@@ -432,18 +429,13 @@ async def test_bot_lists_and_sends_certificates(db: AsyncSession) -> None:
 
     await harness.send(texts.BTN_ACHIEVEMENTS)
     assert "🎓 Sertifikatlar: 1" in harness.last_text()
-    await harness.press("cert:list")
-    message = harness.session.sent_messages()[-1]
-    assert "1 ta" in message.text
-    assert message.reply_markup.inline_keyboard[0][0].callback_data == f"cert:get:{certificate.id}"
-
-    await harness.press(f"cert:get:{certificate.id}")
-    document = next(r for r in reversed(harness.session.requests) if isinstance(r, SendDocument))
-    assert document.document.filename == certificate_service.filename(certificate)
-    assert harness.session.alerts()[-1] == texts.FILE_SENT
-
-    await harness.press("cert:get:not-a-uuid")
-    assert harness.session.alerts()[-1] == texts.FILE_FAILED
+    # Buttons of older messages now lead to the Mini App, where certificates are seen and downloaded.
+    for data in ("cert:list", f"cert:get:{certificate.id}", "cert:get:not-a-uuid"):
+        await harness.press(data)
+        message = harness.session.sent_messages()[-1]
+        assert message.text == texts.CERTIFICATES_IN_APP
+        assert message.reply_markup.inline_keyboard[0][0].web_app is not None
+    assert not any(isinstance(r, SendDocument) for r in harness.session.requests)
 
 
 # ---------------------------------------------------------------------------- download links
@@ -545,4 +537,5 @@ async def test_certificate_pdf_is_redrawn_when_the_file_is_lost(db: AsyncSession
     )
     certificate.file_key = "certificates/missing.pdf"
     data = await certificate_service.pdf_bytes(db, certificate)
-    assert data.startswith(b"%PDF") and certificate.file_key == f"certificates/{certificate.id}.pdf"
+    assert data.startswith(b"%PDF")
+    assert certificate.file_key == f"certificates/{certificate.id}-{certificate.design}.pdf"
