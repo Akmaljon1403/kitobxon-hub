@@ -534,6 +534,8 @@ LEFT_WIPED = (
 )
 BTN_LEFT_RESTORE = "🔄 Qayta tiklash"
 BTN_LEFT_WIPE = "🧹 Chatni tozalash"
+STILL_HERE = "Ajoyib! 👋 Siz bilan davom etamiz — yangi kitob va tadbirlardan xabardor bo'lib turing."
+WELCOME_BACK_AFTER_BREAK = "🎉 Qaytganingiz bilan! Hisobingiz yana faol — ballaringiz va yutuqlaringiz joyida."
 STOPPED = "⏹ To'xtatildi. Oldingi amal bekor qilindi — pastdagi menyudan davom eting."
 BTN_FAQ = "❓ Savol-javoblar"
 BTN_FAQ_APP = "📱 Barchasi ilovada"

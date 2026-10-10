@@ -76,6 +76,17 @@ async def restore_self(callback: CallbackQuery, db: AsyncSession, member: User |
     )
 
 
+@router.callback_query(F.data == "mem:alive")
+async def still_here(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    """«✋ Men shu yerdaman» on the long-break reminder."""
+    from datetime import UTC, datetime
+
+    if member is not None:
+        member.last_seen_at = datetime.now(UTC)
+        await db.commit()
+    await callback.answer(texts.STILL_HERE, show_alert=True)
+
+
 @router.callback_query(F.data == "mem:back")
 async def come_back(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
     await callback.answer()

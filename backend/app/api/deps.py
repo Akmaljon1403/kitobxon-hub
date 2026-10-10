@@ -61,6 +61,14 @@ async def _require_subscription(request: Request, db: AsyncSession, user: User, 
         )
 
 
+def _require_licence(roles: set[str]) -> None:
+    """A rented copy whose licence ended: members wait, administrators keep full access (and their data)."""
+    from app.core import licence
+
+    if licence.status().blocks_members and not is_admin_role_set(roles):
+        raise ForbiddenError("LICENCE_EXPIRED", licence.MEMBER_MESSAGE)
+
+
 async def get_current_user(
     request: Request,
     db: DbSession,
@@ -77,6 +85,7 @@ async def get_current_user(
         raise TokenInvalidError()
     ensure_user_can_sign_in(user)
     roles = await get_role_codes(db, user.id)
+    _require_licence(roles)
     await _require_subscription(request, db, user, roles)
     return CurrentUser(user=user, scope=claims.scope, roles=roles)
 

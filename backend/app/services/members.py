@@ -122,6 +122,10 @@ async def register_member(session: AsyncSession, data: RegistrationData) -> User
 
     requires_approval = await get_setting(session, "registration.require_approval")
     is_owner = data.telegram_id in get_settings().super_admin_telegram_ids
+    if not is_owner:
+        from app.core import licence
+
+        await licence.check_member_limit(session)
     user = User(
         telegram_id=data.telegram_id,
         telegram_username=data.telegram_username,

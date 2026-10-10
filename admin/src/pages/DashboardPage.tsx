@@ -24,6 +24,44 @@ function StatTile({ label, value, hint, onClick }: { label: string; value: numbe
   )
 }
 
+interface Licence {
+  required: boolean
+  valid: boolean
+  organization: string | null
+  expires: string | null
+  max_members: number | null
+  days_left: number | null
+  members_paused: boolean
+  problem: string | null
+}
+
+/** Only on rented copies: the licence is ending or has ended (renewing keeps every record). */
+function LicenceBanner() {
+  const { api } = useSession()
+  const { state } = useAsync((signal) => api<Licence>('/api/v1/admin/system/licence', { signal }))
+  if (state.status !== 'success' || !state.data.required) return null
+  const licence = state.data
+  const soon = licence.days_left !== null && licence.days_left <= 30
+  if (licence.valid && !soon && !licence.problem) return null
+  const tone = licence.members_paused || !licence.valid ? 'border-rose-300 bg-rose-50 text-rose-900' : 'border-amber-300 bg-amber-50 text-amber-900'
+  return (
+    <div className={`mb-4 rounded-xl border p-4 text-sm ${tone}`}>
+      <p className="font-semibold">
+        📜 Litsenziya{licence.organization ? ` — ${licence.organization}` : ''}
+        {licence.expires ? ` (muddati: ${licence.expires})` : ''}
+      </p>
+      {licence.problem && <p className="mt-1">{licence.problem}</p>}
+      {!licence.problem && licence.days_left !== null && <p className="mt-1">Muddat tugashiga {licence.days_left} kun qoldi.</p>}
+      {licence.members_paused && (
+        <p className="mt-1">
+          A'zolar uchun xizmat to'xtatilgan. Adminlar ishlashda va hujjatlarni yuklab olishda davom etadi; litsenziya
+          yangilangach, hammasi joyidan davom etadi.
+        </p>
+      )}
+    </div>
+  )
+}
+
 function FacultyBars({ rows }: { rows: Statistics['faculties'] }) {
   const max = Math.max(1, ...rows.map((row) => row.members))
   return (
@@ -58,6 +96,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader title={`Assalomu alaykum, ${admin?.first_name ?? ''}!`} subtitle="Klub faoliyatining qisqacha ko'rinishi" />
+      <LicenceBanner />
       {can('SETTINGS_MANAGE') && <SystemStatusBanner />}
       {!allowed && (
         <Card className="p-4 text-sm text-app-hint">Statistikani ko'rish uchun «ANALYTICS_VIEW» ruxsati kerak.</Card>

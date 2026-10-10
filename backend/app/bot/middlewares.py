@@ -56,6 +56,14 @@ class MemberMiddleware(BaseMiddleware):
             if member is not None and member.telegram_id in get_settings().super_admin_telegram_ids:
                 if await ensure_bootstrap_super_admin(db, member):
                     await db.commit()
+            if member is not None:
+                from app.services import lifecycle
+
+                # Made «faol emas» automatically after a long break: they are back, so they are active again.
+                if await lifecycle.wake_up(db, member):
+                    data["woke_up"] = True
+                elif await lifecycle.touch(db, member):
+                    await db.commit()
         data["member"] = member
         return await handler(event, data)
 
@@ -72,6 +80,29 @@ class FloodMiddleware(BaseMiddleware):
                 logger.warning("Bot flood limit reached", extra={"telegram_user": "redacted"})
                 return None
         return await handler(event, data)
+
+
+class LicenceMiddleware(BaseMiddleware):
+    """A rented copy whose licence ended: members get one polite line; administrators carry on."""
+
+    async def __call__(self, handler: Handler, event: TelegramObject, data: dict[str, Any]) -> Any:
+        from app.bot import access
+        from app.core import licence
+
+        if not licence.status().blocks_members:
+            return await handler(event, data)
+        if isinstance(event, Message):
+            if event.chat.type != "private" or event.successful_payment is not None:
+                return await handler(event, data)
+        elif not isinstance(event, CallbackQuery):
+            return await handler(event, data)
+        if await access.is_admin(data["db"], data.get("member")):
+            return await handler(event, data)
+        if isinstance(event, CallbackQuery):
+            await event.answer(licence.MEMBER_MESSAGE[:200], show_alert=True)
+        else:
+            await event.answer(licence.MEMBER_MESSAGE)
+        return None
 
 
 CHECK = "sub:check"

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
+import { GlobalSearch } from '../components/GlobalSearch'
 import { useSession } from '../store/session'
 import { navigate } from '../utils/router'
 
@@ -123,7 +124,10 @@ export function AdminLayout({ section, children }: { section: string; children: 
             ☰
           </button>
           <p className="font-semibold lg:hidden">Kitobxon Hub</p>
-          <div className="ml-auto flex items-center gap-3 text-sm">
+          <div className="mx-2 flex min-w-0 flex-1 justify-center">
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-app-hint sm:inline">
               {admin?.first_name} {admin?.last_name}
               {admin?.is_super_admin ? ' · Bosh administrator' : ' · Administrator'}

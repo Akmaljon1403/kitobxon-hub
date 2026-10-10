@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
+import { useRoute } from '../utils/router'
 import type { AdminUser, Faculty, Page, UserStatus } from '../types/api'
 import { USER_STATUS_LABELS, formatDate, formatDateTime } from '../utils/format'
 
@@ -41,7 +42,8 @@ function useDebounced<T>(value: T, delay = 350): T {
 
 export function MembersPage() {
   const { api, can } = useSession()
-  const [search, setSearch] = useState('')
+  const route = useRoute()
+  const [search, setSearch] = useState(route.query.get('q') ?? '')  // from the search box in the header
   const [status, setStatus] = useState('')
   const [facultyId, setFacultyId] = useState('')
   const [course, setCourse] = useState('')

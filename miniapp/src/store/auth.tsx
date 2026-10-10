@@ -47,7 +47,7 @@ function storeToken(token: string | null): void {
   }
 }
 
-const ACCOUNT_ERRORS = new Set(['USER_BLOCKED', 'USER_PENDING', 'USER_INACTIVE'])
+const ACCOUNT_ERRORS = new Set(['USER_BLOCKED', 'USER_PENDING', 'USER_INACTIVE', 'LICENCE_EXPIRED'])
 
 function channelsOf(error: ApiError): SubscriptionChannel[] {
   const details = error.details as { channels?: SubscriptionChannel[] } | undefined
@@ -86,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Left the club channel while the app was open: show the «subscribe» screen.
         if (error instanceof ApiError && error.code === 'SUBSCRIPTION_REQUIRED')
           setStatus({ kind: 'subscribe', channels: channelsOf(error) })
+        // A rented copy whose licence ended while the app was open.
+        if (error instanceof ApiError && error.code === 'LICENCE_EXPIRED') setStatus({ kind: 'blocked', message: error.message })
         throw error
       }
     },

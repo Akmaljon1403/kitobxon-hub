@@ -88,8 +88,15 @@ async def _begin(
 
 @router.message(CommandStart())
 async def start(
-    message: Message, state: FSMContext, db: AsyncSession, member: User | None, command: CommandObject
+    message: Message,
+    state: FSMContext,
+    db: AsyncSession,
+    member: User | None,
+    command: CommandObject,
+    woke_up: bool = False,
 ) -> None:
+    if woke_up:
+        await message.answer(texts.WELCOME_BACK_AFTER_BREAK)
     await handle_start(message, state, db, member, command.args or "")
 
 

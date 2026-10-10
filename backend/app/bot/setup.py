@@ -32,6 +32,7 @@ from app.bot.middlewares import (
     DbSessionMiddleware,
     FloodMiddleware,
     GroupMiddleware,
+    LicenceMiddleware,
     MemberMiddleware,
     SubscriptionMiddleware,
 )
@@ -81,6 +82,8 @@ def create_dispatcher() -> Dispatcher:
     # club channel(s) — both are checked before any handler runs.
     dispatcher.message.outer_middleware(GroupMiddleware())
     dispatcher.callback_query.outer_middleware(GroupMiddleware())
+    dispatcher.message.outer_middleware(LicenceMiddleware())
+    dispatcher.callback_query.outer_middleware(LicenceMiddleware())
     dispatcher.message.outer_middleware(SubscriptionMiddleware())
     dispatcher.callback_query.outer_middleware(SubscriptionMiddleware())
     # Order matters: free-text handlers (support messages) come after the menu buttons.

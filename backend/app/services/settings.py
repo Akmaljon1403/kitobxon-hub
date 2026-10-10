@@ -208,6 +208,38 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=100)],
         "Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz)",
     ),
+    # ---- Study years ----
+    SettingDefinition(
+        "academic.year_start",
+        "09-01",
+        Annotated[str, StringConstraints(pattern=r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")],
+        "O'quv yili boshlanadigan kun (OO-KK): shu kuni kurslar bittaga oshadi va yangi mavsum boshlanadi",
+    ),
+    SettingDefinition(
+        "academic.promote_courses",
+        True,
+        bool,
+        "Yangi o'quv yilida faol a'zolarning kursi avtomatik bittaga oshirilsin (oxirgi kursdan oshmaydi)",
+    ),
+    SettingDefinition(
+        "academic.auto_season",
+        True,
+        bool,
+        "Har o'quv yili uchun alohida mavsum (reyting va hisobotlar yillar bo'yicha aralashmaydi)",
+    ),
+    SettingDefinition(
+        "academic.current_year",
+        0,
+        Annotated[int, Field(ge=0, le=2200)],
+        "Joriy o'quv yili boshlangan yil (avtomatik yoziladi; 0 — hali aniqlanmagan)",
+    ),
+    SettingDefinition(
+        "membership.inactive_days",
+        365,
+        Annotated[int, Field(ge=0, le=3650)],
+        "Shuncha kun botga ham, ilovaga ham kirmagan a'zo eslatmadan 7 kun keyin «faol emas» bo'ladi "
+        "(ma'lumotlari saqlanadi, qaytsa o'zi tiklanadi; 0 — o'chiq)",
+    ),
     # ---- Required subscription ----
     SettingDefinition(
         "subscription.required",

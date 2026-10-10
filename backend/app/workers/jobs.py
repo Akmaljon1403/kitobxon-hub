@@ -10,7 +10,7 @@ from collections.abc import Awaitable, Callable
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.services import achievements, announcements, channel, membership
+from app.services import achievements, announcements, channel, lifecycle, membership
 from app.services import attendance as attendance_service
 from app.services import certificates as certificate_service
 from app.services import events as event_service
@@ -43,13 +43,25 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("premium_reminders", premium_service.remind_expiring),
     ("erase_left_members", membership.erase_expired),
     ("complete_events", event_service.complete_finished),
+    ("new_study_year", lifecycle.new_study_year),
+    ("inactive_members", lifecycle.inactive_members),
+    ("cleanup_old_records", lifecycle.cleanup),
 )
+
+
+# While a rented copy's licence has ended, only these run (nothing is sent to members).
+HOUSEKEEPING = frozenset({"close_ended_tests", "complete_events", "erase_left_members", "cleanup_old_records"})
 
 
 async def run_scheduled_jobs(session_factory: async_sessionmaker[AsyncSession]) -> dict[str, int]:
     """Run every job once. A failing job is logged and does not stop the others."""
+    from app.core import licence
+
+    paused = licence.status().blocks_members
     results: dict[str, int] = {}
     for index, (name, job) in enumerate(JOBS):
+        if paused and name not in HOUSEKEEPING:
+            continue
         async with session_factory() as session:
             try:
                 locked = await session.scalar(select(func.pg_try_advisory_xact_lock(LOCK_NAMESPACE, index)))
