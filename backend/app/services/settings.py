@@ -7,6 +7,8 @@ value is validated against the declared type before it is stored.
 
 from __future__ import annotations
 
+import copy
+import time
 import uuid
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
@@ -307,10 +309,39 @@ def get_definition(key: str) -> SettingDefinition:
         raise NotFoundError("SETTING_NOT_FOUND", "Bunday sozlama mavjud emas.") from exc
 
 
+# Every request reads a few settings; they change rarely. One process keeps the stored values for
+# a few seconds (a change made here is seen at once; other processes catch up within seconds).
+SETTINGS_SECONDS = 10.0
+_stored_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def forget_cache() -> None:
+    global _stored_cache
+    _stored_cache = None
+
+
+def _cache_seconds() -> float:
+    from app.core.config import get_settings
+
+    return 0.0 if get_settings().environment == "test" else SETTINGS_SECONDS
+
+
+async def _stored_value(session: AsyncSession, key: str) -> Any:
+    global _stored_cache
+    seconds = _cache_seconds()
+    if not seconds:
+        return await session.scalar(select(SystemSetting.value).where(SystemSetting.key == key))
+    now = time.monotonic()
+    if _stored_cache is None or now - _stored_cache[0] >= seconds:
+        rows = (await session.execute(select(SystemSetting.key, SystemSetting.value))).all()
+        _stored_cache = (now, {row[0]: row[1] for row in rows})
+    return copy.deepcopy(_stored_cache[1].get(key))
+
+
 async def get_setting(session: AsyncSession, key: str) -> Any:
     """Current value of a setting, falling back to its default (and validating stored data)."""
     definition = get_definition(key)
-    stored = await session.scalar(select(SystemSetting.value).where(SystemSetting.key == key))
+    stored = await _stored_value(session, key)
     if stored is None:
         return definition.default
     try:
@@ -356,6 +387,7 @@ async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_i
         after={"value": validated},
     )
     await session.commit()
+    forget_cache()
     if key.startswith("subscription.") or key == "channel.chat_id":
         from app.services import subscription
 

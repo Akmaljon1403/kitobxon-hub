@@ -35,7 +35,7 @@ filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
 source = ["app"]
 # SQLAlchemy's async mode runs on greenlets; without this, lines after a database call are missed.
 concurrency = ["greenlet", "thread"]
-omit = ["app/cli.py", "app/workers/__main__.py", "app/bot/polling.py"]
+omit = ["app/cli.py", "app/workers/__main__.py", "app/bot/polling.py", "app/load_test.py"]
 
 [tool.coverage.report]
 skip_covered = true

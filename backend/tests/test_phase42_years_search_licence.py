@@ -351,3 +351,75 @@ def test_owner_licence_tool(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     issued = capsys.readouterr().out.split("LICENCE_KEY=")[1].strip()
     parsed = licence.parse(issued, public)
     assert (parsed.organization, parsed.expires, parsed.max_members) == ("Namuna kolleji", date(2027, 6, 30), 800)
+
+
+async def test_daily_jobs_run_only_in_their_hour(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    async def job(session: AsyncSession) -> int:
+        calls.append("ran")
+        return 1
+
+    from app.utils.timezone import local_tz
+
+    hour = datetime.now(local_tz()).hour
+    assert await jobs.daily_at(hour, job)(db) == 1
+    assert await jobs.daily_at((hour + 1) % 24, job)(db) == 0
+    assert calls == ["ran"]
+
+
+async def test_rankings_are_kept_briefly_and_refreshed_by_new_points(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.models import Faculty, ScoreTransaction
+    from app.models.enums import ScoreCategory
+    from app.services import ranking, scoring
+
+    monkeypatch.setattr(ranking, "_cache_seconds", lambda: 30.0)
+    ranking.forget()
+    faculty = Faculty(name="Pediatriya", short_name="PD")
+    db.add(faculty)
+    await db.flush()
+    first = await create_user(db, faculty_id=faculty.id, group_name="101")
+    second = await create_user(db, faculty_id=faculty.id, group_name="102")
+    third = await create_user(db)
+    for user, points in ((first, 30), (second, 20), (third, 40)):
+        await scoring.award_points(
+            db, user_id=user.id, amount=points, category=ScoreCategory.TEST, idempotency_key=f"t:{user.id}"
+        )
+    await db.commit()
+
+    overall = await ranking.ranking(db, period="all", scope="all", viewer=second, limit=2)
+    assert [row.total for row in overall.items] == [40, 30] and overall.me is not None and overall.me.rank == 3
+    in_faculty = await ranking.ranking(db, period="all", scope="faculty", viewer=second, limit=10)
+    assert [row.rank for row in in_faculty.items] == [1, 2] and in_faculty.me.rank == 2
+    in_group = await ranking.ranking(db, period="all", scope="group", viewer=second, limit=10)
+    assert [row.user_id for row in in_group.items] == [second.id] and in_group.me.rank == 1
+
+    # Written around the scoring service: the short-lived copy is still shown…
+    db.add(ScoreTransaction(user_id=second.id, amount=50, category=ScoreCategory.TEST, idempotency_key="direct"))
+    await db.commit()
+    assert (await ranking.ranking(db, period="all", scope="all", viewer=second, limit=0)).me.rank == 3
+    # …while points given the normal way show at once.
+    await scoring.award_points(db, user_id=second.id, amount=1, category=ScoreCategory.TEST, idempotency_key="more")
+    await db.commit()
+    mine = (await ranking.ranking(db, period="all", scope="all", viewer=second, limit=0)).me
+    assert mine is not None and (mine.rank, mine.total) == (1, 71)
+    ranking.forget()
+
+
+async def test_settings_are_kept_briefly(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.models import SystemSetting
+    from app.services import settings as settings_service
+
+    monkeypatch.setattr(settings_service, "_cache_seconds", lambda: 10.0)
+    settings_service.forget_cache()
+    assert await get_setting(db, "membership.inactive_days") == 365
+    row = await db.get(SystemSetting, "membership.inactive_days")
+    assert row is not None
+    row.value = 200
+    await db.commit()
+    assert await get_setting(db, "membership.inactive_days") == 365  # another process changed it: seen shortly
+    await update_setting(db, key="membership.inactive_days", value=180, actor_id=None)
+    assert await get_setting(db, "membership.inactive_days") == 180  # changed here: seen at once
+    settings_service.forget_cache()

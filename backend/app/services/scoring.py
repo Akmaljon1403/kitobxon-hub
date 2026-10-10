@@ -22,6 +22,12 @@ async def current_season_id(session: AsyncSession) -> uuid.UUID | None:
     return await session.scalar(select(Season.id).where(Season.is_current.is_(True)))
 
 
+def _rankings_changed() -> None:
+    from app.services import ranking
+
+    ranking.forget()  # the member sees their new place at once
+
+
 async def award_points(
     session: AsyncSession,
     *,
@@ -53,6 +59,7 @@ async def award_points(
         .on_conflict_do_nothing(index_elements=[ScoreTransaction.idempotency_key])
         .returning(ScoreTransaction.id)
     )
+    _rankings_changed()
     return await session.scalar(statement)
 
 
@@ -88,6 +95,7 @@ async def reverse_latest_award(
     )
     if original is None:
         return None
+    _rankings_changed()
     return await session.scalar(
         insert(ScoreTransaction)
         .values(
@@ -169,6 +177,7 @@ async def reverse_transaction(
     if original.category == ScoreCategory.REVERSAL:
         raise BadRequestError("CANNOT_REVERSE_REVERSAL", "Bekor qilish yozuvini qayta bekor qilib bo'lmaydi.")
     before = await user_total(session, original.user_id)
+    _rankings_changed()
     reversal_id = await session.scalar(
         insert(ScoreTransaction)
         .values(

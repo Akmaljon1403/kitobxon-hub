@@ -44,6 +44,8 @@ COMMANDS: tuple[tuple[str, str], ...] = (
     ("/stiker", "Botga stikerlarni yuborib, kanal postlari va tabriklar uchun saqlash (adminlar)"),
     ("/emoji", "Premium emojilarni o'rgatish: bot xabarlaridagi oddiy emojilar premiumga almashadi (adminlar)"),
     ("/admin", "Boshqaruv: qisqa holat va admin panel"),
+    ("/menu", "Bosh menyu"),
+    ("/portfolio", "Kitobxonlik portfoliosi (PDF va Word)"),
     ("/davomat", "Tadbirda davomat qilish"),
     ("/pasport", "Kitobxon pasporti"),
     ("/premium", "Premium va klubni qo'llab-quvvatlash"),

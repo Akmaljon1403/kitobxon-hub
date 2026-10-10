@@ -24,6 +24,24 @@ logger = logging.getLogger(__name__)
 LOCK_NAMESPACE = 0x4B48  # "KH"
 Job = Callable[[AsyncSession], Awaitable[int]]
 
+
+def daily_at(hour: int, job: Callable[[AsyncSession], Awaitable[int]]) -> Job:
+    """Run a heavy daily job only during one hour of the club's day (cheap the rest of the time):
+    reminders in the daytime, cleaning up at night."""
+
+    async def run(session: AsyncSession) -> int:
+        from datetime import datetime
+
+        from app.utils.timezone import local_tz
+
+        if datetime.now(local_tz()).hour != hour:
+            return 0
+        return await job(session)
+
+    run.__name__ = getattr(job, "__name__", "daily_job")
+    return run
+
+
 JOBS: tuple[tuple[str, Job], ...] = (
     ("close_ended_tests", quiz_service.close_ended_tests),
     ("event_reminders", announcements.event_reminders),
@@ -44,8 +62,8 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("erase_left_members", membership.erase_expired),
     ("complete_events", event_service.complete_finished),
     ("new_study_year", lifecycle.new_study_year),
-    ("inactive_members", lifecycle.inactive_members),
-    ("cleanup_old_records", lifecycle.cleanup),
+    ("inactive_members", daily_at(11, lifecycle.inactive_members)),
+    ("cleanup_old_records", daily_at(4, lifecycle.cleanup)),
 )
 
 

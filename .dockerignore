@@ -12,3 +12,5 @@ backend/tests
 docs
 .env
 .env.*
+infra/institute/data
+infra/institute/.env
