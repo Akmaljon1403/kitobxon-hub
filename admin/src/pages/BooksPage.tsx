@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHeader, Select, Table, Textarea } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
-import { ApiError } from '../services/api'
+import { API_BASE, ApiError } from '../services/api'
 import { useSession } from '../store/session'
 import type { Book, BookStatus, Page, Reader } from '../types/api'
 import { BOOK_STATUS_LABELS, formatDate } from '../utils/format'
@@ -158,6 +158,60 @@ export function BooksPage() {
   )
 }
 
+/** The book's own cover picture: shown to members and in the channel posts of the book and its events. */
+function CoverUpload({ book }: { book: Book }) {
+  const { api } = useSession()
+  const [image, setImage] = useState<string | null>(book.cover_image ?? null)
+  const [uploaded, setUploaded] = useState(Boolean(book.cover_uploaded))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const input = useRef<HTMLInputElement>(null)
+
+  async function send(file: File | null) {
+    setBusy(true)
+    setError(null)
+    try {
+      let next: Book
+      if (file) {
+        const form = new FormData()
+        form.append('file', file)
+        next = await api<Book>(`/api/v1/admin/books/${book.id}/cover`, { method: 'PUT', body: form })
+      } else {
+        next = await api<Book>(`/api/v1/admin/books/${book.id}/cover`, { method: 'DELETE' })
+      }
+      setImage(next.cover_image ?? null)
+      setUploaded(Boolean(next.cover_uploaded))
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Rasmni yuklab bo'lmadi.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const src = image ? (image.startsWith('/') ? `${API_BASE}${image}` : image) : null
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-app-border p-3 sm:col-span-2">
+      {src ? <img src={src} alt="Muqova" className="h-28 w-20 rounded object-cover" /> : <div className="h-28 w-20 rounded bg-app-surface" />}
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium">📕 Muqova rasmi</p>
+        <p className="text-xs text-app-hint">A'zolar ilovada ko'radi; kitob va shu kitob bo'yicha tadbir posti kanalga muqova bilan chiqadi.</p>
+        <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => void send(e.target.files?.[0] ?? null)} />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" loading={busy} onClick={() => input.current?.click()}>
+            🖼 {uploaded ? 'Boshqa rasm' : 'Rasm yuklash'}
+          </Button>
+          {uploaded && (
+            <Button variant="ghost" className="text-app-danger" disabled={busy} onClick={() => void send(null)}>
+              Olib tashlash
+            </Button>
+          )}
+        </div>
+        <InlineError message={error} />
+      </div>
+    </div>
+  )
+}
+
 function BookFormModal({ book, onClose, onSaved }: { book: Book | null; onClose: () => void; onSaved: () => void }) {
   const { api } = useSession()
   const [form, setForm] = useState<BookForm>(book ? toForm(book) : EMPTY)
@@ -206,7 +260,12 @@ function BookFormModal({ book, onClose, onSaved }: { book: Book | null; onClose:
         <Field label="Muallif *">
           <Input value={form.author} onChange={set('author')} maxLength={255} />
         </Field>
-        <Field label="Muqova rasmi (havola)" hint="Masalan: https://.../muqova.jpg">
+        {book ? (
+          <CoverUpload book={book} />
+        ) : (
+          <p className="text-xs text-app-hint sm:col-span-2">📕 Muqova rasmini kitob saqlangandan keyin yuklaysiz.</p>
+        )}
+        <Field label="Yoki muqova havolasi" hint="Rasm yuklanmagan bo'lsa ishlatiladi: https://.../muqova.jpg">
           <Input value={form.cover_url} onChange={set('cover_url')} placeholder="https://" />
         </Field>
         <Field label="Kitob havolasi" hint="A'zolar kitobni shu havola orqali ochadi">

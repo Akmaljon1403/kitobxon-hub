@@ -50,7 +50,7 @@ from app.models.enums import (
     ScoreCategory,
 )
 from app.security.crypto import derive_key, keyed_hash
-from app.services import achievements, announcements, referrals
+from app.services import achievements, announcements, books, referrals
 from app.services.audit import record_audit
 from app.services.events import effective_points, get_event, shifts_of
 from app.services.scoring import award_points, reverse_latest_award
@@ -483,6 +483,7 @@ async def check_in(
         source_type="EVENT",
         source_id=event.id,
     )
+    await books.read_at_event(session, event.book_id, user.id)
     await achievements.evaluate(session, user.id)
     await referrals.on_first_attendance(session, user.id)
     await session.commit()
@@ -526,6 +527,7 @@ async def _credit(
         created_by=actor_id,
         reason=note,
     )
+    await books.read_at_event(session, event.book_id, record.user_id)
     await achievements.evaluate(session, record.user_id)
     await referrals.on_first_attendance(session, record.user_id)
     return points
@@ -721,6 +723,7 @@ async def set_record_status(
     )
     if status == AttendanceStatus.VERIFIED:
         await session.flush()
+        await books.read_at_event(session, event.book_id, record.user_id)
         await achievements.evaluate(session, record.user_id)
     await session.commit()
     return record

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '../components/ui'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
+import { QuestionImage } from '../components/QuestionImage'
 import { useAuth } from '../store/auth'
 import type { AttemptResult, RunningAttempt } from '../types/api'
 import { confirmAction, getWebApp, haptic } from '../utils/telegram'
@@ -216,6 +217,7 @@ export function TestRunner({
             {question.points} ball
           </p>
           <h2 className="mt-1 whitespace-pre-line text-[17px] font-semibold leading-snug">{question.text}</h2>
+          {question.has_image && <QuestionImage testId={attempt.test_id} questionId={question.id} />}
         </section>
 
         <div

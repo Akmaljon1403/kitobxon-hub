@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.models import Book, BookQuote
@@ -48,6 +48,8 @@ def _book_out(book: Book, counts: tuple[int, int] = (0, 0)) -> BookAdminOut:
         completed_count=counts[1],
         created_at=book.created_at,
         updated_at=book.updated_at,
+        cover_image=book_service.cover_image(book),
+        cover_uploaded=book.cover_key is not None,
     )
 
 
@@ -90,6 +92,21 @@ async def update_book(book_id: uuid.UUID, payload: BookUpdateIn, current: BookEd
         db, actor_id=current.user.id, book_id=book_id, changes=plain(payload.model_dump(exclude_unset=True))
     )
     return await _with_counts(db, book)
+
+
+@router.put("/books/{book_id}/cover", response_model=BookAdminOut, summary="Upload the book's cover picture")
+async def upload_cover(
+    book_id: uuid.UUID, current: BookEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> BookAdminOut:
+    from app.services.test_import import MAX_IMAGE_BYTES
+
+    data = await file.read(MAX_IMAGE_BYTES + 1)
+    return _book_out(await book_service.set_cover(db, actor_id=current.user.id, book_id=book_id, data=data))
+
+
+@router.delete("/books/{book_id}/cover", response_model=BookAdminOut, summary="Remove the uploaded cover")
+async def remove_cover(book_id: uuid.UUID, current: BookEditor, db: DbSession) -> BookAdminOut:
+    return _book_out(await book_service.set_cover(db, actor_id=current.user.id, book_id=book_id, data=None))
 
 
 @router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a book (soft)")

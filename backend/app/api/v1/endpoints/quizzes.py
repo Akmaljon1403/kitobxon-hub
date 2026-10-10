@@ -20,6 +20,7 @@ from app.schemas.quiz import (
     OptionOut,
     QuestionOut,
     ReviewOut,
+    StandingsOut,
     SubmitIn,
     TestOut,
 )
@@ -107,6 +108,7 @@ async def _attempt_out(db, test: Test, attempt: TestAttempt) -> AttemptOut:
                 text=question.text,
                 points=question.points,
                 options=[OptionOut(id=option.id, text=option.text) for option in options],
+                has_image=question.image_key is not None,
             )
             for question, options in questions
         ],
@@ -197,3 +199,24 @@ async def activity(
 @router.get("/tests/{test_id}/review", response_model=ReviewOut, summary="Correct answers (after the test closes)")
 async def review(test_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> ReviewOut:
     return ReviewOut(**await quiz_service.review(db, user_id=current.user.id, test_id=test_id))
+
+
+@router.get(
+    "/tests/{test_id}/questions/{question_id}/image",
+    summary="A question's picture (for members who started the test)",
+    response_class=Response,
+)
+async def question_image(
+    test_id: uuid.UUID, question_id: uuid.UUID, current: CurrentUserDep, db: DbSession
+) -> Response:
+    data = await quiz_service.question_image(db, user_id=current.user.id, test_id=test_id, question_id=question_id)
+    return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
+
+@router.get(
+    "/tests/{test_id}/standings",
+    response_model=StandingsOut,
+    summary="Places of a closed test (top 20 and me); «davomatsiz» for members who missed the event",
+)
+async def standings(test_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> StandingsOut:
+    return StandingsOut(**await quiz_service.public_standings(db, user_id=current.user.id, test_id=test_id))

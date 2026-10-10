@@ -87,6 +87,8 @@ class TestQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
     # Optional explanation shown to members only after the test has closed.
     explanation: Mapped[str | None] = mapped_column(Text)
+    # A picture for the question (a map, a portrait, a page of the book): a file in our storage.
+    image_key: Mapped[str | None] = mapped_column(String(512))
 
 
 class TestOption(UUIDPrimaryKeyMixin, Base):

@@ -82,6 +82,8 @@ export interface MyReading {
   status: ReadingStatus
   started_at: string
   completed_at: string | null
+  /** Finished after the deadline: in the portfolio, without points. */
+  late?: boolean
   verified: boolean
   verification_required: boolean
 }
@@ -248,6 +250,7 @@ export interface AttemptQuestion {
   text: string
   points: number
   options: { id: string; text: string }[]
+  has_image?: boolean
 }
 
 export interface RunningAttempt {
@@ -285,6 +288,7 @@ export interface TestReview {
   correct_count: number
   question_count: number
   place: number | null
+  attended?: boolean | null
   participants: number
   questions: {
     id: string
@@ -294,6 +298,7 @@ export interface TestReview {
     explanation: string | null
     is_correct: boolean
     points_awarded: number
+    has_image?: boolean
     options: { id: string; text: string; is_correct: boolean; selected: boolean }[]
   }[]
 }
@@ -457,4 +462,13 @@ export interface Referrals {
   points: number
   premium_days: number
   monthly_limit: number
+}
+
+export interface TestStandings {
+  test_id: string
+  title: string
+  max_score: number
+  event_test: boolean
+  participants: number
+  rows: { place: number; prize_place: number | null; name: string; score: number; attended: boolean | null; me: boolean }[]
 }

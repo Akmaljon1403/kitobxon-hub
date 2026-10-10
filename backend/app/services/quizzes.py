@@ -16,6 +16,7 @@ Rules (docs/ARCHITECTURE.md §7.3 and §8):
 from __future__ import annotations
 
 import io
+import logging
 import random
 import uuid
 from collections import defaultdict
@@ -58,8 +59,11 @@ from app.services.audit import record_audit
 from app.services.books import award_book_completion, get_or_create_read
 from app.services.scoring import award_points, current_season_id
 from app.services.settings import get_setting
+from app.services.storage import get_storage
 from app.utils.spreadsheet import excel_writer
 from app.utils.timezone import format_datetime
+
+logger = logging.getLogger(__name__)
 
 MEMBER_VISIBLE = (TestStatus.PUBLISHED, TestStatus.CLOSED)
 FINISHED = (AttemptStatus.SUBMITTED, AttemptStatus.EXPIRED)
@@ -282,9 +286,18 @@ async def replace_questions(
     test = await get_test(session, test_id)
     if await _has_attempts(session, test.id):
         raise ConflictError("TEST_HAS_ATTEMPTS", "A'zolar testni boshlagan — savollarni endi o'zgartirib bo'lmaydi.")
-    before_count = len(await load_questions(session, test.id))
+    before = await load_questions(session, test.id)
+    before_count = len(before)
+    old_images = {question.image_key for question, _ in before if question.image_key}
+    own_prefix = f"tests/{test.id}/"
+    kept_images: set[str] = set()
     await session.execute(delete(TestQuestion).where(TestQuestion.test_id == test.id))
     for index, item in enumerate(questions):
+        image = item.get("image_key")
+        if image and not str(image).startswith(own_prefix):
+            raise BadRequestError("IMAGE_NOT_FOUND", f"{index + 1}-savol rasmi topilmadi. Rasmni qayta yuklang.")
+        if image:
+            kept_images.add(image)
         question = TestQuestion(
             test_id=test.id,
             type=item["type"],
@@ -292,6 +305,7 @@ async def replace_questions(
             points=item["points"],
             explanation=item.get("explanation"),
             sort_order=index,
+            image_key=image or None,
         )
         session.add(question)
         await session.flush()
@@ -314,7 +328,29 @@ async def replace_questions(
         after={"questions": len(questions)},
     )
     await session.commit()
+    storage = get_storage()
+    for key in old_images - kept_images:  # pictures of removed questions
+        try:
+            await storage.delete(key)
+        except Exception:  # an orphaned file is harmless
+            logger.info("An old question picture could not be removed")
     return test
+
+
+async def question_image(
+    session: AsyncSession, *, user_id: uuid.UUID, test_id: uuid.UUID, question_id: uuid.UUID
+) -> bytes:
+    """A question's picture for a member who has started (or finished) this test."""
+    test = await get_member_test(session, test_id)
+    question = await session.get(TestQuestion, question_id)
+    if question is None or question.test_id != test.id or not question.image_key:
+        raise NotFoundError("IMAGE_NOT_FOUND", "Rasm topilmadi.")
+    started = await session.scalar(
+        select(TestAttempt.id).where(TestAttempt.test_id == test.id, TestAttempt.user_id == user_id).limit(1)
+    )
+    if started is None and state(test) != "CLOSED":
+        raise ForbiddenError("TEST_NOT_STARTED", "Rasm test boshlanganda ko'rinadi.")
+    return await get_storage().get(question.image_key)
 
 
 def question_problems(question: TestQuestion, options: list[TestOption]) -> list[str]:
@@ -390,9 +426,9 @@ async def close_test(session: AsyncSession, *, actor_id: uuid.UUID | None, test_
     first_close = test.rank_bonus_awarded_at is None
     await award_rank_bonuses(session, test)
     if first_close:
-        standings = await test_standings(session, test)
-        await announcements.test_results(session, test, standings)
-        await certificate_service.issue_for_test(session, test, standings)
+        rows = await standings_with_attendance(session, test)
+        await announcements.test_results(session, test, rows)
+        await certificate_service.issue_for_test(session, test, await test_standings(session, test))
     await session.commit()
     return test
 
@@ -561,9 +597,9 @@ async def award_rank_bonuses(session: AsyncSession, test: Test) -> int:
     if test.rank_bonus_awarded_at is not None:
         return 0
     bonuses: list[int] = await get_setting(session, "score.test_rank_bonus")
-    standings = await test_standings(session, test)
+    standings = await official_places(session, test, limit=len(bonuses))  # an event's test: attendees only
     awarded = 0
-    for place, row in enumerate(standings[: len(bonuses)], start=1):
+    for place, row in enumerate(standings, start=1):
         amount = bonuses[place - 1]
         if amount <= 0:
             continue
@@ -612,20 +648,93 @@ async def test_standings(session: AsyncSession, test: Test) -> list[dict[str, An
     ]
 
 
-async def official_places(session: AsyncSession, test: Test, limit: int = 3) -> list[dict[str, Any]]:
-    """Places 1..limit as announced: for a test of an event only members whose attendance at
-    that event was confirmed take places (the same rule as for certificates)."""
-    standings = await test_standings(session, test)
-    if test.event_id is not None:
-        present = set(
-            await session.scalars(
-                select(AttendanceRecord.user_id).where(
-                    AttendanceRecord.event_id == test.event_id, AttendanceRecord.status == AttendanceStatus.VERIFIED
-                )
+async def _present(session: AsyncSession, test: Test) -> set[uuid.UUID] | None:
+    """Members whose attendance at the test's event was confirmed (None: the test has no event)."""
+    if test.event_id is None:
+        return None
+    return set(
+        await session.scalars(
+            select(AttendanceRecord.user_id).where(
+                AttendanceRecord.event_id == test.event_id, AttendanceRecord.status == AttendanceStatus.VERIFIED
             )
         )
-        standings = [row for row in standings if row["user_id"] in present]
-    return [{**row, "place": place} for place, row in enumerate(standings[:limit], start=1)]
+    )
+
+
+async def standings_with_attendance(session: AsyncSession, test: Test) -> list[dict[str, Any]]:
+    """Everybody in order of their result. For a test of an event, ``attended`` says whether the member
+    was at the event, and only those who were take the prize places (``official_place``)."""
+    standings = await test_standings(session, test)
+    present = await _present(session, test)
+    rows = []
+    official = 0
+    for row in standings:
+        attended = None if present is None else row["user_id"] in present
+        official_place = None
+        if attended is not False:
+            official += 1
+            official_place = official
+        rows.append({**row, "attended": attended, "official_place": official_place})
+    return rows
+
+
+async def official_places(session: AsyncSession, test: Test, limit: int = 3) -> list[dict[str, Any]]:
+    """Places 1..limit as announced: for a test of an event only members whose attendance at
+    that event was confirmed take places (the same rule as for certificates and prizes)."""
+    rows = await standings_with_attendance(session, test)
+    return [
+        {
+            "place": row["official_place"],
+            "user_id": row["user_id"],
+            "score": row["score"],
+            "duration_seconds": row["duration_seconds"],
+        }
+        for row in rows
+        if row["official_place"] is not None and row["official_place"] <= limit
+    ]
+
+
+async def public_standings(
+    session: AsyncSession, *, user_id: uuid.UUID, test_id: uuid.UUID, limit: int = 20
+) -> dict[str, Any]:
+    """The closed test's table for members: names as in the club ranking, «davomatsiz» marks."""
+    from app.services.ranking import display_name
+
+    test = await get_member_test(session, test_id)
+    if state(test) != "CLOSED":
+        raise ForbiddenError("STANDINGS_NOT_AVAILABLE", "O'rinlar test yopilgandan keyin e'lon qilinadi.")
+    rows = await standings_with_attendance(session, test)
+    shown = rows[:limit]
+    mine = next((row for row in rows if row["user_id"] == user_id), None)
+    if mine is not None and mine not in shown:
+        shown = [*shown, mine]
+    name_format = str(await get_setting(session, "ranking.public_name_format"))
+    users = {
+        user.id: user
+        for user in await session.scalars(select(User).where(User.id.in_([row["user_id"] for row in shown])))
+    }
+    return {
+        "test_id": test.id,
+        "title": test.title,
+        "max_score": test.max_score,
+        "event_test": test.event_id is not None,
+        "participants": len(rows),
+        "rows": [
+            {
+                "place": row["place"],
+                "prize_place": row["official_place"] if row["official_place"] and row["official_place"] <= 3 else None,
+                "name": display_name(
+                    users[row["user_id"]].first_name, users[row["user_id"]].last_name or "", name_format
+                )
+                if row["user_id"] in users
+                else "—",
+                "score": row["score"],
+                "attended": row["attended"],
+                "me": row["user_id"] == user_id,
+            }
+            for row in shown
+        ],
+    }
 
 
 # ---------------------------------------------------------------------------- members
@@ -928,14 +1037,16 @@ async def review(session: AsyncSession, *, user_id: uuid.UUID, test_id: uuid.UUI
                 "explanation": question.explanation,
                 "is_correct": bool(answer and answer.is_correct),
                 "points_awarded": (answer.points_awarded or 0) if answer else 0,
+                "has_image": question.image_key is not None,
                 "options": [
                     {"id": o.id, "text": o.text, "is_correct": o.is_correct, "selected": o.id in selected}
                     for o in options
                 ],
             }
         )
-    standings = await test_standings(session, test)
-    place = next((row["place"] for row in standings if row["user_id"] == user_id), None)
+    standings = await standings_with_attendance(session, test)
+    mine = next((row for row in standings if row["user_id"] == user_id), None)
+    place = mine["place"] if mine else None
     return {
         "test_id": test.id,
         "title": test.title,
@@ -944,6 +1055,7 @@ async def review(session: AsyncSession, *, user_id: uuid.UUID, test_id: uuid.UUI
         "correct_count": best.correct_count or 0,
         "question_count": len(questions),
         "place": place,
+        "attended": mine["attended"] if mine else None,
         "participants": len(standings),
         "questions": questions,
     }
@@ -977,7 +1089,8 @@ async def results(session: AsyncSession, test_id: uuid.UUID) -> tuple[Test, list
             )
         ).all()
     )
-    places = {row["user_id"]: row["place"] for row in await test_standings(session, test)}
+    table = {row["user_id"]: row for row in await standings_with_attendance(session, test)}
+    places = {user_id: row["place"] for user_id, row in table.items()}
     items = []
     for attempt, user, faculty in attempts:
         finished_at = attempt.submitted_at
@@ -1003,6 +1116,8 @@ async def results(session: AsyncSession, test_id: uuid.UUID) -> tuple[Test, list
                 else None,
                 "signals": int(signals.get(attempt.id, 0)),
                 "place": places.get(user.id),
+                "attended": table[user.id]["attended"] if user.id in table else None,
+                "prize_place": table[user.id]["official_place"] if user.id in table else None,
             }
         )
     return test, items

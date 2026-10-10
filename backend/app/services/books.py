@@ -7,6 +7,7 @@ the ledger either immediately or only after verification, depending on the setti
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, date, datetime
 from typing import Any
@@ -41,6 +42,8 @@ _BOOK_FIELDS = (
     "deadline",
     "status",
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _snapshot(book: Book) -> dict[str, Any]:
@@ -176,6 +179,82 @@ async def award_book_completion(session: AsyncSession, read: BookRead, created_b
     )
 
 
+async def read_at_event(session: AsyncSession, book_id: uuid.UUID | None, user_id: uuid.UUID) -> None:
+    """A member attended the discussion of a book: the book counts as read (points once).
+    The caller commits."""
+    if book_id is None:
+        return
+    book = await session.get(Book, book_id)
+    if book is None or book.deleted_at is not None:
+        return
+    read = await get_or_create_read(session, book_id, user_id)
+    now = datetime.now(UTC)
+    if read.status != ReadingStatus.COMPLETED:
+        read.status = ReadingStatus.COMPLETED
+        read.completed_at = now
+    if read.verified_at is None:
+        read.verified_at = now
+        read.verification_source = ReadingVerification.EVENT
+    await award_book_completion(session, read, None)
+
+
+def cover_image(book: Book) -> str | None:
+    """The cover to show: the uploaded picture (a public, versioned link) or the cover link."""
+    if book.cover_key:
+        version = book.cover_key.rsplit("-", 1)[-1].split(".")[0]
+        return f"/api/v1/meta/book-covers/{book.id}.jpg?v={version}"
+    return book.cover_url
+
+
+def finished_late(book: Book, read: BookRead) -> bool:
+    """Marked as read after the deadline by the member (no points; the club did not confirm it)."""
+    if read.status != ReadingStatus.COMPLETED or read.completed_at is None or read.verified_at is not None:
+        return False
+    return past_deadline(book, read.completed_at)
+
+
+async def set_cover(session: AsyncSession, *, actor_id: uuid.UUID, book_id: uuid.UUID, data: bytes | None) -> Book:
+    """Upload (``data``) or remove (``None``) the book's cover picture."""
+    import asyncio
+
+    from app.services.storage import get_storage
+    from app.services.test_import import prepare_image
+
+    book = await get_book(session, book_id)
+    storage = get_storage()
+    old = book.cover_key
+    key = None
+    if data is not None:
+        prepared = await asyncio.to_thread(prepare_image, data)
+        key = f"books/covers/{book.id}-{uuid.uuid4().hex[:8]}.jpg"
+        await storage.put(key, prepared, "image/jpeg")
+    book.cover_key = key
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="BOOK_COVER_SET" if key else "BOOK_COVER_REMOVE",
+        entity_type="book",
+        entity_id=book.id,
+    )
+    await session.commit()
+    if old and old != key:
+        try:
+            await storage.delete(old)
+        except Exception:  # an orphaned file is harmless
+            logger.info("An old book cover could not be removed")
+    return book
+
+
+def past_deadline(book: Book, now: datetime | None = None) -> bool:
+    """The book's reading time is over (the deadline day has ended in the club's time zone)."""
+    if book.deadline is None:
+        return False
+    from app.utils.timezone import local_tz
+
+    today = (now or datetime.now(UTC)).astimezone(local_tz()).date()
+    return today > book.deadline
+
+
 async def verify_reading(
     session: AsyncSession, *, actor_id: uuid.UUID, book_id: uuid.UUID, user_id: uuid.UUID
 ) -> BookRead:
@@ -274,7 +353,9 @@ async def set_reading_status(session: AsyncSession, *, user_id: uuid.UUID, book_
     if action == "complete" and read.status != ReadingStatus.COMPLETED:
         read.status = ReadingStatus.COMPLETED
         read.completed_at = datetime.now(UTC)
-        if not await get_setting(session, "score.book_completion_requires_verification"):
+        # Read after the deadline: it goes to the portfolio, but without points.
+        on_time = not past_deadline(book)
+        if on_time and not await get_setting(session, "score.book_completion_requires_verification"):
             await award_book_completion(session, read, None)
             await session.flush()
             await achievements.evaluate(session, user_id)

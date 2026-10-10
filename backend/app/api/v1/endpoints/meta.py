@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
@@ -60,3 +62,15 @@ async def certificate_design_picture(code: str, db: DbSession) -> Response:
         raise NotFoundError("DESIGN_NOT_FOUND", "Bunday dizayn yo'q.")
     data = await certificate_service.design_thumbnail(db, code)
     return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
+@router.get("/book-covers/{book_id}.jpg", summary="A book's uploaded cover (public)", response_class=Response)
+async def book_cover(book_id: uuid.UUID, db: DbSession) -> Response:
+    from app.models import Book
+    from app.services.storage import get_storage
+
+    book = await db.get(Book, book_id)
+    if book is None or book.deleted_at is not None or not book.cover_key:
+        raise NotFoundError("COVER_NOT_FOUND", "Muqova topilmadi.")
+    data = await get_storage().get(book.cover_key)
+    return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=604800"})

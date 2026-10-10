@@ -9,10 +9,13 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
+from app.core.errors import NotFoundError
 from app.models import Event, Test
 from app.schemas.common import Page
 from app.schemas.quiz import (
     AttemptDetailOut,
+    ImageKeyOut,
+    ImportOut,
     OptionAdminOut,
     QuestionAdminOut,
     QuestionsIn,
@@ -24,8 +27,9 @@ from app.schemas.quiz import (
     TestUpdateIn,
 )
 from app.security.permissions import Perm
-from app.services import certificate_backgrounds
+from app.services import certificate_backgrounds, test_import
 from app.services import quizzes as quiz_service
+from app.services.storage import get_storage
 
 router = APIRouter(prefix="/admin", tags=["admin: tests"])
 TestViewer = Annotated[CurrentUser, Depends(require_permissions(Perm.TEST_VIEW))]
@@ -82,6 +86,7 @@ async def _detail(db, test: Test) -> TestAdminDetailOut:
                 points=question.points,
                 explanation=question.explanation,
                 options=[OptionAdminOut(id=o.id, text=o.text, is_correct=o.is_correct) for o in options],
+                image_key=question.image_key,
             )
             for question, options in questions
         ],
@@ -180,6 +185,43 @@ async def results_csv(test_id: uuid.UUID, _: TestViewer, db: DbSession) -> Respo
 @router.get("/test-attempts/{attempt_id}", response_model=AttemptDetailOut, summary="One attempt: answers and signals")
 async def attempt_detail(attempt_id: uuid.UUID, _: TestViewer, db: DbSession) -> AttemptDetailOut:
     return AttemptDetailOut(**await quiz_service.attempt_detail(db, attempt_id))
+
+
+# ---------------------------------------------------------------------------- import and question pictures
+
+
+@router.post(
+    "/tests/{test_id}/import",
+    response_model=ImportOut,
+    summary="Read questions from a TXT, Word or PDF file (not saved: the editor shows them first)",
+)
+async def import_questions(
+    test_id: uuid.UUID, _: TestEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> ImportOut:
+    test = await quiz_service.get_test(db, test_id)
+    data = await file.read(test_import.MAX_BYTES + 1)
+    questions, warnings = await test_import.import_file(test.id, file.filename or "", data)
+    return ImportOut(questions=questions, warnings=warnings)
+
+
+@router.post("/tests/{test_id}/question-images", response_model=ImageKeyOut, summary="Upload a question's picture")
+async def upload_question_image(
+    test_id: uuid.UUID, _: TestEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> ImageKeyOut:
+    test = await quiz_service.get_test(db, test_id)
+    data = await file.read(test_import.MAX_IMAGE_BYTES + 1)
+    prepared = test_import.prepare_image(data)
+    key = test_import.image_key(test.id)
+    await get_storage().put(key, prepared, "image/jpeg")
+    return ImageKeyOut(image_key=key)
+
+
+@router.get("/tests/{test_id}/question-images", summary="A question's picture", response_class=Response)
+async def question_image(test_id: uuid.UUID, key: str, _: TestViewer, db: DbSession) -> Response:
+    test = await quiz_service.get_test(db, test_id)
+    if not key.startswith(f"tests/{test.id}/") or ".." in key:
+        raise NotFoundError("IMAGE_NOT_FOUND", "Rasm topilmadi.")
+    return Response(content=await get_storage().get(key), media_type="image/jpeg")
 
 
 # ---------------------------------------------------------------------------- the test's own certificate design

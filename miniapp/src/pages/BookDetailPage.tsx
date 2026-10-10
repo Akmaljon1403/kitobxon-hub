@@ -40,6 +40,8 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   const book = state.data
   const reading = book.my_reading
+  const open = book.status === 'ACTIVE' || book.status === 'COMPLETED'
+  const pastDeadline = Boolean(book.deadline && new Date(`${book.deadline}T23:59:59`) < new Date())
 
   return (
     <>
@@ -64,7 +66,12 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
             📖 Kitobni ochish
           </Button>
         )}
-        {!reading && book.status === 'ACTIVE' && (
+        {pastDeadline && reading?.status !== 'COMPLETED' && open && (
+          <p className="text-center text-xs text-app-hint">
+            ⏰ Muddat o'tgan. O'qib tugatsangiz ham bo'ladi — portfoliongizga qo'shiladi, faqat ball berilmaydi.
+          </p>
+        )}
+        {!reading && open && (
           <Button loading={saving} onClick={() => setReading('start')}>
             O'qishni boshladim
           </Button>
@@ -81,7 +88,9 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
             ) : (
               <>
                 <Badge tone="success">✓ O'qib tugatdingiz</Badge>
-                {reading.verification_required && (
+                {reading.late ? (
+                  <p className="text-xs text-app-hint">Muddatdan keyin o'qildi: portfolioga qo'shildi, ball berilmaydi.</p>
+                ) : reading.verification_required && (
                   <p className="text-xs text-app-hint">
                     Kitob uchun ball test yoki muhokamada tasdiqlangandan keyin beriladi.
                   </p>

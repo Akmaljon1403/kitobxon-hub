@@ -71,6 +71,28 @@ class TestPlaceIn(BaseModel):
     place: int = Field(ge=1, le=3)
 
 
+class DistributeIn(BaseModel):
+    codes: str = Field(default="", max_length=20_000, description="One code per line")
+    usage: str | None = Field(default=None, max_length=300, description="Where the code is used (sent to winners)")
+    test_ids: list[uuid.UUID] | None = Field(default=None, max_length=50)
+    days: int = Field(default=60, ge=1, le=365)
+
+
+class DistributionSlotOut(BaseModel):
+    test_id: uuid.UUID
+    test_title: str
+    place: int
+    user_id: uuid.UUID
+    name: str
+
+
+class DistributionOut(BaseModel):
+    codes_added: int = 0
+    duplicates: int = 0
+    given: list[DistributionSlotOut]
+    waiting: list[DistributionSlotOut]
+
+
 class TestPlaceOut(BaseModel):
     place: int
     user_id: uuid.UUID

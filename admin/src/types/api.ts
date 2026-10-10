@@ -69,6 +69,9 @@ export interface Book {
   completed_count: number
   created_at: string
   updated_at: string
+  /** The cover shown to members: the uploaded picture or the cover link. */
+  cover_image?: string | null
+  cover_uploaded?: boolean
 }
 
 export interface Reader {
@@ -304,6 +307,13 @@ export interface AdminQuestion {
   points: number
   explanation: string | null
   options: { id?: string; text: string; is_correct: boolean }[]
+  /** A picture for the question (stored file). */
+  image_key?: string | null
+}
+
+export interface QuestionImport {
+  questions: AdminQuestion[]
+  warnings: string[]
 }
 
 export interface AdminTestDetail extends AdminTest {
@@ -329,6 +339,10 @@ export interface TestResultRow {
   duration_seconds: number | null
   signals: number
   place: number | null
+  /** A test of an event: was the member at the event? (null: the test has no event) */
+  attended?: boolean | null
+  /** The place counted for prizes (attendees only). */
+  prize_place?: number | null
 }
 
 export interface TestResults {

@@ -303,9 +303,18 @@ async def book_published(session: AsyncSession, book: Book) -> int:
 
 
 async def test_results(session: AsyncSession, test: Test, standings: list[dict[str, Any]]) -> int:
-    """After a test closes: every participant gets their best score (and place, if any)."""
-    await channel.test_winners(session, test, standings)
-    places = {row["user_id"]: row["place"] for row in standings}
+    """After a test closes: every participant gets their best score (and place, if any).
+
+    ``standings`` may carry ``official_place`` (a test of an event: only members who attended take
+    prize places); a strong result without attendance gets a kind note instead of a place."""
+    official = [
+        {**row, "place": row.get("official_place", row["place"])}
+        for row in standings
+        if row.get("official_place", row["place"]) is not None
+    ]
+    await channel.test_winners(session, test, official)
+    places = {row["user_id"]: row["place"] for row in official}
+    missed = {row["user_id"] for row in standings if row.get("attended") is False and row["place"] <= 3}
     best: dict[Any, int] = {}
     for attempt in await session.scalars(
         select(TestAttempt).where(
@@ -325,6 +334,11 @@ async def test_results(session: AsyncSession, test: Test, standings: list[dict[s
         place = places.get(user_id)
         if place is not None and place <= len(bonuses) and bonuses[place - 1] > 0:
             text += f"\n🏅 Siz {place}-o'rinni egalladingiz: +{bonuses[place - 1]} bonus ball!"
+        elif user_id in missed:
+            text += (
+                "\n👏 Natijangiz sovrinli o'rinlar darajasida! Ammo tadbirda davomat qilinmagani uchun o'rinlar "
+                "hisobiga kirmadi — keyingi safar tadbirga keling, sovg'a sizni kutadi."
+            )
         text += "\n\nTo'g'ri javoblarni ilovada ko'rishingiz mumkin."
         await enqueue_notification(
             session,

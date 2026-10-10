@@ -13,6 +13,9 @@ from app.schemas.reward import (
     AssignIn,
     CodesAddedOut,
     CodesIn,
+    DistributeIn,
+    DistributionOut,
+    DistributionSlotOut,
     RecipientOut,
     RewardCodeOut,
     RewardIn,
@@ -137,6 +140,43 @@ async def _recipient_of(db, reward_id: uuid.UUID, user_reward_id: uuid.UUID) -> 
 )
 async def test_winners(_: Manager, db: DbSession, days: int = 60) -> list[TestWinnersOut]:
     return [TestWinnersOut(**item) for item in await reward_service.test_winners(db, days=min(max(days, 1), 365))]
+
+
+@router.get(
+    "/rewards/distribution-plan",
+    response_model=DistributionOut,
+    summary="Who would get codes, in order (1st places first, then 2nd, then 3rd; one per member)",
+)
+async def distribution_plan(
+    _: Manager, db: DbSession, days: int = 60, reward_id: uuid.UUID | None = None
+) -> DistributionOut:
+    plan = await reward_service.distribution_plan(db, days=min(max(days, 1), 365), reward_id=reward_id)
+    return DistributionOut(given=[], waiting=[DistributionSlotOut(**slot) for slot in plan])
+
+
+@router.post(
+    "/rewards/{reward_id}/distribute-test-places",
+    response_model=DistributionOut,
+    summary="Add codes (one per line) and give them to test places: 1st places first, then 2nd, then 3rd",
+)
+async def distribute_test_places(
+    reward_id: uuid.UUID, payload: DistributeIn, current: Manager, db: DbSession
+) -> DistributionOut:
+    result = await reward_service.distribute_test_places(
+        db,
+        actor_id=current.user.id,
+        reward_id=reward_id,
+        codes=payload.codes.splitlines(),
+        usage=payload.usage,
+        test_ids=payload.test_ids,
+        days=payload.days,
+    )
+    return DistributionOut(
+        codes_added=result["codes_added"],
+        duplicates=result["duplicates"],
+        given=[DistributionSlotOut(**slot) for slot in result["given"]],
+        waiting=[DistributionSlotOut(**slot) for slot in result["waiting"]],
+    )
 
 
 @router.post(

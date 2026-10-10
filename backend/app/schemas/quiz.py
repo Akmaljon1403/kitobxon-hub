@@ -58,6 +58,7 @@ class QuestionIn(BaseModel):
     points: int = Field(default=1, ge=1, le=100)
     explanation: str | None = Field(default=None, max_length=2000)
     options: list[OptionIn] = Field(min_length=2, max_length=10)
+    image_key: str | None = Field(default=None, max_length=512, description="From the picture upload or the import")
 
     @model_validator(mode="after")
     def _correct_answers(self) -> QuestionIn:
@@ -89,6 +90,30 @@ class QuestionAdminOut(BaseModel):
     points: int
     explanation: str | None
     options: list[OptionAdminOut]
+    image_key: str | None = None
+
+
+class ImportedOptionOut(BaseModel):
+    text: str
+    is_correct: bool
+
+
+class ImportedQuestionOut(BaseModel):
+    type: QuestionType
+    text: str
+    points: int
+    explanation: str | None
+    options: list[ImportedOptionOut]
+    image_key: str | None
+
+
+class ImportOut(BaseModel):
+    questions: list[ImportedQuestionOut]
+    warnings: list[str]
+
+
+class ImageKeyOut(BaseModel):
+    image_key: str
 
 
 class TestAdminOut(BaseModel):
@@ -139,6 +164,8 @@ class TestResultRow(BaseModel):
     duration_seconds: int | None
     signals: int
     place: int | None
+    attended: bool | None = None  # a test of an event: was the member there? (None: no event)
+    prize_place: int | None = None  # the place counted for prizes (attendees only)
 
 
 class TestResultsOut(BaseModel):
@@ -219,6 +246,7 @@ class QuestionOut(BaseModel):
     text: str
     points: int
     options: list[OptionOut]
+    has_image: bool = False  # /api/v1/tests/{test_id}/questions/{id}/image
 
 
 class AttemptOut(BaseModel):
@@ -298,6 +326,7 @@ class ReviewQuestionOut(BaseModel):
     is_correct: bool
     points_awarded: int
     options: list[ReviewOptionOut]
+    has_image: bool = False
 
 
 class ReviewOut(BaseModel):
@@ -308,5 +337,24 @@ class ReviewOut(BaseModel):
     correct_count: int
     question_count: int
     place: int | None
+    attended: bool | None = None
     participants: int
     questions: list[ReviewQuestionOut]
+
+
+class StandingRowOut(BaseModel):
+    place: int
+    prize_place: int | None
+    name: str
+    score: int
+    attended: bool | None
+    me: bool
+
+
+class StandingsOut(BaseModel):
+    test_id: uuid.UUID
+    title: str
+    max_score: int
+    event_test: bool
+    participants: int
+    rows: list[StandingRowOut]
