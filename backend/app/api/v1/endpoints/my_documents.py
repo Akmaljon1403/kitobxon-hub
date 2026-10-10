@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Response, UploadFile, status
+from pydantic import BaseModel
 
 from app.api.deps import CurrentUser, CurrentUserDep, DbSession, feature_required, get_current_user
 from app.core.config import get_settings
@@ -286,4 +287,18 @@ async def portfolio_pdf(current: FileUser, db: DbSession) -> Response:
 )
 async def send_portfolio(current: SendUser, db: DbSession) -> Response:
     await delivery.explain_failures(delivery.send_portfolio(delivery.runtime_bot(), db, current.user))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+class StatementIn(BaseModel):
+    format: Literal["pdf", "docx"] = "pdf"
+
+
+@router.post(
+    "/statement/send",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="The bot sends me my activity statement for this study year (PDF or Word)",
+)
+async def send_statement(payload: StatementIn, current: SendUser, db: DbSession) -> Response:
+    await delivery.explain_failures(delivery.send_statement(delivery.runtime_bot(), db, current.user, payload.format))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

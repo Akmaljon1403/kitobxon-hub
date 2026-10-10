@@ -75,7 +75,8 @@ async def send_certificate(bot: Bot, session: AsyncSession, user: User, certific
 
 
 async def send_portfolio(bot: Bot, session: AsyncSession, user: User) -> None:
-    from app.services import portfolio
+    """The portfolio as a PDF (to show) and as Word (to edit or add to an application)."""
+    from app.services import document_render, documents, portfolio
 
     data = await portfolio.render_pdf(session, user)
     await bot.send_document(
@@ -83,4 +84,23 @@ async def send_portfolio(bot: Bot, session: AsyncSession, user: User) -> None:
         BufferedInputFile(data, filename=portfolio.filename(user)),
         caption="🗂 <b>Kitobxonlik portfoliosi</b> — klubdagi barcha natijalaringiz bitta hujjatda. "
         "Rezyume va grant arizalariga ilova qilishingiz mumkin.",
+    )
+    document = await documents.portfolio_document(session, user)
+    await bot.send_document(
+        user.telegram_id,
+        BufferedInputFile(await document_render.render(document, "docx"), filename=f"{document.filename}.docx"),
+        caption="📝 Portfolio Word'da — kerak bo'lsa tahrirlab olasiz.",
+    )
+
+
+async def send_statement(bot: Bot, session: AsyncSession, user: User, fmt: str) -> None:
+    """«Faoliyat ma'lumotnomasi» of this study year (PDF or Word)."""
+    from app.services import document_render, documents
+
+    document = await documents.statement(session, user)
+    await bot.send_document(
+        user.telegram_id,
+        BufferedInputFile(await document_render.render(document, fmt), filename=f"{document.filename}.{fmt}"),
+        caption="📄 <b>Faoliyat ma'lumotnomasi</b> — o'quv yili davomidagi klub faoliyatingiz. QR kod orqali "
+        "istalgan kishi tekshira oladi.",
     )

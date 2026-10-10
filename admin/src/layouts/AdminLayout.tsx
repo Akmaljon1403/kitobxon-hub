@@ -20,6 +20,12 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'tests', icon: '📝', label: 'Testlar', visible: (can) => can('TEST_VIEW') },
   { route: 'scores', icon: '🏆', label: 'Ballar va reyting', visible: (can) => can('SCORE_VIEW') },
   { route: 'reports', icon: '📄', label: 'Hisobotlar', visible: (can) => can('REPORT_VIEW') },
+  {
+    route: 'documents',
+    icon: '🗂',
+    label: 'Hujjatlar',
+    visible: (can) => can('ANALYTICS_VIEW') || can('ATTENDANCE_VIEW') || can('TEST_VIEW') || can('USER_VIEW') || can('REPORT_VIEW'),
+  },
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', visible: () => true },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", visible: (can) => can('REWARD_MANAGE') },
   { route: 'giveaways', icon: '🎲', label: "Sovg'a o'yinlari", visible: (can) => can('REWARD_MANAGE') },

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.title }}</title>
+<style>
+  @page { size: A4 {{ 'landscape' if doc.landscape else 'portrait' }}; margin: 14mm 12mm 16mm;
+    @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #777; } }
+  html { font-family: "Liberation Serif", "Times New Roman", "DejaVu Serif", serif; font-size: 10pt; color: #1b1b1b; }
+  h1 { font-size: 15pt; text-align: center; margin: 0 0 2mm; color: #14402c; }
+  .line { text-align: center; color: #555; margin: 0.6mm 0; }
+  h2 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #14402c; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+  th { background: #1f5132; color: #fff; font-weight: bold; text-align: left; padding: 1.4mm 1.6mm; font-size: 8.8pt; }
+  td { border-bottom: 0.25mm solid #d8e0da; padding: 1.2mm 1.6mm; font-size: 8.8pt; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f8f6; }
+  tr.totals td { font-weight: bold; border-top: 0.4mm solid #1f5132; background: #eef4f0; }
+  .appendix { page-break-before: always; }
+  .grid { display: flex; flex-wrap: wrap; gap: 3mm; }
+  .card { width: 58mm; border: 0.3mm solid #c9d3cc; border-radius: 2mm; padding: 2mm; text-align: center; page-break-inside: avoid; }
+  .card img { width: 26mm; height: 26mm; }
+  .card .name { font-weight: bold; font-size: 9pt; margin-top: 1mm; }
+  .card .details { color: #555; font-size: 8pt; }
+  .signature { margin-top: 10mm; }
+  .empty { color: #777; font-style: italic; }
+</style>
+</head>
+<body>
+  <h1>{{ doc.title }}</h1>
+  {% for line in doc.lines %}<p class="line">{{ line }}</p>{% endfor %}
+  {% for table in doc.tables %}
+    {% if table.title %}<h2>{{ table.title }}</h2>{% endif %}
+    {% if table.rows %}
+    <table>
+      <thead><tr>{% for column in table.columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for row in table.rows %}<tr>{% for value in row %}<td>{{ '' if value is none else value }}</td>{% endfor %}</tr>{% endfor %}
+        {% if table.totals %}<tr class="totals">{% for value in table.totals %}<td>{{ '' if value is none else value }}</td>{% endfor %}</tr>{% endif %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">Ma'lumot yo'q.</p>{% endif %}
+  {% endfor %}
+  {% if doc.signature %}<p class="signature">{{ doc.signature }}</p>{% endif %}
+  {% if appendix %}
+  <section class="appendix">
+    <h1>{{ doc.appendix_title or 'Ilova' }}</h1>
+    <p class="line">QR kodni telefon kamerasi bilan skanerlang — a'zoning klubdagi faoliyati ochiladi.</p>
+    <div class="grid">
+      {% for entry in appendix %}
+      <div class="card">
+        <img src="{{ entry.qr }}" alt="">
+        <div class="name">{{ loop.index }}. {{ entry.title }}</div>
+        <div class="details">{{ entry.details }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</body>
+</html>
