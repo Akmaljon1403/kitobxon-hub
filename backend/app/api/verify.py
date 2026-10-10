@@ -87,6 +87,11 @@ async def verify(code: str, db: DbSession) -> HTMLResponse:
                     ("Nima uchun", certificate.description),
                     ("Berilgan sana", format_date(certificate.issued_at)),
                     ("Tekshirish kodi", certificate_service.display_code(certificate.verify_code)),
+                    (
+                        "Eslatma",
+                        "Bu — yagona sertifikat. A'zo uni turli dizaynda yuklab olgan bo'lishi mumkin, lekin "
+                        "barcha nusxalar shu bitta kod bilan tasdiqlanadi.",
+                    ),
                 ],
             }
     html = (

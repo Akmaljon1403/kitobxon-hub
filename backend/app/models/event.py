@@ -45,6 +45,8 @@ class Event(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         enum_column(EventStatus), default=EventStatus.DRAFT, server_default=EventStatus.DRAFT.value
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # The club's own certificate design for this event (an image; the text is written on top).
+    certificate_background_key: Mapped[str | None] = mapped_column(String(512))
 
 
 class EventShift(UUIDPrimaryKeyMixin, Base):

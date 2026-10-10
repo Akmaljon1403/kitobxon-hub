@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.bot.setup import bot_username
@@ -33,6 +33,7 @@ from app.schemas.event import (
 from app.schemas.premium import FeedbackSummaryOut
 from app.security.permissions import Perm
 from app.services import attendance as attendance_service
+from app.services import certificate_backgrounds
 from app.services import events as event_service
 from app.services import feedback as feedback_service
 
@@ -90,6 +91,7 @@ async def _events_out(db, events: list[Event]) -> list[EventAdminOut]:
                 attendance_open=event.id in live,
                 created_at=event.created_at,
                 pending_requests=pending.get(event.id, 0),
+                certificate_background=event.certificate_background_key is not None,
             )
         )
     return result
@@ -313,3 +315,45 @@ async def export_attendance(event_id: uuid.UUID, _: AttendanceViewer, db: DbSess
 @router.get("/events/{event_id}/feedback", response_model=FeedbackSummaryOut, summary="Members' ratings and comments")
 async def event_feedback(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> FeedbackSummaryOut:
     return FeedbackSummaryOut(**await feedback_service.summary(db, event_id))
+
+
+# ---------------------------------------------------------------------------- the event's own certificate design
+
+
+@router.put(
+    "/events/{event_id}/certificate-background",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Upload the event's certificate design (admins until the start, the super admin until the test ends)",
+)
+async def set_certificate_background(
+    event_id: uuid.UUID, current: EventEditor, db: DbSession, file: Annotated[UploadFile, File()]
+) -> Response:
+    event = await event_service.get_event(db, event_id)
+    data = await file.read(certificate_backgrounds.MAX_BYTES + 1)
+    await certificate_backgrounds.set_background(
+        db, actor_id=current.user.id, super_admin="SUPER_ADMIN" in current.roles, target=event, data=data
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/events/{event_id}/certificate-background",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Back to the standard designs (taken in turn)",
+)
+async def remove_certificate_background(event_id: uuid.UUID, current: EventEditor, db: DbSession) -> Response:
+    event = await event_service.get_event(db, event_id)
+    await certificate_backgrounds.set_background(
+        db, actor_id=current.user.id, super_admin="SUPER_ADMIN" in current.roles, target=event, data=None
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/events/{event_id}/certificate-preview.png",
+    summary="How the winners' certificate of this event will look (a sample)",
+    response_class=Response,
+)
+async def certificate_preview(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> Response:
+    event = await event_service.get_event(db, event_id)
+    return Response(content=await certificate_backgrounds.preview(db, event), media_type="image/png")

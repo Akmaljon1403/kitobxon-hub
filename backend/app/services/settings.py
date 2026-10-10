@@ -144,6 +144,18 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
     SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
+    SettingDefinition(
+        "certificates.free_downloads",
+        1,
+        Annotated[int, Field(ge=0, le=20)],
+        "Premiumsiz a'zo har bir sertifikatini necha marta bepul yuklab oladi (Premium — cheklovsiz)",
+    ),
+    SettingDefinition(
+        "certificates.design_changes",
+        3,
+        Annotated[int, Field(ge=0, le=50)],
+        "Premium a'zo bitta sertifikat dizaynini necha marta almashtira oladi",
+    ),
     # ---- Card payments (Premium paid to the club's card, confirmed by the super admin) ----
     SettingDefinition(
         "payments.card_number", "", ShortText, "Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012"

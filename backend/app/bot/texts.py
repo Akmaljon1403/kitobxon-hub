@@ -180,20 +180,12 @@ PASSPORT_PHOTO_SAVED = "✅ Rasm saqlandi! Yangi pasportingiz:"
 PASSPORT_PHOTO_RESET = "✅ Endi pasportda Telegram profilingiz rasmi turadi."
 PASSPORT_THEMES = "🎨 <b>Pasport dizayni</b>\n\nPremium a'zolar pasportining ko'rinishini tanlaydi:"
 PASSPORT_THEME_SAVED = "✅ Dizayn o'zgardi!"
-BTN_CERTIFICATES = "🎓 Sertifikatlarim"
+BTN_CERTIFICATES = "🎓 Sertifikatlarim (ilovada)"
+CERTIFICATES_IN_APP = (
+    "🎓 Sertifikatlaringiz endi ilovada: u yerda ko'rasiz, dizaynini tanlaysiz va PDF nusxasini yuklab olasiz 👇"
+)
 FILE_SENT = "Yuborildi ✅"
 FILE_FAILED = "Faylni tayyorlab bo'lmadi. Birozdan keyin qayta urinib ko'ring."
-CERTIFICATES = (
-    "🎓 <b>Sertifikatlaringiz</b> — {count} ta\n\nQaysi birini yuboray? PDF faylni yuklab olib, chop etishingiz mumkin."
-)
-CERTIFICATES_NONE = (
-    "🎓 Hozircha sertifikatingiz yo'q.\n\n"
-    "Sertifikat avtomatik beriladi:\n"
-    "• testda 1-, 2- yoki 3-o'rinni olganlarga (tadbir testida — davomatdan o'tganlarga);\n"
-    "• oy yakunida reytingdagi eng faol uchlikka.\n\n"
-    "Omad! 💪"
-)
-
 SETTINGS = (
     "⚙️ <b>Sozlamalar</b>\n\n"
     "Qaysi eslatmalarni olishni tanlang. Muhim xabarlar (test natijasi, javoblar, sovg'alar) har doim keladi."

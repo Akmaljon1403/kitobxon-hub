@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { CertificateDesignBox } from '../components/CertificateDesign'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHeader, Select, Table, Textarea } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -138,6 +139,7 @@ export function EventsPage() {
         <EventModal
           event={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
+          onChanged={reload}
           onSaved={() => {
             setEditing(null)
             reload()
@@ -148,7 +150,17 @@ export function EventsPage() {
   )
 }
 
-function EventModal({ event, onClose, onSaved }: { event: AdminEvent | null; onClose: () => void; onSaved: () => void }) {
+function EventModal({
+  event,
+  onClose,
+  onSaved,
+  onChanged,
+}: {
+  event: AdminEvent | null
+  onClose: () => void
+  onSaved: () => void
+  onChanged: () => void
+}) {
   const { api, can } = useSession()
   const books = useAsync((signal) => api<Page<Book>>('/api/v1/admin/books?limit=200', { signal }))
   const [form, setForm] = useState({
@@ -351,6 +363,11 @@ function EventModal({ event, onClose, onSaved }: { event: AdminEvent | null; onC
       <Field label="Tavsif">
         <Textarea value={form.description} onChange={set('description')} maxLength={5000} />
       </Field>
+      {event ? (
+        <CertificateDesignBox base={`/api/v1/admin/events/${event.id}`} hasBackground={event.certificate_background} onChanged={onChanged} />
+      ) : (
+        <p className="text-xs text-app-hint">🎓 G'oliblar sertifikati dizaynini tadbir saqlangach, shu oynada yuklaysiz.</p>
+      )}
       <InlineError message={error} />
     </Modal>
   )

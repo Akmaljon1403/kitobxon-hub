@@ -90,6 +90,7 @@ class EventBaseOut(BaseModel):
 
 
 class EventAdminOut(EventBaseOut):
+    certificate_background: bool = False
     attendance_points_override: int | None
     responsible_admin_id: uuid.UUID | None
     attendance_open: bool

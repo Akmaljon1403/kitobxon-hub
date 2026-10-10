@@ -44,7 +44,7 @@ function Routes() {
   else if (section === 'tests' && id) page = <TestDetailPage testId={id} />
   else if (section === 'tests') page = <TestsPage />
   else if (section === 'checkin') page = <CheckInPage />
-  else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage /></FeatureGate>
+  else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage certificateId={id} /></FeatureGate>
   else if (section === 'premium') page = <PremiumPage />
   else if (section === 'stats') page = <FeatureGate code="personal_stats"><StatsPage /></FeatureGate>
   else page = <NotFoundPage />

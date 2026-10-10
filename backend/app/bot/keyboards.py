@@ -131,7 +131,7 @@ def passport(*, own_photo: bool = False) -> InlineKeyboardMarkup | None:
             InlineKeyboardButton(text=texts.BTN_PASSPORT_THEME, callback_data="pp:themes"),
             InlineKeyboardButton(text=texts.BTN_PASSPORT_FILE, callback_data="pp:file"),
         ],
-        [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [app_button("certificates", texts.BTN_CERTIFICATES)],
         [app_button("profile", texts.BTN_MORE)],
     )
 
@@ -147,21 +147,10 @@ def passport_themes(themes: list[tuple[str, str, bool]]) -> InlineKeyboardMarkup
 
 def achievements() -> InlineKeyboardMarkup | None:
     return inline(
-        [InlineKeyboardButton(text=texts.BTN_CERTIFICATES, callback_data="cert:list")],
+        [app_button("certificates", texts.BTN_CERTIFICATES)],
         [InlineKeyboardButton(text=texts.BTN_PORTFOLIO, callback_data="pf:get")],
         [InlineKeyboardButton(text=texts.BTN_INVITE, callback_data="ref:open")],
         [app_button("achievements", texts.BTN_MORE)],
-    )
-
-
-def certificates(items: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
-    """One button per certificate: (id, title)."""
-    return inline(
-        *[
-            [InlineKeyboardButton(text=f"📄 {title[:60]}", callback_data=f"cert:get:{cid}")]
-            for cid, title in items[:20]
-        ],
-        [app_button("certificates", texts.BTN_MORE)],
     )
 
 

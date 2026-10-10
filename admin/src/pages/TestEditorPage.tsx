@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 
+import { CertificateDesignBox } from '../components/CertificateDesign'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, Field, InlineError, Input, PageHeader, Select, Textarea } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -418,6 +419,14 @@ export function TestEditorPage({ testId }: { testId: string }) {
       />
       <InlineError message={error} />
       <SettingsForm key={test.id + test.status} test={test} readOnlyScores={locked} onSaved={reload} />
+      {can('TEST_EDIT') && (
+        <Card className="p-4">
+          {test.event_id && !test.certificate_background && (
+            <p className="mb-2 text-xs text-app-hint">Test tadbirga bog'langan: bu yerda rasm yuklanmasa, tadbirning sertifikat dizayni ishlatiladi.</p>
+          )}
+          <CertificateDesignBox base={`/api/v1/admin/tests/${test.id}`} hasBackground={test.certificate_background} onChanged={reload} />
+        </Card>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Savollar ({questions.length})</h2>

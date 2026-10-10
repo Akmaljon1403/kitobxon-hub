@@ -20,8 +20,8 @@ export function PortfolioCard() {
     setBusy(true)
     setNotice(null)
     try {
-      const how = await saveDocument(api, { kind: 'portfolio' })
-      setNotice({ text: how === 'dialog' ? '✅ Saqlash oynasi ochildi.' : '✅ Portfolio bot chatiga yuborildi.' })
+      await saveDocument(api, { kind: 'portfolio' })
+      setNotice({ text: '✅ Portfolio bot chatiga yuborildi (PDF va Word).' })
       haptic('success')
     } catch (error) {
       haptic('error')
@@ -46,7 +46,7 @@ export function PortfolioCard() {
       </div>
       {access === 'on' ? (
         <Button loading={busy} disabled={busy} onClick={() => void save()}>
-          📥 PDF yuklab olish
+          📥 Botga yuborish (PDF + Word)
         </Button>
       ) : (
         <Button variant="secondary" onClick={() => navigate('/premium')}>

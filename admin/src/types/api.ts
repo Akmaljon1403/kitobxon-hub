@@ -188,6 +188,7 @@ export interface AdminEvent {
   rating: number | null
   ratings_count: number
   pending_requests: number
+  certificate_background: boolean
 }
 
 export interface AttendanceRecord {
@@ -292,6 +293,8 @@ export interface AdminTest {
   published_at: string | null
   rank_bonus_awarded: boolean
   created_at: string
+  event_id: string | null
+  certificate_background: boolean
 }
 
 export interface AdminQuestion {

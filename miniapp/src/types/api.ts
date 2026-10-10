@@ -323,6 +323,21 @@ export interface Certificate {
   issued_at: string
   code: string
   verify_url?: string | null
+  design?: string | null
+  rights?: CertificateRights
+}
+
+export interface CertificateRights {
+  can_download: boolean
+  downloads_left: number | null
+  premium: boolean
+  can_change_design: boolean
+  design_changes_left: number
+}
+
+export interface CertificateDesign {
+  code: string
+  title: string
 }
 
 export interface DownloadLink {

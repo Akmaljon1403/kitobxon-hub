@@ -18,6 +18,28 @@ class CertificateOut(BaseModel):
     issued_at: datetime
     code: str
     verify_url: str | None = None  # the public page anyone can open to check the certificate
+    design: str | None = None
+
+
+class CertificateRightsOut(BaseModel):
+    can_download: bool
+    downloads_left: int | None = Field(description="Free downloads left; null = unlimited (Premium)")
+    premium: bool
+    can_change_design: bool
+    design_changes_left: int
+
+
+class MyCertificateOut(CertificateOut):
+    rights: CertificateRightsOut
+
+
+class DesignOut(BaseModel):
+    code: str
+    title: str
+
+
+class DesignIn(BaseModel):
+    design: str = Field(min_length=2, max_length=32)
 
 
 class CertificateMemberOut(BaseModel):

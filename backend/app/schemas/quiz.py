@@ -112,6 +112,8 @@ class TestAdminOut(BaseModel):
     published_at: datetime | None
     rank_bonus_awarded: bool
     created_at: datetime
+    event_id: uuid.UUID | None = None
+    certificate_background: bool = False
 
 
 class TestAdminDetailOut(TestAdminOut):

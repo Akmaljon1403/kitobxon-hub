@@ -17,7 +17,7 @@ import {
   Textarea,
 } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
-import { ApiError } from '../services/api'
+import { API_BASE, ApiError } from '../services/api'
 import { useSession } from '../store/session'
 import type { AdminUser, Page } from '../types/api'
 import { formatDateTime } from '../utils/format'
@@ -36,6 +36,12 @@ interface AdminCertificate {
   member: { user_id: string; first_name: string; last_name: string; member_number: string }
   revoked_at: string | null
   revoke_reason: string | null
+  design: string | null
+}
+
+interface Design {
+  code: string
+  title: string
 }
 
 const KINDS: Record<Kind, string> = {
@@ -45,6 +51,43 @@ const KINDS: Record<Kind, string> = {
 }
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
 const LIMIT = 30
+
+/** The 12 standard designs: each new test (or month) takes the next one, so certificates do not all look alike. */
+function DesignGallery() {
+  const { api } = useSession()
+  const [open, setOpen] = useState(false)
+  const designs = useAsync((signal) => (open ? api<Design[]>('/api/v1/meta/certificate-designs', { signal }) : Promise.resolve([])), [open])
+  return (
+    <Card className="p-4">
+      <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpen((value) => !value)}>
+        <span className="font-semibold">🎨 Sertifikat dizaynlari (12 ta)</span>
+        <span className="text-sm text-app-hint">{open ? 'Yopish ▲' : "Ko'rish ▼"}</span>
+      </button>
+      {open && (
+        <>
+          <p className="mt-2 text-sm text-app-hint">
+            Har bir yangi test (yoki oy yakuni) navbatdagi dizaynni oladi — bitta testning barcha g'oliblari bir xil dizaynda. Tadbir yoki
+            test sahifasida o'z rasmingizni yuklasangiz, matn o'sha rasm ustiga yoziladi. A'zolar sertifikatni ilovada ko'radi; Premium a'zo
+            dizaynni almashtira oladi — kod baribir bitta, ya'ni sertifikat yagona.
+          </p>
+          {designs.state.status === 'success' && (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {designs.state.data.map((design, index) => (
+                <figure key={design.code} className="rounded-lg border border-app-border p-2">
+                  <img src={`${API_BASE}/api/v1/meta/certificate-designs/${design.code}.png`} alt="" loading="lazy" className="w-full rounded" />
+                  <figcaption className="mt-1 text-center text-xs">
+                    {index + 1}. {design.title}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+          {designs.state.status === 'loading' && <LoadingState />}
+        </>
+      )}
+    </Card>
+  )
+}
 
 function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { api } = useSession()
@@ -170,6 +213,7 @@ export function CertificatesPage() {
         subtitle="Test g'oliblari (1–3-o'rin) va oy yakunidagi reyting yetakchilari sertifikatni avtomatik oladi. Bu yerda qo'lda ham berish mumkin."
         actions={<Button onClick={() => setIssuing(true)}>➕ Sertifikat berish</Button>}
       />
+      <DesignGallery />
       <div className="flex flex-wrap gap-2">
         <form
           className="flex gap-2"
