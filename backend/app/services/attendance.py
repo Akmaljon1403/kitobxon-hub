@@ -25,18 +25,19 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Select, and_, exists, func, select, update
+from sqlalchemy import Select, and_, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import BadRequestError, ConflictError, NotFoundError
+from app.core.errors import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.models import (
     AttendanceRecord,
     AttendanceSession,
     AttendanceToken,
     Event,
     EventRegistration,
+    EventShift,
     Faculty,
     User,
 )
@@ -51,7 +52,7 @@ from app.models.enums import (
 from app.security.crypto import derive_key, keyed_hash
 from app.services import achievements, announcements, referrals
 from app.services.audit import record_audit
-from app.services.events import effective_points, get_event
+from app.services.events import effective_points, get_event, shifts_of
 from app.services.scoring import award_points, reverse_latest_award
 from app.services.settings import get_setting
 from app.utils.spreadsheet import excel_writer
@@ -123,6 +124,41 @@ async def get_open_session(session: AsyncSession, event_id: uuid.UUID) -> Attend
     )
 
 
+async def open_events(session: AsyncSession, event_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Which of these events have attendance open right now."""
+    if not event_ids:
+        return set()
+    return set(
+        await session.scalars(
+            select(AttendanceSession.event_id).where(
+                AttendanceSession.event_id.in_(event_ids),
+                AttendanceSession.status == AttendanceSessionStatus.OPEN,
+                AttendanceSession.closes_at > datetime.now(UTC),
+            )
+        )
+    )
+
+
+async def pending_counts(session: AsyncSession, event_ids: list[uuid.UUID]) -> dict[uuid.UUID, int]:
+    """Members added by hand that wait for the super admin, per event."""
+    if not event_ids:
+        return {}
+    rows = await session.execute(
+        select(AttendanceRecord.event_id, func.count())
+        .where(AttendanceRecord.event_id.in_(event_ids), AttendanceRecord.status == AttendanceStatus.PENDING)
+        .group_by(AttendanceRecord.event_id)
+    )
+    return {event_id: int(count) for event_id, count in rows}
+
+
+async def requester_names(session: AsyncSession, records: list[AttendanceRecord]) -> dict[uuid.UUID, str]:
+    ids = {record.requested_by for record in records if record.requested_by}
+    if not ids:
+        return {}
+    rows = await session.execute(select(User.id, User.first_name, User.last_name).where(User.id.in_(ids)))
+    return {user_id: f"{last} {first}" for user_id, first, last in rows}
+
+
 def _is_live(attendance_session: AttendanceSession | None, now: datetime) -> bool:
     return (
         attendance_session is not None
@@ -132,7 +168,13 @@ def _is_live(attendance_session: AttendanceSession | None, now: datetime) -> boo
 
 
 async def _create_session(
-    session: AsyncSession, *, event: Event, actor_id: uuid.UUID | None, closes_at: datetime, now: datetime
+    session: AsyncSession,
+    *,
+    event: Event,
+    actor_id: uuid.UUID | None,
+    closes_at: datetime,
+    now: datetime,
+    shift: EventShift | None = None,
 ) -> AttendanceSession:
     ttl = await get_setting(session, "attendance.token_ttl_seconds")
     rotation = min(await get_setting(session, "attendance.rotation_seconds"), ttl)
@@ -143,6 +185,7 @@ async def _create_session(
         closes_at=closes_at,
         token_ttl_seconds=ttl,
         rotation_seconds=rotation,
+        shift_id=shift.id if shift else None,
     )
     session.add(attendance_session)
     await session.flush()
@@ -152,10 +195,19 @@ async def _create_session(
         action="ATTENDANCE_SESSION_OPEN" if actor_id else "ATTENDANCE_SESSION_AUTO_OPEN",
         entity_type="event",
         entity_id=event.id,
-        after={"closes_at": closes_at.isoformat()},
+        after={"closes_at": closes_at.isoformat(), "shift": shift.position if shift else None},
     )
-    await announcements.attendance_opened(session, event)
+    await announcements.attendance_opened(session, event, shift)
     return attendance_session
+
+
+def _current_shift(shifts: list[EventShift], now: datetime) -> EventShift | None:
+    """The shift whose attendance window is open now, else the next one, else the last one."""
+    for shift in shifts:
+        if shift.attendance_opens_at <= now < shift.attendance_closes_at:
+            return shift
+    upcoming = [shift for shift in shifts if shift.attendance_opens_at > now]
+    return upcoming[0] if upcoming else (shifts[-1] if shifts else None)
 
 
 async def open_session(
@@ -171,29 +223,63 @@ async def open_session(
         existing.closed_at = now
         await session.flush()
 
+    shift = _current_shift(await shifts_of(session, event.id), now)
+    window_closes = shift.attendance_closes_at if shift else event.attendance_closes_at
     if minutes:
         closes_at = now + timedelta(minutes=minutes)
-    elif event.attendance_closes_at > now + timedelta(minutes=1):
-        closes_at = event.attendance_closes_at
+    elif window_closes > now + timedelta(minutes=1):
+        closes_at = window_closes
     else:
         closes_at = now + timedelta(minutes=15)
-    attendance_session = await _create_session(session, event=event, actor_id=actor_id, closes_at=closes_at, now=now)
+    attendance_session = await _create_session(
+        session, event=event, actor_id=actor_id, closes_at=closes_at, now=now, shift=shift
+    )
     await session.commit()
     return attendance_session
 
 
 def _due_events(now: datetime, event_id: uuid.UUID | None = None) -> Select[tuple[Event]]:
-    """Published events inside their attendance window that never had an attendance session."""
+    """Published events inside their (overall) attendance window."""
     conditions = [
         Event.status == EventStatus.PUBLISHED,
         Event.deleted_at.is_(None),
         Event.attendance_opens_at <= now,
         Event.attendance_closes_at > now,
-        ~exists(select(AttendanceSession.id).where(AttendanceSession.event_id == Event.id)),
     ]
     if event_id is not None:
         conditions.append(Event.id == event_id)
     return select(Event).where(*conditions)
+
+
+async def _due_window(session: AsyncSession, event: Event, now: datetime) -> tuple[EventShift | None, datetime] | None:
+    """(shift, closes_at) when attendance should open by itself now, else None.
+
+    Once per window: an administrator who closed attendance early is not overruled, but a window
+    that moved (the event got a new time) or the next shift opens again."""
+    shifts = await shifts_of(session, event.id)
+    if shifts:
+        shift = next((item for item in shifts if item.attendance_opens_at <= now < item.attendance_closes_at), None)
+        if shift is None:
+            return None
+        opened = await session.scalar(
+            select(AttendanceSession.id)
+            .where(
+                AttendanceSession.event_id == event.id,
+                AttendanceSession.shift_id == shift.id,
+                AttendanceSession.opened_at >= shift.attendance_opens_at - timedelta(hours=2),
+            )
+            .limit(1)
+        )
+        return None if opened else (shift, shift.attendance_closes_at)
+    opened = await session.scalar(
+        select(AttendanceSession.id)
+        .where(
+            AttendanceSession.event_id == event.id,
+            AttendanceSession.opened_at >= event.attendance_opens_at - timedelta(hours=2),
+        )
+        .limit(1)
+    )
+    return None if opened else (None, event.attendance_closes_at)
 
 
 async def open_scheduled_sessions(
@@ -206,20 +292,27 @@ async def open_scheduled_sessions(
     overruled: an event that already had a session is never reopened automatically.
     """
     now = now or datetime.now(UTC)
-    opened = 0
-    for event in list(await session.scalars(_due_events(now, event_id))):
-        # Serialise parallel callers per event; the re-check sees a session created meanwhile.
-        await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"attendance-open:{event.id}"))))
-        if await session.scalar(select(AttendanceSession.id).where(AttendanceSession.event_id == event.id).limit(1)):
-            continue
-        await _create_session(session, event=event, actor_id=None, closes_at=event.attendance_closes_at, now=now)
-        opened += 1
-    # Tidy up: sessions whose time is over are marked closed.
+    # Tidy up first: sessions whose time is over are marked closed (a new shift may open next).
     await session.execute(
         update(AttendanceSession)
         .where(AttendanceSession.status == AttendanceSessionStatus.OPEN, AttendanceSession.closes_at <= now)
         .values(status=AttendanceSessionStatus.CLOSED, closed_at=AttendanceSession.closes_at)
     )
+    opened = 0
+    for event in list(await session.scalars(_due_events(now, event_id))):
+        # Serialise parallel callers per event; the re-check sees a session created meanwhile.
+        await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"attendance-open:{event.id}"))))
+        due = await _due_window(session, event, now)
+        if due is None:
+            continue
+        shift, closes_at = due
+        still_open = await get_open_session(session, event.id)
+        if still_open is not None:  # the previous shift's session gives way to this one
+            still_open.status = AttendanceSessionStatus.CLOSED
+            still_open.closed_at = now
+            await session.flush()
+        await _create_session(session, event=event, actor_id=None, closes_at=closes_at, now=now, shift=shift)
+        opened += 1
     await session.commit()
     return opened
 
@@ -355,9 +448,13 @@ async def check_in(
             raise BadRequestError("REGISTRATION_REQUIRED", "Davomat uchun avval tadbirga ro'yxatdan o'ting.")
 
     existing = await session.scalar(
-        select(AttendanceRecord.id).where(AttendanceRecord.event_id == event.id, AttendanceRecord.user_id == user.id)
+        select(AttendanceRecord).where(AttendanceRecord.event_id == event.id, AttendanceRecord.user_id == user.id)
     )
-    if existing is not None:
+    if existing is not None and existing.status == AttendanceStatus.PENDING:
+        # An admin asked to add the member by hand, but the member scanned the code: no approval needed.
+        await session.delete(existing)
+        await session.flush()
+    elif existing is not None:
         raise ConflictError("ALREADY_CHECKED_IN", "Siz bu tadbirda allaqachon qayd etilgansiz.")
 
     record = AttendanceRecord(
@@ -407,60 +504,166 @@ async def list_records(session: AsyncSession, event_id: uuid.UUID) -> list[tuple
     return [(record, user, faculty) for record, user, faculty in rows]
 
 
-async def manual_check_in(
-    session: AsyncSession, *, actor_id: uuid.UUID, event_id: uuid.UUID, user_id: uuid.UUID, note: str
-) -> AttendanceRecord:
-    event = await get_event(session, event_id)
-    member = await session.get(User, user_id)
-    if member is None or member.deleted_at is not None:
-        raise NotFoundError("USER_NOT_FOUND", "Foydalanuvchi topilmadi.")
-    existing = await session.scalar(
-        select(AttendanceRecord).where(AttendanceRecord.event_id == event_id, AttendanceRecord.user_id == user_id)
-    )
-    if existing is not None:
-        if existing.status == AttendanceStatus.REVOKED:
-            return await set_record_status(
-                session, actor_id=actor_id, record_id=existing.id, status=AttendanceStatus.VERIFIED, reason=note
-            )
-        raise ConflictError("ALREADY_CHECKED_IN", "Bu a'zo tadbirda allaqachon qayd etilgan.")
-    now = datetime.now(UTC)
-    record = AttendanceRecord(
-        event_id=event.id,
-        user_id=user_id,
-        method=AttendanceMethod.MANUAL,
-        status=AttendanceStatus.VERIFIED,
-        checked_in_at=now,
-        verified_by=actor_id,
-        verified_at=now,
-        note=note,
-    )
-    session.add(record)
-    await session.flush()
+async def _is_super_admin(session: AsyncSession, user_id: uuid.UUID) -> bool:
+    from app.services.rbac import get_role_codes
+
+    return "SUPER_ADMIN" in await get_role_codes(session, user_id)
+
+
+async def _credit(
+    session: AsyncSession, record: AttendanceRecord, event: Event, *, actor_id: uuid.UUID, note: str | None
+) -> int:
+    """Points, achievements and a friend's invitation reward for a verified manual record."""
     points = await effective_points(session, event)
     await award_points(
         session,
-        user_id=user_id,
+        user_id=record.user_id,
         amount=points,
         category=ScoreCategory.ATTENDANCE,
-        idempotency_key=f"attendance:{event.id}:{user_id}",
+        idempotency_key=f"attendance:{event.id}:{record.user_id}",
         source_type="EVENT",
         source_id=event.id,
         created_by=actor_id,
         reason=note,
     )
+    await achievements.evaluate(session, record.user_id)
+    await referrals.on_first_attendance(session, record.user_id)
+    return points
+
+
+async def manual_check_in(
+    session: AsyncSession, *, actor_id: uuid.UUID, event_id: uuid.UUID, user_id: uuid.UUID, note: str
+) -> AttendanceRecord:
+    """An administrator adds a member by hand (exceptional cases: a dead phone, a lost code...).
+
+    Added by the super administrator, it counts at once. Added by another administrator, it waits
+    (PENDING) until a super administrator approves it in the bot or the panel."""
+    event = await get_event(session, event_id)
+    member = await session.get(User, user_id)
+    if member is None or member.deleted_at is not None:
+        raise NotFoundError("USER_NOT_FOUND", "Foydalanuvchi topilmadi.")
+    direct = await _is_super_admin(session, actor_id)
+    existing = await session.scalar(
+        select(AttendanceRecord).where(AttendanceRecord.event_id == event_id, AttendanceRecord.user_id == user_id)
+    )
+    if existing is not None:
+        if existing.status == AttendanceStatus.REVOKED and direct:
+            return await set_record_status(
+                session, actor_id=actor_id, record_id=existing.id, status=AttendanceStatus.VERIFIED, reason=note
+            )
+        if existing.status == AttendanceStatus.PENDING:
+            raise ConflictError("ATTENDANCE_PENDING", "Bu a'zo uchun so'rov allaqachon tasdiq kutmoqda.")
+        if existing.status != AttendanceStatus.REVOKED:
+            raise ConflictError("ALREADY_CHECKED_IN", "Bu a'zo tadbirda allaqachon qayd etilgan.")
+        await session.delete(existing)  # a revoked record is replaced by the new request
+        await session.flush()
+    now = datetime.now(UTC)
+    record = AttendanceRecord(
+        event_id=event.id,
+        user_id=user_id,
+        method=AttendanceMethod.MANUAL,
+        status=AttendanceStatus.VERIFIED if direct else AttendanceStatus.PENDING,
+        checked_in_at=now,
+        requested_by=actor_id,
+        verified_by=actor_id if direct else None,
+        verified_at=now if direct else None,
+        note=note,
+    )
+    session.add(record)
+    await session.flush()
+    points = await _credit(session, record, event, actor_id=actor_id, note=note) if direct else 0
     record_audit(
         session,
         actor_id=actor_id,
-        action="ATTENDANCE_MANUAL_ADD",
+        action="ATTENDANCE_MANUAL_ADD" if direct else "ATTENDANCE_MANUAL_REQUEST",
         entity_type="attendance",
         entity_id=record.id,
-        after={"event_id": str(event.id), "user_id": str(user_id), "points": points},
+        after={"event_id": str(event.id), "user_id": str(user_id), "points": points, "pending": not direct},
         reason=note,
     )
-    await achievements.evaluate(session, user_id)
-    await referrals.on_first_attendance(session, user_id)
+    if not direct:
+        await _ask_super_admins(session, record, event, member, actor_id)
     await session.commit()
     return record
+
+
+async def _ask_super_admins(
+    session: AsyncSession, record: AttendanceRecord, event: Event, member: User, actor_id: uuid.UUID
+) -> None:
+    from html import escape
+
+    from app.models.enums import NotificationType
+    from app.services.notifications import enqueue_for_members
+    from app.services.rbac import super_admins
+
+    actor = await session.get(User, actor_id)
+    who = f"{actor.last_name} {actor.first_name}" if actor else "Admin"
+    text = (
+        f"🙋 <b>Davomatga qo'lda qo'shish so'rovi</b>\n\n"
+        f"Tadbir: «{escape(event.title)}»\n"
+        f"A'zo: {escape(member.last_name)} {escape(member.first_name)}"
+        + (f" ({escape(member.group_name)}-guruh)" if member.group_name else "")
+        + f"\nKim qo'shdi: {escape(who)}\nSabab: {escape(record.note or '—')}\n\nTasdiqlaysizmi?"
+    )
+    await enqueue_for_members(
+        session,
+        type_=NotificationType.SYSTEM,
+        text=text,
+        dedup_prefix=f"attendance_request:{record.id}",
+        members=super_admins(),
+        payload={
+            "buttons": [
+                {
+                    "row": [
+                        {"text": "✅ Tasdiqlash", "callback": f"att:ok:{record.id.hex}"},
+                        {"text": "❌ Rad etish", "callback": f"att:no:{record.id.hex}"},
+                    ]
+                },
+                {"text": "📋 Davomat sahifasi", "admin_route": f"events/{event.id}/attendance"},
+            ]
+        },
+        priority=2,
+    )
+
+
+async def decide_request(
+    session: AsyncSession, *, actor_id: uuid.UUID, record_id: uuid.UUID, approve: bool, reason: str | None = None
+) -> AttendanceRecord | None:
+    """The super administrator approves (points are given) or rejects (the request is removed)."""
+    if not await _is_super_admin(session, actor_id):
+        raise ForbiddenError("SUPER_ADMIN_ONLY", "Qo'lda qo'shilgan davomatni faqat bosh administrator tasdiqlaydi.")
+    record = await session.scalar(select(AttendanceRecord).where(AttendanceRecord.id == record_id).with_for_update())
+    if record is None or record.status != AttendanceStatus.PENDING:
+        raise ConflictError("REQUEST_DECIDED", "Bu so'rov allaqachon hal qilingan.")
+    event = await get_event(session, record.event_id)
+    if approve:
+        record.status = AttendanceStatus.VERIFIED
+        record.verified_by = actor_id
+        record.verified_at = datetime.now(UTC)
+        await session.flush()
+        points = await _credit(session, record, event, actor_id=actor_id, note=record.note)
+        record_audit(
+            session,
+            actor_id=actor_id,
+            action="ATTENDANCE_MANUAL_APPROVE",
+            entity_type="attendance",
+            entity_id=record.id,
+            after={"points": points},
+        )
+        await session.commit()
+        return record
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="ATTENDANCE_MANUAL_REJECT",
+        entity_type="attendance",
+        entity_id=record.id,
+        before={"event_id": str(record.event_id), "user_id": str(record.user_id)},
+        reason=reason,
+    )
+    await session.delete(record)  # the member can still check in properly
+    await session.commit()
+    return None
 
 
 async def set_record_status(
@@ -472,6 +675,10 @@ async def set_record_status(
     previous = record.status
     if previous == status:
         return record
+    if AttendanceStatus.PENDING in (previous, status):
+        raise ConflictError(
+            "ATTENDANCE_PENDING", "Tasdiq kutayotgan yozuvni «Tasdiqlash» yoki «Rad etish» bilan hal qiling."
+        )
     event = await get_event(session, record.event_id)
 
     if status == AttendanceStatus.REVOKED:
@@ -524,6 +731,7 @@ _STATUS_LABELS = {
     AttendanceStatus.VERIFIED: "Tasdiqlangan",
     AttendanceStatus.SUSPICIOUS: "Shubhali",
     AttendanceStatus.REVOKED: "Bekor qilingan",
+    AttendanceStatus.PENDING: "Tasdiq kutilmoqda",
 }
 
 

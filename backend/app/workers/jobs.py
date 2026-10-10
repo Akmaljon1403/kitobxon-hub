@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.services import achievements, announcements, channel, membership
 from app.services import attendance as attendance_service
 from app.services import certificates as certificate_service
+from app.services import events as event_service
 from app.services import feedback as feedback_service
 from app.services import giveaways as giveaway_service
 from app.services import premium as premium_service
@@ -41,6 +42,7 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("channel_posts", channel.scheduled_posts),
     ("premium_reminders", premium_service.remind_expiring),
     ("erase_left_members", membership.erase_expired),
+    ("complete_events", event_service.complete_finished),
 )
 
 

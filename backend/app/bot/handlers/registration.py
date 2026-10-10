@@ -16,6 +16,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import access, keyboards, texts
+from app.bot.handlers.events import open_link
 from app.bot.states import Registration
 from app.core.errors import ConflictError
 from app.models import User
@@ -69,11 +70,15 @@ async def begin_registration(message: Message, state: FSMContext, db: AsyncSessi
     await _begin(message, state, db)
 
 
-async def _begin(message: Message, state: FSMContext, db: AsyncSession, *, referrer: int | None = None) -> None:
+async def _begin(
+    message: Message, state: FSMContext, db: AsyncSession, *, referrer: int | None = None, after: str | None = None
+) -> None:
     await state.clear()
     await state.set_state(Registration.first_name)
     if referrer is not None:
         await state.update_data(referrer=referrer)
+    if after:
+        await state.update_data(after=after)  # e.g. the event opened from a channel post
     steps = await _steps(db)
     await message.answer(texts.WELCOME_NEW, reply_markup=keyboards.remove())
     await message.answer(texts.ASK_FIRST_NAME.format(step=steps["first_name"]))
@@ -95,9 +100,17 @@ async def start(
         return
     if member is not None:
         await state.clear()
+        if member.status == UserStatus.ACTIVE and await open_link(message, db, member, payload):
+            return
         await send_member_home(message, member, db)
         return
-    await _begin(message, state, db, referrer=referrals.parse(payload))
+    await _begin(
+        message,
+        state,
+        db,
+        referrer=referrals.parse(payload),
+        after=payload if payload.startswith(("ev_", "bk_")) else None,
+    )
 
 
 async def _check_in_from_qr(
@@ -273,6 +286,8 @@ async def confirm(callback: CallbackQuery, state: FSMContext, db: AsyncSession) 
         else:
             await callback.message.answer(texts.REGISTERED_PENDING.format(first_name=html.escape(user.first_name)))
     await after_registration(db, user.id)
+    if data.get("after") and user.status == UserStatus.ACTIVE and isinstance(callback.message, Message):
+        await open_link(callback.message, db, user, data["after"])
 
 
 @router.callback_query(F.data == "reg:restart")
@@ -281,7 +296,8 @@ async def restart(callback: CallbackQuery, state: FSMContext, db: AsyncSession, 
     if member is not None or not isinstance(callback.message, Message):
         return
     await callback.message.edit_reply_markup(reply_markup=None)
-    await _begin(callback.message, state, db, referrer=(await state.get_data()).get("referrer"))
+    data = await state.get_data()
+    await _begin(callback.message, state, db, referrer=data.get("referrer"), after=data.get("after"))
 
 
 @router.callback_query(F.data.startswith("reg:"))

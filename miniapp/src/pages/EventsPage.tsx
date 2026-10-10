@@ -5,14 +5,19 @@ import { Badge, Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { ClubEvent, Page } from '../types/api'
-import { formatEventDate } from '../utils/format'
+import { formatEventDate, formatTime } from '../utils/format'
 import { navigate } from '../utils/router'
 
 export function EventBadges({ event }: { event: ClubEvent }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {event.status === 'CANCELLED' && <Badge tone="warning">Bekor qilingan</Badge>}
-      {event.my_attendance === 'VERIFIED' && <Badge tone="success">✅ Qatnashdingiz</Badge>}
+      {event.my_attendance === 'VERIFIED' &&
+        (new Date(event.ends_at).getTime() > Date.now() ? (
+          <Badge tone="success">✅ Qatnashyapsiz</Badge>
+        ) : (
+          <Badge tone="success">✅ Qatnashdingiz</Badge>
+        ))}
       {event.my_attendance === 'SUSPICIOUS' && <Badge tone="warning">Tekshirilmoqda</Badge>}
       {!event.my_attendance && event.is_registered && event.status !== 'CANCELLED' && (
         <Badge tone="info">Ro'yxatdasiz</Badge>
@@ -27,6 +32,9 @@ export function EventCard({ event }: { event: ClubEvent }) {
       <Card className="flex flex-col gap-1.5">
         <p className="text-xs font-medium text-app-link">{formatEventDate(event.starts_at)}</p>
         <h2 className="font-semibold">{event.title}</h2>
+        {event.shifts.length > 0 && (
+          <p className="text-sm text-app-hint">🕒 {event.shifts.map((shift) => `${shift.position}-smena ${formatTime(shift.starts_at)}`).join(' · ')}</p>
+        )}
         {event.location && <p className="text-sm text-app-hint">📍 {event.location}</p>}
         {event.book_title && <p className="text-sm text-app-hint">📚 {event.book_title}</p>}
         <div className="flex items-center justify-between gap-2 pt-1">

@@ -144,7 +144,26 @@ export interface Statistics {
 }
 
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'COMPLETED' | 'CANCELLED'
-export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED'
+export type AttendanceStatus = 'VERIFIED' | 'SUSPICIOUS' | 'REVOKED' | 'PENDING'
+
+export interface EventShift {
+  id: string
+  position: number
+  starts_at: string
+  ends_at: string
+  attendance_opens_at: string
+  attendance_closes_at: string
+  capacity: number | null
+  registered_count: number
+}
+
+export interface TopEvent {
+  event_id: string
+  title: string
+  starts_at: string
+  average: number
+  ratings: number
+}
 
 export interface AdminEvent {
   id: string
@@ -165,6 +184,10 @@ export interface AdminEvent {
   attended_count: number
   attendance_open: boolean
   created_at: string
+  shifts: EventShift[]
+  rating: number | null
+  ratings_count: number
+  pending_requests: number
 }
 
 export interface AttendanceRecord {
@@ -180,12 +203,15 @@ export interface AttendanceRecord {
   checked_in_at: string
   suspicious_reason: string | null
   note: string | null
+  requested_by_name: string | null
 }
 
 export interface AttendanceOverview {
   event_id: string
   is_open: boolean
   closes_at: string | null
+  shift: number | null
+  can_approve: boolean
   registered_count: number
   attended_count: number
   records: AttendanceRecord[]

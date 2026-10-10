@@ -199,6 +199,18 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("channel.post_quotes", True, bool, "Kun iqtibosi kanalga ham joylanadi"),
     SettingDefinition("channel.post_results", True, bool, "Test g'oliblari, sovg'a o'yinlari va oy peshqadamlari"),
     SettingDefinition("channel.post_invites", True, bool, "Har dushanba botga taklif posti"),
+    SettingDefinition(
+        "channel.post_reports",
+        True,
+        bool,
+        "Tadbir hisoboti tasdiqlanganda rasmlari bilan «... davra suhbati bo'lib o'tdi» posti",
+    ),
+    SettingDefinition(
+        "channel.more_photos_url",
+        "",
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=255, pattern=r"^(|https://\S+)$")],
+        "Hisobot postidagi «📸 Boshqa rasmlar» tugmasi havolasi (masalan, rasmlar kanali: https://t.me/...)",
+    ),
     SettingDefinition("channel.stickers", True, bool, "Avtomatik postlardan keyin saqlangan stikerlardan biri"),
     SettingDefinition(
         "channel.review_minutes",

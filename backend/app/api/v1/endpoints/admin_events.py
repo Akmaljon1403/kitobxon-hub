@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.bot.setup import bot_username
+from app.core.errors import ForbiddenError
 from app.models import Event
 from app.models.enums import EventStatus
 from app.schemas.common import Page
@@ -25,6 +26,9 @@ from app.schemas.event import (
     ManualCheckInIn,
     RecordStatusIn,
     RegistrationOut,
+    RejectIn,
+    ShiftOut,
+    TopEventOut,
 )
 from app.schemas.premium import FeedbackSummaryOut
 from app.security.permissions import Perm
@@ -41,31 +45,58 @@ AttendanceViewer = Annotated[CurrentUser, Depends(require_permissions(Perm.ATTEN
 AttendanceManager = Annotated[CurrentUser, Depends(require_permissions(Perm.ATTENDANCE_VIEW, Perm.ATTENDANCE_MANAGE))]
 
 
+async def _events_out(db, events: list[Event]) -> list[EventAdminOut]:
+    """Everything the panel shows about the events, loaded in a few queries (not per event)."""
+    ids = [event.id for event in events]
+    counts = await event_service.counts(db, ids)
+    titles = await event_service.book_titles(db, {event.book_id for event in events if event.book_id})
+    shifts = await event_service.shifts_by_event(db, ids)
+    shift_counts = await event_service.shift_registrations(db, ids)
+    ratings = await event_service.feedback_averages(db, ids)
+    live = await attendance_service.open_events(db, ids)
+    pending = await attendance_service.pending_counts(db, ids)
+    default_points = await event_service.default_points(db)
+    result = []
+    for event in events:
+        registered, attended = counts[event.id]
+        rating, rated = ratings.get(event.id, (None, 0))
+        result.append(
+            EventAdminOut(
+                id=event.id,
+                title=event.title,
+                description=event.description,
+                book_id=event.book_id,
+                book_title=titles.get(event.book_id) if event.book_id else None,
+                location=event.location,
+                starts_at=event.starts_at,
+                ends_at=event.ends_at,
+                attendance_opens_at=event.attendance_opens_at,
+                attendance_closes_at=event.attendance_closes_at,
+                attendance_points=event.attendance_points if event.attendance_points is not None else default_points,
+                attendance_points_override=event.attendance_points,
+                capacity=event.capacity,
+                status=event.status,
+                registered_count=registered,
+                attended_count=attended,
+                shifts=[
+                    ShiftOut.model_validate(shift, from_attributes=True).model_copy(
+                        update={"registered_count": shift_counts.get(shift.id, 0)}
+                    )
+                    for shift in shifts[event.id]
+                ],
+                rating=rating,
+                ratings_count=rated,
+                responsible_admin_id=event.responsible_admin_id,
+                attendance_open=event.id in live,
+                created_at=event.created_at,
+                pending_requests=pending.get(event.id, 0),
+            )
+        )
+    return result
+
+
 async def _event_out(db, event: Event) -> EventAdminOut:
-    registered, attended = (await event_service.counts(db, [event.id]))[event.id]
-    titles = await event_service.book_titles(db, {event.book_id} if event.book_id else set())
-    open_session = await attendance_service.get_open_session(db, event.id)
-    return EventAdminOut(
-        id=event.id,
-        title=event.title,
-        description=event.description,
-        book_id=event.book_id,
-        book_title=titles.get(event.book_id) if event.book_id else None,
-        location=event.location,
-        starts_at=event.starts_at,
-        ends_at=event.ends_at,
-        attendance_opens_at=event.attendance_opens_at,
-        attendance_closes_at=event.attendance_closes_at,
-        attendance_points=await event_service.effective_points(db, event),
-        attendance_points_override=event.attendance_points,
-        capacity=event.capacity,
-        status=event.status,
-        registered_count=registered,
-        attended_count=attended,
-        responsible_admin_id=event.responsible_admin_id,
-        attendance_open=open_session is not None and open_session.closes_at > datetime.now(UTC),
-        created_at=event.created_at,
-    )
+    return (await _events_out(db, [event]))[0]
 
 
 @router.get("/events", response_model=Page[EventAdminOut], summary="All events")
@@ -77,9 +108,14 @@ async def list_events(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[EventAdminOut]:
     events, total = await event_service.list_events_admin(db, status=status_filter, limit=limit, offset=offset)
-    return Page[EventAdminOut](
-        items=[await _event_out(db, event) for event in events], total=total, limit=limit, offset=offset
-    )
+    return Page[EventAdminOut](items=await _events_out(db, events), total=total, limit=limit, offset=offset)
+
+
+@router.get("/events/top-rated", response_model=list[TopEventOut], summary="The best events by members' ratings")
+async def top_rated(
+    _: EventViewer, db: DbSession, min_ratings: Annotated[int, Query(ge=1, le=50)] = 3
+) -> list[TopEventOut]:
+    return [TopEventOut(**row) for row in await event_service.top_rated(db, min_ratings=min_ratings)]
 
 
 @router.post("/events", response_model=EventAdminOut, status_code=status.HTTP_201_CREATED, summary="Create an event")
@@ -103,6 +139,17 @@ async def update_event(
     return await _event_out(db, event)
 
 
+@router.post(
+    "/events/{event_id}/finish",
+    response_model=EventAdminOut,
+    summary="Stop a running event now (super admin): attendance closes, members are told",
+)
+async def finish_event(event_id: uuid.UUID, current: EventEditor, db: DbSession) -> EventAdminOut:
+    if "SUPER_ADMIN" not in current.roles:
+        raise ForbiddenError("SUPER_ADMIN_ONLY", "Tadbirni muddatidan oldin faqat bosh administrator yakunlaydi.")
+    return await _event_out(db, await event_service.finish_event(db, actor_id=current.user.id, event_id=event_id))
+
+
 @router.delete(
     "/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete an event without attendance"
 )
@@ -113,6 +160,7 @@ async def delete_event(event_id: uuid.UUID, current: EventDeleter, db: DbSession
 
 @router.get("/events/{event_id}/registrations", response_model=list[RegistrationOut], summary="Registered members")
 async def registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> list[RegistrationOut]:
+    positions = {shift.id: shift.position for shift in await event_service.shifts_of(db, event_id)}
     return [
         RegistrationOut(
             user_id=user.id,
@@ -121,6 +169,7 @@ async def registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> l
             group_name=user.group_name,
             status=registration.status.value,
             registered_at=registration.registered_at,
+            shift=positions.get(registration.shift_id) if registration.shift_id else None,
         )
         for registration, user in await event_service.list_registrations(db, event_id)
     ]
@@ -130,17 +179,21 @@ async def registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> l
 
 
 @router.get("/events/{event_id}/attendance", response_model=AttendanceOverviewOut, summary="Live attendance list")
-async def attendance_overview(event_id: uuid.UUID, _: AttendanceViewer, db: DbSession) -> AttendanceOverviewOut:
+async def attendance_overview(event_id: uuid.UUID, current: AttendanceViewer, db: DbSession) -> AttendanceOverviewOut:
     # Attendance opens by itself at the scheduled time; opening the screen makes it immediate.
     await attendance_service.open_scheduled_sessions(db, event_id=event_id)
     records = await attendance_service.list_records(db, event_id)
     open_session = await attendance_service.get_open_session(db, event_id)
     is_open = open_session is not None and open_session.closes_at > datetime.now(UTC)
     registered, attended = (await event_service.counts(db, [event_id]))[event_id]
+    names = await attendance_service.requester_names(db, [record for record, _, _ in records])
+    positions = {shift.id: shift.position for shift in await event_service.shifts_of(db, event_id)}
     return AttendanceOverviewOut(
         event_id=event_id,
         is_open=is_open,
         closes_at=open_session.closes_at if is_open and open_session else None,
+        shift=positions.get(open_session.shift_id) if is_open and open_session and open_session.shift_id else None,
+        can_approve="SUPER_ADMIN" in current.roles,
         registered_count=registered,
         attended_count=attended,
         records=[
@@ -157,6 +210,7 @@ async def attendance_overview(event_id: uuid.UUID, _: AttendanceViewer, db: DbSe
                 checked_in_at=record.checked_in_at,
                 suspicious_reason=record.suspicious_reason,
                 note=record.note,
+                requested_by_name=names.get(record.requested_by) if record.requested_by else None,
             )
             for record, user, faculty in records
         ],
@@ -206,6 +260,30 @@ async def manual_attendance(
 ) -> Response:
     await attendance_service.manual_check_in(
         db, actor_id=current.user.id, event_id=event_id, user_id=payload.user_id, note=payload.note
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/attendance/{record_id}/approve",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Approve a member added by hand (super admin): the points are given",
+)
+async def approve_attendance(record_id: uuid.UUID, current: AttendanceViewer, db: DbSession) -> Response:
+    await attendance_service.decide_request(db, actor_id=current.user.id, record_id=record_id, approve=True)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/attendance/{record_id}/reject",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Reject a member added by hand (super admin): the request is removed",
+)
+async def reject_attendance(
+    record_id: uuid.UUID, payload: RejectIn, current: AttendanceViewer, db: DbSession
+) -> Response:
+    await attendance_service.decide_request(
+        db, actor_id=current.user.id, record_id=record_id, approve=False, reason=payload.reason
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

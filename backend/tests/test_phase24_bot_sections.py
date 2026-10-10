@@ -151,7 +151,7 @@ async def test_attendance_opens_by_itself_and_code_can_be_typed(client: httpx.As
     assert await db.scalar(select(func.count()).select_from(AttendanceRecord)) == 1
 
     await harness.send(texts.BTN_ATTENDANCE)
-    assert "qayd etilgansiz" in harness.last_text()
+    assert "qatnashyapsiz" in harness.last_text()
     open_now = await client.get("/api/v1/attendance/open", headers=member_headers(await db.get(User, member_id)))
     assert open_now.json()[0]["checked_in"] is True
 

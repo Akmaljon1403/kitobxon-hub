@@ -7,7 +7,7 @@ import { ApiError, saveBlob } from '../services/api'
 import { useSession } from '../store/session'
 import type { AdminEvent, Page, ReportDetail, ReportKind, ReportListItem, ReportStatus } from '../types/api'
 import { formatDateTime } from '../utils/format'
-import { navigate } from '../utils/router'
+import { navigate, useRoute } from '../utils/router'
 
 const STATUS: Record<ReportStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' }> = {
   DRAFT: { label: 'Qoralama', tone: 'neutral' },
@@ -32,12 +32,12 @@ function isoDate(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
 }
 
-function NewReportModal({ onClose }: { onClose: () => void }) {
+function NewReportModal({ onClose, initialEvent = '' }: { onClose: () => void; initialEvent?: string }) {
   const { api } = useSession()
   const events = useAsync((signal) => api<Page<AdminEvent>>('/api/v1/admin/events?limit=200', { signal }))
   const today = new Date()
   const [kind, setKind] = useState<ReportKind>('EVENT')
-  const [eventId, setEventId] = useState('')
+  const [eventId, setEventId] = useState(initialEvent)
   const [start, setStart] = useState(isoDate(new Date(today.getFullYear(), today.getMonth(), 1)))
   const [end, setEnd] = useState(isoDate(today))
   const [title, setTitle] = useState('')
@@ -148,7 +148,9 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
 
 export function ReportsPage() {
   const { api, can } = useSession()
-  const [creating, setCreating] = useState(false)
+  // «📝 Hisobot tayyorlash» in the bot's «tadbir yakunlandi» message opens #/reports?event=<id>.
+  const fromEvent = useRoute().query.get('event') ?? ''
+  const [creating, setCreating] = useState(Boolean(fromEvent))
   const { state, reload } = useAsync((signal) => api<Page<ReportListItem>>('/api/v1/admin/reports?limit=200', { signal }))
 
   return (
@@ -185,7 +187,7 @@ export function ReportsPage() {
           </Table>
         )}
       </Card>
-      {creating && <NewReportModal onClose={() => setCreating(false)} />}
+      {creating && <NewReportModal initialEvent={fromEvent} onClose={() => setCreating(false)} />}
     </>
   )
 }

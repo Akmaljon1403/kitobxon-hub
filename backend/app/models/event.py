@@ -47,6 +47,31 @@ class Event(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
 
+class EventShift(UUIDPrimaryKeyMixin, Base):
+    """One of several sessions of the same event on the same day (e.g. morning and afternoon).
+
+    Attendance opens by itself in every shift's window; a member still checks in once per event
+    (one record, one score), and registers for the shift that suits them."""
+
+    __tablename__ = "event_shifts"
+    __table_args__ = (
+        UniqueConstraint("event_id", "position"),
+        Index("ix_event_shifts_event_id", "event_id"),
+        CheckConstraint("ends_at > starts_at", name="dates_order"),
+        CheckConstraint("attendance_closes_at > attendance_opens_at", name="attendance_window_order"),
+        CheckConstraint("position BETWEEN 1 AND 6", name="position_range"),
+        CheckConstraint("capacity IS NULL OR capacity > 0", name="capacity_positive"),
+    )
+
+    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("events.id", ondelete="CASCADE"))
+    position: Mapped[int] = mapped_column(SmallInteger)
+    starts_at: Mapped[datetime] = mapped_column()
+    ends_at: Mapped[datetime] = mapped_column()
+    attendance_opens_at: Mapped[datetime] = mapped_column()
+    attendance_closes_at: Mapped[datetime] = mapped_column()
+    capacity: Mapped[int | None] = mapped_column(Integer)
+
+
 class EventRegistration(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "event_registrations"
     __table_args__ = (
@@ -63,6 +88,8 @@ class EventRegistration(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     registered_at: Mapped[datetime] = mapped_column(server_default=func.now())
     cancelled_at: Mapped[datetime | None] = mapped_column()
+    # The chosen shift when the event has several (NULL: the event has one session).
+    shift_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("event_shifts.id", ondelete="SET NULL"))
 
 
 class EventFeedback(UUIDPrimaryKeyMixin, TimestampMixin, Base):

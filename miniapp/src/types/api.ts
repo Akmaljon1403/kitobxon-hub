@@ -124,6 +124,17 @@ export interface ClubEvent {
   attended_count: number
   is_registered: boolean
   my_attendance: AttendanceStatus | null
+  my_shift_id: string | null
+  shifts: EventShift[]
+}
+
+export interface EventShift {
+  id: string
+  position: number
+  starts_at: string
+  ends_at: string
+  capacity: number | null
+  registered_count: number
 }
 
 export interface CheckInResult {

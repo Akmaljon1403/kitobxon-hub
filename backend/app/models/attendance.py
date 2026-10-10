@@ -45,6 +45,8 @@ class AttendanceSession(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
         default=AttendanceSessionStatus.OPEN,
         server_default=AttendanceSessionStatus.OPEN.value,
     )
+    # The shift this session belongs to (events with several shifts open once per shift).
+    shift_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("event_shifts.id", ondelete="SET NULL"))
     token_ttl_seconds: Mapped[int] = mapped_column(Integer, default=60, server_default=text("60"))
     rotation_seconds: Mapped[int] = mapped_column(Integer, default=30, server_default=text("30"))
 
@@ -82,6 +84,8 @@ class AttendanceRecord(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         enum_column(AttendanceStatus), default=AttendanceStatus.VERIFIED, server_default=AttendanceStatus.VERIFIED.value
     )
     checked_in_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # An administrator added the member by hand (status PENDING until the super admin approves).
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     # Set when an admin confirmed or created the record manually.
     verified_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     verified_at: Mapped[datetime | None] = mapped_column()

@@ -13,7 +13,7 @@ from typing import Any
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
-from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -85,9 +85,42 @@ async def _claim(session: AsyncSession, limit: int) -> list[ChannelPost]:
     return claimed
 
 
-async def _publish(bot: Bot, chat_id: str | int, post: ChannelPost) -> int:
+async def _extra_photos(post: ChannelPost) -> list[BufferedInputFile]:
+    from app.services.storage import get_storage
+
+    files = []
+    for index, key in enumerate(post.extra_photo_keys or [], start=2):
+        try:
+            files.append(BufferedInputFile(await get_storage().get(key), filename=f"post-{index}.jpg"))
+        except Exception:  # a missing picture does not stop the album
+            logger.warning("Channel post %s: picture %s is missing", post.id, key)
+    return files
+
+
+async def _publish_album(
+    bot: Bot, chat_id: str | int, post: ChannelPost, photo: BufferedInputFile | str, extra: list[BufferedInputFile]
+) -> int:
+    """Several pictures: an album (Telegram allows no buttons on it, so they follow in a short message)."""
+    caption = post.text if len(post.text) <= CAPTION_LIMIT else None
+    media = [InputMediaPhoto(media=photo, caption=caption)] + [InputMediaPhoto(media=item) for item in extra[:9]]
+    messages = await bot.send_media_group(chat_id=chat_id, media=media)
+    first = messages[0].message_id
     markup = await _markup(bot, post.buttons)
+    if caption is None:
+        first = (
+            await bot.send_message(chat_id=chat_id, text=post.text, reply_markup=markup, disable_web_page_preview=True)
+        ).message_id
+    elif markup is not None:
+        await bot.send_message(chat_id=chat_id, text="📸 Tadbirdan ko'proq lavhalar 👇", reply_markup=markup)
+    return first
+
+
+async def _publish(bot: Bot, chat_id: str | int, post: ChannelPost) -> int:
     photo = await _photo(post)
+    extra = await _extra_photos(post) if photo is not None and post.extra_photo_keys else []
+    if photo is not None and extra:
+        return await _publish_album(bot, chat_id, post, photo, extra)
+    markup = await _markup(bot, post.buttons)
     if photo is not None and len(post.text) <= CAPTION_LIMIT:
         message = await bot.send_photo(chat_id=chat_id, photo=photo, caption=post.text or None, reply_markup=markup)
     else:

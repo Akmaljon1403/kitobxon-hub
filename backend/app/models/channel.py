@@ -24,6 +24,8 @@ class ChannelPost(UUIDPrimaryKeyMixin, Base):
     photo_key: Mapped[str | None] = mapped_column(String(512))
     photo_url: Mapped[str | None] = mapped_column(Text)
     sticker_file_id: Mapped[str | None] = mapped_column(String(255))  # sent right after the post
+    # More pictures in our storage: the post goes out as an album (e.g. the photos of a report).
+    extra_photo_keys: Mapped[list[str] | None] = mapped_column(JSONB)
     buttons: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)  # [{"text", "url" | "bot_start"}]
     # One post per business fact, e.g. "event:<id>" or "invite:2026-W41".
     dedup_key: Mapped[str | None] = mapped_column(String(160), unique=True)

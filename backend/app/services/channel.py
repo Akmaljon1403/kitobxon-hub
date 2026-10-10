@@ -27,7 +27,7 @@ from datetime import UTC, datetime, time, timedelta
 from typing import Any
 
 from PIL import Image, ImageOps, UnidentifiedImageError
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,6 +63,7 @@ TOGGLES = {
     ChannelPostKind.QUOTE: "channel.post_quotes",
     ChannelPostKind.RESULTS: "channel.post_results",
     ChannelPostKind.INVITE: "channel.post_invites",
+    ChannelPostKind.REPORT: "channel.post_reports",
 }
 
 
@@ -161,6 +162,7 @@ async def queue(
     scheduled_at: datetime | None = None,
     created_by: uuid.UUID | None = None,
     automatic: bool = True,
+    extra_photos: list[str] | None = None,
 ) -> bool:
     """Queue a post. Automatic posts respect the switches, the night hours and get a sticker.
     Returns False when nothing was queued (switched off or already posted)."""
@@ -179,6 +181,7 @@ async def queue(
             dedup_key=dedup_key,
             photo_key=photo_key,
             photo_url=photo_url,
+            extra_photo_keys=extra_photos or None,
             buttons=buttons if buttons is not None else [JOIN_BUTTON],
             sticker_file_id=sticker_file_id,
             scheduled_at=when,
@@ -203,11 +206,15 @@ async def _book(session: AsyncSession, book_id: uuid.UUID | None) -> Book | None
     return book if book is not None and book.deleted_at is None else None
 
 
-async def event_announced(session: AsyncSession, event: Event) -> bool:
-    if event.status != EventStatus.PUBLISHED or event.starts_at <= datetime.now(UTC):
-        return False
+def event_button(event: Event) -> dict[str, Any]:
+    """Opens the bot on this very event: one tap registers the member (or starts registration)."""
+    return {"text": "✅ Qatnashaman", "bot_start": f"ev_{event.id.hex}"}
+
+
+async def _event_post(session: AsyncSession, event: Event, shifts: list[Any]) -> tuple[str, Book | None]:
+    from app.services import event_times
+
     book = await _book(session, event.book_id)
-    local = event.starts_at.astimezone(local_tz())
     lines = [
         _pick(
             ("📅 <b>Yangi tadbir!</b>", "🎉 <b>Kitobxonlar, yangi uchrashuv!</b>", "📣 <b>Diqqat, kitobxonlar!</b>"),
@@ -215,7 +222,7 @@ async def event_announced(session: AsyncSession, event: Event) -> bool:
         ),
         "",
         f"<b>«{_e(event.title)}»</b>",
-        f"🗓 {_weekday_date(event.starts_at)}, soat {local:%H:%M}",
+        f"🗓 {_e(event_times.when_text(event, shifts))}",
     ]
     if event.location:
         lines.append(f"📍 {_e(event.location)}")
@@ -226,51 +233,167 @@ async def event_announced(session: AsyncSession, event: Event) -> bool:
     lines += [
         "",
         "✅ Davomat QR kod orqali, faol qatnashchilarga ball, sertifikat va sovg'alar.",
-        "👇 Ro'yxatdan o'tish va eslatma olish uchun botga qo'shiling.",
+        "✋ <b>Kelmoqchimisiz?</b> Pastdagi «✅ Qatnashaman» tugmasini bosing"
+        + (" va smenangizni tanlang" if shifts else "")
+        + " — joylarni shunga qarab tayyorlaymiz va sizga eslatma yuboramiz.",
     ]
+    return "\n".join(lines), book
+
+
+async def event_announced(session: AsyncSession, event: Event) -> bool:
+    from app.services.events import shifts_of
+
+    if event.status != EventStatus.PUBLISHED or event.starts_at <= datetime.now(UTC):
+        return False
+    text, book = await _event_post(session, event, await shifts_of(session, event.id))
     return await queue(
         session,
         kind=ChannelPostKind.EVENT,
-        text="\n".join(lines),
+        text=text,
         dedup_key=f"event:{event.id}",
         photo_key=book.cover_key if book is not None else None,
         photo_url=book.cover_url if book is not None and not book.cover_key else None,
+        buttons=[event_button(event)],
     )
 
 
-async def book_announced(session: AsyncSession, book: Book) -> bool:
-    if book.status != BookStatus.ACTIVE or book.deleted_at is not None:
-        return False
+async def event_changed(session: AsyncSession, event: Event, shifts: list[Any]) -> bool:
+    """A post not sent yet gets the new time; an announcement already out gets a short update post."""
+    from app.services import event_times
+
+    pending = await session.scalar(
+        select(ChannelPost).where(
+            ChannelPost.dedup_key == f"event:{event.id}", ChannelPost.status == ChannelPostStatus.PENDING
+        )
+    )
+    if pending is not None:
+        pending.text, book = await _event_post(session, event, shifts)
+        pending.photo_key = book.cover_key if book is not None else None
+        pending.photo_url = book.cover_url if book is not None and not book.cover_key else None
+        return True
+    announced = await session.scalar(
+        select(ChannelPost.id).where(
+            ChannelPost.dedup_key == f"event:{event.id}", ChannelPost.status == ChannelPostStatus.SENT
+        )
+    )
+    if announced is None:
+        return await event_announced(session, event)
     lines = [
-        _pick(
-            (
-                "📚 <b>Yangi kitob — birga o'qiymiz!</b>",
-                "📖 <b>Navbatdagi asarimiz</b>",
-                "✨ <b>Yangi kitob e'lon qilindi</b>",
-            ),
-            f"book:{book.id}",
-        ),
+        "🔔 <b>Diqqat, o'zgarish!</b>",
         "",
-        f"<b>«{_e(book.title)}»</b> — {_e(book.author)}",
+        f"<b>«{_e(event.title)}»</b> tadbiri endi:",
+        f"🗓 {_e(event_times.when_text(event, shifts))}",
     ]
-    if book.pages:
-        lines.append(f"📄 {book.pages} bet")
-    if book.deadline:
-        lines.append(f"🗓 O'qish muddati: {format_human_date(book.deadline)} gacha")
-    if book.description:
-        lines += ["", _e(book.description.strip()[:500])]
+    if event.location:
+        lines.append(f"📍 {_e(event.location)}")
     lines += [
         "",
-        "O'qib tugatganlarga ball, testda g'oliblarga sertifikat 🏆",
-        "👇 Kitobni botda «o'qiyapman» deb belgilang",
+        "Ro'yxatdan o'tganlarga eslatmani yangi vaqtga yuboramiz. Hali yozilmagan bo'lsangiz — pastdagi tugma 👇",
+    ]
+    return await queue(
+        session,
+        kind=ChannelPostKind.EVENT_REMINDER,
+        text="\n".join(lines),
+        dedup_key=f"event_change:{event.id}:{event_times.stamp(event.starts_at)}",
+        buttons=[event_button(event)],
+    )
+
+
+async def event_cancelled(session: AsyncSession, event: Event) -> bool:
+    """Posts about the event that have not gone out are dropped; an announced event gets a short note."""
+    pending = list(
+        await session.scalars(
+            select(ChannelPost).where(
+                ChannelPost.status == ChannelPostStatus.PENDING,
+                or_(
+                    ChannelPost.dedup_key == f"event:{event.id}",
+                    ChannelPost.dedup_key.like(f"event_reminder:{event.id}:%"),
+                    ChannelPost.dedup_key.like(f"event_change:{event.id}:%"),
+                ),
+            )
+        )
+    )
+    for post in pending:
+        post.status = ChannelPostStatus.CANCELLED
+        post.last_error = "tadbir bekor qilindi"
+    announced = await session.scalar(
+        select(ChannelPost.id).where(
+            ChannelPost.dedup_key == f"event:{event.id}", ChannelPost.status == ChannelPostStatus.SENT
+        )
+    )
+    if announced is None:
+        return False
+    return await queue(
+        session,
+        kind=ChannelPostKind.EVENT_REMINDER,
+        text=f"❌ <b>«{_e(event.title)}»</b> tadbiri bekor qilindi.\n\n"
+        "Noqulaylik uchun uzr — yangi uchrashuvni albatta e'lon qilamiz 📚",
+        dedup_key=f"event_cancel:{event.id}",
+        buttons=[],
+    )
+
+
+BOOK_HOOKS = (
+    "📚 <b>Yangi sahifa ochiladi!</b> Bu safar qaysi olamga sayohat qilamiz?",
+    "✨ <b>Kitobxonlar, navbatdagi asar tanlandi!</b>",
+    "🔖 <b>Bir kitob — ming savol, ming javob.</b> Navbatdagi asarimiz bilan tanishing:",
+    "☕ <b>Choyingizni damlab qo'ying</b> — yangi kitob vaqti keldi!",
+    "🌙 <b>Ehtiyot bo'ling: bu kitob tunlari uyg'oq ushlab turishi mumkin...</b>",
+    "🗝 <b>Har bir kitob — yangi eshik.</b> Bu safargi kalit sizning qo'lingizda:",
+)
+BOOK_ENDINGS = (
+    "Birga o'qiymiz, birga muhokama qilamiz — marra hammamizniki! 💪",
+    "Kitob — eng sodiq do'st. Bu do'st bilan tanishishni kechiktirmang 📖",
+    "Sahifalar sizni kutyapti. Birinchi qadam — bugun! 🚀",
+)
+
+
+def book_button(book: Book) -> dict[str, Any]:
+    return {"text": "📖 O'qiyman", "bot_start": f"bk_{book.id.hex}"}
+
+
+async def book_announced(session: AsyncSession, book: Book) -> bool:
+    from app.services import literary
+
+    if book.status != BookStatus.ACTIVE or book.deleted_at is not None:
+        return False
+    key = f"book:{book.id}"
+    lines = [_pick(BOOK_HOOKS, key), "", f"📖 <b>«{_e(book.title)}»</b>", f"✍️ {_e(book.author)}"]
+    if book.description:
+        lines += ["", _e(book.description.strip()[:450])]
+    quote = await literary.book_line(session, book.id, key)
+    if quote:
+        lines += ["", f"💬 {quote}"]
+    details = []
+    today = datetime.now(UTC).astimezone(local_tz()).date()
+    start = book.start_date if book.start_date and book.start_date > today else today
+    if book.deadline:
+        days = (book.deadline - start).days
+        details.append(
+            f"🗓 O'qish muddati: {format_human_date(book.deadline)} gacha" + (f" ({days} kun)" if days > 0 else "")
+        )
+        if book.pages and days > 0:
+            per_day = max(1, -(-book.pages // days))
+            details.append(f"📄 {book.pages} bet — kuniga atigi ~{per_day} bet")
+    elif book.pages:
+        details.append(f"📄 {book.pages} bet")
+    if details:
+        lines += ["", *details]
+    lines += [
+        "",
+        "🏅 O'qib tugatganlarga — ball, testda g'oliblarga — sertifikat.",
+        "👇 «📖 O'qiyman» tugmasini bosing — eslatma va maslahatlar bilan birga marraga yetamiz!",
+        "",
+        _pick(BOOK_ENDINGS, key + ":end"),
     ]
     return await queue(
         session,
         kind=ChannelPostKind.BOOK,
         text="\n".join(lines),
-        dedup_key=f"book:{book.id}",
+        dedup_key=key,
         photo_key=book.cover_key,
         photo_url=book.cover_url if not book.cover_key else None,
+        buttons=[book_button(book)],
     )
 
 
@@ -308,6 +431,50 @@ async def quote_posted(session: AsyncSession, quote: BookQuote, author: str | No
     return await queue(session, kind=ChannelPostKind.QUOTE, text=text, dedup_key=f"quote:{quote.id}")
 
 
+async def report_posted(session: AsyncSession, report: Any) -> bool:
+    """An event report was approved: the channel shows how it went, with the report's photos."""
+    from app.models import ReportPhoto
+
+    event = await session.get(Event, report.event_id) if report.event_id else None
+    if event is None:
+        return False
+    book = await _book(session, event.book_id)
+    local = event.starts_at.astimezone(local_tz())
+    day = f"{local.day}-{MONTHS_UZ[local.month - 1]} {local.year}-yil"
+    if book is not None:
+        head = f"📚 <b>{day} kuni «{_e(book.title)}» ({_e(book.author)}) asari bo'yicha davra suhbati bo'lib o'tdi.</b>"
+    else:
+        head = f"📚 <b>{day} kuni «{_e(event.title)}» tadbiri bo'lib o'tdi.</b>"
+    lines = [
+        head,
+        "",
+        "Talabalar faol ishtirok etib, munosib rag'batlantirildilar. Fikr almashgan, savol bergan va "
+        "kitob olamiga birga sayohat qilgan barcha kitobxonlarga rahmat! 🙏",
+    ]
+    chat = normalize_chat_id(str(await get_setting(session, "channel.chat_id")))
+    if isinstance(chat, str):
+        lines += ["", f'📣 <a href="https://t.me/{chat[1:]}">{_e(chat)}</a> — kuzatib boring!']
+    photos = list(
+        await session.scalars(
+            select(ReportPhoto.object_key)
+            .where(ReportPhoto.report_id == report.id)
+            .order_by(ReportPhoto.sort_order, ReportPhoto.created_at)
+            .limit(10)
+        )
+    )
+    more = str(await get_setting(session, "channel.more_photos_url") or "")
+    return await queue(
+        session,
+        kind=ChannelPostKind.REPORT,
+        text="\n".join(lines),
+        dedup_key=f"report:{event.id}",
+        photo_key=photos[0] if photos else book.cover_key if book else None,
+        photo_url=None if photos or (book and book.cover_key) else (book.cover_url if book else None),
+        extra_photos=photos[1:],
+        buttons=[{"text": "📸 Boshqa rasmlar", "url": more}] if more else [],
+    )
+
+
 # ---------------------------------------------------------------------------- scheduled posts
 
 REMINDERS = (
@@ -316,16 +483,23 @@ REMINDERS = (
 )
 
 
-def _event_reminder_text(event: Event, book: Book | None, which: str) -> str:
+def _event_reminder_text(event: Event, book: Book | None, which: str, shifts: list[Any] | None = None) -> str:
+    from app.services import event_times
+
     local = event.starts_at.astimezone(local_tz())
     when = "Ertaga" if which == "day" else "Bugun"
-    head = _pick(
-        (
-            f"⏰ <b>{when} soat {local:%H:%M} da «{_e(event.title)}»!</b>",
-            f"🔔 <b>Eslatma: {when.lower()} soat {local:%H:%M} da uchrashamiz!</b>\n«{_e(event.title)}»",
-        ),
-        f"{event.id}:{which}",
-    )
+    if shifts:
+        head = f"⏰ <b>{when} «{_e(event.title)}»!</b>\n" + "\n".join(
+            f"🕒 {_e(event_times.shift_text(shift))}" for shift in shifts
+        )
+    else:
+        head = _pick(
+            (
+                f"⏰ <b>{when} soat {local:%H:%M} da «{_e(event.title)}»!</b>",
+                f"🔔 <b>Eslatma: {when.lower()} soat {local:%H:%M} da uchrashamiz!</b>\n«{_e(event.title)}»",
+            ),
+            f"{event.id}:{which}",
+        )
     lines = [head]
     if event.location:
         lines.append(f"📍 {_e(event.location)}")
@@ -356,9 +530,12 @@ async def _event_reminders(session: AsyncSession, now: datetime) -> int:
             )
         )
     )
+    from app.services.events import shifts_of
+
     queued = 0
     for event in events:
         book = await _book(session, event.book_id)
+        shifts = await shifts_of(session, event.id)
         for which, before in REMINDERS:
             due = event.starts_at - before
             if not (due <= now < due + timedelta(hours=2)):
@@ -372,8 +549,9 @@ async def _event_reminders(session: AsyncSession, now: datetime) -> int:
             queued += await queue(
                 session,
                 kind=ChannelPostKind.EVENT_REMINDER,
-                text=_event_reminder_text(event, book, which),
+                text=_event_reminder_text(event, book, which, shifts),
                 dedup_key=f"event_reminder:{event.id}:{which}",
+                buttons=[event_button(event)],
             )
     return queued
 

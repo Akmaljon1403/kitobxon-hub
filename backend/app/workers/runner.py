@@ -16,20 +16,22 @@ from app.services.notifications import wait_for_work
 from app.workers.channel_sender import send_channel_posts
 from app.workers.jobs import run_scheduled_jobs
 from app.workers.sender import send_due_notifications
+from app.workers.timing import seconds_until_due
 
 logger = logging.getLogger(__name__)
 BATCH = 100
+MIN_SLEEP = 5.0  # seconds
 
 
 async def run_worker(stop: asyncio.Event) -> None:
     interval = get_settings().worker_interval_seconds
     factory = get_session_factory()
-    last_jobs = 0.0
-    logger.info("Background worker started (checks every %s s)", interval)
+    next_jobs = 0.0  # time.monotonic() when the scheduled checks run next
+    logger.info("Background worker started (checks at least every %s s)", interval)
     while not stop.is_set():
         try:
-            if time.monotonic() - last_jobs >= interval:
-                last_jobs = time.monotonic()
+            if time.monotonic() >= next_jobs:
+                next_jobs = time.monotonic() + interval
                 await run_scheduled_jobs(factory)
             runtime = get_bot_runtime()
             if runtime is not None:
@@ -38,9 +40,16 @@ async def run_worker(stop: asyncio.Event) -> None:
                     if report.total < BATCH:
                         break
                 await send_channel_posts(factory, runtime.bot)
+            async with factory() as session:
+                due_in = await seconds_until_due(session)
+            if due_in is not None:
+                # Wake for the next due moment (a post, «test started», attendance...) instead of
+                # waiting for the full interval.
+                next_jobs = min(next_jobs, time.monotonic() + max(due_in + 1, MIN_SLEEP))
         except Exception:
             logger.exception("Background worker iteration failed")
-        if await _sleep_or_wake(stop, interval):
+        wait = max(MIN_SLEEP, next_jobs - time.monotonic())
+        if await _sleep_or_wake(stop, wait):
             # Woken by a request that queued messages: give its transaction a moment to commit.
             await asyncio.sleep(1)
     logger.info("Background worker stopped")

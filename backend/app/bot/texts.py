@@ -112,10 +112,13 @@ ATTENDANCE_OPEN = (
     "✅ <b>Davomat ochiq</b>: «{title}»\n\n"
     "Ekrandagi <b>6 belgili kodni</b> shu yerga yozing yoki «📷 QR kodni skanerlash»ni bosing."
 )
-ATTENDANCE_ALREADY = "✅ Siz «{title}» tadbirida qayd etilgansiz."
+ATTENDANCE_ALREADY = "✅ Siz «{title}» tadbirida qatnashyapsiz. Davomatingiz qayd etilgan."
 ATTENDANCE_NONE = "Hozir ochiq davomat yo'q.\n\n{next}Davomat tadbir boshlanishidan biroz oldin o'zi ochiladi."
 ATTENDANCE_NEXT = "📅 Keyingi tadbir: «{title}», {when}\n\n"
-ATTENDANCE_OK = "✅ Davomatingiz qayd etildi!\n\n📅 «{title}»\n🏆 +{points} ball"
+ATTENDANCE_OK = (
+    "✅ Davomatingiz qayd etildi — siz «{title}» tadbirida qatnashyapsiz! 🙌\n"
+    "🏆 +{points} ball\n\nTadbir tugagach, taassurotlaringizni so'raymiz."
+)
 ATTENDANCE_REGISTER_FIRST = "Davomat uchun avval ro'yxatdan o'ting. Keyin ekrandagi QR kodni qayta skanerlang."
 ATTENDANCE_CODE_HINT = "Kod 6 ta harf va raqamdan iborat, masalan: <code>K7M2QX</code>. Qayta yozing yoki /cancel."
 
@@ -457,3 +460,27 @@ RESTORE_DECLINED_MEMBER = (
 )
 RESTORE_ADMIN_ONLY = "Bu amal faqat a'zolarni boshqaruvchi adminlar uchun."
 RESTORE_DONE_ALREADY = "Bu so'rov allaqachon hal qilingan."
+
+# ---- Events and books opened from the channel ----
+EVENT_NOT_FOUND = "Bu tadbir topilmadi yoki o'chirilgan."
+BOOK_NOT_FOUND = "Bu kitob topilmadi yoki o'chirilgan."
+EVENT_ATTENDING = "✅ Siz bu tadbirda qatnashyapsiz — davomatingiz qayd etilgan."
+EVENT_ATTENDED = "✅ Siz bu tadbirda qatnashgansiz. Rahmat!"
+EVENT_REGISTRATION_CLOSED = "Bu tadbirga ro'yxatdan o'tish yopilgan."
+EVENT_PICK_SHIFT = "Qaysi smenada kelasiz? Tanlang 👇"
+EVENT_YOUR_SHIFT = "✅ Siz ro'yxatdasiz: <b>{shift}</b>. Boshqa smenaga o'tish uchun uni tanlang."
+EVENT_REGISTERED = "✅ Siz ro'yxatdasiz — tadbir oldidan eslatma yuboramiz."
+EVENT_WHY_REGISTER = (
+    "✋ Kelmoqchimisiz? «✅ Qatnashaman»ni bosing: joylarni shunga qarab tayyorlaymiz, "
+    "sizga tadbir oldidan va davomat ochilganda eslatma yuboramiz."
+)
+EVENT_REGISTERED_ALERT = "✅ Ro'yxatga oldik! Tadbir oldidan eslatamiz."
+EVENT_UNREGISTERED = "Ro'yxatdan chiqdingiz."
+BTN_ATTEND = "✅ Qatnashaman"
+BTN_UNREGISTER = "❌ Kela olmayman"
+BOOK_START_HINT = "«📖 O'qishni boshladim» tugmasini bosing — o'qish eslatmalari va maslahatlar keladi."
+BTN_START_READING = "📖 O'qishni boshladim"
+BOOK_STARTED = "📖 Zo'r! Kitob «O'qiyapman» ro'yxatingizga qo'shildi. Tugatganingizda ilovada belgilang ✅"
+SUPER_ADMIN_ONLY = "Bu amal faqat bosh administrator uchun."
+ATTENDANCE_APPROVED = "✅ Tasdiqlandi — a'zoga ball berildi."
+ATTENDANCE_REJECTED = "❌ So'rov rad etildi."
