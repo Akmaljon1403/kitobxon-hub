@@ -18,6 +18,7 @@ interface ProfileState {
   telegram: ProfileTexts | null
   username: string | null
   has_avatar: boolean | null
+  avatar_preview: string | null
 }
 
 const FIELDS: { key: keyof ProfileTexts; setting: string; label: string; max: number; hint: string }[] = [
@@ -38,8 +39,6 @@ const FIELDS: { key: keyof ProfileTexts; setting: string; label: string; max: nu
   },
   { key: 'menu_button', setting: 'bot.menu_button', label: 'Ilova tugmasi', max: 32, hint: 'Chat pastidagi tugma matni' },
 ]
-
-const AVATAR = `${import.meta.env.BASE_URL}brand/telegram-bot-avatar.png`
 
 /** «🤖 Bot profili»: what @BotFather would do, done from here — the bot applies it itself. */
 export function BotProfile() {
@@ -118,7 +117,11 @@ export function BotProfile() {
           </div>
           {/* How a member sees the bot before pressing «Start». */}
           <div className="flex flex-col items-center gap-3 rounded-2xl bg-[#0e1621] p-4 text-white">
-            <img src={AVATAR} alt="" className="h-20 w-20 rounded-full shadow-lg" />
+            {data?.avatar_preview ? (
+              <img src={data.avatar_preview} alt="" className="h-20 w-20 rounded-full shadow-lg" />
+            ) : (
+              <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#2b5278] text-4xl">📚</span>
+            )}
             <p className="text-center font-semibold">{draft.name || data?.telegram?.name || 'Kitobxon Hub'}</p>
             <p className="text-center text-xs text-white/60">{draft.short_description}</p>
             <div className="w-full whitespace-pre-line rounded-xl bg-[#182533] p-3 text-sm leading-snug">{draft.description}</div>
@@ -147,15 +150,17 @@ export function BotProfile() {
         <Button
           variant="secondary"
           loading={busy === 'avatar'}
+          disabled={!data?.avatar_preview}
+          title={data?.avatar_preview ? undefined : "Avval klub avatari fayli qo'yilishi kerak"}
           onClick={() => {
-            if (!window.confirm("Botning hozirgi rasmi klub brendi avatari bilan almashtirilsinmi?")) return
+            if (!window.confirm('Botning hozirgi rasmi klub avatari bilan almashtirilsinmi?')) return
             void run('avatar', async () => {
               const result = await api<{ ok: boolean }>('/api/v1/admin/bot-profile/avatar', { method: 'POST' })
-              return result.ok ? "✓ Bot avatari o'rnatildi (Telegram'da bir necha daqiqada yangilanadi)." : 'Avatar fayli topilmadi.'
+              return result.ok ? "✓ Bot avatari o'rnatildi (Telegram'da bir necha daqiqada yangilanadi)." : "Klub avatari fayli hali qo'yilmagan."
             })
           }}
         >
-          🖼 Brend avatarini o'rnatish
+          🖼 Klub avatarini o'rnatish
         </Button>
       </div>
     </Card>

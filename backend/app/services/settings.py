@@ -181,6 +181,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
     SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
     SettingDefinition(
+        "certificates.seal", True, bool, "Sertifikatda imzo ustida klub pechati (app/brand/seal.png bo'lsa)"
+    ),
+    SettingDefinition(
+        "certificates.logo", True, bool, "Sertifikat tepasida klub belgisi (app/brand/logo-mark.png bo'lsa)"
+    ),
+    SettingDefinition(
         "certificates.free_downloads",
         1,
         Annotated[int, Field(ge=0, le=20)],

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>{{ heading }} — {{ club }}</title>
+{% if brand_favicon() %}<link rel="icon" type="image/png" href="{{ brand_favicon() }}">{% endif %}
 <style>
   :root { color-scheme: light dark; --bg: #f3f6f4; --card: #fff; --text: #14231c; --hint: #5f6f67; --ok: #1f7a4d; --bad: #b42318; --line: #e3e9e5; }
   @media (prefers-color-scheme: dark) { :root { --bg: #0f1713; --card: #18231d; --text: #eef3f0; --hint: #9fb0a7; --ok: #4cc38a; --bad: #f97066; --line: #26352d; } }
@@ -26,11 +27,14 @@
   .stat span { color: var(--hint); font-size: 12px; }
   .certs { list-style: none; padding: 0; margin: 12px 0 0; font-size: 14px; }
   .certs li { padding: 4px 0; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; font-weight: 700; letter-spacing: .2px; }
+  .brand img { width: 40px; height: 40px; }
   footer { color: var(--hint); font-size: 13px; text-align: center; margin-top: 18px; }
 </style>
 </head>
 <body>
 <main>
+  {% if brand_icon() %}<div class="brand"><img src="{{ brand_icon() }}" alt="">{{ club }}</div>{% endif %}
   <div class="card">
     <div class="badge">{{ icon }}</div>
     <h1>{{ heading }}</h1>

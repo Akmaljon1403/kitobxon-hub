@@ -22,7 +22,17 @@ TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
 
 @lru_cache
 def _environment() -> Environment:
-    return Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]))
+    from app.services import brand
+
+    environment = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]))
+    # The club's mark and logo for every printed page and the verification page (services/brand.py).
+    environment.globals.update(
+        brand_mark=brand.logo_mark,
+        brand_logo=brand.logo_horizontal,
+        brand_icon=lambda: brand.data_uri("logo-mark", 160),
+        brand_favicon=lambda: brand.data_uri("logo-mark", 64),
+    )
+    return environment
 
 
 def body_blocks(text: str | None) -> list[dict[str, str]]:

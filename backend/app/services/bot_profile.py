@@ -9,7 +9,8 @@ applied by the bot itself — at start-up and whenever a ``bot.*`` setting chang
   too (in their own chat only); groups and channels see none;
 * the default administrator rights suggested when the bot is added to a channel or a group, so the
   owners only press «Save»;
-* the brand avatar — once, when the bot has no profile photo, or with a button in the Admin Panel.
+* the club's avatar (``app/brand/bot-avatar.*``) — once, when the bot has no profile photo, or with a
+  button in the Admin Panel.
 
 Telegram limits how often a profile may change, so a value is only sent when it differs from what
 Telegram already shows.
@@ -18,7 +19,6 @@ Telegram already shows.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any
 
 from aiogram import Bot
@@ -42,8 +42,6 @@ from app.models.enums import UserStatus
 from app.services.settings import get_setting
 
 logger = logging.getLogger(__name__)
-
-AVATAR = Path(__file__).resolve().parent.parent / "brand" / "telegram-bot-avatar.jpg"
 
 MEMBER_COMMANDS = [
     BotCommand(command="start", description="🏠 Bosh menyu"),
@@ -185,10 +183,13 @@ async def has_avatar(bot: Bot) -> bool:
 
 
 async def set_avatar(bot: Bot) -> bool:
-    """The brand avatar as the bot's profile photo. False when the picture is missing."""
-    if not AVATAR.is_file():
+    """The club's avatar (``app/brand/bot-avatar.*``) as the bot's profile photo. False when there is none."""
+    from app.services import brand
+
+    picture = brand.avatar_jpeg()
+    if picture is None:
         return False
-    photo = BufferedInputFile(AVATAR.read_bytes(), filename=AVATAR.name)
+    photo = BufferedInputFile(picture, filename="avatar.jpg")
     await bot.set_my_profile_photo(photo=InputProfilePhotoStatic(photo=photo))
     return True
 
@@ -220,7 +221,7 @@ async def describe(bot: Bot | None, session: AsyncSession) -> dict[str, Any]:
     """For the Admin Panel: what is set here and what Telegram shows now."""
     wanted = await _texts(session)
     if bot is None:
-        return {"wanted": wanted, "telegram": None, "username": None, "has_avatar": None}
+        return {"wanted": wanted, "telegram": None, "username": None, "has_avatar": None, **_avatar_preview()}
     try:
         me = await bot.me()
         telegram = {
@@ -230,8 +231,14 @@ async def describe(bot: Bot | None, session: AsyncSession) -> dict[str, Any]:
         }
         avatar = await has_avatar(bot)
     except Exception:
-        return {"wanted": wanted, "telegram": None, "username": None, "has_avatar": None}
-    return {"wanted": wanted, "telegram": telegram, "username": me.username, "has_avatar": avatar}
+        return {"wanted": wanted, "telegram": None, "username": None, "has_avatar": None, **_avatar_preview()}
+    return {"wanted": wanted, "telegram": telegram, "username": me.username, "has_avatar": avatar, **_avatar_preview()}
+
+
+def _avatar_preview() -> dict[str, str | None]:
+    from app.services import brand
+
+    return {"avatar_preview": brand.data_uri("bot-avatar", 160)}
 
 
 async def refresh_person(session: AsyncSession, user_id: Any) -> None:

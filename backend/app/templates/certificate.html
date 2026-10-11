@@ -44,6 +44,10 @@
     justify-content: space-between; font-size: 10.5pt; text-align: left; color: {{ p.ink }};
   }
   .footer .col { width: 33%; }
+  .footer .center { position: relative; }
+  /* The club's seal sits over the signature line, as a real stamp does. */
+  .seal { position: absolute; width: 30mm; height: 30mm; left: 50%; margin-left: 3mm; bottom: 3.5mm; opacity: 0.93; }
+  .logo { display: block; height: 13mm; margin: -6mm auto 1.2mm; }
   .footer .center { text-align: center; }
   .footer .right { text-align: right; }
   .sign-line { display: inline-block; width: 52mm; border-bottom: 0.3mm solid {{ p.ink }}; height: 9mm; }
@@ -61,6 +65,7 @@
 <body>
 <div class="sheet">
   <div class="content">
+    {% if logo %}<img class="logo" src="{{ logo }}" alt="">{% endif %}
     <div class="org">{{ organization }}</div>
     <div class="club">{{ club }}</div>
     <h1>SERTIFIKAT</h1>
@@ -77,6 +82,7 @@
         <div class="muted">A'zo № {{ number }}</div>
       </div>
       <div class="col center">
+        {% if seal %}<img class="seal" src="{{ seal }}" alt="">{% endif %}
         <div class="sign-line"></div>
         <div>{{ signer_title }}{% if signer_name %} — {{ signer_name }}{% endif %}</div>
       </div>

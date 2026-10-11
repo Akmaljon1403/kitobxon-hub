@@ -3,7 +3,6 @@ settings and applied by the bot itself — no @BotFather steps for the owners.""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -82,13 +81,11 @@ class ProfileSession(FakeTelegramSession):
 
 
 @pytest.fixture
-def telegram(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> ProfileSession:
+def telegram(monkeypatch: pytest.MonkeyPatch) -> ProfileSession:
     session = ProfileSession()
     bot = Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     monkeypatch.setattr("app.services.delivery.optional_bot", lambda: bot)
-    avatar = tmp_path / "avatar.jpg"
-    avatar.write_bytes(b"\xff\xd8\xff fake jpeg")
-    monkeypatch.setattr(bot_profile, "AVATAR", avatar)
+    monkeypatch.setattr("app.services.brand.avatar_jpeg", lambda: b"\xff\xd8\xff fake jpeg")
     session.bot = bot  # type: ignore[attr-defined]
     return session
 

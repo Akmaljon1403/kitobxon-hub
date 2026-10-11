@@ -655,8 +655,13 @@ emas — bot hammasini o'zi Telegram'ga yozadi:
   ko'rinish (oldindan ko'rish). **Saqlash** — darhol Telegram'da yangilanadi.
 - **🔄 Telegram'ga qayta yuborish** — nom, tavsif, buyruqlar menyusi va kanal huquqlarini qayta
   yozadi (masalan, kimdir @BotFather'da qo'lda o'zgartirib yuborgan bo'lsa).
-- **🖼 Brend avatarini o'rnatish** — botning rasmi klub brendi avatari bilan almashtiriladi. Botda
-  rasm umuman bo'lmasa, bot buni ishga tushganda o'zi qiladi.
+- **🖼 Klub avatarini o'rnatish** — botning rasmi klub avatari bilan almashtiriladi. Botda rasm
+  umuman bo'lmasa, bot buni ishga tushganda o'zi qiladi.
+
+**Klub rasmlari** (logotip, pechat, bot avatari) tizimga bir marta qo'yiladi (`backend/app/brand`
+papkasi, fayl nomlari o'sha yerdagi README'da). Shundan keyin pechat sertifikatlarda imzo ustida,
+belgi sertifikat va hisobot tepasida, QR tekshirish sahifasida va portfolio sarlavhasida o'zi
+chiqadi. O'chirish: **Sozlamalar** → `certificates.seal`, `certificates.logo`.
 
 Botni kanal yoki guruhga administrator qilib qo'shganingizda, Telegram kerakli huquqlarni (xabar
 joylash, tahrirlash, o'chirish, taklif havolasi) **o'zi belgilab** ko'rsatadi — faqat «Saqlash»ni
