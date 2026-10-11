@@ -212,9 +212,12 @@ async def card_payment_list(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[AdminCardPaymentOut]:
     rows, total = await card_payments.list_payments(db, status=status, limit=limit, offset=offset)
+    repeated = await card_payments.repeated_receipts(db, [payment for payment, _, _ in rows])
     return Page(
         items=[
-            AdminCardPaymentOut(**card_payment_out(payment, title).model_dump(), member=_member(user))
+            AdminCardPaymentOut(
+                **card_payment_out(payment, title).model_dump(), member=_member(user), duplicate=payment.id in repeated
+            )
             for payment, user, title in rows
         ],
         total=total,

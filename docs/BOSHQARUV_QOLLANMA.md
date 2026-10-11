@@ -445,6 +445,7 @@ keladi:
 | A'zolarning «To'lov bo'yicha» savollari — **✍️ Javob yozish** tugmasi bilan | 💳 To'lovlar kanali |
 | Har bir Telegram Stars to'lovi va qaytarilgan Stars | 💳 To'lovlar kanali |
 | Har dushanba 09:00 — o'tgan haftaning moliyaviy xulosasi | 💳 To'lovlar kanali |
+| 10:00 va 17:00 — 3 soatdan ko'p kutib qolgan cheklar haqida eslatma | 💳 To'lovlar kanali |
 
 Sozlash (bir daqiqa, hech narsa yozish shart emas):
 
@@ -460,6 +461,10 @@ muammo nimada), u yerda **🧪 Sinov xabari** tugmasi va oxirgi 30 kunlik moliya
 Qo'lda sozlash ham mumkin: **Sozlamalar** → `payments.chat_id` (`@username` yoki `-100…`).
 Botni kanaldan chiqarsangiz, bot darhol ogohlantiradi va cheklar vaqtincha botda keladi —
 hech narsa yo'qolmaydi.
+
+**Takroriy chek**: a'zo (yoki boshqa kishi) avval yuborilgan chek faylini qayta yuborsa, chek ostida
+«⚠️ Diqqat: bu chek avval ham yuborilgan — sana, kim, summa» deb yoziladi, admin paneldagi ro'yxatda
+esa «⚠️ takroriy chek» belgisi chiqadi. Bunday chekni bank ilovasi bilan albatta solishtiring.
 
 Chek kelganda: **✅ Tasdiqlash** yoki **❌ Rad etish** → tayyor sabablardan birini tanlaysiz
 («Chek o'qilmayapti yoki to'liq emas», «Summa tarif narxiga mos emas», «To'lov kartaga kelib

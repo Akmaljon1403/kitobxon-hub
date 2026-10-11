@@ -35,6 +35,7 @@ interface CardPayment {
   stars: number | null
   delivered_at: string | null
   member: Member
+  duplicate?: boolean
 }
 
 function cardWhat(payment: CardPayment): string {
@@ -473,6 +474,11 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
               <td className="whitespace-nowrap px-4 py-2 tabular-nums">{uzs(payment.amount_uzs)}</td>
               <td className="px-4 py-2">
                 <Receipt paymentId={payment.id} />
+                {payment.duplicate && (
+                  <p className="mt-1" title="Xuddi shu chek fayli boshqa to'lov bilan ham yuborilgan — bank ilovasida tekshiring">
+                    <Badge tone="warning">⚠️ takroriy chek</Badge>
+                  </p>
+                )}
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-sm">{formatDateTime(payment.created_at)}</td>
               <td className="whitespace-nowrap px-4 py-2 text-right">

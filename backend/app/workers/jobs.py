@@ -77,6 +77,7 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("year_summaries", daily_at(10, lifecycle.year_summaries)),
     ("admin_morning_digest", daily_at(8, admin_digest.send)),
     ("payments_weekly_summary", daily_at(9, payments_chat.weekly_summary)),
+    ("payments_pending_reminder", payments_chat.remind_pending),
 )
 
 

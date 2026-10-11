@@ -30,6 +30,7 @@ from app.models.enums import (
     TestStatus,
     UserStatus,
 )
+from app.services import payments_chat
 from app.services.notifications import enqueue_notification
 from app.services.settings import get_setting
 from app.utils.timezone import local_tz
@@ -108,7 +109,7 @@ async def text(session: AsyncSession, now: datetime) -> str:
     todo = []
     if waiting_members:
         todo.append(f"⏳ Tasdiq kutayotgan a'zolar: <b>{waiting_members}</b>")
-    if receipts:
+    if receipts and not await payments_chat.chat_id(session):  # with a payments channel, they are recalled there
         todo.append(f"🧾 Tekshirilmagan to'lov cheklari: <b>{receipts}</b>")
     if questions:
         todo.append(f"📨 Javob kutayotgan murojaatlar: <b>{questions}</b>")

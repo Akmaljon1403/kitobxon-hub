@@ -98,6 +98,7 @@ class CardPayment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
         CheckConstraint("amount_uzs > 0", name="amount_positive"),
         Index("ix_card_payments_status_created_at", "status", "created_at"),
         Index("ix_card_payments_user_id", "user_id"),
+        Index("ix_card_payments_receipt_sha256", "receipt_sha256"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -105,6 +106,8 @@ class CardPayment(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("premium_plans.id", ondelete="SET NULL"))
     amount_uzs: Mapped[int] = mapped_column(Integer)
     receipt_key: Mapped[str] = mapped_column(String(512))
+    # The uploaded file's SHA-256: the very same receipt sent again (by anyone) is flagged to the admins.
+    receipt_sha256: Mapped[str | None] = mapped_column(String(64))
     status: Mapped[CardPaymentStatus] = mapped_column(
         enum_column(CardPaymentStatus),
         default=CardPaymentStatus.PENDING,

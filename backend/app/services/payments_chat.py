@@ -6,7 +6,8 @@ there and nowhere else:
 * card receipts with ✅ / ❌ buttons (Premium, Telegram Stars, donations) — see ``card_payments``;
 * members' payment questions with «✍️ Javob yozish» — see ``support``;
 * every Telegram Stars payment and refund, as a short line;
-* a weekly money summary (Mondays).
+* a weekly money summary (Mondays);
+* a reminder at 10:00 and 17:00 when receipts have waited for hours.
 
 When the chat cannot be reached (the bot was removed), receipts fall back to the super administrators
 in the bot, so nothing is ever lost. Adding the bot to a channel as an administrator is enough: the
@@ -32,6 +33,9 @@ from app.utils.timezone import format_datetime, local_tz
 
 logger = logging.getLogger(__name__)
 SUMMARY_ACTION = "PAYMENTS_WEEKLY_SUMMARY"
+REMINDER_ACTION = "PAYMENTS_PENDING_REMINDER"
+REMINDER_HOURS = (10, 17)  # local hours when forgotten receipts are recalled
+WAITING_HOURS = 3  # a receipt counts as forgotten after this long
 
 
 def _e(value: str) -> str:
@@ -167,6 +171,40 @@ async def weekly_summary(session: AsyncSession, now: datetime | None = None) -> 
     if not await post(session, await summary_text(session, since, until)):
         return 0
     record_audit(session, actor_id=None, action=SUMMARY_ACTION, entity_type="payments", entity_id=week)
+    await session.commit()
+    return 1
+
+
+async def remind_pending(session: AsyncSession, now: datetime | None = None) -> int:
+    """Scheduler job: at 10:00 and 17:00, receipts waiting for hours are recalled in the payments chat."""
+    now = now or datetime.now(UTC)
+    local = now.astimezone(local_tz())
+    if local.hour not in REMINDER_HOURS or await chat_id(session) is None:
+        return 0
+    slot = f"{local.date().isoformat()}-{local.hour}"
+    if await session.scalar(
+        select(AuditLog.id).where(AuditLog.action == REMINDER_ACTION, AuditLog.entity_id == slot).limit(1)
+    ):
+        return 0
+    count, oldest = (
+        await session.execute(
+            select(func.count(CardPayment.id), func.min(CardPayment.created_at)).where(
+                CardPayment.status == CardPaymentStatus.PENDING,
+                CardPayment.created_at < now - timedelta(hours=WAITING_HOURS),
+            )
+        )
+    ).one()
+    if not count:
+        return 0
+    hours = max(WAITING_HOURS, int((now - oldest).total_seconds() // 3600))
+    text = (
+        f"⏳ <b>Tekshirilmagan cheklar: {count}</b>\n"
+        f"Eng eskisi {hours} soatdan beri kutmoqda — a'zolar javob kutyapti. Yuqoridagi cheklarda ✅ yoki ❌ ni "
+        "bosing (yoki admin panel → 💎 Premium → Karta to'lovlari)."
+    )
+    if not await post(session, text):
+        return 0
+    record_audit(session, actor_id=None, action=REMINDER_ACTION, entity_type="payments", entity_id=slot)
     await session.commit()
     return 1
 
