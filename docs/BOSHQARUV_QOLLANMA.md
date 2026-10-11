@@ -327,6 +327,67 @@ akkauntlardan himoya qiladi. Bir a'zo oyiga 5 tagacha mukofot oladi.
 Sozlash: **⚙️ Sozlamalar → 👥 Do'stlarni taklif qilish** (ball, Premium kunlar, oylik chegara); butunlay
 o'chirish — **🧩 Imkoniyatlar → 👥 Do'stlarni taklif qilish**.
 
+### 💚 «Sizning foydangiz» — a'zo o'z hissasini ko'radi
+
+Ilovada **👥 Do'stlar** sahifasi (bosh sahifadagi tugma yoki botda /taklif → «💚 Batafsil»):
+
+- shaxsiy havola, «📤 Yuborish» va «📋 Nusxalash»;
+- **Sizning foydangiz**: nechta do'st taklif qilgan, ulardan nechtasi tadbirga kelgan, olib kelgan
+  do'stlari jami **qancha ball to'plagani**, nechta kitob o'qigani, necha marta tadbirga kelgani va
+  test yechgani; a'zoning o'zi taklif uchun olgan ballar va Premium kunlar;
+- do'stlari ro'yxati (ismi, qachon qo'shilgani, tadbirga kelgan-kelmagani, ballari);
+- **Eng faol taklif qiluvchilar** — butun klub bo'yicha jadval va a'zoning o'z o'rni;
+- davom etayotgan va yaqinda tugagan **taklif tanlovlari**.
+
+A'zo nimani ko'rishini **⚙️ Sozlamalar** da tanlaysiz:
+
+| Sozlama | Ma'nosi |
+|---|---|
+| `referral.friend_details` | FULL — do'stlarning ismi, ballari, kitoblari; NAMES — faqat ism va tadbirga kelgani; COUNT — faqat sonlar |
+| `referral.leaderboard_size` | «Eng faol taklif qiluvchilar» jadvalida nechta o'rin ko'rinadi (0 — jadval yashirin) |
+| `referral.leaderboard_rule` | ATTENDED — faqat tadbirga kelgan do'stlar sanaladi (tavsiya); REGISTERED — ro'yxatdan o'tganlarning hammasi |
+
+Yutuqlar: do'sti birinchi tadbirga kelganda **🤗 Birinchi do'st**, 5 ta do'st kelganda
+**📣 Targ'ibotchi** (**🏅 Yutuqlar** bo'limida o'zgartirasiz yoki yangisini qo'shasiz, mezon — «Taklif qilgan va
+tadbirga kelgan do'stlar soni»).
+
+### 🏁 Taklif tanlovlari («kim ko'p do'st olib kelsa — sovg'a»)
+
+**Admin panel → 🏁 Taklif tanlovlari → + Yangi tanlov**. Masalan: «Oktabr oxirigacha klubga eng ko'p do'st olib
+kelgan 3 kishiga sovg'a».
+
+1. **Nomi, tavsifi, boshlanish va tugash vaqti.**
+2. **Qoidalar** — qaysi do'stlar sanaladi:
+   - ✅ **tadbirga kelgan do'stlar** (tavsiya: soxta akkauntlardan eng yaxshi himoya);
+   - 👤 ro'yxatdan o'tgan do'stlar (tez, lekin jadvalni tekshirib turing);
+   - ⭐ kamida N ball to'plagan do'stlar.
+   Faqat tanlov davrida havola orqali qo'shilganlar sanaladi. «Kamida necha do'st» — bundan kam bo'lsa sovrin
+   berilmaydi. Qatnashuvchilarni fakultet yoki kurs bo'yicha cheklash mumkin. Adminlar hech qachon qatnashmaydi.
+3. **Sovrinlar** — har bir o'ringa alohida: **ball**, **Premium kunlar**, **promokod** («🎁 Sovg'alar»dagi
+   sovg'adan) va/yoki **qo'lda beriladigan sovg'a** (masalan, kitob). Shartni bajargan hammaga qo'shimcha ball ham
+   berish mumkin.
+4. **A'zolar nimani ko'radi**: jadval (yoki faqat o'z natijasi), jadvaldagi do'stlar soni, ismlar (to'liq,
+   «Aziza K.» yoki yashirin — «Ishtirokchi»), har kimning o'z o'rni, sovrinlar (yoki sir), **oxirgi soatlarda
+   jadvalni yashirish** (intriga uchun).
+5. **Xabarlar**: boshlanganda hammaga e'lon (sovrinlar va havola tugmasi bilan), tugashidan N soat oldin har bir
+   ishtirokchiga o'rni va kerakli do'stlar soni bilan eslatma, natijalarni hammaga e'lon qilish va kanalga post.
+
+**📢 E'lon qilish** tugmasi bilan tanlov boshlanadi (boshlanish vaqti kelganda a'zolarga xabar boradi). Tanlov
+boshlangach adolat uchun shartlar va sovrinlar **qulflanadi**; nomi, ko'rinish sozlamalari va tugash vaqtini
+o'zgartirish mumkin.
+
+Tanlov davomida **Batafsil** → jadval (adminlar to'liq ismlarni ko'radi) → **Do'stlari** — har bir ishtirokchi olib
+kelgan do'stlar ro'yxati (telefoni, tadbirga kelgani, ballari, sanaladimi). Shubhali bo'lsa — **Chiqarish** (sababi
+bilan) yoki shubhali akkauntlarni **👥 A'zolar** da bloklang — ular jadvaldan o'zi chiqadi.
+
+Tugash vaqti kelganda tanlov **o'zi yakunlanadi**: g'oliblar aniqlanadi, ball / Premium / promokod avtomatik
+beriladi, g'oliblarga 🎉 tabrik boradi, natijalar e'lon qilinadi. Qo'lda beriladigan sovg'ani topshirgach —
+**✅ Topshirildi deb belgilash**. Kerak bo'lsa **🏁 Hozir yakunlash** yoki **Bekor qilish** (a'zolarga sababi bilan
+xabar boradi).
+
+Sahifa pastida — **barcha vaqt bo'yicha eng ko'p do'st olib kelganlar** (ro'yxatdan o'tgan va tadbirga kelgan
+do'stlari soni bilan).
+
 ## 15. Tadbirlar: smenalar, qo'lda davomat, vaqtni o'zgartirish
 
 - **Smenalar**: bir tadbir bir necha vaqtda o'tsa (masalan, 1-smena 10:00, 2-smena 14:00), tadbirga
@@ -389,7 +450,16 @@ tushmagan») yoki **✍️ Boshqa sabab** ni yozasiz. Adashib bosilgan qarorni *
 administratorlarga botda keladi. Hissa (donat) uchun chek so'ralmaydi.
 
 **Premium emojilar** — bot xabarlaridagi oddiy emojilarni Telegram premium (animatsion) emojilariga
-almashtirish: botga `/emoji` yozing va premium emojili xabar yuboring — bot ularni eslab qoladi.
+almashtirish. Masalan, xabarda «Assalomu alaykum ❤️» bo'lsa, ❤️ o'rnida siz oldindan yuklagan premium yurakcha
+turadi — barcha xabarlarda (e'lonlar, eslatmalar, tabriklar) o'zi almashadi:
+
+1. Botga `/emoji` yozing.
+2. Premium emojili xabar yuboring: bot har bir premium emojini o'zining oddiy «egizagi» o'rniga eslab qoladi.
+   Boshqa oddiy emojiga bog'lamoqchi bo'lsangiz — juftlab yozing: `❤️ = <premium emoji>`.
+3. `/tayyor` — tugatish.
+
+Ro'yxatni ko'rish, bittasini yoki hammasini o'chirish va **🧪 O'zimga namuna yuborish** — **📢 Xabarlar** sahifasi
+pastidagi «✨ Premium emojilar» bo'limida.
 
 > ⚠️ Cheklov (Telegram qoidasi): bot premium emojini xabarda faqat **Fragment'da sotib olingan
 > username**ga ega bo'lsa ko'rsata oladi. Aks holda Telegram xatosi chiqadi — bot buni sezib, xabarni
@@ -466,6 +536,29 @@ PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlan
   **o'zi faollashadi**. Adminlarga tegilmaydi. `0` — o'chiq.
 - **Eski yozuvlar** (yetkazilgan xabarlar, test signallari, eski bot holatlari) har kecha
   tozalanadi — baza yillar o'tib ham tez ishlaydi. Audit jurnali hech qachon o'chmaydi.
+
+### Yangi o'quv yilida yana nimalar o'zi bo'ladi
+
+- **Guruh raqami**: 2-kursdagi «201» guruh avtomatik «301» bo'ladi (agar guruh nomining birinchi raqami kursga
+  teng bo'lsa). «DI-21» kabi boshqacha nomlangan guruhlar o'zgarmaydi. O'chirish: `academic.promote_groups`.
+- **Bitiruvchilar**: oxirgi kursdagi a'zolarga «🎓 Bitirdingizmi?» savoli boradi — «Ha, bitirdim» deganlar
+  **bitiruvchi** bo'ladi: klubda qoladi (ballari, kitoblari, sertifikatlari joyida), lekin kurs bo'yicha
+  hisobotlarga kirmaydi. Admin ham **👥 A'zolar** → a'zo → «🎓 Bitiruvchi» belgisi bilan qo'yishi mumkin.
+  O'chirish: `academic.ask_graduates`.
+- **📖 Yil yakuni** (`academic.summary_day`, odatda 20-iyun): har bir faol a'zoga o'quv yilidagi natijalari —
+  o'qigan kitoblari, tadbirlari, testlari, ballari, yillik reytingdagi o'rni, sertifikatlari, yutuqlari va olib
+  kelgan do'stlari 🎉 bilan yuboriladi. Bo'sh qoldirilsa — yuborilmaydi.
+
+### Kundalik yordamchilar
+
+- **🌅 Xayrli tong** (`admin.morning_digest`): har kuni soat 08:00 da bosh administratorlarga qisqa hisobot —
+  kecha qo'shilgan a'zolar, tasdiq kutayotganlar, tekshirilmagan cheklar, javobsiz murojaatlar, tasdiq kutayotgan
+  qo'lda davomat, bugungi tadbirlar, bugun tugaydigan testlar va davom etayotgan tanlovlar.
+- **🌙 Tungi tinchlik** (`notifications.quiet_hours`, odatda 22:00–08:00): bu vaqtda ommaviy xabarlar (e'lonlar,
+  yangi kitob va tadbirlar, yutuqlar, haftalik xulosa) yuborilmaydi — ertalab boradi. Shaxsiy va shoshilinch
+  xabarlar (davomat, to'lov, test natijasi) har doim darhol boradi.
+- **⏰ Rejalashtirilgan e'lonlar**: **📢 Xabarlar** da «Yuborish vaqti»ni tanlang (90 kungacha oldin) — masalan,
+  bayram tabrigini oldindan yozib qo'yasiz. Yuborilguncha «So'nggi e'lonlar» ro'yxatida **Bekor qilish** mumkin.
 
 ## 25. 🔍 Qidiruv
 

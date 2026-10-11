@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import html
 import logging
 import uuid
@@ -85,6 +86,23 @@ async def still_here(callback: CallbackQuery, db: AsyncSession, member: User | N
         member.last_seen_at = datetime.now(UTC)
         await db.commit()
     await callback.answer(texts.STILL_HERE, show_alert=True)
+
+
+@router.callback_query(F.data.in_({"grad:yes", "grad:no"}))
+async def graduation_answer(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    """The answer to «Bitirdingizmi?» asked at the start of a study year."""
+    from app.services import lifecycle
+
+    if member is None:
+        await callback.answer()
+        return
+    graduated = callback.data == "grad:yes"
+    await lifecycle.set_graduated(db, member, graduated)
+    await callback.answer()
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(Exception):
+            await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.message.answer(texts.GRADUATED if graduated else texts.STILL_STUDYING)
 
 
 @router.callback_query(F.data == "mem:back")

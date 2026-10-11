@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     admin_channel,
     admin_contests,
     admin_documents,
+    admin_emoji,
     admin_events,
     admin_faculties,
     admin_giveaways,
@@ -73,5 +74,6 @@ for module in (
     admin_analytics,
     admin_system,
     admin_documents,
+    admin_emoji,
 ):
     api_router.include_router(module.router)

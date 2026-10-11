@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import Select, func, or_, select
@@ -100,6 +101,7 @@ def _profile_snapshot(user: User) -> dict[str, Any]:
         "faculty_id": str(user.faculty_id) if user.faculty_id else None,
         "course": user.course,
         "group_name": user.group_name,
+        "graduated": user.graduated_at is not None,
     }
 
 
@@ -117,6 +119,11 @@ async def _apply_profile_changes(session: AsyncSession, user: User, changes: dic
         user.course = await validate_course(session, changes["course"])
     if "group_name" in changes:
         user.group_name = normalize_group(changes["group_name"])
+    if changes.get("graduated") is not None:
+        if changes["graduated"] and user.graduated_at is None:
+            user.graduated_at = datetime.now(UTC)
+        elif not changes["graduated"]:
+            user.graduated_at = None
 
 
 async def update_my_profile(session: AsyncSession, user: User, changes: dict[str, Any]) -> User:

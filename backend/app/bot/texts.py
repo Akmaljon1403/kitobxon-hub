@@ -541,6 +541,13 @@ LEFT_WIPED = (
 )
 BTN_LEFT_RESTORE = "🔄 Qayta tiklash"
 BTN_LEFT_WIPE = "🧹 Chatni tozalash"
+GRADUATED = (
+    "🎓 Tabriklaymiz, bitiruvchi! Siz klubda qolasiz — tadbirlar, kitoblar va do'stlar sizni kutadi. "
+    "Yangi kitobxonlarni ham olib keling 📚"
+)
+STILL_STUDYING = (
+    "📚 Yaxshi, yangi o'quv yilida omad! Kurs yoki guruhingiz o'zgargan bo'lsa, ilovada profilingizni to'g'rilang."
+)
 STILL_HERE = "Ajoyib! 👋 Siz bilan davom etamiz — yangi kitob va tadbirlardan xabardor bo'lib turing."
 WELCOME_BACK_AFTER_BREAK = "🎉 Qaytganingiz bilan! Hisobingiz yana faol — ballaringiz va yutuqlaringiz joyida."
 STOPPED = "⏹ To'xtatildi. Oldingi amal bekor qilindi — pastdagi menyudan davom eting."

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -9,6 +11,7 @@ from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.core.config import get_settings
+from app.core.errors import BadRequestError
 from app.models import AuditLog, User
 from app.schemas.notification import (
     BroadcastHistoryItem,
@@ -36,8 +39,13 @@ async def summary(_: Sender, db: DbSession) -> NotificationSummaryOut:
         .limit(10)
     )
     history = []
+    now = datetime.now(UTC)
     for entry, first, last in rows:
         after = entry.after or {}
+        scheduled = datetime.fromisoformat(after["scheduled_at"]) if after.get("scheduled_at") else None
+        waiting = 0
+        if scheduled is not None and after.get("broadcast_id") and scheduled > now - timedelta(hours=1):
+            waiting = await announcements.broadcast_pending(db, after["broadcast_id"])
         history.append(
             BroadcastHistoryItem(
                 at=entry.created_at,
@@ -45,6 +53,9 @@ async def summary(_: Sender, db: DbSession) -> NotificationSummaryOut:
                 message=after.get("message", ""),
                 recipients=int(after.get("recipients", 0)),
                 filters={key: after.get(key) for key in ("faculty_id", "course", "group_name") if after.get(key)},
+                broadcast_id=after.get("broadcast_id"),
+                scheduled_at=scheduled,
+                waiting=waiting,
             )
         )
     return NotificationSummaryOut(
@@ -68,8 +79,26 @@ async def broadcast(payload: BroadcastIn, current: Sender, db: DbSession) -> Bro
         buttons=payload.buttons,
         dry_run=payload.dry_run,
         only_to=current.user.id if payload.test else None,
+        scheduled_at=_when(payload.scheduled_at) if not payload.test else None,
     )
     return BroadcastOut(recipients=recipients, queued=not payload.dry_run)
+
+
+def _when(value: datetime | None) -> datetime | None:
+    """A planned time must be in the future (a past one means «now») and at most 90 days ahead."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        raise BadRequestError("SCHEDULE_TIMEZONE", "Vaqtni mintaqa bilan yuboring.")
+    now = datetime.now(UTC)
+    if value > now + timedelta(days=90):
+        raise BadRequestError("SCHEDULE_TOO_FAR", "Ko'pi bilan 90 kun oldinga rejalashtirish mumkin.")
+    return value if value > now else None
+
+
+@router.post("/broadcast/{broadcast_id}/cancel", summary="Cancel a planned announcement (messages not sent yet)")
+async def cancel_broadcast(broadcast_id: uuid.UUID, current: Sender, db: DbSession) -> dict[str, int]:
+    return {"cancelled": await announcements.cancel_broadcast(db, actor_id=current.user.id, broadcast_id=broadcast_id)}
 
 
 @router.post(

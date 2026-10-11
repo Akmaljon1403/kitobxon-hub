@@ -120,6 +120,7 @@ export function MembersPage() {
                   <td className="px-4 py-2.5">{user.faculty_name ?? '—'}</td>
                   <td className="whitespace-nowrap px-4 py-2.5">
                     {user.course ? `${user.course}-kurs` : '—'} · {user.group_name ?? '—'}
+                    {user.graduated_at && <span title="Bitiruvchi"> 🎓</span>}
                   </td>
                   {showPhone && <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">{user.phone ?? '—'}</td>}
                   <td className="px-4 py-2.5">
@@ -192,6 +193,7 @@ function MemberModal({
           faculty_id: form.faculty_id || null,
           course: form.course ? Number(form.course) : undefined,
           group_name: form.group_name,
+          graduated: Boolean(form.graduated_at),
         },
       }),
     )
@@ -232,6 +234,7 @@ function MemberModal({
         <>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={state.data.status} />
+            {state.data.graduated_at && <Badge tone="info">🎓 Bitiruvchi</Badge>}
             {state.data.roles?.map((role) => (
               <Badge key={role} tone="info">
                 {role}
@@ -278,6 +281,15 @@ function MemberModal({
                 <Input value={form.group_name ?? ''} disabled={!canManage} onChange={(e) => setForm({ ...form, group_name: e.target.value })} />
               </Field>
             </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(form.graduated_at)}
+                disabled={!canManage}
+                onChange={(e) => setForm({ ...form, graduated_at: e.target.checked ? new Date().toISOString() : null })}
+              />
+              🎓 Bitiruvchi (o'qishni tamomlagan; klubda qoladi, kurs hisobotlariga kirmaydi)
+            </label>
             {state.data.phone && (
               <Field label="Telefon">
                 <Input value={state.data.phone} disabled />

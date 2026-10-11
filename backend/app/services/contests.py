@@ -473,6 +473,17 @@ async def _announce_start(session: AsyncSession, contest: ReferralContest) -> No
         if prizes:
             parts.append(f"🎁 Sovrinlar:\n{prizes}")
     parts.append("👥 Shaxsiy havolangizni ilovadagi «Do'stlar» bo'limidan oling va do'stlaringizga yuboring!")
+    if contest.post_to_channel:
+        from app.services import channel
+
+        await channel.queue(
+            session,
+            kind=ChannelPostKind.RESULTS,
+            text="\n\n".join(
+                [*parts[:-1], "👥 Qatnashish uchun botga kiring va «Do'stlar» bo'limidan havolangizni oling!"]
+            ),
+            dedup_key=f"contest:{contest.id}:start",
+        )
     await enqueue_for_members(
         session,
         type_=NotificationType.ANNOUNCEMENT,

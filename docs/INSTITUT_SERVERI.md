@@ -157,10 +157,13 @@ Server qayta yoqilganda hammasi o'zi ishga tushadi (`restart: unless-stopped`).
 
 | Qachon | Nima bo'ladi |
 |---|---|
-| Har daqiqa | Xabarlar, eslatmalar, testlarni yopish, kanal postlari |
+| Har daqiqa | Xabarlar, eslatmalar, testlarni yopish, kanal postlari, taklif tanlovlarini boshlash va yakunlash |
+| 22:00–08:00 | Tungi tinchlik: ommaviy xabarlar ertalab boradi (`notifications.quiet_hours`) |
+| Har kuni 08:00 | «🌅 Xayrli tong» — bosh administratorlarga qisqa hisobot |
 | Har kuni 04:00 | Eski yetkazilgan xabarlar (120 kun), test signallari (400 kun), eski bot suhbat holatlari tozalanadi. Audit jurnali **hech qachon** o'chmaydi |
 | Har kuni 11:00 | Uzoq vaqt (sozlamada 365 kun) kirmagan a'zolarga eslatma; bir haftadan keyin «faol emas» (qaytsa — o'zi faollashadi) |
-| Har yili 1-sentabr | Kurslar bittaga oshadi (oxirgi kursdagilar o'zgarmaydi), «2027–2028 o'quv yili» mavsumi boshlanadi — reyting va hisobotlar yillar bo'yicha aralashmaydi |
+| Har yili 1-sentabr | Kurslar va guruh raqamlari bittaga oshadi («201» → «301»), oxirgi kursdagilardan «Bitirdingizmi?» so'raladi, «2027–2028 o'quv yili» mavsumi boshlanadi — reyting va hisobotlar yillar bo'yicha aralashmaydi |
+| Har yili 20-iyun | «📖 Yil yakuni» — har bir a'zoga o'quv yilidagi natijalari (`academic.summary_day`) |
 
 Bularni **Admin panel → Sozlamalar** da o'zgartirish mumkin: `academic.*` (o'quv yili boshlanish
 kuni, kurslarni oshirish, mavsum), `membership.inactive_days` (0 — o'chirish).

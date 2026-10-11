@@ -39,6 +39,7 @@ class MeOut(BaseModel):
     group_name: str | None
     status: UserStatus
     registered_at: datetime | None
+    graduated: bool = False  # finished their studies (alumni stay in the club)
     is_admin: bool
     roles: list[str]
     max_course: int
@@ -95,6 +96,7 @@ class AdminUserOut(BaseModel):
     left_at: datetime | None = None
     left_reason: str | None = None
     restore_requested_at: datetime | None = None
+    graduated_at: datetime | None = None
 
 
 class AdminUserDetailOut(AdminUserOut):
@@ -107,6 +109,7 @@ class AdminUserUpdateIn(BaseModel):
     faculty_id: uuid.UUID | None = None
     course: int | None = Field(default=None, ge=1, le=8)
     group_name: str | None = Field(default=None, min_length=1, max_length=16)
+    graduated: bool | None = Field(default=None, description="Mark as a graduate (alumni) or take the mark off")
 
 
 class UserStatusIn(BaseModel):

@@ -121,6 +121,21 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition("notifications.quote_of_day_time", "09:00", ClockTime, "Kun iqtibosi yuboriladigan vaqt"),
     SettingDefinition(
+        "admin.morning_digest",
+        True,
+        bool,
+        "Har kuni soat 08:00 da bosh administratorlarga qisqa hisobot: yangi a'zolar, tekshirilmagan cheklar, "
+        "javobsiz murojaatlar, tasdiq kutayotgan davomat va bugungi tadbirlar",
+    ),
+    SettingDefinition(
+        "notifications.quiet_hours",
+        "22:00-08:00",
+        Annotated[str, StringConstraints(pattern=r"^$|^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")],
+        "Tungi tinchlik (SS:DD-SS:DD): shu vaqtda ommaviy xabarlar (e'lonlar, yangi kitob va tadbirlar, "
+        "yutuqlar, haftalik xulosa) yuborilmaydi — ertalab boradi. Shaxsiy va shoshilinch xabarlar (davomat, "
+        "to'lov, test natijasi) har doim boradi. Bo'sh — o'chiq",
+    ),
+    SettingDefinition(
         "notifications.stickers",
         False,
         bool,
@@ -233,6 +248,27 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         choices=("ATTENDED", "REGISTERED"),
     ),
     # ---- Study years ----
+    SettingDefinition(
+        "academic.promote_groups",
+        True,
+        bool,
+        "Yangi o'quv yilida guruh raqami ham kurs bilan birga oshadi, agar uning birinchi raqami kursga teng "
+        "bo'lsa (2-kursdagi «201» → «301»). Boshqacha nomlangan guruhlar o'zgarmaydi",
+    ),
+    SettingDefinition(
+        "academic.ask_graduates",
+        True,
+        bool,
+        "Yangi o'quv yilida oxirgi kursdagi a'zolardan «Bitirdingizmi?» deb so'raladi; «Ha» deganlar "
+        "bitiruvchi (alumni) bo'ladi — klubda qoladi, lekin kurs bo'yicha hisobotlarga kirmaydi",
+    ),
+    SettingDefinition(
+        "academic.summary_day",
+        "06-20",
+        Annotated[str, StringConstraints(pattern=r"^$|^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")],
+        "«Yil yakuni»: shu kuni (OO-KK) har bir a'zoga o'quv yili davomidagi natijalari (kitoblar, tadbirlar, "
+        "testlar, ballar, o'rni, do'stlari) yuboriladi. Bo'sh — yuborilmaydi",
+    ),
     SettingDefinition(
         "academic.year_start",
         "09-01",

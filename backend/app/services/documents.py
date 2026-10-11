@@ -176,6 +176,7 @@ def _member_filter(params: Params) -> list[Any]:
         conditions.append(User.faculty_id == params.faculty_id)
     if params.course is not None:
         conditions.append(User.course == params.course)
+        conditions.append(User.graduated_at.is_(None))  # a course means its current students
     if params.group_name:
         conditions.append(User.group_name == normalize_group(params.group_name))
     return conditions

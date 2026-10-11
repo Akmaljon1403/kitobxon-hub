@@ -44,6 +44,7 @@ export interface Me {
   group_name: string | null
   status: UserStatus
   registered_at: string | null
+  graduated?: boolean
   is_admin: boolean
   roles: string[]
   max_course: number

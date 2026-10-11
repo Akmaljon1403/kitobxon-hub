@@ -76,7 +76,65 @@ def _markup(payload: dict[str, Any] | None) -> InlineKeyboardMarkup | None:
     return InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
 
 
+# Mass messages wait for the morning during the club's quiet hours; personal and urgent ones
+# (attendance, payments, test results, priority 1-2) always go.
+QUIET_TYPES = (
+    NotificationType.ADMIN_MESSAGE,
+    NotificationType.ANNOUNCEMENT,
+    NotificationType.NEW_BOOK,
+    NotificationType.EVENT_CREATED,
+    NotificationType.DIGEST,
+    NotificationType.RANKING_UPDATE,
+    NotificationType.ACHIEVEMENT_UNLOCKED,
+    NotificationType.CERTIFICATE,
+    NotificationType.REWARD,
+    NotificationType.FEEDBACK_REQUEST,
+)
+
+
+async def quiet_until(session: AsyncSession, now: datetime) -> datetime | None:
+    """The end of the quiet hours when ``now`` falls inside them (``notifications.quiet_hours``)."""
+    from datetime import time as clock
+
+    from app.services.settings import get_setting
+    from app.utils.timezone import local_tz
+
+    window = str(await get_setting(session, "notifications.quiet_hours") or "")
+    if not window:
+        return None
+    start_text, end_text = window.split("-")
+    start = clock.fromisoformat(start_text)
+    end = clock.fromisoformat(end_text)
+    local = now.astimezone(local_tz())
+    current = local.time()
+    inside = (start <= current or current < end) if start > end else (start <= current < end)
+    if not inside or start == end:
+        return None
+    day = local.date() if current < end else local.date() + timedelta(days=1)
+    return datetime.combine(day, end, tzinfo=local_tz())
+
+
+async def _hold_for_morning(session: AsyncSession) -> None:
+    """During the quiet hours, due mass messages move to the morning (the worker then sleeps till then)."""
+    now = datetime.now(UTC)
+    morning = await quiet_until(session, now)
+    if morning is None:
+        return
+    await session.execute(
+        update(Notification)
+        .where(
+            Notification.status == NotificationStatus.PENDING,
+            Notification.scheduled_at <= now,
+            Notification.type.in_(QUIET_TYPES),
+            Notification.priority >= 3,
+        )
+        .values(scheduled_at=morning)
+    )
+    await session.commit()
+
+
 async def _claim(session: AsyncSession, limit: int) -> list[Notification]:
+    await _hold_for_morning(session)
     due = (
         select(Notification.id)
         .where(Notification.status == NotificationStatus.PENDING, Notification.scheduled_at <= datetime.now(UTC))

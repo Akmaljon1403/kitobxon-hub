@@ -47,6 +47,7 @@ async def _me(current, db) -> MeOut:
         group_name=user.group_name,
         status=user.status,
         registered_at=user.registered_at,
+        graduated=user.graduated_at is not None,
         is_admin=current.is_admin,
         roles=sorted(current.roles),
         max_course=await get_setting(db, "registration.max_course"),
