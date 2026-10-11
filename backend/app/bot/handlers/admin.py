@@ -7,18 +7,19 @@ import html
 import uuid
 
 from aiogram import F, Router
+from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import keyboards, summaries, texts
-from app.bot.access import has_permission, is_admin
+from app.bot.access import has_permission, is_admin, is_super_admin
 from app.bot.states import ChannelPostEdit, ChannelStickers, CustomEmojiCollect
 from app.core.config import get_settings
 from app.core.errors import AppError
-from app.models import User
+from app.models import ChannelSticker, User
 from app.models.enums import UserStatus
 from app.security.permissions import Perm
 from app.services import channel, custom_emoji
@@ -61,13 +62,91 @@ async def computer_link(callback: CallbackQuery, db: AsyncSession, member: User 
         await callback.message.answer(texts.ADMIN_LINK.format(minutes=minutes), reply_markup=keyboards.admin_login(url))
 
 
-# ---------------------------------------------------------------------------- channel stickers
+# ---------------------------------------------------------------------------- stickers and premium emoji
+# Any admin with the right may teach the bot stickers (/stiker) and premium emoji (/emoji): both kinds
+# are accepted in both modes, and outside them the bot offers to save what an admin sends.
+
+
+async def _decor_right(db: AsyncSession, member: User | None) -> str | None:
+    """None when the admin may add stickers and premium emoji, otherwise the reason to show."""
+    if not await _allowed(db, member):
+        return texts.ADMIN_ONLY
+    if await is_super_admin(db, member):
+        return None
+    for permission in (Perm.NOTIFICATION_SEND, Perm.SETTINGS_MANAGE):
+        if await has_permission(db, member, permission):
+            return None
+    return texts.DECOR_NO_RIGHT
+
+
+async def _save_sticker(db: AsyncSession, member: User, message: Message) -> tuple[ChannelSticker | None, int]:
+    sticker = message.sticker
+    assert sticker is not None
+    return await channel.add_sticker(
+        db,
+        actor_id=member.id,
+        file_id=sticker.file_id,
+        file_unique_id=sticker.file_unique_id,
+        emoji=sticker.emoji,
+        set_name=sticker.set_name,
+        is_animated=bool(sticker.is_animated or sticker.is_video),
+    )
+
+
+def _mood(created: ChannelSticker | None) -> str:
+    return texts.STICKER_MOODS.get(str(created.mood) if created else "ANY", "")
+
+
+def _emoji_pairs(message: Message) -> list[tuple[str, str, str]]:
+    if message.text is not None:
+        return custom_emoji.pairs_from_message(message.text, list(message.entities or []))
+    return custom_emoji.pairs_from_message(message.caption or "", list(message.caption_entities or []))
+
+
+def _has_premium_emoji(message: Message) -> bool:
+    return any(entity.type == "custom_emoji" for entity in (message.entities or message.caption_entities or []))
+
+
+async def _probe(message: Message, pairs: list[tuple[str, str]]) -> bool:
+    """Send a sample with the premium emoji (fallback, id); True when Telegram accepted it."""
+    sample = " ".join(
+        f'<tg-emoji emoji-id="{html.escape(custom_id)}">{html.escape(fallback)}</tg-emoji>'
+        for fallback, custom_id in pairs[:30]
+    )
+    try:
+        await message.answer(texts.EMOJI_SAMPLE.format(sample=sample))
+    except TelegramBadRequest:
+        custom_emoji.report_refusal(message.chat.id)
+        await message.answer(texts.EMOJI_STATUS_REFUSED)
+        return False
+    custom_emoji.resume()
+    custom_emoji.report_success(message.chat.id)
+    return True
+
+
+def _status_text() -> str:
+    state = custom_emoji.status()
+    if state["paused"] or state["state"] == "refused":
+        return texts.EMOJI_STATUS_REFUSED
+    if state["state"] == "working":
+        return texts.EMOJI_STATUS_WORKING
+    if state["state"] == "group_refused":
+        return texts.EMOJI_STATUS_GROUP
+    return texts.EMOJI_STATUS_UNKNOWN
+
+
+async def _emoji_overview(db: AsyncSession) -> tuple[str, bool]:
+    """The /emoji text (plain emoji only, so it always arrives) and whether anything is saved."""
+    rows = await custom_emoji.list_all(db)
+    items = ": " + " ".join(html.escape(row.emoji) for row in rows[:60]) if rows else ""
+    return texts.EMOJI_ASK.format(count=len(rows), items=items, status=_status_text()), bool(rows)
 
 
 @router.message(Command("stiker"))
 async def stickers_start(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
-    if not await _allowed(db, member) or not await has_permission(db, member, Perm.NOTIFICATION_SEND):
-        await message.answer(texts.ADMIN_ONLY)
+    denied = await _decor_right(db, member)
+    if denied:
+        await message.answer(denied)
         return
     await state.set_state(ChannelStickers.waiting)
     await message.answer(texts.STICKER_ASK)
@@ -80,55 +159,48 @@ async def stickers_done(message: Message, state: FSMContext) -> None:
 
 
 @router.message(ChannelStickers.waiting, F.sticker)
-async def sticker_save(message: Message, db: AsyncSession, member: User | None) -> None:
-    if member is None or message.sticker is None:
+@router.message(CustomEmojiCollect.waiting, F.sticker)
+async def sticker_save(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    if member is None or await _decor_right(db, member):
+        await state.clear()
+        await message.answer(texts.ADMIN_ONLY)
         return
-    sticker = message.sticker
-    created, total = await channel.add_sticker(
-        db,
-        actor_id=member.id,
-        file_id=sticker.file_id,
-        file_unique_id=sticker.file_unique_id,
-        emoji=sticker.emoji,
-        set_name=sticker.set_name,
-        is_animated=bool(sticker.is_animated or sticker.is_video),
+    created, total = await _save_sticker(db, member, message)
+    if await state.get_state() == CustomEmojiCollect.waiting.state:
+        await message.answer(texts.STICKER_FROM_EMOJI.format(mood=_mood(created), total=total))
+        return
+    await message.answer(
+        (texts.STICKER_SAVED if created else texts.STICKER_DUPLICATE).format(total=total, mood=_mood(created))
     )
-    mood = texts.STICKER_MOODS.get(str(created.mood) if created else "ANY", "")
-    await message.answer((texts.STICKER_SAVED if created else texts.STICKER_DUPLICATE).format(total=total, mood=mood))
 
 
-@router.message(ChannelStickers.waiting)
+@router.message(ChannelStickers.waiting, ~F.text.startswith("/"), F.func(_has_premium_emoji))
+async def sticker_mode_emoji(message: Message, db: AsyncSession, member: User | None) -> None:
+    """Premium emoji sent while collecting stickers are saved as premium emoji."""
+    pairs = _emoji_pairs(message)
+    if member is None or not pairs:
+        await message.answer(texts.STICKER_ONLY)
+        return
+    total = await custom_emoji.save(db, actor_id=member.id, pairs=pairs)
+    shown = ", ".join(emoji for emoji, _, _ in pairs)
+    await message.answer(texts.EMOJI_FROM_STICKER_MODE.format(emoji=html.escape(shown), total=total))
+    await _probe(message, [(fallback, custom_id) for _, custom_id, fallback in pairs])
+
+
+@router.message(ChannelStickers.waiting, ~F.text.startswith("/"))
 async def sticker_expected(message: Message) -> None:
     await message.answer(texts.STICKER_ONLY)
 
 
-# ---------------------------------------------------------------------------- premium emoji in messages
-
-
-async def _emoji_overview(db: AsyncSession) -> str:
-    rows = await custom_emoji.list_all(db)
-    items = "".join(
-        f'\n{html.escape(row.fallback)} → <tg-emoji emoji-id="{html.escape(row.custom_emoji_id)}">'
-        f"{html.escape(row.fallback)}</tg-emoji>"
-        for row in rows[:40]
-    )
-    text = texts.EMOJI_ASK.format(count=len(rows), items=items)
-    return text + (texts.EMOJI_PAUSED if custom_emoji.paused() else "")
-
-
 @router.message(Command("emoji"))
 async def emoji_start(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
-    if not await _allowed(db, member) or not await has_permission(db, member, Perm.NOTIFICATION_SEND):
-        await message.answer(texts.ADMIN_ONLY)
+    denied = await _decor_right(db, member)
+    if denied:
+        await message.answer(denied)
         return
     await state.set_state(CustomEmojiCollect.waiting)
-    has_any = bool(await custom_emoji.list_all(db))
-    markup = (
-        keyboards.inline([InlineKeyboardButton(text=texts.BTN_EMOJI_CLEAR, callback_data="emj:clear")])
-        if has_any
-        else None
-    )
-    await message.answer(await _emoji_overview(db), reply_markup=markup)
+    text, has_any = await _emoji_overview(db)
+    await message.answer(text, reply_markup=keyboards.emoji_tools(has_any))
 
 
 @router.message(CustomEmojiCollect.waiting, Command("tayyor"))
@@ -137,31 +209,118 @@ async def emoji_done(message: Message, state: FSMContext) -> None:
     await message.answer(texts.EMOJI_DONE)
 
 
-@router.message(CustomEmojiCollect.waiting)
+@router.message(CustomEmojiCollect.waiting, ~F.text.startswith("/"))
 async def emoji_save(message: Message, db: AsyncSession, member: User | None) -> None:
     if member is None:
         return
-    pairs = custom_emoji.pairs_from_message(message.text or message.caption or "", message.entities or [])
+    pairs = _emoji_pairs(message)
     if not pairs:
         await message.answer(texts.EMOJI_NONE_FOUND)
         return
     total = await custom_emoji.save(db, actor_id=member.id, pairs=pairs)
-    shown = ", ".join(
-        f'{html.escape(emoji)} → <tg-emoji emoji-id="{html.escape(custom_id)}">{html.escape(fallback)}</tg-emoji>'
-        for emoji, custom_id, fallback in pairs
-    )
-    await message.answer(texts.EMOJI_SAVED.format(pairs=shown, total=total))
+    shown = ", ".join(emoji for emoji, _, _ in pairs)
+    await message.answer(texts.EMOJI_SAVED.format(emoji=html.escape(shown), count=len(pairs), total=total))
+    await _probe(message, [(fallback, custom_id) for _, custom_id, fallback in pairs])
+
+
+@router.callback_query(F.data == "emj:test")
+async def emoji_test(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    if await _decor_right(db, member):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    await callback.answer()
+    rows = await custom_emoji.list_all(db)
+    if not isinstance(callback.message, Message):
+        return
+    if not rows:
+        await callback.message.answer(texts.EMOJI_NONE_FOUND)
+        return
+    if await _probe(callback.message, [(row.fallback, row.custom_emoji_id) for row in rows]):
+        await callback.message.answer(texts.EMOJI_STATUS_WORKING)
 
 
 @router.callback_query(F.data == "emj:clear")
 async def emoji_clear(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
-    if not await _allowed(db, member) or not await has_permission(db, member, Perm.NOTIFICATION_SEND):
+    if await _decor_right(db, member):
         await callback.answer(texts.ADMIN_ONLY, show_alert=True)
         return
     await custom_emoji.clear(db)
     await callback.answer("🗑")
     if isinstance(callback.message, Message):
         await callback.message.answer(texts.EMOJI_CLEARED)
+
+
+# Outside the modes: an admin who simply sends a sticker or premium emoji is offered to save it.
+
+
+@router.message(StateFilter(None), F.sticker | F.func(_has_premium_emoji), F.chat.type == "private")
+async def decor_offer(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    if await _decor_right(db, member):
+        raise SkipHandler  # a member's sticker: the usual handlers answer
+    if message.sticker is not None:
+        sticker = message.sticker
+        await state.update_data(
+            decor={
+                "kind": "sticker",
+                "file_id": sticker.file_id,
+                "file_unique_id": sticker.file_unique_id,
+                "emoji": sticker.emoji,
+                "set_name": sticker.set_name,
+                "animated": bool(sticker.is_animated or sticker.is_video),
+            }
+        )
+        text = texts.DECOR_OFFER_STICKER
+    else:
+        pairs = _emoji_pairs(message)
+        if not pairs:
+            raise SkipHandler
+        await state.update_data(decor={"kind": "emoji", "pairs": [list(pair) for pair in pairs]})
+        text = texts.DECOR_OFFER_EMOJI.format(count=len(pairs))
+    await message.answer(text, reply_markup=keyboards.decor_offer())
+
+
+@router.callback_query(F.data.in_({"dec:save", "dec:skip"}))
+async def decor_answer(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User | None) -> None:
+    if member is None or await _decor_right(db, member):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    data = await state.get_data()
+    offer = data.get("decor")
+    await state.update_data(decor=None)
+    await callback.answer()
+    message = callback.message if isinstance(callback.message, Message) else None
+    if message is not None:
+        with contextlib.suppress(TelegramBadRequest):
+            await message.edit_reply_markup(reply_markup=None)
+    if message is None:
+        return
+    if callback.data == "dec:skip":
+        await message.answer(texts.DECOR_SKIPPED)
+        return
+    if not offer:
+        await message.answer(texts.DECOR_EXPIRED)
+        return
+    if offer["kind"] == "sticker":
+        created, total = await channel.add_sticker(
+            db,
+            actor_id=member.id,
+            file_id=offer["file_id"],
+            file_unique_id=offer["file_unique_id"],
+            emoji=offer.get("emoji"),
+            set_name=offer.get("set_name"),
+            is_animated=bool(offer.get("animated")),
+        )
+        await message.answer(
+            (texts.DECOR_STICKER_ADDED if created else texts.DECOR_STICKER_KNOWN).format(
+                total=total, mood=_mood(created)
+            )
+        )
+        return
+    pairs = [(str(a), str(b), str(c)) for a, b, c in offer["pairs"]]
+    total = await custom_emoji.save(db, actor_id=member.id, pairs=pairs)
+    shown = ", ".join(emoji for emoji, _, _ in pairs)
+    await message.answer(texts.DECOR_EMOJI_ADDED.format(emoji=html.escape(shown), total=total))
+    await _probe(message, [(fallback, custom_id) for _, custom_id, fallback in pairs])
 
 
 # ---------------------------------------------------------------------------- channel posts: admins look first

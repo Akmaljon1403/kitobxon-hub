@@ -3,11 +3,13 @@ here the administrator sees them, removes some and sends a sample to themself.""
 
 from __future__ import annotations
 
+import html
 from datetime import datetime
 from typing import Annotated
 
+from aiogram.exceptions import TelegramBadRequest
 from fastapi import APIRouter, Depends, Query, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
 from app.security.permissions import Perm
@@ -27,7 +29,12 @@ class EmojiOut(BaseModel):
 
 class EmojiListOut(BaseModel):
     items: list[EmojiOut]
-    paused: bool  # Telegram refused premium emoji recently (no Fragment username): ordinary ones for an hour
+    paused: bool  # Telegram refused premium emoji recently: ordinary ones for an hour
+    state: str = Field(
+        description="What Telegram said last time: unknown, working, refused (the bot owner has no Telegram "
+        "Premium and the bot has no Fragment username) or group_refused (refused in a channel or group only)"
+    )
+    checked_at: datetime | None
 
 
 class SampleOut(BaseModel):
@@ -46,6 +53,8 @@ async def list_emoji(_: Manager, db: DbSession) -> EmojiListOut:
             for row in rows
         ],
         paused=custom_emoji.paused(),
+        state=str(custom_emoji.status()["state"]),
+        checked_at=custom_emoji.status()["at"],
     )
 
 
@@ -59,9 +68,25 @@ async def delete_emoji(
 
 @router.post("/test", response_model=SampleOut, summary="The bot sends me a sample with every saved emoji")
 async def send_sample(current: Manager, db: DbSession) -> SampleOut:
+    """A real check: the sample carries the premium emoji themselves, so Telegram's answer tells whether
+    members see them (and the bot starts using them again at once when it does)."""
     rows = await custom_emoji.list_all(db)
-    emoji = " ".join(row.emoji for row in rows) or "📚 ❤️ 🎉"
     bot = delivery.runtime_bot()
-    await custom_emoji.refresh_if_stale()
-    await delivery.explain_failures(bot.send_message(current.user.telegram_id, f"{SAMPLE}\n\n{emoji}"))
-    return SampleOut(sent=True, premium_shown=bool(rows) and not custom_emoji.paused())
+    chat_id = current.user.telegram_id
+    if not rows:
+        await delivery.explain_failures(bot.send_message(chat_id, f"{SAMPLE}\n\n📚 ❤️ 🎉"))
+        return SampleOut(sent=True, premium_shown=False)
+    sample = " ".join(
+        f'<tg-emoji emoji-id="{html.escape(row.custom_emoji_id)}">{html.escape(row.fallback)}</tg-emoji>'
+        for row in rows[:30]
+    )
+    try:
+        await bot.send_message(chat_id, f"{SAMPLE}\n\n{sample}")
+    except TelegramBadRequest:
+        custom_emoji.report_refusal(chat_id)
+        plain = " ".join(row.emoji for row in rows[:30])
+        await delivery.explain_failures(bot.send_message(chat_id, f"{SAMPLE}\n\n{plain}"))
+        return SampleOut(sent=True, premium_shown=False)
+    custom_emoji.resume()
+    custom_emoji.report_success(chat_id)
+    return SampleOut(sent=True, premium_shown=True)

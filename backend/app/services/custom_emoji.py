@@ -5,9 +5,14 @@ written right before it («✋ = <premium>»), or else the emoji Telegram shows 
 Every message the bot sends (HTML) is then rewritten: the ordinary emoji becomes
 ``<tg-emoji emoji-id="…">✋</tg-emoji>``.
 
-Telegram lets bots use custom emoji only when the bot has an extra username bought on Fragment.
-If Telegram refuses such a message, it is sent again with ordinary emoji and the replacement pauses
-for an hour — members always get their messages.
+Who may use them (Telegram's rules, February 2026): a bot whose **owner** — the account that created
+it in @BotFather — has Telegram Premium, in private chats and groups (not in channels); or a bot with
+an extra username bought on Fragment (everywhere). The admins who *teach* the emoji may be anyone with
+Premium; what matters is the bot owner.
+
+If Telegram refuses such a message, it is sent again with ordinary emoji: a refusal in a private chat
+pauses the replacement for an hour (the bot may not use them at all), a refusal in a group or channel
+switches it off for that chat only. Members always get their messages.
 """
 
 from __future__ import annotations
@@ -16,6 +21,7 @@ import logging
 import re
 import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -36,10 +42,14 @@ _SKIP_TAGS = {"code", "pre", "tg-emoji"}
 _TAG = re.compile(r"(<[^>]+>)")
 _TAG_NAME = re.compile(r"^</?\s*([a-zA-Z-]+)")
 
+CHAT_REFUSAL_SECONDS = 6 * 60 * 60
+
 _mapping: dict[str, tuple[str, str]] = {}  # emoji (no U+FE0F) -> (custom emoji id, fallback)
 _pattern: re.Pattern[str] | None = None
 _loaded_at = 0.0
 _paused_until = 0.0
+_refused_chats: dict[int, float] = {}  # group/channel id -> until (monotonic)
+_last: dict[str, Any] = {"state": "unknown", "at": None, "where": None}  # what Telegram said last time
 
 
 def normalize(emoji: str) -> str:
@@ -91,6 +101,7 @@ async def save(session: AsyncSession, *, actor_id: uuid.UUID | None, pairs: list
         )
     await session.commit()
     forget()
+    resume()  # new emoji: try them with the next message
     return len(await list_all(session))
 
 
@@ -145,9 +156,18 @@ async def refresh_if_stale() -> None:
     use({row.emoji: (row.custom_emoji_id, row.fallback) for row in rows})
 
 
-def apply(html_text: str) -> str:
-    """Rewrite ordinary emoji in Telegram HTML as the club's premium ones."""
-    if _pattern is None or not html_text or time.monotonic() < _paused_until:
+def _chat_refused(chat_id: Any) -> bool:
+    if not isinstance(chat_id, int) or chat_id not in _refused_chats:
+        return False
+    if time.monotonic() >= _refused_chats[chat_id]:
+        del _refused_chats[chat_id]
+        return False
+    return True
+
+
+def apply(html_text: str, chat_id: Any = None) -> str:
+    """Rewrite ordinary emoji in Telegram HTML as the club's premium ones (not for a chat that refused)."""
+    if _pattern is None or not html_text or time.monotonic() < _paused_until or _chat_refused(chat_id):
         return html_text
     pattern = _pattern
     parts = _TAG.split(html_text)
@@ -177,12 +197,55 @@ def apply(html_text: str) -> str:
     return "".join(parts)
 
 
-def pause() -> None:
-    """Telegram refused custom emoji (the bot has no Fragment username): ordinary emoji for an hour."""
+def _where(chat_id: Any) -> str:
+    if isinstance(chat_id, int) and chat_id < 0:
+        return "group"  # groups and channels have negative ids
+    return "private"
+
+
+def report_success(chat_id: Any = None) -> None:
+    """Telegram accepted a message with premium emoji."""
+    _last.update(state="working", at=datetime.now(UTC), where=_where(chat_id))
+
+
+def report_refusal(chat_id: Any = None) -> None:
+    """Telegram refused premium emoji. In a private chat: the bot may not use them (its owner has no
+    Premium and it has no Fragment username) — ordinary emoji for an hour. In a group or channel: only
+    there (channels are never allowed under the owner-Premium rule)."""
     global _paused_until
+    if _where(chat_id) == "group":
+        _refused_chats[chat_id] = time.monotonic() + CHAT_REFUSAL_SECONDS
+        if _last["state"] != "working":
+            _last.update(state="group_refused", at=datetime.now(UTC), where="group")
+        logger.info("Telegram refused custom emoji in chat %s; ordinary emoji there for a while", chat_id)
+        return
     _paused_until = time.monotonic() + PAUSE_SECONDS
+    _last.update(state="refused", at=datetime.now(UTC), where="private")
     logger.warning("Telegram refused custom emoji; sending ordinary emoji for an hour")
+
+
+def pause() -> None:
+    """Ordinary emoji for an hour (kept for callers that do not know the chat)."""
+    report_refusal(None)
+
+
+def resume() -> None:
+    """Try premium emoji again with the next message (after new emoji are saved, or a manual check)."""
+    global _paused_until
+    _paused_until = 0.0
+    _refused_chats.clear()
+
+
+def reset() -> None:
+    """Forget every refusal and the last answer (tests)."""
+    resume()
+    _last.update(state="unknown", at=None, where=None)
 
 
 def paused() -> bool:
     return time.monotonic() < _paused_until
+
+
+def status() -> dict[str, Any]:
+    """What Telegram said the last time the bot used premium emoji (for /emoji and the Admin Panel)."""
+    return {**_last, "paused": paused()}

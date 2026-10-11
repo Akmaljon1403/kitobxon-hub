@@ -104,7 +104,7 @@ function ImpactCard({ info }: { info: ReferralOverview }) {
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <p className="font-semibold">💚 Sizning foydangiz</p>
+        <p className="font-semibold">📊 Qisqacha</p>
         <p className="text-sm text-app-hint">Siz olib kelgan kitobxonlar klubda nimalar qildi</p>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -132,19 +132,27 @@ function FriendsCard({ info }: { info: ReferralOverview }) {
   if (info.friend_details === 'COUNT' || info.friends.length === 0) return null
   return (
     <>
-      <SectionTitle>Do'stlarim</SectionTitle>
+      <SectionTitle>Taklif qilgan do'stlarim</SectionTitle>
       <Card className="p-2">
         <ul className="divide-y divide-app-surface">
           {info.friends.map((friend, index) => (
             <li key={`${friend.name}-${index}`} className="flex items-center gap-3 px-2 py-2.5">
+              <span className="w-6 shrink-0 text-center text-sm text-app-hint tabular-nums">{index + 1}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{friend.name}</p>
                 <p className="text-xs text-app-hint">
                   {formatDate(friend.joined_at)} dan beri a'zo
-                  {friend.points !== null && ` · ⭐ ${friend.points} ball · 📚 ${friend.books ?? 0} kitob`}
+                  {friend.books !== null && ` · 📚 ${friend.books} kitob`} ·{' '}
+                  {friend.came_to_event ? '✅ tadbirga keldi' : '⏳ hali kelmadi'}
                 </p>
               </div>
-              {friend.came_to_event ? <Badge tone="success">tadbirga keldi</Badge> : <Badge>kutilmoqda</Badge>}
+              {friend.points !== null ? (
+                <span className="shrink-0 font-semibold tabular-nums">⭐ {friend.points.toLocaleString('uz-UZ')}</span>
+              ) : friend.came_to_event ? (
+                <Badge tone="success">tadbirga keldi</Badge>
+              ) : (
+                <Badge>kutilmoqda</Badge>
+              )}
             </li>
           ))}
         </ul>
@@ -220,7 +228,8 @@ function ContestCard({ contest }: { contest: MemberContest }) {
   )
 }
 
-/** «👥 Do'stlar»: the personal link, what the invited friends did, contests and the inviters' table. */
+/** «🎁 Sizning foydangiz» (always open): the personal link, what the invited friends did, contests and the
+ * inviters' table. */
 export function InvitePage() {
   const { api } = useAuth()
   const goBack = useCallback(() => navigate('/profile'), [])
@@ -231,14 +240,25 @@ export function InvitePage() {
   if (overview.state.status === 'loading') return <LoadingState />
   if (overview.state.status === 'error') return <ErrorState message={overview.state.error.message} onRetry={overview.reload} />
   const info = overview.state.data
-  if (!info.enabled || !info.link) {
-    return <EmptyState icon="👥" title="Do'stlarni taklif qilish hozircha yopiq" />
-  }
   const board = info.leaderboard
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="px-1 text-xl font-semibold">👥 Do'stlar</h1>
-      <LinkCard info={info} />
+      <div className="px-1">
+        <h1 className="text-xl font-semibold">🎁 Sizning foydangiz</h1>
+        <p className="text-sm text-app-hint">Do'stlaringizni taklif qiling — ular bilan birga o'qing va mukofot oling</p>
+      </div>
+      {info.link ? (
+        <LinkCard info={info} />
+      ) : (
+        <Card>
+          <EmptyState icon="⏳" title="Havola tayyorlanmoqda">
+            Bir daqiqadan so'ng qayta oching yoki botda /referal buyrug'ini yuboring.
+          </EmptyState>
+          <Button variant="secondary" onClick={overview.reload}>
+            🔄 Qayta urinish
+          </Button>
+        </Card>
+      )}
       {contests.state.status === 'success' && contests.state.data.length > 0 && (
         <>
           <SectionTitle>Tanlovlar</SectionTitle>

@@ -1,5 +1,6 @@
 import { BookCover } from '../components/BookCover'
 import { Avatar } from '../components/Avatar'
+import { BenefitCard } from '../components/BenefitCard'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -21,7 +22,7 @@ const SHORTCUTS: { route: string; icon: string; label: string; feature?: string 
   { route: 'profile', icon: '🪪', label: 'Pasportim' },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", feature: 'rewards' },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', feature: 'certificates' },
-  { route: 'invite', icon: '👥', label: "Do'stlar", feature: 'referrals' },
+  { route: 'invite', icon: '🎁', label: 'Sizning foydangiz' },
   { route: 'premium', icon: '💎', label: 'Premium', feature: 'premium' },
   { route: 'help', icon: '❓', label: 'Yordam' },
 ]
@@ -147,6 +148,8 @@ export function HomePage() {
           </button>
         </>
       )}
+
+      <BenefitCard />
 
       <SectionTitle>Bo'limlar</SectionTitle>
       <div className="grid grid-cols-3 gap-2">

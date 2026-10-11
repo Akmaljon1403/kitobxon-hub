@@ -404,7 +404,7 @@ async def card_receipt(message: Message, state: FSMContext, db: AsyncSession, me
     await message.answer(texts.CARD_RECEIPT_OK)
 
 
-@router.message(StateFilter(CardReceipt.waiting), F.text, ~F.text.startswith("/"))
+@router.message(StateFilter(CardReceipt.waiting), F.text, ~F.text.startswith("/"), ~F.text.in_(keyboards.MENU_BUTTONS))
 async def card_receipt_hint(message: Message) -> None:
     await message.answer(texts.CARD_RECEIPT_HINT)
 
@@ -636,7 +636,7 @@ async def _mark_origin(bot: Any, data: dict[str, Any], payment: Any, line: str) 
             logger.warning("The receipt message could not be updated after a typed reason")
 
 
-@router.message(StateFilter(CardReject.waiting), F.text, ~F.text.startswith("/"))
+@router.message(StateFilter(CardReject.waiting), F.text, ~F.text.startswith("/"), ~F.text.in_(keyboards.MENU_BUTTONS))
 async def card_reject_reason(message: Message, state: FSMContext, db: AsyncSession, member: User | None) -> None:
     data = await state.get_data()
     await state.clear()

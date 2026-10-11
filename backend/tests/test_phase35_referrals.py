@@ -103,7 +103,8 @@ async def test_friend_joins_comes_to_an_event_and_the_inviter_is_thanked(
 
     harness = BotHarness(inviter.telegram_id)
     await harness.send("/taklif")
-    assert f"ref_{inviter.member_number}" in harness.last_text() and "<b>1</b>" in harness.last_text()
+    reply = harness.last_text()
+    assert f"ref_{inviter.member_number}" in reply and "Taklif qilganlaringiz: <b>1</b>" in reply
     button = harness.session.sent_messages()[-1].reply_markup.inline_keyboard[0][0]
     assert button.text == texts.BTN_SHARE_INVITE and button.url.startswith("https://t.me/share/url?")
 
@@ -125,10 +126,11 @@ async def test_monthly_limit_unknown_links_and_switching_off(db: AsyncSession) -
     stray = await _user(db, await _register("ref_99999999", "Farrux", "+998901110004"))
     assert stray.referred_by is None
 
+    # Inviting friends is always open: a switch stored by an older version changes nothing.
     db.add(FeatureFlag(code="referrals", mode=FeatureMode.OFF))
     await db.commit()
-    off = await _user(db, await _register(f"ref_{inviter.member_number}", "G'ayrat", "+998901110005"))
-    assert off.referred_by is None
+    still = await _user(db, await _register(f"ref_{inviter.member_number}", "G'ayrat", "+998901110005"))
+    assert still.referred_by == inviter.id
     harness = BotHarness(inviter.telegram_id)
     await harness.send("/taklif")
-    assert f"ref_{inviter.member_number}" not in harness.last_text()
+    assert f"ref_{inviter.member_number}" in harness.last_text()

@@ -27,9 +27,10 @@ def _reply_for(member: User | None) -> str:
 @router.message()
 async def anything(message: Message, member: User | None) -> None:
     if member is not None and member.status == UserStatus.LEFT:
-        from app.bot.setup import bot_username
+        from app.bot.setup import resolve_bot_username
 
-        await message.answer(texts.LEFT_RESTRICTED, reply_markup=keyboards.left_member(bot_username()))
+        username = await resolve_bot_username(message.bot)
+        await message.answer(texts.LEFT_RESTRICTED, reply_markup=keyboards.left_member(username))
         return
     limited = member is not None and member.status in _STATUS_TEXT
     await message.answer(_reply_for(member), reply_markup=keyboards.limited_account() if limited else None)

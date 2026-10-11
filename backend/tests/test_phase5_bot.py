@@ -226,6 +226,7 @@ async def test_registered_member_gets_main_menu(db: AsyncSession) -> None:
         texts.BTN_RANKING,
         texts.BTN_PASSPORT,
         texts.BTN_ACHIEVEMENTS,
+        texts.BTN_BENEFIT,
         texts.BTN_SETTINGS,
         texts.BTN_HELP,
     }  # no «Boshqaruv» for ordinary members

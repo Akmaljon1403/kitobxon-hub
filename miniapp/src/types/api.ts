@@ -494,6 +494,10 @@ export interface InviterRow {
   me: boolean
 }
 
+export interface ReferralBrief extends Referrals {
+  impact: ReferralImpact
+}
+
 export interface ReferralOverview extends Referrals {
   impact: ReferralImpact
   friend_details: 'FULL' | 'NAMES' | 'COUNT'

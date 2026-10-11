@@ -1,5 +1,6 @@
 """Every message the bot sends goes through here: ordinary emoji become the club's premium ones
-(see ``app.services.custom_emoji``). If Telegram refuses, the message is sent as it was."""
+(see ``app.services.custom_emoji``). If Telegram refuses, the message is sent as it was and the
+refusal is remembered (for that chat, or for an hour everywhere when it happens in a private chat)."""
 
 from __future__ import annotations
 
@@ -49,15 +50,18 @@ class CustomEmojiMiddleware(BaseRequestMiddleware):
         if not isinstance(original, str) or not original or not _is_html(bot, method):
             return await make_request(bot, method)
         await custom_emoji.refresh_if_stale()
-        rewritten = custom_emoji.apply(original)
+        chat_id = getattr(method, "chat_id", None)
+        rewritten = custom_emoji.apply(original, chat_id)
         if rewritten == original:
             return await make_request(bot, method)
         setattr(method, field, rewritten)
         try:
-            return await make_request(bot, method)
+            response = await make_request(bot, method)
         except TelegramBadRequest:
-            # Most likely the bot may not use custom emoji (no Fragment username): send it as it was.
+            # The bot may not use premium emoji here (see app.services.custom_emoji): send it as it was.
             setattr(method, field, original)
             response = await make_request(bot, method)
-            custom_emoji.pause()
+            custom_emoji.report_refusal(chat_id)
             return response
+        custom_emoji.report_success(chat_id)
+        return response

@@ -262,7 +262,7 @@ async def test_personal_stats_ranking_badge_and_menu_button(client: httpx.AsyncC
     await features.set_mode(db, actor_id=admin.id, code="premium", new_mode=FeatureMode.ALL, announce=False)
     await harness.send("/menu")
     keyboard = harness.session.sent_messages()[-1].reply_markup
-    assert keyboard.keyboard[-1][0].text == texts.BTN_PREMIUM
+    assert [b.text for b in keyboard.keyboard[-1]] == [texts.BTN_HELP, texts.BTN_PREMIUM]
     await harness.send(texts.BTN_PREMIUM)
     assert "Kitobxon Premium" in harness.last_text() and "Pasport dizaynlari" in harness.last_text()
     await harness.send(texts.BTN_RANKING)

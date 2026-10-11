@@ -8,6 +8,26 @@ import { Button, Card, InlineError } from './ui'
 interface EmojiList {
   items: { emoji: string; custom_emoji_id: string; fallback: string; created_at: string }[]
   paused: boolean
+  state: 'unknown' | 'working' | 'refused' | 'group_refused'
+  checked_at: string | null
+}
+
+/** Why Telegram may refuse premium emoji, and what to do (shown when it did). */
+function RefusedHelp() {
+  return (
+    <div className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <p className="font-semibold">⚠️ Telegram premium emojini rad etdi — xabarlar hozir oddiy emoji bilan ketyapti.</p>
+      <p className="mt-1">
+        <b>Sabab:</b> Telegram qoidasiga ko'ra bot premium emojini faqat <b>bot egasida</b> (botni @BotFather'da yaratgan akkauntda)
+        Telegram Premium bo'lsa ishlata oladi. Emojilarni kiritgan adminning Premium'i hisobga olinmaydi.
+      </p>
+      <p className="mt-1">
+        <b>Yechim</b> (bittasi yetarli): 1) bot egasi akkauntiga Telegram Premium olish; 2) @BotFather → Bot Settings → Transfer
+        Ownership orqali botni Premium'i bor ishonchli adminga o'tkazish; 3) Fragment'da botga qo'shimcha username olish (kanallarda
+        ham ishlaydi). Emojilar saqlanib turadi — ruxsat paydo bo'lgach «🧪 Tekshirish»ni bosing.
+      </p>
+    </div>
+  )
 }
 
 /** «✨ Premium emojilar»: ordinary emoji in every bot message are replaced by the club's premium ones. */
@@ -40,8 +60,8 @@ export function PremiumEmoji() {
       const result = await api<{ sent: boolean; premium_shown: boolean }>('/api/v1/admin/custom-emoji/test', { method: 'POST' })
       setNotice(
         result.premium_shown
-          ? '✓ Namuna bot chatingizga yuborildi — premium emojilar ko\'rinishini tekshiring.'
-          : "Namuna yuborildi, lekin Telegram premium emojini ruxsat bermadi: bot oddiy emojilar bilan yubordi. Bu Fragment'dan sotib olingan username bo'lmaganda bo'ladi.",
+          ? "✓ Telegram qabul qildi — namuna bot chatingizga yuborildi, a'zolar premium emojilarni ko'radi."
+          : 'Namuna oddiy emoji bilan yuborildi: Telegram premium emojini rad etdi (sababi pastda).',
       )
       list.reload()
     } catch (err) {
@@ -60,14 +80,21 @@ export function PremiumEmoji() {
           emojiga almashadi. Qo'shish: botga <b>/emoji</b> yozing va premium emojili xabar yuboring (yoki «❤️ = premium❤️» deb
           juftlab yozing), tugatgach <b>/tayyor</b>.
         </p>
-        <p className="mt-1 text-xs text-amber-700">
-          ⚠️ Telegram qoidasi: bot premium emojini faqat Fragment'da sotib olingan qo'shimcha username'i bo'lsa ko'rsata oladi. Aks
-          holda bot buni sezadi va xabarni oddiy emoji bilan yuboradi — hech narsa buzilmaydi.
+        <p className="mt-1 text-xs text-app-hint">
+          Telegram qoidasi: premium emoji bot <b>egasida</b> Telegram Premium bo'lsa shaxsiy chat va guruhlarda ishlaydi (kanallarda —
+          faqat Fragment username bilan). Ruxsat bo'lmasa bot buni sezadi va xabarni oddiy emoji bilan yuboradi — hech narsa buzilmaydi.
         </p>
       </div>
-      {list.state.status === 'success' && list.state.data.paused && (
-        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Telegram yaqinda premium emojini rad etdi — bir soat davomida oddiy emojilar ishlatiladi.
+      {list.state.status === 'success' && (list.state.data.paused || list.state.data.state === 'refused') && <RefusedHelp />}
+      {list.state.status === 'success' && list.state.data.state === 'working' && !list.state.data.paused && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+          ✅ Telegram premium emojini qabul qilyapti — a'zolar ularni ko'radi.
+        </p>
+      )}
+      {list.state.status === 'success' && list.state.data.state === 'group_refused' && (
+        <p className="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900">
+          ℹ️ Kanal yoki guruhda Telegram premium emojini rad etdi — u yerda oddiy emojilar ishlatiladi. Shaxsiy xabarlarni tekshirish
+          uchun «🧪 Tekshirish»ni bosing.
         </p>
       )}
       {list.state.status === 'success' && (
@@ -96,7 +123,7 @@ export function PremiumEmoji() {
       {notice && <p className="text-sm text-emerald-700">{notice}</p>}
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" loading={busy === 'test'} onClick={() => void sample()}>
-          🧪 O'zimga namuna yuborish
+          🧪 Tekshirish (o'zimga namuna)
         </Button>
         {list.state.status === 'success' && list.state.data.items.length > 0 && (
           <Button variant="ghost" loading={busy === 'all'} onClick={() => void remove(null)}>

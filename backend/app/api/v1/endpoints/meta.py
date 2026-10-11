@@ -8,7 +8,7 @@ from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 from app.api.deps import DbSession
-from app.bot.setup import bot_username
+from app.bot.setup import resolve_bot_username
 from app.core.config import get_settings
 from app.core.errors import NotFoundError
 
@@ -28,7 +28,7 @@ async def public_meta() -> PublicMeta:
     return PublicMeta(
         app_name=settings.app_name,
         version=settings.app_version,
-        bot_username=bot_username(),
+        bot_username=await resolve_bot_username(),
         timezone=settings.timezone,
     )
 

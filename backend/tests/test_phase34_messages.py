@@ -99,7 +99,7 @@ def test_sticker_moods_and_sayings() -> None:
 
 async def test_wins_come_with_confetti_and_a_sticker(db: AsyncSession) -> None:
     member = await create_user(db, telegram_id=next(_ids))
-    await update_setting(db, key="notifications.stickers", value=True, actor_id=member.id)  # off by default
+    await update_setting(db, key="notifications.stickers", value=True, actor_id=member.id)
     await _sticker(db, "party", "🥳")
     await _sticker(db, "book", "📚")
     await enqueue_notification(
@@ -278,7 +278,7 @@ async def test_welcome_message_has_a_saying_and_a_sticker(db: AsyncSession) -> N
     from app.models.enums import UserStatus
 
     owner = await create_user(db, telegram_id=next(_ids))
-    await update_setting(db, key="notifications.stickers", value=True, actor_id=owner.id)  # off by default
+    await update_setting(db, key="notifications.stickers", value=True, actor_id=owner.id)
     await _sticker(db, "hello", "👋")
     harness = BotHarness(next(_ids))
     await harness.send("/start")
