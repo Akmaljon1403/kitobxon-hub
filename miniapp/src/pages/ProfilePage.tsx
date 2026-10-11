@@ -211,6 +211,9 @@ export function ProfilePage() {
           { route: '/certificates', label: '🎓 Sertifikatlar', feature: 'certificates' },
           { route: '/achievements', label: '🏅 Yutuqlar', feature: 'achievements' },
           { route: '/rewards', label: "🎁 Sovg'alar", feature: 'rewards' },
+          { route: '/shelf', label: '📖 Javonim', feature: 'shelf' },
+          { route: '/card', label: '🪪 Kartam', feature: 'reading_card' },
+          { route: '/missions', label: '🎯 Missiyalar', feature: 'missions' },
         ]
           .filter((item) => me.features[item.feature] !== 'off')
           .map((item) => (

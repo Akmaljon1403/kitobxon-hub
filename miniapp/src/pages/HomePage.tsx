@@ -12,6 +12,9 @@ import { navigate } from '../utils/router'
 
 const SHORTCUTS: { route: string; icon: string; label: string; feature?: string }[] = [
   { route: 'books', icon: '📚', label: 'Kitoblar' },
+  { route: 'shelf', icon: '📖', label: 'Javonim', feature: 'shelf' },
+  { route: 'missions', icon: '🎯', label: 'Missiyalar', feature: 'missions' },
+  { route: 'quotes', icon: '💬', label: 'Iqtiboslarim', feature: 'quote_box' },
   { route: 'events', icon: '📅', label: 'Tadbirlar' },
   { route: 'checkin', icon: '✅', label: 'Davomat' },
   { route: 'tests', icon: '📝', label: 'Testlar' },
@@ -22,6 +25,7 @@ const SHORTCUTS: { route: string; icon: string; label: string; feature?: string 
   { route: 'profile', icon: '🪪', label: 'Pasportim' },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", feature: 'rewards' },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', feature: 'certificates' },
+  { route: 'card', icon: '🪪', label: 'Kartam', feature: 'reading_card' },
   { route: 'invite', icon: '🎁', label: 'Sizning foydangiz' },
   { route: 'premium', icon: '💎', label: 'Premium', feature: 'premium' },
   { route: 'help', icon: '❓', label: 'Yordam' },

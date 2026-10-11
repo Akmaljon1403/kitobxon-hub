@@ -11,6 +11,11 @@ import { EventsPage } from './pages/EventsPage'
 import { HelpPage } from './pages/HelpPage'
 import { HomePage } from './pages/HomePage'
 import { InvitePage } from './pages/InvitePage'
+import { MissionsPage } from './pages/MissionsPage'
+import { QuotesPage } from './pages/QuotesPage'
+import { ReadingCardPage } from './pages/ReadingCardPage'
+import { ShelfItemPage } from './pages/ShelfItemPage'
+import { ShelfPage } from './pages/ShelfPage'
 import { PremiumPage } from './pages/PremiumPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RankingPage } from './pages/RankingPage'
@@ -51,6 +56,11 @@ function Routes() {
   else if (section === 'premium') page = <PremiumPage />
   else if (section === 'help') page = <HelpPage />
   else if (section === 'invite' || section === 'referal') page = <InvitePage />
+  else if (section === 'shelf' && id) page = <FeatureGate code="shelf"><ShelfItemPage itemId={id} /></FeatureGate>
+  else if (section === 'shelf') page = <FeatureGate code="shelf"><ShelfPage /></FeatureGate>
+  else if (section === 'quotes') page = <FeatureGate code="quote_box"><QuotesPage /></FeatureGate>
+  else if (section === 'missions') page = <FeatureGate code="missions"><MissionsPage /></FeatureGate>
+  else if (section === 'card') page = <FeatureGate code="reading_card"><ReadingCardPage /></FeatureGate>
   else if (section === 'stats') page = <FeatureGate code="personal_stats"><StatsPage /></FeatureGate>
   else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>

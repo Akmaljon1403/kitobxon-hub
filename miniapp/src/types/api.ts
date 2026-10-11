@@ -111,6 +111,7 @@ export interface Quote {
   text: string
   author: string | null
   source: string | null
+  saved?: boolean
 }
 
 export interface BookDetail extends Book {
@@ -541,4 +542,97 @@ export interface TestStandings {
   event_test: boolean
   participants: number
   rows: { place: number; prize_place: number | null; name: string; score: number; attended: boolean | null; me: boolean }[]
+}
+
+// ---- «📚 Mening mutolaam» ----
+export type ShelfStatus = 'WANT' | 'READING' | 'FINISHED' | 'LATER'
+
+export interface ShelfItem {
+  id: string
+  book_id: string | null
+  club_book: boolean
+  title: string
+  author: string | null
+  cover_url: string | null
+  status: ShelfStatus
+  pages_total: number | null
+  pages_read: number
+  percent: number | null
+  rating: number | null
+  started_at: string | null
+  finished_at: string | null
+  updated_at: string
+}
+
+export interface ReadingStats {
+  today_pages: number
+  week_pages: number
+  month_pages: number
+  year_pages: number
+  streak: number
+  best_streak: number
+  month_days: number
+  finished_this_year: number
+  shelf: Record<ShelfStatus, number>
+  quotes: number
+  reflections: number
+  last_days: { date: string; pages: number }[]
+}
+
+export interface Shelf {
+  items: ShelfItem[]
+  stats: ReadingStats
+}
+
+export interface DiaryEntry {
+  id: string
+  shelf_item_id: string
+  title: string
+  log_date: string
+  pages: number
+  minutes: number | null
+  note: string | null
+}
+
+export interface Reflection {
+  main_idea: string
+  favorite_moment: string
+  apply_in_life: string
+  updated_at: string
+  points: number
+}
+
+export interface SavedQuote {
+  id: string
+  text: string
+  source: string | null
+  page: number | null
+  note: string | null
+  shelf_item_id: string | null
+  book_quote_id: string | null
+  created_at: string
+}
+
+export interface ShelfItemDetail extends ShelfItem {
+  diary: DiaryEntry[]
+  reflection: Reflection | null
+  quotes: SavedQuote[]
+}
+
+export interface Mission {
+  id: string
+  title: string
+  description: string | null
+  icon: string
+  metric: string
+  unit: string
+  target: number
+  period_days: number
+  reward_points: number
+  status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED' | null
+  progress: number
+  started_at: string | null
+  deadline: string | null
+  completed_at: string | null
+  attempts: number
 }
