@@ -22,6 +22,7 @@ from app.api.v1.endpoints import (
     admin_reports,
     admin_rewards,
     admin_scores,
+    admin_stars,
     admin_support,
     admin_system,
     admin_users,
@@ -75,5 +76,6 @@ for module in (
     admin_system,
     admin_documents,
     admin_emoji,
+    admin_stars,
 ):
     api_router.include_router(module.router)

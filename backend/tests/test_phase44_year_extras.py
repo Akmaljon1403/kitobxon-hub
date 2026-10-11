@@ -255,7 +255,7 @@ async def test_premium_emoji_in_the_admin_panel(
         sample = await client.post("/api/v1/admin/custom-emoji/test", headers=headers)
         assert sample.json() == {"sent": True, "premium_shown": True}
         message = next(request for request in telegram.requests if isinstance(request, SendMessage))
-        assert message.chat_id == admin.telegram_id and "❤ 📚" in message.text
+        assert message.chat_id == admin.telegram_id and 'emoji-id="5368324170671202286"' in message.text
         removed = await client.delete("/api/v1/admin/custom-emoji", params={"emoji": "❤️"}, headers=headers)
         assert removed.status_code == 204
         assert [

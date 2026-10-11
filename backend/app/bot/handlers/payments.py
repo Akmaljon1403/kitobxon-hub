@@ -20,6 +20,7 @@ from app.bot.states import CardReceipt, CardReject
 from app.core.errors import AppError
 from app.models import User
 from app.models.enums import CardPaymentStatus, FeatureMode, PaymentKind, StickerMood, UserStatus
+from app.security.permissions import Perm
 from app.services import card_payments, features, stickers
 from app.services import premium as premium_service
 from app.utils.timezone import format_date
@@ -425,6 +426,33 @@ async def _decision_target(callback: CallbackQuery, db: AsyncSession, member: Us
         return None
 
 
+async def _in_payments_chat(db: AsyncSession, chat: Any) -> bool:
+    """True when a button was pressed in the payments chat itself (its message already shows the step)."""
+    from app.services import payments_chat
+
+    configured = await payments_chat.chat_id(db)
+    if configured is None or chat is None:
+        return False
+    username = getattr(chat, "username", None)
+    return configured in {str(chat.id), f"@{username}" if username else ""}
+
+
+def _pressed_in(callback: CallbackQuery) -> Any:
+    return callback.message.chat if isinstance(callback.message, Message) else None
+
+
+async def _sender_target(callback: CallbackQuery, db: AsyncSession, member: User | None, prefix: str) -> Any:
+    """«✅ Stars yuborildi»: the super admins and the admins given «⭐ Stars yuborish»."""
+    if not (await access.is_super_admin(db, member) or await access.has_permission(db, member, Perm.STARS_SEND)):
+        await callback.answer(texts.STARS_SENDER_ONLY, show_alert=True)
+        return None
+    try:
+        return await card_payments.get(db, uuid.UUID(hex=(callback.data or "").removeprefix(prefix)[:32]))
+    except (ValueError, AppError):
+        await callback.answer(texts.FILE_FAILED, show_alert=True)
+        return None
+
+
 async def _describe(db: AsyncSession, payment: Any) -> tuple[str, str, str]:
     user = await db.get(User, payment.user_id)
     plan = await premium_service.get_plan(db, payment.plan_id, active=False) if payment.plan_id else None
@@ -496,30 +524,29 @@ async def card_approve(callback: CallbackQuery, db: AsyncSession, member: User |
     if payment is None:
         return
     assert member is not None
+    here = await _in_payments_chat(db, _pressed_in(callback))
     try:
-        payment = await card_payments.approve(db, actor_id=member.id, payment_id=payment.id)
+        payment = await card_payments.approve(db, actor_id=member.id, payment_id=payment.id, announce=not here)
     except AppError as exc:
         await callback.answer(exc.message, show_alert=True)
         return
     await callback.answer("✅")
     line = texts.CARD_LINE_APPROVED.format(admin=html.escape(member.first_name), time=_now_text())
+    if payment.kind == PaymentKind.STARS:
+        # The order went to the admins who gift the Stars (with the steps); here only who has it.
+        line += "\n" + texts.CARD_LINE_STARS_ORDERED.format(senders=await card_payments.stars_senders_text(db))
     await _show_decision(callback, payment, line, _decided_markup(payment))
-    if payment.kind == PaymentKind.STARS and isinstance(callback.message, Message):
-        user = await db.get(User, payment.user_id)
-        assert user is not None
-        await callback.message.answer(
-            card_payments.gift_steps(payment, user), reply_markup=keyboards.stars_sent(payment.id.hex)
-        )
 
 
 @router.callback_query(F.data.startswith("cp:sent:"))
 async def card_stars_sent(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
-    payment = await _decision_target(callback, db, member, "cp:sent:")
+    payment = await _sender_target(callback, db, member, "cp:sent:")
     if payment is None:
         return
     assert member is not None
+    here = await _in_payments_chat(db, _pressed_in(callback))
     try:
-        payment = await card_payments.mark_delivered(db, actor_id=member.id, payment_id=payment.id)
+        payment = await card_payments.mark_delivered(db, actor_id=member.id, payment_id=payment.id, announce=not here)
     except AppError as exc:
         await callback.answer(exc.message, show_alert=True)
         return
@@ -556,8 +583,11 @@ async def card_reject_back(callback: CallbackQuery, db: AsyncSession, member: Us
 
 
 async def _reject(callback: CallbackQuery, db: AsyncSession, member: User, payment: Any, reason: str) -> None:
+    here = await _in_payments_chat(db, _pressed_in(callback))
     try:
-        payment = await card_payments.reject(db, actor_id=member.id, payment_id=payment.id, reason=reason)
+        payment = await card_payments.reject(
+            db, actor_id=member.id, payment_id=payment.id, reason=reason, announce=not here
+        )
     except AppError as exc:
         await callback.answer(exc.message, show_alert=True)
         return
@@ -644,9 +674,17 @@ async def card_reject_reason(message: Message, state: FSMContext, db: AsyncSessi
         await message.answer(texts.CARD_ADMIN_ONLY)
         return
     assert member is not None
+    origin = data.get("origin_chat")
+    # Typed in the private chat: the payments chat hears about it, unless its own receipt gets the line.
+    configured = await card_payments.payments_chat(db)
+    announce = origin is None or configured is None or str(origin) != configured
     try:
         payment = await card_payments.reject(
-            db, actor_id=member.id, payment_id=uuid.UUID(hex=data["payment_id"]), reason=message.text or ""
+            db,
+            actor_id=member.id,
+            payment_id=uuid.UUID(hex=data["payment_id"]),
+            reason=message.text or "",
+            announce=announce,
         )
     except AppError as exc:
         await message.answer(exc.message)
@@ -664,8 +702,9 @@ async def card_undo(callback: CallbackQuery, db: AsyncSession, member: User | No
     if payment is None:
         return
     assert member is not None
+    here = await _in_payments_chat(db, _pressed_in(callback))
     try:
-        payment = await card_payments.undo(db, actor_id=member.id, payment_id=payment.id)
+        payment = await card_payments.undo(db, actor_id=member.id, payment_id=payment.id, announce=not here)
     except AppError as exc:
         await callback.answer(exc.message, show_alert=True)
         return

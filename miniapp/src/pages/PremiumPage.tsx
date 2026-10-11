@@ -21,12 +21,12 @@ const FAQ: [string, string][] = [
   ],
   [
     'Telegram Stars (⭐) nima?',
-    "Telegram'ning ichki to'lov birligi. Stars bilan to'lov bir zumda o'tadi. Stars'ingiz yo'q bo'lsa — pastdagi «⭐ Stars sotib olish» bo'limida ularni karta orqali oling (profilingizda username bo'lishi kerak).",
+    "Telegram'ning ichki to'lov birligi. Stars bilan to'lov bir zumda o'tadi. Stars'ingiz yo'q bo'lsa — «⭐ Telegram Stars» usulini tanlang va o'sha yerda ularni karta orqali sotib oling: bosh admin chekni tasdiqlaydi, mas'ul admin Stars'ni Telegram'da sizga sovg'a qiladi va bot xabar beradi (profilingizda username bo'lishi kerak).",
   ],
   ['Bepul sinov bormi?', "Ha — ro'yxatdan o'tganingizda 7 kunlik Premium o'zi yoqiladi. Pul yechilmaydi, muddat tugagach o'zi to'xtaydi."],
   ["Muddat tugasa nima bo'ladi?", "Premium o'z-o'zidan uzaytirilmaydi, pul yechilmaydi. Xohlasangiz yana sotib olasiz — muddat oxiridan davom etadi."],
   ["Asosiy imkoniyatlar pullikmi?", "Yo'q. Kitob, tadbir, davomat, test, reyting va sertifikatlar hamma uchun bepul. Premium — qo'shimcha imkoniyatlar va klubga yordam."],
-  ['Muammo bo‘lsa?', "Botda /paysupport — to'lovlar bilan shug'ullanadigan admin javob beradi. Xato to'lov bo'lsa pul qaytariladi."],
+  ['Muammo bo‘lsa?', "Botda /paysupport — to'lovlar bo'yicha bosh admin javob beradi. Xato to'lov bo'lsa pul qaytariladi."],
 ]
 
 function perMonth(plan: PremiumPlan): number {
@@ -88,7 +88,6 @@ export function PremiumPage() {
   const cheapestUzs = status.card ? Math.min(...status.plans.map((plan) => plan.price_uzs_now ?? plan.price_uzs ?? Infinity)) : Infinity
   const selectedPlan = status.plans.find((plan) => plan.id === planId) ?? null
   const selectedPlanUzs = selectedPlan ? selectedPlan.price_uzs_now ?? selectedPlan.price_uzs : null
-  const selectedPack = (status.stars_packages ?? []).find((item) => item.stars === starsPack) ?? null
   const perks = [
     ...status.premium_features.map((feature) => ({ icon: feature.title.split(' ')[0], title: feature.title.split(' ').slice(1).join(' '), description: feature.description })),
     ...status.perks,
@@ -219,7 +218,10 @@ export function PremiumPage() {
                 >
                   <span className="font-semibold">⭐ Telegram Stars</span>
                   <span className="text-sm text-app-hint">
-                    Telegram ichida bir zumda — {selectedPlan.stars_now ?? selectedPlan.stars} ⭐. Stars'ingiz bo'lsa qulay.
+                    Telegram ichida bir zumda — {selectedPlan.stars_now ?? selectedPlan.stars} ⭐.
+                    {status.card && (status.stars_packages ?? []).length > 0
+                      ? " Stars'ingiz yo'qmi? Shu yerning o'zida karta orqali sotib olasiz."
+                      : " Stars'ingiz bo'lsa qulay."}
                   </span>
                 </button>
               </div>
@@ -236,9 +238,21 @@ export function PremiumPage() {
                     onDone={() => setVersion((value) => value + 1)}
                   />
                 ) : (
-                  <Button loading={busy === selectedPlan.id} disabled={busy !== null} onClick={() => void pay(selectedPlan.id, { plan_id: selectedPlan.id })}>
-                    {selectedPlan.stars_now ?? selectedPlan.stars} ⭐ bilan to'lash
-                  </Button>
+                  <div className="flex flex-col gap-3">
+                    <Button loading={busy === selectedPlan.id} disabled={busy !== null} onClick={() => void pay(selectedPlan.id, { plan_id: selectedPlan.id })}>
+                      {selectedPlan.stars_now ?? selectedPlan.stars} ⭐ bilan to'lash
+                    </Button>
+                    {status.card && (status.stars_packages ?? []).length > 0 && (
+                      <StarsTopUp
+                        status={status}
+                        hasUsername={Boolean(me?.telegram_username)}
+                        need={selectedPlan.stars_now ?? selectedPlan.stars}
+                        pack={starsPack}
+                        onPack={setStarsPack}
+                        onDone={() => setVersion((value) => value + 1)}
+                      />
+                    )}
+                  </div>
                 )}
               </Card>
             </>
@@ -263,45 +277,18 @@ export function PremiumPage() {
         </>
       )}
 
-      {status.card && (status.stars_packages ?? []).length > 0 && (
+      {!status.store_open && status.card && (status.stars_packages ?? []).length > 0 && (
         <>
           <SectionTitle>⭐ Telegram Stars sotib olish (karta orqali)</SectionTitle>
-          <Card className="flex flex-col gap-3">
-            <p className="text-sm text-app-hint">
-              Stars'ni so'mda oling: to'laysiz, chekni yuborasiz — admin ularni Telegram'da sizga sovg'a qilib yuboradi.
-            </p>
-            {!me?.telegram_username ? (
-              <p className="rounded-xl bg-app-surface px-3 py-2 text-sm">
-                ⚠️ Buning uchun Telegram profilingizda <b>username</b> bo'lishi kerak: Telegram → Sozlamalar → «Foydalanuvchi nomi». Qo'ygach,
-                ilovani qayta oching.
-              </p>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(status.stars_packages ?? []).map((item) => (
-                    <button
-                      key={item.stars}
-                      type="button"
-                      onClick={() => setStarsPack(item.stars)}
-                      className={`flex flex-col rounded-xl px-3 py-2 text-left ${starsPack === item.stars ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
-                    >
-                      <span className="font-medium">⭐ {item.stars} Stars</span>
-                      <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>
-                    </button>
-                  ))}
-                </div>
-                {selectedPack && (
-                  <CardCheckout
-                    key={selectedPack.stars}
-                    card={status.card}
-                    price={selectedPack.price_uzs}
-                    what={`${selectedPack.stars} Stars`}
-                    form={{ stars: String(selectedPack.stars) }}
-                    onDone={() => setVersion((value) => value + 1)}
-                  />
-                )}
-              </>
-            )}
+          <Card>
+            <StarsTopUp
+              status={status}
+              hasUsername={Boolean(me?.telegram_username)}
+              need={null}
+              pack={starsPack}
+              onPack={setStarsPack}
+              onDone={() => setVersion((value) => value + 1)}
+            />
           </Card>
         </>
       )}
@@ -378,6 +365,81 @@ export function PremiumPage() {
       <p className="px-2 text-center text-xs text-app-hint">
         To'lov {status.card ? 'bank kartasi yoki ' : ''}Telegram Stars orqali. Asosiy imkoniyatlar hamma uchun bepul. Savol bo'lsa — botda /paysupport.
       </p>
+    </div>
+  )
+}
+
+/** «⭐ Stars'ingiz yo'qmi?»: Stars bought with the bank card. The super admin confirms the receipt, the admin in
+ * charge gifts the Stars in Telegram, and the bot says when they arrive. ``need``: the plan's price in Stars
+ * (the smallest package that covers it is suggested). */
+function StarsTopUp({
+  status,
+  hasUsername,
+  need,
+  pack,
+  onPack,
+  onDone,
+}: {
+  status: PremiumStatus
+  hasUsername: boolean
+  need: number | null
+  pack: number | null
+  onPack: (stars: number) => void
+  onDone: () => void
+}) {
+  const packages = status.stars_packages ?? []
+  const suggested = need === null ? null : (packages.find((item) => item.stars >= need) ?? null)
+  const selected = packages.find((item) => item.stars === pack) ?? null
+  if (!status.card) return null
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-app-hint/20 p-3">
+      <div>
+        <p className="font-semibold">⭐ Stars'ingiz yo'qmi? Karta orqali sotib oling</p>
+        <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-sm text-app-hint">
+          <li>To'plamni tanlang va summani kartaga o'tkazing, chekni yuboring.</li>
+          <li>Bosh admin chekni tekshirib tasdiqlaydi.</li>
+          <li>Mas'ul admin Stars'ni Telegram'da sizga sovg'a qiladi — bot xabar beradi.</li>
+          <li>{need !== null ? "So'ng shu yerda «⭐ bilan to'lash» ni bosasiz." : "Stars'ni xohlagan narsangizga ishlatasiz."}</li>
+        </ol>
+      </div>
+      {!hasUsername ? (
+        <p className="rounded-xl bg-app-surface px-3 py-2 text-sm">
+          ⚠️ Stars sovg'a qilinishi uchun Telegram profilingizda <b>username</b> bo'lishi kerak: Telegram → Sozlamalar → «Foydalanuvchi
+          nomi». Qo'ygach, ilovani qayta oching.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-1.5">
+            {packages.map((item) => (
+              <button
+                key={item.stars}
+                type="button"
+                onClick={() => onPack(item.stars)}
+                className={`relative flex flex-col rounded-xl px-3 py-2 text-left ${pack === item.stars ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
+              >
+                <span className="font-medium">⭐ {item.stars} Stars</span>
+                <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>
+                {suggested?.stars === item.stars && (
+                  <span className="mt-0.5 text-[11px] font-medium text-app-button">✓ tarif uchun yetadi</span>
+                )}
+              </button>
+            ))}
+          </div>
+          {need !== null && !suggested && (
+            <p className="text-xs text-app-hint">Tarif {need} ⭐ — bir nechta to'plam olishingiz yoki karta orqali to'g'ridan-to'g'ri to'lashingiz mumkin.</p>
+          )}
+          {selected && (
+            <CardCheckout
+              key={selected.stars}
+              card={status.card}
+              price={selected.price_uzs}
+              what={`${selected.stars} Stars`}
+              form={{ stars: String(selected.stars) }}
+              onDone={onDone}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

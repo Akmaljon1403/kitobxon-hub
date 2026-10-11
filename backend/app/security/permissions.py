@@ -41,6 +41,7 @@ class Perm(StrEnum):
     SETTINGS_MANAGE = "SETTINGS_MANAGE"
     AUDIT_LOG_VIEW = "AUDIT_LOG_VIEW"
     SUPPORT_MANAGE = "SUPPORT_MANAGE"
+    STARS_SEND = "STARS_SEND"
 
 
 # (group, description shown to administrators)
@@ -75,6 +76,10 @@ PERMISSION_INFO: dict[Perm, tuple[str, str]] = {
     Perm.SETTINGS_MANAGE: ("system", "Tizim sozlamalari, ball qoidalari va fakultetlarni o'zgartirish"),
     Perm.AUDIT_LOG_VIEW: ("system", "Audit jurnalini ko'rish"),
     Perm.SUPPORT_MANAGE: ("support", "A'zolar murojaatlarini o'qish va ularga javob berish"),
+    Perm.STARS_SEND: (
+        "payments",
+        "Telegram Stars'ni a'zolarga yuborish: bosh admin tasdiqlagan Stars buyurtmalari shu adminga keladi",
+    ),
 }
 
 assert set(PERMISSION_INFO) == set(Perm), "Every permission needs a description"

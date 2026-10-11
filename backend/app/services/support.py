@@ -107,8 +107,22 @@ async def member_message(
     preview = html.escape(body[:PREVIEW] + ("…" if len(body) > PREVIEW else "")) if body else "📷 Rasm yubordi"
     title = "💳 <b>To'lov bo'yicha murojaat</b>" if topic == "payment" else "📨 <b>Yangi murojaat</b>"
     text = f"{title}\n👤 {who}" + (f" · {details}" if details else "") + f"\n\n{preview}"
-    if topic == "payment" and await _to_payments_chat(session, text, ticket.id):
-        return ticket  # payment questions live in the payments chat, not in the admins' private chats
+    if topic == "payment":
+        # Money questions are a conversation between the member and the super admins: they live in the
+        # payments chat (or, without one, come to the super admins in the bot).
+        if not await _to_payments_chat(session, text, ticket.id):
+            from app.services.rbac import super_admins
+
+            await enqueue_for_members(
+                session,
+                type_=NotificationType.SUPPORT,
+                text=text,
+                dedup_prefix=f"support:{message.id}",
+                members=super_admins(),
+                payload={"buttons": [{"text": "✍️ Javob yozish", "callback": f"sup:pay:{ticket.id}"}]},
+                priority=1,
+            )
+        return ticket
     await enqueue_for_members(
         session,
         type_=NotificationType.SUPPORT,
@@ -147,12 +161,16 @@ async def _to_payments_chat(session: AsyncSession, text: str, ticket_id: uuid.UU
     from app.services import payments_chat
 
     markup = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:ans:{ticket_id}")]]
+        inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:pay:{ticket_id}")]]
     )
     return await payments_chat.post(session, text, markup)
 
 
-async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: uuid.UUID, text: str) -> SupportMessage:
+async def admin_reply(
+    session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: uuid.UUID, text: str, payment: bool = False
+) -> SupportMessage:
+    """``payment``: an answer to a money question — the member continues in the same topic, and the
+    answer is written in the payments chat too."""
     body = _clean(text)
     if not body:
         raise BadRequestError("SUPPORT_EMPTY", "Javob matnini yozing.")
@@ -170,7 +188,10 @@ async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: 
         text=f"📩 <b>Klub rahbariyatidan javob</b>\n\n{html.escape(body)}",
         dedup_key=f"support-reply:{message.id}",
         # A blocked member gets the answer too: writing to the club is how they sort it out.
-        payload={"buttons": [{"text": "✍️ Yana yozish", "callback": "sup:new"}], "deliver_to_inactive": True},
+        payload={
+            "buttons": [{"text": "✍️ Yana yozish", "callback": "sup:new:pay" if payment else "sup:new"}],
+            "deliver_to_inactive": True,
+        },
         priority=1,
     )
     record_audit(
@@ -182,6 +203,16 @@ async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: 
         after={"length": len(body)},
     )
     await session.commit()
+    if payment:
+        from app.services import payments_chat
+
+        member = await session.get(User, ticket.user_id)
+        admin = await session.get(User, actor_id)
+        await payments_chat.post(
+            session,
+            f"↪️ <b>Javob</b> — {html.escape(admin.first_name if admin else '—')} → "
+            f"{html.escape(member.full_name if member else '—')}\n\n{html.escape(body)}",
+        )
     return message
 
 

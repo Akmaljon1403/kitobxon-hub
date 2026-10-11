@@ -294,7 +294,7 @@ async def test_payment_questions_reach_the_payments_chat(db: AsyncSession, monke
     await harness.send("Premium uchun to'ladim, hali yoqilmadi")
     copy = next(r for r in telegram.requests if isinstance(r, SendMessage))
     assert copy.chat_id == "@club_payments" and "To'lov bo'yicha murojaat" in copy.text
-    assert copy.reply_markup.inline_keyboard[0][0].callback_data.startswith("sup:ans:")
+    assert copy.reply_markup.inline_keyboard[0][0].callback_data.startswith("sup:pay:")
 
 
 async def test_stars_by_card_need_a_username(client: httpx.AsyncClient, db: AsyncSession) -> None:

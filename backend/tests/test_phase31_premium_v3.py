@@ -408,11 +408,16 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
 
     boss = _harness(9610)
     await boss.press(f"cp:ok:{payment_id.hex}")
-    steps = boss.session.sent_messages()[-1]
+    # Nobody has «⭐ Stars yuborish»: the order comes to the super admin's private chat, with the steps.
+    order = await db.scalar(
+        select(Notification).where(
+            Notification.user_id == admin.id, Notification.dedup_key.like(f"stars-order:{payment_id}:%")
+        )
+    )
     # The Stars are bought on Fragment for the member's current Telegram username.
-    assert "100 Stars'ni yuboring" in steps.text and "fragment.com" in steps.text and "@akmal_reader" in steps.text
-    assert "tg://user?id=9611" in steps.text
-    assert steps.reply_markup.inline_keyboard[0][0].callback_data == f"cp:sent:{payment_id.hex}"
+    assert "100 Stars'ni yuboring" in order.text and "fragment.com" in order.text and "@akmal_reader" in order.text
+    assert "tg://user?id=9611" in order.text and "Bosh admin tomonidan tasdiqlandi" in order.text
+    assert order.payload["buttons"][0]["callback"] == f"cp:sent:{payment_id.hex}"
 
     waiting = (
         await client.get("/api/v1/admin/premium/card-payments?status=PENDING", headers=admin_headers(admin))
