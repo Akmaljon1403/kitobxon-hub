@@ -222,5 +222,19 @@ export async function finish({ OUT, ROOT, copyFileSync, execFileSync, writeFileS
   rmSync(zip, { force: true })
   execFileSync('zip', ['-q', '-r', '-X', '-9', zip, '.'], { cwd: OUT })
   console.log(`✓ ${relative(ROOT, zip)} (${(statSync(zip).size / 1e6).toFixed(1)} MB; kit ${(folderSize(OUT) / 1e6).toFixed(1)} MB)`)
+
+  // The same kit in parts under 30 MB each (messengers and file-sharing limits).
+  const parts = [
+    ['1-Logotiplar', ['01_Logotip', 'OQING.txt', 'Kitobxon-brend-doskasi.jpg', 'Kitobxon-brend-qollanma.pdf']],
+    ['2-Avatar-Pechat-Watermark', ['02_Avatar', '03_Ikonka_ilova', '04_Pechat', '05_Watermark', 'OQING.txt']],
+    ['3-Ikonka-Banner-Post-Stiker', ['06_Ikonkalar', '07_Tugmalar', '08_Banner', '09_Postlar', '10_Stikerlar', 'OQING.txt']],
+    ['4-SVG-manbalar', ['SVG', 'OQING.txt']],
+  ]
+  for (const [name, entries] of parts) {
+    const part = join(ROOT, 'brand', `Kitobxon-Brend-4K-qism-${name}.zip`)
+    rmSync(part, { force: true })
+    execFileSync('zip', ['-q', '-r', '-X', '-9', part, ...entries], { cwd: OUT })
+    console.log(`  ✓ ${relative(ROOT, part)} (${(statSync(part).size / 1e6).toFixed(1)} MB)`)
+  }
   void existsSync
 }

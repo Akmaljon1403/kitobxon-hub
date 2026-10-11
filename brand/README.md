@@ -12,7 +12,7 @@ node brand/tools/build.mjs Pechat     # faqat yo'lida «Pechat» bo'lganlar
 Natija:
 
 - `brand/out/` — tayyor to'plam (PNG/JPG papkalarda, `SVG/`, brend doskasi, PDF qo'llanma, `OQING.txt`);
-- `brand/Kitobxon-Brend-4K.zip` — egalariga beriladigan arxiv;
+- `brand/Kitobxon-Brend-4K.zip` — egalariga beriladigan arxiv (va 30 MB dan kichik 4 ta qism: `...-qism-*.zip`);
 - ilovalar ishlatadigan nusxalar: `backend/app/brand/` (sertifikat pechati va belgisi, bot avatari),
   `miniapp/public/`, `admin/public/` (favicon, ikonka, logotip).
 
