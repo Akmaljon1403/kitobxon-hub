@@ -14,6 +14,7 @@
   html { font-family: "DejaVu Sans", sans-serif; color: #1c2b24; font-size: 9.5pt; line-height: 1.4; }
   body { margin: 0; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 0.7mm solid #1f5c40; padding-bottom: 4mm; }
+  .brand { display: block; height: 10mm; margin-bottom: 2mm; }
   .org { font-size: 8pt; letter-spacing: 1pt; text-transform: uppercase; color: #1f5c40; font-weight: bold; }
   h1 { margin: 2mm 0 1mm; font-family: "DejaVu Serif", serif; font-size: 22pt; color: #14402c; letter-spacing: 0.5pt; }
   .name { font-size: 15pt; font-weight: bold; margin-top: 2mm; }
@@ -41,6 +42,7 @@
 <body>
 <div class="head">
   <div>
+    {% if brand_logo() %}<img class="brand" src="{{ brand_logo() }}" alt="">{% endif %}
     <div class="org">{{ organization }} · {{ club }}</div>
     <h1>Kitobxonlik portfoliosi</h1>
     <div class="name">{{ name }}</div>

@@ -212,9 +212,12 @@ async def card_payment_list(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[AdminCardPaymentOut]:
     rows, total = await card_payments.list_payments(db, status=status, limit=limit, offset=offset)
+    repeated = await card_payments.repeated_receipts(db, [payment for payment, _, _ in rows])
     return Page(
         items=[
-            AdminCardPaymentOut(**card_payment_out(payment, title).model_dump(), member=_member(user))
+            AdminCardPaymentOut(
+                **card_payment_out(payment, title).model_dump(), member=_member(user), duplicate=payment.id in repeated
+            )
             for payment, user, title in rows
         ],
         total=total,
@@ -261,3 +264,30 @@ async def card_payment_reject(
 ) -> dict[str, str]:
     payment = await card_payments.reject(db, actor_id=current.user.id, payment_id=payment_id, reason=payload.reason)
     return {"status": str(payment.status)}
+
+
+@router.get("/premium/payments-chat", summary="The payments channel: which one, and can the bot write there")
+async def payments_chat_status(_: SuperAdminDep, db: DbSession) -> dict[str, object]:
+    from app.services import payments_chat
+
+    return await payments_chat.describe(db)
+
+
+@router.post("/premium/payments-chat/test", summary="A test message in the payments channel")
+async def payments_chat_test(_: SuperAdminDep, db: DbSession) -> dict[str, object]:
+    from app.services import payments_chat
+
+    sent = await payments_chat.send_test(db)
+    return {"sent": sent, **(await payments_chat.describe(db))}
+
+
+@router.get("/premium/money-summary", summary="Money of the last N days (card payments and Telegram Stars)")
+async def money_summary(
+    _: SuperAdminDep, db: DbSession, days: Annotated[int, Query(ge=1, le=366)] = 7
+) -> dict[str, str]:
+    from datetime import UTC, datetime, timedelta
+
+    from app.services import payments_chat
+
+    until = datetime.now(UTC)
+    return {"text": await payments_chat.summary_text(db, until - timedelta(days=days), until)}

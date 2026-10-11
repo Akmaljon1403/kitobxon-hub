@@ -434,19 +434,42 @@ a'zoga **bir marta** `premium.trial_days` kunlik (odatda 7) bepul Premium beradi
 imkoniyatlar ilovada 💎 belgisi bilan ko'rinadi. Tasdiqlash yoqilgan bo'lsa, sinov admin
 tasdiqlagan kundan boshlanadi.
 
-## 19. To'lovlar guruhi, cheklar va premium emojilar
+## 19. To'lovlar kanali, cheklar va premium emojilar
 
-**To'lovlar guruhi** — barcha cheklar (Premium, Stars, hissa) va to'lov savollari bitta joyga
-kelishi uchun:
+**To'lovlar kanali** — pulga oid hamma narsa sizning shaxsiy chatingizga emas, alohida yopiq kanalga
+keladi:
 
-1. Telegram'da yopiq guruh yarating, botni va to'lovlarni tekshiruvchi adminlarni qo'shing,
-   botni guruhda **administrator** qiling.
-2. **Sozlamalar** → `payments.chat_id` — guruh @username'i yoki `-100…` raqami.
+| Nima | Qayerga |
+|---|---|
+| Karta cheklari (Premium, Stars, hissa) — ✅ / ❌ tugmalari bilan | 💳 To'lovlar kanali |
+| A'zolarning «To'lov bo'yicha» savollari — **✍️ Javob yozish** tugmasi bilan | 💳 To'lovlar kanali |
+| Har bir Telegram Stars to'lovi va qaytarilgan Stars | 💳 To'lovlar kanali |
+| Har dushanba 09:00 — o'tgan haftaning moliyaviy xulosasi | 💳 To'lovlar kanali |
+| 10:00 va 17:00 — 3 soatdan ko'p kutib qolgan cheklar haqida eslatma | 💳 To'lovlar kanali |
+
+Sozlash (bir daqiqa, hech narsa yozish shart emas):
+
+1. Telegram'da **yopiq kanal** yarating (masalan «Kitobxon — to'lovlar»). Kanalni ko'radigan
+   adminlarni qo'shing.
+2. Kanal → **Administratorlar** → **Administrator qo'shish** → botni toping → **Xabar joylash**
+   huquqi yoqilgan bo'lsin → saqlang.
+3. Bot sizga shaxsiy xabar yozadi: «Bu kanal nima uchun?» → **💳 To'lovlar kanali** ni bosing.
+   Kanalga «✅ Sinov xabari» keladi — tayyor.
+
+Holatni **Premium** sahifasidagi «💳 To'lovlar kanali» kartasida ko'rasiz (✅ ulangan yoki
+muammo nimada), u yerda **🧪 Sinov xabari** tugmasi va oxirgi 30 kunlik moliyaviy xulosa bor.
+Qo'lda sozlash ham mumkin: **Sozlamalar** → `payments.chat_id` (`@username` yoki `-100…`).
+Botni kanaldan chiqarsangiz, bot darhol ogohlantiradi va cheklar vaqtincha botda keladi —
+hech narsa yo'qolmaydi.
+
+**Takroriy chek**: a'zo (yoki boshqa kishi) avval yuborilgan chek faylini qayta yuborsa, chek ostida
+«⚠️ Diqqat: bu chek avval ham yuborilgan — sana, kim, summa» deb yoziladi, admin paneldagi ro'yxatda
+esa «⚠️ takroriy chek» belgisi chiqadi. Bunday chekni bank ilovasi bilan albatta solishtiring.
 
 Chek kelganda: **✅ Tasdiqlash** yoki **❌ Rad etish** → tayyor sabablardan birini tanlaysiz
 («Chek o'qilmayapti yoki to'liq emas», «Summa tarif narxiga mos emas», «To'lov kartaga kelib
 tushmagan») yoki **✍️ Boshqa sabab** ni yozasiz. Adashib bosilgan qarorni **48 soat ichida**
-**↩️ Qaytarish** bilan bekor qilasiz. Guruh sozlanmagan bo'lsa, cheklar bosh
+**↩️ Qaytarish** bilan bekor qilasiz. Kanal sozlanmagan bo'lsa, cheklar bosh
 administratorlarga botda keladi. Hissa (donat) uchun chek so'ralmaydi.
 
 **Premium emojilar** — bot xabarlaridagi oddiy emojilarni Telegram premium (animatsion) emojilariga
@@ -621,6 +644,33 @@ O'rnatish va sozlash bir martalik 1 500 000 so'm; birinchi oy sinov uchun bepul.
 | `/admin` | admin | Qisqa holat va admin panel havolasi |
 | `/stiker` | admin | Kanal va tabriklar uchun stikerlarni saqlash (tugatish — `/tayyor`) |
 | `/emoji` | admin | Premium emojilarni o'rgatish (tugatish — `/tayyor`) |
+
+Buyruqlar menyusini (chatdagi «/» yoki «Menu» tugmasi) bot **o'zi sozlaydi**: a'zolar faqat
+a'zolar buyruqlarini ko'radi; admin qilingan odamda darhol `/admin` (va xabar yuborish huquqi
+bo'lsa `/stiker`, `/emoji`) paydo bo'ladi, adminlikdan olinganda yo'qoladi. Kanal va guruhlarda
+menyu chiqmaydi.
+
+### 🤖 Bot profili (nom, tavsif, avatar)
+
+**Sozlamalar** sahifasining yuqorisida **🤖 Bot profili** kartasi bor. @BotFather'ga kirish shart
+emas — bot hammasini o'zi Telegram'ga yozadi:
+
+- **Bot nomi** (bo'sh — @BotFather'dagi nom qoladi), **qisqa tavsif** (profil va ulashilgan
+  havolada) va **to'liq tavsif** (botning bo'sh chatida, «Start» ustida). O'ngda a'zo ko'radigan
+  ko'rinish (oldindan ko'rish). **Saqlash** — darhol Telegram'da yangilanadi.
+- **🔄 Telegram'ga qayta yuborish** — nom, tavsif, buyruqlar menyusi va kanal huquqlarini qayta
+  yozadi (masalan, kimdir @BotFather'da qo'lda o'zgartirib yuborgan bo'lsa).
+- **🖼 Klub avatarini o'rnatish** — botning rasmi klub avatari bilan almashtiriladi. Botda rasm
+  umuman bo'lmasa, bot buni ishga tushganda o'zi qiladi.
+
+**Klub rasmlari** (logotip, pechat, bot avatari) tizimga bir marta qo'yiladi (`backend/app/brand`
+papkasi, fayl nomlari o'sha yerdagi README'da). Shundan keyin pechat sertifikatlarda imzo ustida,
+belgi sertifikat va hisobot tepasida, QR tekshirish sahifasida va portfolio sarlavhasida o'zi
+chiqadi. O'chirish: **Sozlamalar** → `certificates.seal`, `certificates.logo`.
+
+Botni kanal yoki guruhga administrator qilib qo'shganingizda, Telegram kerakli huquqlarni (xabar
+joylash, tahrirlash, o'chirish, taklif havolasi) **o'zi belgilab** ko'rsatadi — faqat «Saqlash»ni
+bosasiz.
 
 ## 28. Kundalik ish — qisqa ro'yxat
 

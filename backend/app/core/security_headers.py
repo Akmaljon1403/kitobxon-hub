@@ -34,9 +34,11 @@ _SPA_POLICY = (
 ADMIN_CSP = _SPA_POLICY.format(scripts=" https://telegram.org", frames="; frame-ancestors https://web.telegram.org")
 MINIAPP_CSP = _SPA_POLICY.format(scripts=" https://telegram.org", frames="")
 API_CSP = "default-src 'none'; frame-ancestors 'none'"
-# The public page behind certificate and passport QR codes: static HTML with inline styles only.
+# The public page behind certificate and passport QR codes: static HTML with inline styles and the
+# club's mark (an inline data: picture) only.
 VERIFY_CSP = (
-    "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; "
+    "frame-ancestors 'none'"
 )
 HSTS = "max-age=31536000"
 

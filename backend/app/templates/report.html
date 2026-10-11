@@ -21,6 +21,7 @@
     transform: rotate(-30deg); font-weight: bold; letter-spacing: 8pt;
   }
   {% endif %}
+  .brand { display: block; height: 13mm; margin: 0 auto 2mm; }
   .org { text-align: center; text-transform: uppercase; font-weight: bold; font-size: 11.5pt; letter-spacing: 0.3pt; }
   .club { text-align: center; font-size: 11pt; margin-top: 2pt; }
   hr.top { border: 0; border-top: 2px solid #1f4e3d; margin: 8pt 0 2pt; }
@@ -50,6 +51,7 @@
 </style>
 </head>
 <body>
+  {% if brand_mark() %}<img class="brand" src="{{ brand_mark() }}" alt="">{% endif %}
   <div class="org">{{ facts.organization }}</div>
   <div class="club">{{ facts.club }}</div>
   <hr class="top"><hr class="thin">

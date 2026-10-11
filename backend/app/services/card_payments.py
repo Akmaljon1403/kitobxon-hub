@@ -20,6 +20,7 @@ Nothing is charged by the bot: it only records.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 import logging
 import uuid
@@ -147,6 +148,7 @@ async def submit(
             raise BadRequestError("INVALID_AMOUNT", f"Hissa kamida {format_uzs(MIN_DONATION_UZS)} bo'lsin.")
         kind, amount = PaymentKind.DONATION, amount_uzs
     prepared = await asyncio.to_thread(prepare_receipt, receipt)
+    fingerprint = hashlib.sha256(receipt).hexdigest()
     key = f"card-receipts/{user.id}/{uuid.uuid4().hex}.jpg"
     await get_storage().put(key, prepared, "image/jpeg")
     assert amount is not None
@@ -156,6 +158,7 @@ async def submit(
         plan_id=plan.id if plan else None,
         amount_uzs=amount,
         receipt_key=key,
+        receipt_sha256=fingerprint,
         stars=stars if kind == PaymentKind.STARS else None,
         discount_id=discount.id if discount else None,
     )
@@ -199,8 +202,9 @@ def decision_markup(payment: CardPayment, *, with_receipt: bool = False) -> Any:
 
 
 async def payments_chat(session: AsyncSession) -> str | None:
-    chat = str(await get_setting(session, "payments.chat_id")).strip()
-    return chat or None
+    from app.services import payments_chat as chat_service
+
+    return await chat_service.chat_id(session)
 
 
 async def _send_to_chat(session: AsyncSession, payment: CardPayment, text: str) -> bool:
@@ -226,10 +230,47 @@ async def _send_to_chat(session: AsyncSession, payment: CardPayment, text: str) 
     return True
 
 
+async def earlier_copy(session: AsyncSession, payment: CardPayment) -> str | None:
+    """A warning when the very same receipt file was sent before (by this member or anyone else)."""
+    import html
+
+    from app.utils.timezone import format_datetime
+
+    if not payment.receipt_sha256:
+        return None
+    row = (
+        await session.execute(
+            select(CardPayment, User)
+            .join(User, User.id == CardPayment.user_id)
+            .where(CardPayment.receipt_sha256 == payment.receipt_sha256, CardPayment.id != payment.id)
+            .order_by(CardPayment.created_at)
+            .limit(1)
+        )
+    ).first()
+    if row is None:
+        return None
+    earlier, owner = row
+    status = {
+        CardPaymentStatus.APPROVED: "tasdiqlangan",
+        CardPaymentStatus.REJECTED: "rad etilgan",
+        CardPaymentStatus.PENDING: "tekshirilmoqda",
+    }.get(earlier.status, str(earlier.status))
+    who = (
+        "shu a'zo" if owner.id == payment.user_id else f"{html.escape(owner.last_name)} {html.escape(owner.first_name)}"
+    )
+    return (
+        f"⚠️ <b>Diqqat: bu chek avval ham yuborilgan</b> — {format_datetime(earlier.created_at)}, {who}, "
+        f"{format_uzs(earlier.amount_uzs)} ({status}). Bank ilovasida tekshirib ko'ring."
+    )
+
+
 async def _tell_admins(session: AsyncSession, payment: CardPayment, user: User, plan: PremiumPlan | None) -> None:
     from app.services.rbac import super_admins
 
     text = staff_text(payment, user, plan.title if plan else None)
+    warning = await earlier_copy(session, payment)
+    if warning:
+        text = f"{text}\n\n{warning}"
     if await _send_to_chat(session, payment, text):
         return
     await enqueue_for_members(
@@ -480,6 +521,22 @@ async def list_payments(
     total = await session.scalar(select(func.count()).select_from(query.subquery()))
     rows = await session.execute(query.order_by(CardPayment.created_at.desc()).limit(limit).offset(offset))
     return [(payment, user, title) for payment, user, title in rows], int(total or 0)
+
+
+async def repeated_receipts(session: AsyncSession, payments: list[CardPayment]) -> set[uuid.UUID]:
+    """Which of these payments carry a receipt file that was also sent with another payment."""
+    hashes = {payment.receipt_sha256 for payment in payments if payment.receipt_sha256}
+    if not hashes:
+        return set()
+    repeated = set(
+        await session.scalars(
+            select(CardPayment.receipt_sha256)
+            .where(CardPayment.receipt_sha256.in_(hashes))
+            .group_by(CardPayment.receipt_sha256)
+            .having(func.count(CardPayment.id) > 1)
+        )
+    )
+    return {payment.id for payment in payments if payment.receipt_sha256 in repeated}
 
 
 async def member_payments(session: AsyncSession, user_id: uuid.UUID) -> list[tuple[CardPayment, str | None]]:

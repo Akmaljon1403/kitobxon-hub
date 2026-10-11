@@ -198,3 +198,4 @@ class CardPaymentOut(BaseModel):
 
 class AdminCardPaymentOut(CardPaymentOut):
     member: MemberBrief
+    duplicate: bool = False  # the very same receipt file was also sent with another payment

@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
+import { PaymentsChannel } from '../components/PaymentsChannel'
 import type { AdminUser, Page } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { navigate } from '../utils/router'
@@ -34,6 +35,7 @@ interface CardPayment {
   stars: number | null
   delivered_at: string | null
   member: Member
+  duplicate?: boolean
 }
 
 function cardWhat(payment: CardPayment): string {
@@ -211,6 +213,8 @@ export function PremiumPage() {
           ))}
         </div>
       )}
+
+      <PaymentsChannel />
 
       <CardPayments onChanged={reloadAll} />
 
@@ -470,6 +474,11 @@ function CardPayments({ onChanged }: { onChanged: () => void }) {
               <td className="whitespace-nowrap px-4 py-2 tabular-nums">{uzs(payment.amount_uzs)}</td>
               <td className="px-4 py-2">
                 <Receipt paymentId={payment.id} />
+                {payment.duplicate && (
+                  <p className="mt-1" title="Xuddi shu chek fayli boshqa to'lov bilan ham yuborilgan — bank ilovasida tekshiring">
+                    <Badge tone="warning">⚠️ takroriy chek</Badge>
+                  </p>
+                )}
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-sm">{formatDateTime(payment.created_at)}</td>
               <td className="whitespace-nowrap px-4 py-2 text-right">

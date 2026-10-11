@@ -113,3 +113,45 @@ async def licence_view(_: CurrentAdminDep) -> LicenceOut:
         members_paused=current.blocks_members,
         problem=current.problem,
     )
+
+
+SettingsManager = Annotated[CurrentUser, Depends(require_permissions(Perm.SETTINGS_MANAGE))]
+
+
+@router.get("/bot-profile", summary="The bot's name, descriptions and avatar: here and in Telegram")
+async def bot_profile_view(_: SettingsManager, db: DbSession) -> dict[str, Any]:
+    from app.services import bot_profile
+    from app.services.delivery import optional_bot
+
+    return await bot_profile.describe(optional_bot(), db)
+
+
+@router.post("/bot-profile/apply", summary="Send the name, descriptions, command menus and rights to Telegram")
+async def bot_profile_apply(_: SettingsManager, db: DbSession) -> dict[str, Any]:
+    from app.core.config import get_settings
+    from app.services import bot_profile
+    from app.services.delivery import runtime_bot
+
+    bot = runtime_bot()
+    result = await bot_profile.apply_all(bot, db, get_settings().webapp_url)
+    return {"result": result, **await bot_profile.describe(bot, db)}
+
+
+@router.post("/bot-profile/avatar", summary="Put the club's brand avatar on the bot")
+async def bot_profile_avatar(current: SettingsManager, db: DbSession) -> dict[str, Any]:
+    from app.core.errors import ServiceUnavailableError
+    from app.services import bot_profile
+    from app.services.audit import record_audit
+    from app.services.delivery import runtime_bot
+
+    bot = runtime_bot()
+    try:
+        done = await bot_profile.set_avatar(bot)
+    except Exception as exc:
+        raise ServiceUnavailableError(
+            "AVATAR_REFUSED", "Telegram rasmni qabul qilmadi. Birozdan keyin qayta urinib ko'ring."
+        ) from exc
+    if done:
+        record_audit(db, actor_id=current.user.id, action="BOT_AVATAR_SET", entity_type="bot", entity_id="avatar")
+        await db.commit()
+    return {"ok": done, **await bot_profile.describe(bot, db)}

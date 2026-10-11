@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { BotProfile } from '../components/BotProfile'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { SystemStatusCard } from '../components/SystemStatus'
 import { Button, Card, InlineError, Input, PageHeader, Select } from '../components/ui'
@@ -147,7 +148,8 @@ export function SettingsPage() {
 
   if (state.status === 'loading') return <LoadingState />
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
-  const groups = [...new Set(state.data.map((setting) => setting.group))]
+  // The bot's profile has its own card (multi-line description, preview, avatar).
+  const groups = [...new Set(state.data.map((setting) => setting.group))].filter((group) => group !== 'bot')
 
   return (
     <>
@@ -160,6 +162,7 @@ export function SettingsPage() {
         }
       />
       {canEdit && <SystemStatusCard />}
+      {canEdit && <BotProfile />}
       {groups.map((group) => (
         <Card key={group}>
           <h2 className="border-b border-app-border px-4 py-3 font-semibold">{GROUP_TITLES[group] ?? group}</h2>

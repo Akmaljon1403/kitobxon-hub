@@ -8,6 +8,7 @@ value is validated against the declared type before it is stored.
 from __future__ import annotations
 
 import copy
+import logging
 import time
 import uuid
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import NotFoundError, ValidationFailedError
 from app.models import SystemSetting
 from app.services.audit import record_audit
+
+logger = logging.getLogger(__name__)
 
 Points = Annotated[int, Field(ge=0, le=1000)]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)]
@@ -63,6 +66,21 @@ class SettingDefinition:
                 f"'{self.key}' sozlamasi uchun qiymat noto'g'ri.",
                 details=[{"field": self.key, "reason": err["msg"]} for err in exc.errors()],
             ) from exc
+
+
+BOT_SHORT_DESCRIPTION = (
+    "📚 Kitobxonlar klubi: kitoblar, tadbirlar, testlar, reyting va sertifikatlar — hammasi bitta botda."
+)
+BOT_DESCRIPTION = (
+    "📚 Kitobxon Hub — Farg'ona jamoat salomatligi tibbiyot instituti kitobxonlar klubining rasmiy boti.\n\n"
+    "✨ Bu yerda siz:\n"
+    "• klub kitoblarini o'qiysiz va muddatlarni kuzatasiz;\n"
+    "• tadbirlarda QR kod bilan davomat qilasiz;\n"
+    "• kitoblar bo'yicha testlar yechasiz;\n"
+    "• ball, reyting, yutuq va sertifikatlar olasiz;\n"
+    "• o'z Kitobxon pasportingizga ega bo'lasiz.\n\n"
+    "👇 Boshlash uchun «Start» tugmasini bosing."
+)
 
 
 SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
@@ -163,6 +181,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
     SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
     SettingDefinition(
+        "certificates.seal", True, bool, "Sertifikatda imzo ustida klub pechati (app/brand/seal.png bo'lsa)"
+    ),
+    SettingDefinition(
+        "certificates.logo", True, bool, "Sertifikat tepasida klub belgisi (app/brand/logo-mark.png bo'lsa)"
+    ),
+    SettingDefinition(
         "certificates.free_downloads",
         1,
         Annotated[int, Field(ge=0, le=20)],
@@ -183,9 +207,10 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "payments.chat_id",
         "",
         ShortText,
-        "To'lovlar guruhi yoki kanali: barcha cheklar (Premium, Stars, hissa) tugmalari bilan va to'lov "
-        "bo'yicha murojaatlar shu yerga keladi. @username yoki -100… raqami; bot u yerda admin bo'lsin "
-        "(bo'sh — bosh administratorlarga botda)",
+        "To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va "
+        "haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga "
+        "administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. "
+        "@username yoki -100… raqami (bo'sh — cheklar bosh administratorlarga botda)",
     ),
     SettingDefinition(
         "payments.stars_packages",
@@ -347,6 +372,31 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "Avtomatik post kanalga chiqishidan oldin adminlarga ko'rsatiladi; shu daqiqalarda hech kim javob "
         "bermasa, o'zi joylanadi (0 — tekshiruvsiz)",
     ),
+    # ---- The bot's Telegram profile (applied by the bot itself; see services/bot_profile.py) ----
+    SettingDefinition(
+        "bot.name",
+        "",
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=64)],
+        "Botning Telegram'dagi nomi (64 belgigacha). Bo'sh — @BotFather'dagi nom o'zgarmaydi",
+    ),
+    SettingDefinition(
+        "bot.short_description",
+        BOT_SHORT_DESCRIPTION,
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)],
+        "Bot profilidagi va ulashilgan havoladagi qisqa matn (120 belgigacha)",
+    ),
+    SettingDefinition(
+        "bot.description",
+        BOT_DESCRIPTION,
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=512)],
+        "Botning bo'sh chatida «Start» ustida ko'rinadigan matn (512 belgigacha)",
+    ),
+    SettingDefinition(
+        "bot.menu_button",
+        "📱 Ilova",
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)],
+        "Chat pastidagi ilovani ochadigan tugma matni",
+    ),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",
@@ -450,4 +500,22 @@ async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_i
         from app.services import subscription
 
         subscription.forget()  # the channel list changed: everybody is checked again
+    if key.startswith("bot."):
+        await _apply_bot_profile(session)
     return validated
+
+
+async def _apply_bot_profile(session: AsyncSession) -> None:
+    """A changed name, description or menu button reaches Telegram at once (best effort)."""
+    from app.core.config import get_settings
+    from app.services import bot_profile
+    from app.services.delivery import optional_bot
+
+    bot = optional_bot()
+    if bot is None:
+        return
+    try:
+        await bot_profile.apply_texts(bot, session)
+        await bot_profile.apply_menu_button(bot, session, get_settings().webapp_url)
+    except Exception:
+        logger.warning("The bot profile could not be updated in Telegram; it is applied again on restart")

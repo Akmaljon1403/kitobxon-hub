@@ -391,6 +391,17 @@ async def _template_values(session: AsyncSession, certificate: Certificate, desi
         "custom": custom,
         "background": background or chosen.background_uri(),
         "p": palette,
+        **await _brand_values(session, palette.paper),
+    }
+
+
+async def _brand_values(session: AsyncSession, paper: str) -> dict[str, Any]:
+    """The club's seal over the signature and its mark above the title (see services/brand.py)."""
+    from app.services import brand
+
+    return {
+        "seal": brand.seal(bool(await get_setting(session, "certificates.seal")), paper),
+        "logo": brand.logo_mark() if await get_setting(session, "certificates.logo") else None,
     }
 
 
@@ -477,6 +488,7 @@ async def sample_png(session: AsyncSession, sample: Certificate, *, width: int =
         "background": background or chosen.background_uri(),
         "p": designs.CUSTOM_PALETTE if custom else chosen.palette,
     }
+    values |= await _brand_values(session, values["p"].paper)
     html = _environment().get_template("certificate.html").render(**values)
     pdf = await asyncio.to_thread(lambda: HTML(string=html, base_url=str(TEMPLATES)).write_pdf())
     return await asyncio.to_thread(_to_png, pdf, width=width, watermark=False)
