@@ -260,6 +260,7 @@ async def test_institute_faculties_seeded_by_migration(db: AsyncSession) -> None
     await asyncio.to_thread(command.upgrade, config, "head")
     names = list(await db.scalars(select(Faculty.name).order_by(Faculty.sort_order)))
     assert names == ["Davolash ishi", "Pediatriya", "Tibbiy profilaktika va jamoat salomatligi"]
+    await db.commit()  # end the read before the schema changes again (dropping tables waits for open reads)
     # Re-running is harmless (no duplicates).
     await asyncio.to_thread(command.downgrade, config, "0002")
     await asyncio.to_thread(command.upgrade, config, "head")

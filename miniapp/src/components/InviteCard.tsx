@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { Referrals } from '../types/api'
+import { navigate } from '../utils/router'
 import { getWebApp, haptic } from '../utils/telegram'
 import { Button, Card } from './ui'
 
@@ -65,6 +66,9 @@ export function InviteCard() {
       <p className="text-center text-xs text-app-hint">
         Taklif qilganlaringiz: <b>{info.invited}</b> · mukofot olingan: <b>{info.rewarded}</b>
       </p>
+      <Button variant="ghost" onClick={() => navigate('/invite')}>
+        💚 Sizning foydangiz va tanlovlar →
+      </Button>
     </Card>
   )
 }

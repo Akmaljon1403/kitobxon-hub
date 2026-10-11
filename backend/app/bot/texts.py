@@ -514,6 +514,13 @@ INVITE = (
     "Do'stingiz shu havola orqali ro'yxatdan o'tib, birinchi tadbirga kelsa — sizga {reward}.{limit}\n\n"
     "Taklif qilganlaringiz: <b>{invited}</b> · mukofot olingan: <b>{rewarded}</b>"
 )
+INVITE_IMPACT = (
+    "\n\n💚 <b>Sizning foydangiz</b>\n"
+    "Olib kelgan do'stlaringiz {came} marta tadbirga keldi, {books} ta kitob o'qidi va jami "
+    "<b>{points}</b> ball to'pladi. Sizga taklif uchun: +{earned} ball."
+)
+INVITE_PLACE = "\n🏅 Eng faol taklif qiluvchilar orasida: <b>{place}-o'rin</b>"
+BTN_INVITE_DETAILS = "💚 Batafsil: do'stlarim va tanlovlar"
 INVITE_LIMIT = " (oyiga {limit} tagacha)"
 INVITE_SHARE_TEXT = "Kitobxonlar klubiga qo'shil! Tadbirlar, testlar, sertifikatlar va sovg'alar 📚"
 INVITE_UNAVAILABLE = "Taklif havolasi hozircha tayyor emas. Birozdan keyin urinib ko'ring."
@@ -534,6 +541,13 @@ LEFT_WIPED = (
 )
 BTN_LEFT_RESTORE = "🔄 Qayta tiklash"
 BTN_LEFT_WIPE = "🧹 Chatni tozalash"
+GRADUATED = (
+    "🎓 Tabriklaymiz, bitiruvchi! Siz klubda qolasiz — tadbirlar, kitoblar va do'stlar sizni kutadi. "
+    "Yangi kitobxonlarni ham olib keling 📚"
+)
+STILL_STUDYING = (
+    "📚 Yaxshi, yangi o'quv yilida omad! Kurs yoki guruhingiz o'zgargan bo'lsa, ilovada profilingizni to'g'rilang."
+)
 STILL_HERE = "Ajoyib! 👋 Siz bilan davom etamiz — yangi kitob va tadbirlardan xabardor bo'lib turing."
 WELCOME_BACK_AFTER_BREAK = "🎉 Qaytganingiz bilan! Hisobingiz yana faol — ballaringiz va yutuqlaringiz joyida."
 STOPPED = "⏹ To'xtatildi. Oldingi amal bekor qilindi — pastdagi menyudan davom eting."

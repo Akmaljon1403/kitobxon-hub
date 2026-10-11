@@ -14,6 +14,7 @@ import { EventsPage } from './pages/EventsPage'
 import { FacultiesPage } from './pages/FacultiesPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { GiveawaysPage } from './pages/GiveawaysPage'
+import { ContestsPage } from './pages/ContestsPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -47,6 +48,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   documents: DocumentsPage,
   rewards: RewardsPage,
   giveaways: GiveawaysPage,
+  contests: ContestsPage,
   certificates: CertificatesPage,
   features: FeaturesPage,
   premium: PremiumPage,

@@ -423,7 +423,7 @@ Aggregates only. Groups with fewer than 3 members are left out of group statisti
 | POST | `/api/v1/admin/faculties` | `SETTINGS_MANAGE` |
 | PATCH | `/api/v1/admin/faculties/{faculty_id}` | `SETTINGS_MANAGE` — rename, reorder, deactivate (no hard delete) |
 
-### Added in rounds E1–E15
+### Added in rounds E1–E15 and F1–F4
 
 Member endpoints need a member token; admin endpoints need an admin session and the permission
 the Admin Panel page uses (checked in the service layer). Members must be subscribed to the
@@ -468,6 +468,19 @@ required channels (`403 SUBSCRIPTION_REQUIRED` with `details.channels`; `/me` an
 | POST | `/api/v1/admin/documents/{code}/send` | Same parameters in the body: the bot sends the file to the admin |
 | GET | `/api/v1/admin/search?q=` | Members, books, events, tests, rewards, sections, settings and bot commands (≥ 2 characters), filtered by the admin's permissions |
 | GET | `/api/v1/admin/system/licence` | Licence of this copy: organisation, end date, member limit, days left, whether members are paused |
+| GET | `/api/v1/me/referrals` | The link and reward terms, plus `impact` («Sizning foydangiz»: friends' points, books, visits, tests; what the member earned), `friends` (as `referral.friend_details` allows) and `leaderboard` (all-time inviters, `null` when hidden) |
+| GET | `/api/v1/me/referral-contests` | Running, upcoming and recently finished referral contests, only with what the club lets members see (table, counts, names, own place, prizes) |
+| GET / POST | `/api/v1/admin/referral-contests` | `REWARD_MANAGE` — list / create a contest (draft): period, `rule` REGISTERED\|ATTENDED\|POINTS, `min_friends`, `winners_count`, `prizes` per place (points, premium_days, reward_id, text), `participation_points`, faculty/course, visibility (`show_leaderboard`, `leaderboard_size`, `show_counts`, `name_format` FULL\|SHORT\|HIDDEN, `show_my_place`, `show_prizes`, `freeze_hours`) and messages (`announce`, `remind_hours`, `announce_results`, `post_to_channel`) |
+| GET / PATCH | `/api/v1/admin/referral-contests/{id}` | One contest / change it (rules and prizes are locked once it runs) |
+| POST | `/api/v1/admin/referral-contests/{id}/publish`, `/finish`, `/cancel` | Announce; finish now (winners and prizes); cancel with a reason |
+| GET | `/api/v1/admin/referral-contests/{id}/standings` | The full table with names (admins) |
+| GET | `/api/v1/admin/referral-contests/{id}/participants/{user_id}/friends` | The friends a participant brought and whether each counts |
+| POST | `/api/v1/admin/referral-contests/{id}/participants/{user_id}/exclude`, `/include` | Take a participant out of the table (with a reason) or put them back |
+| POST | `/api/v1/admin/referral-contests/{id}/winners/{user_id}/handed-over` | A prize given in person was handed over |
+| GET | `/api/v1/admin/referral-contests/top-inviters?rule=&limit=` | All-time inviters with registered and attended friends |
+| POST | `/api/v1/admin/notifications/broadcast/{broadcast_id}/cancel` | Cancel a planned announcement (`broadcast` accepts `scheduled_at`, up to 90 days ahead; the summary lists `waiting` messages) |
+| GET / DELETE | `/api/v1/admin/custom-emoji` | `SETTINGS_MANAGE` — the premium emoji that replace ordinary ones in bot messages (`paused` when Telegram refused them recently); delete one (`?emoji=`) or all |
+| POST | `/api/v1/admin/custom-emoji/test` | The bot sends the admin a sample with every saved emoji; `premium_shown` false when Telegram refused them |
 
 ### Telegram
 

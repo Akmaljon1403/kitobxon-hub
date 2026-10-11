@@ -115,3 +115,15 @@ def _no_required_subscription(request: pytest.FixtureRequest, monkeypatch: pytes
         return []
 
     monkeypatch.setattr(subscription, "configured", nothing_required)
+
+
+@pytest.fixture(autouse=True)
+def _no_quiet_hours(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests run at any hour: the club's night-time quiet hours stay off unless a test is marked «quiet_hours»."""
+    if request.node.get_closest_marker("quiet_hours"):
+        return
+
+    async def never(session: AsyncSession, now: object) -> None:
+        return None
+
+    monkeypatch.setattr("app.workers.sender.quiet_until", never)

@@ -149,25 +149,31 @@ async def enqueue_for_members(
     members: Select[tuple[uuid.UUID]] | None = None,
     payload: dict[str, Any] | None = None,
     priority: int = 5,
+    scheduled_at: datetime | None = None,
 ) -> int:
     """Queue the same message for many members in one statement. Returns how many were new.
 
     ``members`` is a SELECT of user ids (default: every active member). The dedup key is
     ``<dedup_prefix>:<user id>``, so calling this again never duplicates a message.
+    ``scheduled_at``: send later (a planned announcement).
     """
     recipients = (members if members is not None else active_members()).subquery()
-    source = select(
+    columns = ["user_id", "type", "text", "payload", "priority", "dedup_key"]
+    values: list[Any] = [
         recipients.c.id,
         literal(type_.value),
         literal(text),
         literal(payload, JSONB) if payload is not None else literal(None, JSONB),
         literal(priority),
         func.concat(dedup_prefix, ":", recipients.c.id),
-    )
+    ]
+    if scheduled_at is not None:
+        columns.append("scheduled_at")
+        values.append(literal(scheduled_at))
     statement = (
         insert(Notification)
         # Python-side defaults would give every row the same id; let the database fill them in.
-        .from_select(["user_id", "type", "text", "payload", "priority", "dedup_key"], source, include_defaults=False)
+        .from_select(columns, select(*values), include_defaults=False)
         .on_conflict_do_nothing(index_elements=[Notification.dedup_key])
     )
     result = await session.execute(statement)

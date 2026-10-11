@@ -50,6 +50,7 @@ export interface AdminUser {
   left_at?: string | null
   left_reason?: string | null
   restore_requested_at?: string | null
+  graduated_at?: string | null
   roles?: string[]
 }
 
@@ -372,7 +373,16 @@ export interface NotificationSummary {
   skipped_24h: number
   worker_enabled: boolean
   bot_configured: boolean
-  recent_broadcasts: { at: string; actor: string | null; message: string; recipients: number; filters: Record<string, unknown> }[]
+  recent_broadcasts: {
+    at: string
+    actor: string | null
+    message: string
+    recipients: number
+    filters: Record<string, unknown>
+    broadcast_id: string | null
+    scheduled_at: string | null
+    waiting: number
+  }[]
 }
 
 export interface AdminAchievement {

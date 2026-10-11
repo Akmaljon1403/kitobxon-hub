@@ -261,21 +261,40 @@ async def invite_friends(event: Message | CallbackQuery, db: AsyncSession, membe
         await event.answer()
     if not isinstance(message, Message):
         return
-    info = await referrals.summary(db, member)
+    from app.services import contests
+
+    info = await referrals.overview(db, member)
     if not info["link"]:
         await message.answer(texts.INVITE_UNAVAILABLE)
         return
     share = "https://t.me/share/url?" + urlencode({"url": info["link"], "text": texts.INVITE_SHARE_TEXT})
     reward = referrals.reward_text(info)
+    text = texts.INVITE.format(
+        link=info["link"],
+        reward=reward,
+        limit=texts.INVITE_LIMIT.format(limit=info["monthly_limit"]) if info["monthly_limit"] else "",
+        invited=info["invited"],
+        rewarded=info["rewarded"],
+    )
+    impact = info["impact"]
+    if impact["invited"]:
+        text += texts.INVITE_IMPACT.format(
+            came=impact["friends_visits"],
+            books=impact["friends_books"],
+            points=impact["friends_points"],
+            earned=impact["earned_points"],
+        )
+    if info["leaderboard"] and info["leaderboard"]["my_place"]:
+        text += texts.INVITE_PLACE.format(place=info["leaderboard"]["my_place"])
+    contest = await contests.running_line(db, member)
+    if contest:
+        text += "\n\n" + contest
     await message.answer(
-        texts.INVITE.format(
-            link=info["link"],
-            reward=reward,
-            limit=texts.INVITE_LIMIT.format(limit=info["monthly_limit"]) if info["monthly_limit"] else "",
-            invited=info["invited"],
-            rewarded=info["rewarded"],
+        text,
+        reply_markup=keyboards.inline(
+            [InlineKeyboardButton(text=texts.BTN_SHARE_INVITE, url=share)],
+            [keyboards.app_button("invite", texts.BTN_INVITE_DETAILS)],
         ),
-        reply_markup=keyboards.inline([InlineKeyboardButton(text=texts.BTN_SHARE_INVITE, url=share)]),
         disable_web_page_preview=True,
     )
 

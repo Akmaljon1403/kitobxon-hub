@@ -5,8 +5,9 @@ import { Button, Card, Field, InlineError, Input, PageHeader, Select, Textarea }
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
+import { PremiumEmoji } from '../components/PremiumEmoji'
 import type { Faculty, NotificationSummary } from '../types/api'
-import { formatDateTime } from '../utils/format'
+import { formatDateTime, fromLocalInput } from '../utils/format'
 
 const MAX_LENGTH = 3500
 
@@ -28,10 +29,10 @@ function telegramHtml(text: string): string {
 }
 
 export function NotificationsPage() {
-  const { api } = useSession()
+  const { api, can } = useSession()
   const summary = useAsync((signal) => api<NotificationSummary>('/api/v1/admin/notifications/summary', { signal }))
   const faculties = useAsync((signal) => api<Faculty[]>('/api/v1/admin/faculties', { signal }))
-  const [form, setForm] = useState({ message: '', faculty_id: '', course: '', group_name: '', with_app_button: true, buttons: '' })
+  const [form, setForm] = useState({ message: '', faculty_id: '', course: '', group_name: '', with_app_button: true, buttons: '', scheduled_at: '' })
   const [preview, setPreview] = useState<{ text: string; buttons: { text: string; url: string; kind: string }[]; recipients: number } | null>(null)
   const [recipients, setRecipients] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -68,7 +69,19 @@ export function NotificationsPage() {
     ...audience,
     with_app_button: form.with_app_button,
     buttons: form.buttons.trim() || null,
+    scheduled_at: fromLocalInput(form.scheduled_at),
   })
+
+  async function cancelPlanned(broadcastId: string) {
+    if (!window.confirm("Rejalashtirilgan e'lon bekor qilinsinmi?")) return
+    try {
+      const result = await api<{ cancelled: number }>(`/api/v1/admin/notifications/broadcast/${broadcastId}/cancel`, { method: 'POST' })
+      setDone(`✓ Bekor qilindi: ${result.cancelled} ta xabar yuborilmaydi.`)
+      summary.reload()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Bekor qilib bo'lmadi.")
+    }
+  }
 
   async function showPreview() {
     setBusy(true)
@@ -97,7 +110,8 @@ export function NotificationsPage() {
   }
 
   async function send() {
-    if (!window.confirm(`Xabar ${recipients ?? ''} nafar a'zoga yuboriladi. Davom etasizmi?`)) return
+    const when = form.scheduled_at ? ` ${formatDateTime(fromLocalInput(form.scheduled_at))} da` : ''
+    if (!window.confirm(`Xabar ${recipients ?? ''} nafar a'zoga${when} yuboriladi. Davom etasizmi?`)) return
     setBusy(true)
     setError(null)
     setDone(null)
@@ -106,8 +120,12 @@ export function NotificationsPage() {
         method: 'POST',
         body: body(),
       })
-      setDone(`✓ Xabar ${result.recipients} nafar a'zoga navbatga qo'yildi. Bir necha daqiqada yetkaziladi.`)
-      setForm({ ...form, message: '', buttons: '' })
+      setDone(
+        form.scheduled_at
+          ? `✓ E'lon rejalashtirildi: ${formatDateTime(fromLocalInput(form.scheduled_at))} da ${result.recipients} nafar a'zoga yuboriladi. Undan oldin bekor qilish mumkin.`
+          : `✓ Xabar ${result.recipients} nafar a'zoga navbatga qo'yildi. Bir necha daqiqada yetkaziladi (tungi tinchlik vaqtida — ertalab).`,
+      )
+      setForm({ ...form, message: '', buttons: '', scheduled_at: '' })
       setPreview(null)
       summary.reload()
     } catch (err) {
@@ -208,6 +226,12 @@ export function NotificationsPage() {
               placeholder={'Test | https://kitob.uz\nKanalimiz | https://t.me/FJSTIMutolaaxona'}
             />
           </Field>
+          <Field
+            label="Yuborish vaqti (ixtiyoriy, Toshkent vaqti)"
+            hint="Bo'sh — darhol. Masalan, bayram tabrigini oldindan yozib qo'ying. Tungi tinchlik vaqtidagi e'lonlar ertalab boradi."
+          >
+            <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} />
+          </Field>
           {preview && (
             <div className="rounded-xl bg-app-surface p-3">
               <p className="mb-2 text-xs text-app-hint">👀 A'zolar shunday ko'radi ({preview.recipients} nafar):</p>
@@ -239,7 +263,7 @@ export function NotificationsPage() {
                 🧪 O'zimga sinov
               </Button>
               <Button loading={busy} disabled={form.message.trim().length < 3 || !recipients || !preview} onClick={() => void send()} title={preview ? undefined : "Avval «Ko'rib chiqish»ni bosing"}>
-                📢 Yuborish
+                {form.scheduled_at ? '⏰ Rejalashtirish' : '📢 Yuborish'}
               </Button>
             </div>
           </div>
@@ -257,6 +281,14 @@ export function NotificationsPage() {
                 <p className="mt-1 text-xs text-app-hint">
                   {formatDateTime(item.at)} · {item.actor ?? '—'} · {item.recipients} nafar
                 </p>
+                {item.scheduled_at && item.waiting > 0 && item.broadcast_id && (
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-sky-700">⏰ {formatDateTime(item.scheduled_at)} da yuboriladi</span>
+                    <button type="button" className="text-rose-600 underline" onClick={() => void cancelPlanned(item.broadcast_id as string)}>
+                      Bekor qilish
+                    </button>
+                  </p>
+                )}
               </div>
             ))}
           <p className="mt-2 text-xs text-app-hint">
@@ -264,6 +296,11 @@ export function NotificationsPage() {
           </p>
         </Card>
       </div>
+      {can('SETTINGS_MANAGE') && (
+        <div className="mt-4">
+          <PremiumEmoji />
+        </div>
+      )}
     </>
   )
 }

@@ -194,7 +194,7 @@ export function ProfilePage() {
       ) : (
         <Card className="flex flex-col gap-2 text-[15px]">
           <Row label="Fakultet" value={me.faculty?.name ?? 'Tanlanmagan'} />
-          <Row label="Kurs" value={me.course ? `${me.course}-kurs` : '—'} />
+          <Row label="Kurs" value={me.graduated ? '🎓 Bitiruvchi' : me.course ? `${me.course}-kurs` : '—'} />
           <Row label="Guruh" value={me.group_name ?? '—'} />
           <Row label="A'zo bo'lgan" value={formatDate(me.registered_at)} />
           <Button variant="ghost" onClick={() => setEditing(true)}>

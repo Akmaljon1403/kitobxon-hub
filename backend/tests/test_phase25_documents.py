@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import io
+import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -408,7 +409,7 @@ async def test_admin_issues_and_revokes_certificates(client: httpx.AsyncClient, 
 
     unknown = await client.post(
         "/api/v1/admin/certificates",
-        json={**body, "user_id": str(manager.id)[:-1] + "0"},
+        json={**body, "user_id": str(uuid.uuid4())},  # nobody has this id
         headers=admin_headers(manager),
     )
     assert unknown.status_code == 404

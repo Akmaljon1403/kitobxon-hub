@@ -8,6 +8,7 @@ from app.models.book import Book, BookQuote, BookRead
 from app.models.bot import BotFsmState
 from app.models.certificate import Certificate
 from app.models.channel import ChannelPost, ChannelSticker, CustomEmoji
+from app.models.contest import ReferralContest
 from app.models.event import Event, EventFeedback, EventRegistration, EventShift
 from app.models.notification import Notification, NotificationTemplate
 from app.models.premium import CardPayment, FeatureFlag, Payment, PremiumDiscount, PremiumPlan, PremiumSubscription
@@ -54,6 +55,7 @@ __all__ = [
     "PremiumDiscount",
     "PremiumPlan",
     "PremiumSubscription",
+    "ReferralContest",
     "Report",
     "ReportPhoto",
     "Reward",

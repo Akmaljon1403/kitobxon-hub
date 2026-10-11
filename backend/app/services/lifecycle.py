@@ -17,7 +17,7 @@ import calendar
 import logging
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import delete, exists, func, select, update
+from sqlalchemy import String, delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -82,17 +82,25 @@ async def new_study_year(session: AsyncSession, now: datetime | None = None) -> 
     await update_setting(session, key="academic.current_year", value=year, actor_id=None)
     moved = 0
     max_course = int(await get_setting(session, "registration.max_course"))
+    if await get_setting(session, "academic.ask_graduates"):
+        await _ask_graduates(session, year, max_course)
     if await get_setting(session, "academic.promote_courses"):
-        result = await session.execute(
-            update(User)
-            .where(
-                User.deleted_at.is_(None),
-                User.status == UserStatus.ACTIVE,
-                User.course.is_not(None),
-                User.course < max_course,
+        students = (
+            User.deleted_at.is_(None),
+            User.status == UserStatus.ACTIVE,
+            User.course.is_not(None),
+            User.course < max_course,
+            User.graduated_at.is_(None),
+        )
+        if await get_setting(session, "academic.promote_groups"):
+            # «201» of a 2nd-year student becomes «301»; groups named otherwise stay as they are.
+            await session.execute(
+                update(User)
+                .where(*students, func.left(User.group_name, 1) == func.cast(User.course, String))
+                .values(group_name=func.cast(User.course + 1, String) + func.substr(User.group_name, 2))
             )
-            .values(course=User.course + 1)
-            .returning(User.id, User.course)
+        result = await session.execute(
+            update(User).where(*students).values(course=User.course + 1).returning(User.id, User.course)
         )
         promoted = result.all()
         moved = len(promoted)
@@ -102,8 +110,8 @@ async def new_study_year(session: AsyncSession, now: datetime | None = None) -> 
                 user_id=user_id,
                 type_=NotificationType.SYSTEM,
                 text=(
-                    f"🎓 Yangi o'quv yili muborak! Endi siz {course}-kursdasiz. Agar kurs yoki guruhingiz "
-                    "o'zgargan bo'lsa, ilovada «👤 Profil» → «✏️ O'zgartirish» orqali to'g'rilang."
+                    f"🎓 Yangi o'quv yili muborak! Endi siz {course}-kursdasiz. Kurs yoki guruhingiz noto'g'ri "
+                    "bo'lsa, ilovada «👤 Profil» → «✏️ O'zgartirish» orqali to'g'rilang."
                 ),
                 dedup_key=f"study-year:{year}:{user_id}",
                 payload={"buttons": [{"text": "👤 Profil", "app_route": "profile"}]},
@@ -121,6 +129,51 @@ async def new_study_year(session: AsyncSession, now: datetime | None = None) -> 
     await session.commit()
     logger.info("A new study year started: %s, %s members moved up", year, moved)
     return moved
+
+
+GRADUATE_BUTTONS = [
+    {"text": "🎓 Ha, bitirdim", "callback": "grad:yes"},
+    {"text": "📚 Hali o'qiyman", "callback": "grad:no"},
+]
+
+
+async def _ask_graduates(session: AsyncSession, year: int, max_course: int) -> int:
+    """Members of the last course: «Bitirdingizmi?» with two buttons (see the bot's ``grad:`` buttons)."""
+    ids = list(
+        await session.scalars(
+            select(User.id).where(
+                User.deleted_at.is_(None),
+                User.status == UserStatus.ACTIVE,
+                User.course >= max_course,
+                User.graduated_at.is_(None),
+            )
+        )
+    )
+    for user_id in ids:
+        await enqueue_notification(
+            session,
+            user_id=user_id,
+            type_=NotificationType.SYSTEM,
+            text=(
+                "🎓 Yangi o'quv yili boshlandi! Siz oxirgi kursda edingiz — o'qishni tamomladingizmi?\n\n"
+                "Bitirgan bo'lsangiz, klubda <b>bitiruvchi</b> sifatida qolasiz: ballaringiz, kitoblaringiz va "
+                "sertifikatlaringiz joyida, tadbirlarga kelaverasiz 📚"
+            ),
+            dedup_key=f"graduate-question:{year}:{user_id}",
+            payload={"buttons": [{"row": GRADUATE_BUTTONS}]},
+            priority=4,
+        )
+    return len(ids)
+
+
+async def set_graduated(session: AsyncSession, user: User, graduated: bool) -> None:
+    """The member's own answer to «Bitirdingizmi?»."""
+    if graduated and user.graduated_at is None:
+        user.graduated_at = _now()
+        record_audit(session, actor_id=user.id, action="USER_GRADUATED", entity_type="user", entity_id=user.id)
+    elif not graduated and user.graduated_at is not None:
+        user.graduated_at = None
+    await session.commit()
 
 
 async def _open_season(session: AsyncSession, year: int, month_day: str) -> None:
@@ -252,3 +305,70 @@ async def cleanup(session: AsyncSession, now: datetime | None = None) -> int:
     if removed:
         logger.info("Old records removed: %s", removed)
     return removed
+
+
+# ---------------------------------------------------------------------------- «Yil yakuni»
+
+
+async def year_summaries(session: AsyncSession, now: datetime | None = None) -> int:
+    """Scheduler job (daily): on ``academic.summary_day`` every member who did something this study year
+    gets their own results. Returns how many messages were queued."""
+    from app.services import documents, ranking
+
+    now = now or _now()
+    today = now.astimezone(local_tz()).date()
+    day = str(await get_setting(session, "academic.summary_day") or "")
+    if not day or today.strftime("%m-%d") != day:
+        return 0
+    year = study_year_start(today, str(await get_setting(session, "academic.year_start")))
+    start = _start_date(year, str(await get_setting(session, "academic.year_start")))
+    members, data = await documents._activity(session, documents.Params(date_from=start, date_to=today))
+    places = {entry.user_id: place for place, entry in enumerate(await ranking._standings(session, "season", None), 1)}
+    friends = dict(
+        (
+            await session.execute(
+                select(User.referred_by, func.count(User.id))
+                .where(
+                    User.referred_by.is_not(None),
+                    User.deleted_at.is_(None),
+                    User.registered_at >= datetime.combine(start, datetime.min.time(), tzinfo=local_tz()),
+                )
+                .group_by(User.referred_by)
+            )
+        ).all()
+    )
+    queued = 0
+    for user, _faculty in members:
+        if user.status != UserStatus.ACTIVE:
+            continue
+        values = {key: int(data.get(key, {}).get(user.id, 0)) for key in ("books", "events", "tests", "points")}
+        values["certificates"] = int(data.get("certificates", {}).get(user.id, 0))
+        values["achievements"] = int(data.get("achievements", {}).get(user.id, 0))
+        if not any(values.values()):
+            continue
+        lines = [f"📖 <b>{year}–{year + 1} o'quv yilingiz yakunlari</b>", ""]
+        lines.append(f"📚 O'qilgan kitoblar: <b>{values['books']}</b>")
+        lines.append(f"📅 Tadbirlarda qatnashish: <b>{values['events']}</b>")
+        lines.append(f"📝 Yechilgan testlar: <b>{values['tests']}</b>")
+        lines.append(f"⭐ To'plangan ballar: <b>{values['points']}</b>")
+        if user.id in places:
+            lines.append(f"🏆 Yillik reytingda: <b>{places[user.id]}-o'rin</b>")
+        if values["certificates"]:
+            lines.append(f"🎓 Sertifikatlar: <b>{values['certificates']}</b>")
+        if values["achievements"]:
+            lines.append(f"🏅 Yangi yutuqlar: <b>{values['achievements']}</b>")
+        if friends.get(user.id):
+            lines.append(f"👥 Klubga olib kelgan do'stlar: <b>{friends[user.id]}</b>")
+        lines += ["", "Rahmat, ajoyib yil bo'ldi! Yozgi ta'tilda ham kitobni qo'ldan qo'ymang 📖☀️"]
+        await enqueue_notification(
+            session,
+            user_id=user.id,
+            type_=NotificationType.DIGEST,
+            text="\n".join(lines),
+            dedup_key=f"year-summary:{year}:{user.id}",
+            payload={"buttons": [{"text": "📊 Natijalarim", "app_route": "results"}], "mood": "CELEBRATE"},
+            priority=4,
+        )
+        queued += 1
+    await session.commit()
+    return queued

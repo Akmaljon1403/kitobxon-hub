@@ -44,6 +44,7 @@ export interface Me {
   group_name: string | null
   status: UserStatus
   registered_at: string | null
+  graduated?: boolean
   is_admin: boolean
   roles: string[]
   max_course: number
@@ -462,6 +463,71 @@ export interface Referrals {
   points: number
   premium_days: number
   monthly_limit: number
+}
+
+export interface ReferralImpact {
+  invited: number
+  came_to_events: number
+  active: number
+  friends_points: number
+  friends_books: number
+  friends_visits: number
+  friends_tests: number
+  earned_points: number
+  earned_premium_days: number
+}
+
+export interface InvitedFriend {
+  name: string
+  joined_at: string | null
+  came_to_event: boolean
+  active: boolean
+  points: number | null
+  books: number | null
+  visits: number | null
+}
+
+export interface InviterRow {
+  place: number
+  name: string
+  friends: number
+  me: boolean
+}
+
+export interface ReferralOverview extends Referrals {
+  impact: ReferralImpact
+  friend_details: 'FULL' | 'NAMES' | 'COUNT'
+  friends: InvitedFriend[]
+  leaderboard: { rule: string; items: InviterRow[]; my_place: number | null; my_friends: number } | null
+}
+
+export interface ContestRow {
+  place: number
+  name: string
+  friends: number | null
+  winner: boolean
+  me: boolean
+}
+
+export interface MemberContest {
+  id: string
+  title: string
+  description: string | null
+  starts_at: string
+  ends_at: string
+  state: 'upcoming' | 'running' | 'finished'
+  rule: string
+  min_friends: number
+  winners_count: number
+  prizes: { place: number; text: string }[]
+  participation_points: number
+  eligible: boolean
+  leaderboard: ContestRow[]
+  leaderboard_hidden: boolean
+  show_counts: boolean
+  my_friends: number
+  my_place: number | null
+  participants: number
 }
 
 export interface TestStandings {

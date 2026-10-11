@@ -626,9 +626,11 @@ async def broadcast(
     buttons: str | None = None,
     dry_run: bool = False,
     only_to: Any | None = None,
+    scheduled_at: datetime | None = None,
 ) -> int:
     """An admin's message to all active members or a part of them. Returns the recipient count.
-    ``only_to``: a test send to the admin themself (to see it in the bot before everybody)."""
+    ``only_to``: a test send to the admin themself (to see it in the bot before everybody);
+    ``scheduled_at``: a planned announcement (it can be cancelled until then)."""
     conditions = []
     if faculty_id is not None:
         conditions.append(User.faculty_id == faculty_id)
@@ -663,6 +665,7 @@ async def broadcast(
         members=members,
         payload=payload,
         priority=3,
+        scheduled_at=scheduled_at,
     )
     record_audit(
         session,
@@ -673,6 +676,8 @@ async def broadcast(
         after={
             "message": message.strip()[:1000],
             "recipients": count,
+            "broadcast_id": str(broadcast_id),
+            "scheduled_at": scheduled_at.isoformat() if scheduled_at else None,
             "faculty_id": str(faculty_id) if faculty_id else None,
             "course": course,
             "group_name": group_name,
@@ -680,3 +685,40 @@ async def broadcast(
     )
     await session.commit()
     return count
+
+
+async def cancel_broadcast(session: AsyncSession, *, actor_id: Any, broadcast_id: uuid.UUID) -> int:
+    """Stop a planned announcement: the messages not sent yet are cancelled. Returns how many."""
+    result = await session.execute(
+        update(Notification)
+        .where(
+            Notification.dedup_key.like(f"broadcast:{broadcast_id}:%"),
+            Notification.status == NotificationStatus.PENDING,
+        )
+        .values(status=NotificationStatus.CANCELLED, last_error="cancelled by an administrator")
+    )
+    cancelled = int(result.rowcount or 0)
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="NOTIFICATION_BROADCAST_CANCEL",
+        entity_type="notification",
+        entity_id=str(broadcast_id),
+        after={"cancelled": cancelled},
+    )
+    await session.commit()
+    return cancelled
+
+
+async def broadcast_pending(session: AsyncSession, broadcast_id: str) -> int:
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Notification)
+            .where(
+                Notification.dedup_key.like(f"broadcast:{broadcast_id}:%"),
+                Notification.status == NotificationStatus.PENDING,
+            )
+        )
+        or 0
+    )

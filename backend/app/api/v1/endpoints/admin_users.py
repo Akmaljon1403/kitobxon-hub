@@ -42,6 +42,7 @@ def _out(user: User, faculty_name: str | None, current: CurrentUser) -> AdminUse
         left_at=user.left_at,
         left_reason=user.left_reason,
         restore_requested_at=user.restore_requested_at,
+        graduated_at=user.graduated_at,
     )
 
 

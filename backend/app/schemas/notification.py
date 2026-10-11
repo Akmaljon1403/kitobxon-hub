@@ -16,6 +16,7 @@ class BroadcastIn(BaseModel):
     buttons: str | None = Field(default=None, max_length=2000, description="Lines «Text | https://link»")
     dry_run: bool = Field(default=False, description="Only count the recipients")
     test: bool = Field(default=False, description="Send only to me, to see it in the bot first")
+    scheduled_at: datetime | None = Field(default=None, description="Send later (up to 90 days ahead)")
 
 
 class BroadcastPreviewOut(BaseModel):
@@ -35,6 +36,9 @@ class BroadcastHistoryItem(BaseModel):
     message: str
     recipients: int
     filters: dict[str, Any]
+    broadcast_id: str | None = None
+    scheduled_at: datetime | None = None
+    waiting: int = Field(default=0, description="Planned messages not sent yet (can be cancelled)")
 
 
 class NotificationSummaryOut(BaseModel):
