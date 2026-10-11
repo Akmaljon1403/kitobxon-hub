@@ -1,4 +1,4 @@
-"""«Do'stingizni taklif qiling»: every member has a personal link to the bot.
+"""«🎁 Sizning foydangiz»: every member has a personal link to the bot (always open, never switched off).
 
 A friend who registers through the link is remembered (``users.referred_by``). When the friend
 comes to a club event for the first time (attendance verified by the QR code or an admin), the
@@ -20,7 +20,6 @@ from sqlalchemy import Select, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.core.config import get_settings
 from app.models import (
     AttendanceRecord,
     BookRead,
@@ -56,15 +55,12 @@ def parse(payload: str | None) -> int | None:
     return int(match.group(1)) if match else None
 
 
-def link(user: User) -> str | None:
-    username = get_settings().bot_username
+async def link(user: User, bot: Any = None) -> str | None:
+    """The member's personal invitation link (None only while the bot's username is unknown)."""
+    from app.bot.setup import resolve_bot_username
+
+    username = await resolve_bot_username(bot)
     return f"https://t.me/{username}?start={PREFIX}{user.member_number}" if username else None
-
-
-async def _on(session: AsyncSession, user: User) -> bool:
-    from app.services import features
-
-    return await features.allowed(session, user, "referrals") == "on"
 
 
 async def terms(session: AsyncSession) -> dict[str, int]:
@@ -93,7 +89,7 @@ async def attach(session: AsyncSession, user: User, member_number: int | None) -
             User.deleted_at.is_(None),
         )
     )
-    if referrer is None or referrer.id == user.id or not await _on(session, referrer):
+    if referrer is None or referrer.id == user.id:
         return False
     user.referred_by = referrer.id
     values = await terms(session)
@@ -108,7 +104,7 @@ async def attach(session: AsyncSession, user: User, member_number: int | None) -
         type_=NotificationType.SYSTEM,
         text=await render(session, NotificationType.SYSTEM, message=message) or message,
         dedup_key=f"referral:joined:{user.id}",
-        payload={"buttons": [{"text": "👥 Takliflarim", "app_route": "profile"}]},
+        payload={"buttons": [{"text": "🎁 Sizning foydangiz", "app_route": "invite"}]},
         priority=4,
     )
     return True
@@ -145,12 +141,7 @@ async def _reward(session: AsyncSession, user_id: uuid.UUID) -> bool:
         return False
     now = datetime.now(UTC)
     referrer = await session.get(User, user.referred_by)
-    if (
-        referrer is None
-        or referrer.status != UserStatus.ACTIVE
-        or referrer.deleted_at is not None
-        or not await _on(session, referrer)
-    ):
+    if referrer is None or referrer.status != UserStatus.ACTIVE or referrer.deleted_at is not None:
         user.referral_rewarded_at = now  # nobody to thank: this invitation is closed
         return False
     values = await terms(session)
@@ -200,13 +191,13 @@ async def _reward(session: AsyncSession, user_id: uuid.UUID) -> bool:
         type_=NotificationType.SYSTEM,
         text=await render(session, NotificationType.SYSTEM, message=message) or message,
         dedup_key=f"referral:rewarded:{user.id}",
-        payload=celebrate({"buttons": [{"text": "👥 Takliflarim", "app_route": "profile"}]}),
+        payload=celebrate({"buttons": [{"text": "🎁 Sizning foydangiz", "app_route": "invite"}]}),
         priority=3,
     )
     return True
 
 
-async def summary(session: AsyncSession, user: User) -> dict[str, Any]:
+async def summary(session: AsyncSession, user: User, bot: Any = None) -> dict[str, Any]:
     """The member's own invitations (for the Mini App and the bot)."""
     invited = int(
         await session.scalar(
@@ -224,8 +215,8 @@ async def summary(session: AsyncSession, user: User) -> dict[str, Any]:
     )
     values = await terms(session)
     return {
-        "enabled": await _on(session, user),
-        "link": link(user),
+        "enabled": True,  # always open
+        "link": await link(user, bot),
         "invited": invited,
         "rewarded": rewarded,
         **values,
@@ -429,14 +420,14 @@ async def leaderboard(session: AsyncSession, user: User, size: int, rule: str) -
     }
 
 
-async def overview(session: AsyncSession, user: User) -> dict[str, Any]:
-    """Everything for the «👥 Do'stlar» page: the link, the reward terms, the impact, the friends and
-    the all-time table (each part as the settings allow)."""
+async def overview(session: AsyncSession, user: User, bot: Any = None) -> dict[str, Any]:
+    """Everything for the «🎁 Sizning foydangiz» page: the link, the reward terms, the impact, the friends
+    and the all-time table (each part as the settings allow)."""
     details = str(await get_setting(session, "referral.friend_details"))
     size = int(await get_setting(session, "referral.leaderboard_size"))
     rule = str(await get_setting(session, "referral.leaderboard_rule"))
     return {
-        **await summary(session, user),
+        **await summary(session, user, bot),
         "impact": await impact(session, user),
         "friend_details": details,
         "friends": await friends(session, user, details),

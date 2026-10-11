@@ -155,6 +155,7 @@ async def configure_telegram(runtime: BotRuntime, *, with_webhook: bool) -> None
     bot = runtime.bot
     me = await bot.me()
     runtime.username = me.username
+    remember_username(me.username)
     await _apply_profile(bot, settings.webapp_url)
     if with_webhook:
         if not settings.base_url:
@@ -182,9 +183,40 @@ async def _apply_profile(bot: Bot, webapp_url: str | None) -> None:
         logger.exception("The bot profile could not be applied; the bot keeps working")
 
 
+_detected_username: str | None = None  # learnt from Telegram in this process (webhook, polling or worker)
+
+
+def remember_username(username: str | None) -> None:
+    global _detected_username
+    if username:
+        _detected_username = username
+
+
 def bot_username() -> str | None:
-    """BOT_USERNAME if configured, otherwise the username detected from Telegram on start-up."""
+    """BOT_USERNAME if configured, otherwise the username detected from Telegram in this process."""
     configured = get_settings().bot_username
     if configured:
         return configured
-    return _runtime.username if _runtime is not None else None
+    if _runtime is not None and _runtime.username:
+        return _runtime.username
+    return _detected_username
+
+
+async def resolve_bot_username(bot: Bot | None = None) -> str | None:
+    """The bot's username, asking Telegram (getMe) once when it is neither configured nor known yet:
+    links such as the personal invitation link must work without BOT_USERNAME in the environment."""
+    known = bot_username()
+    if known:
+        return known
+    if bot is None:
+        runtime = get_bot_runtime()
+        bot = runtime.bot if runtime is not None else None
+    if bot is None:
+        return None
+    try:
+        username = (await bot.me()).username
+    except Exception:
+        logger.warning("Could not ask Telegram for the bot's username", exc_info=True)
+        return None
+    remember_username(username)
+    return username

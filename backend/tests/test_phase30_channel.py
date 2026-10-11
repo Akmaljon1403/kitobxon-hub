@@ -19,6 +19,7 @@ from PIL import Image
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bot import texts
 from app.core.config import get_settings
 from app.core.database import get_session_factory
 from app.models import BookQuote, ChannelPost, ChannelSticker, Notification, ScoreTransaction, User
@@ -343,7 +344,7 @@ async def test_admin_saves_stickers_in_the_bot(db: AsyncSession) -> None:
     await send_sticker("one")
     assert "allaqachon saqlangan" in harness.last_text()
     await harness.send("salom")
-    assert harness.last_text() == "Stiker yuboring yoki /tayyor deb yozing."
+    assert harness.last_text() == texts.STICKER_ONLY
     await harness.send("/tayyor")
     assert "Tayyor" in harness.last_text()
     saved = list(await db.scalars(select(ChannelSticker)))

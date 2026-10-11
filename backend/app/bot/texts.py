@@ -16,6 +16,7 @@ BTN_PASSPORT = "🪪 Pasportim"
 BTN_ACHIEVEMENTS = "🏅 Yutuqlar"
 BTN_SETTINGS = "⚙️ Sozlamalar"
 BTN_HELP = "💬 Yordam"
+BTN_BENEFIT = "🎁 Sizning foydangiz"
 BTN_ADMIN = "🛠 Boshqaruv"
 
 # Buttons of the previous menu: members keep the old keyboard until the bot sends a new one.
@@ -24,6 +25,7 @@ LEGACY_BUTTONS = {
     "🔔 Bildirishnomalar": BTN_SETTINGS,
     "ℹ️ Yordam": BTN_HELP,
 }
+LEGACY_INVITE_BUTTONS = {"👥 Do'stni taklif qilish", "👥 Do'stlar"}
 
 # ---- Inline buttons ----
 BTN_SHARE_PHONE = "📱 Raqamni yuborish"
@@ -441,6 +443,9 @@ CARD_LINE_APPROVED = "✅ Tasdiqlandi — {admin}, {time}"
 CARD_LINE_REJECTED = "❌ Rad etildi — {admin}, {time}. Sabab: {reason}"
 CARD_LINE_UNDONE = "↩️ Qaytarildi — {admin}, {time}: qayta ko'rib chiqing"
 CARD_LINE_SENT = "⭐ Stars yuborildi — {admin}, {time}"
+SUPPORT_PAYMENT_SUPER_ONLY = "To'lov bo'yicha savollarga faqat bosh admin javob beradi."
+CARD_LINE_STARS_ORDERED = "⭐ Yuborish topshirildi: {senders} (ko'rsatma ularga shaxsiy xabarda)"
+STARS_SENDER_ONLY = "Bu tugma bosh admin va «⭐ Stars yuborish» huquqi berilgan adminlar uchun."
 BTN_UNDO = "↩️ Qaytarish"
 BTN_VIEW_RECEIPT = "🧾 Chekni ko'rish"
 BTN_REJECT_OTHER = "✍️ Boshqa sabab"
@@ -471,46 +476,91 @@ CHANNEL_POST_EDITED = "✅ Matn yangilandi — post kanalga joylanmoqda."
 CHANNEL_POST_EDIT_KEPT = "Matn o'zgarmadi: post 30 daqiqadan keyin avvalgi holida chiqadi."
 CHANNEL_POST_TEXT_ONLY = "Iltimos, post matnini oddiy xabar qilib yuboring yoki /cancel"
 STICKER_DUPLICATE = "Bu stiker allaqachon saqlangan (jami {total} ta). Boshqasini yuboring yoki /tayyor"
-STICKER_ONLY = "Stiker yuboring yoki /tayyor deb yozing."
+STICKER_ONLY = "Stiker (yoki premium emojili xabar) yuboring yoki /tayyor deb yozing."
 EMOJI_ASK = (
     "✨ <b>Premium emojilar</b>\n\n"
     "Bot xabarlaridagi oddiy emojilar o'rniga klubning premium emojilari chiqadi (masalan «Salom ✋» dagi ✋). "
     "Menga premium emojilarni yuboring:\n"
     "• shunchaki premium emoji — u o'zining oddiy ko'rinishi o'rniga ishlatiladi;\n"
     "• yoki juftlik: <code>✋ =</code> [premium emoji] — aynan shu oddiy emoji o'rniga.\n"
-    "Bir xabarda bir nechtasini yuborish mumkin. Tugatish: /tayyor\n\n"
-    "Hozir: {count} ta.{items}\n\n"
-    "<i>Telegram premium emojini faqat Fragment'da qo'shimcha username olingan botlarga ruxsat beradi. "
-    "Ruxsat bo'lmasa, bot o'zi oddiy emojidan foydalanadi — xabarlar baribir yetib boradi.</i>"
+    "Bir xabarda bir nechtasini yuborish mumkin. Stiker yuborsangiz — u stikerlar ro'yxatiga qo'shiladi. "
+    "Tugatish: /tayyor\n\n"
+    "Saqlangan: <b>{count}</b> ta{items}\n\n{status}"
 )
-EMOJI_SAVED = "✅ Saqlandi: {pairs}\nJami: {total} ta. Yana yuboring yoki /tayyor."
-EMOJI_NONE_FOUND = "Bu xabarda premium emoji topilmadi. Premium emojini yuboring (Telegram Premium kerak) yoki /tayyor."
-EMOJI_DONE = "✨ Tayyor! Endi bot xabarlaridagi shu emojilar premium ko'rinishda chiqadi."
+EMOJI_SAVED = "✅ Saqlandi: {emoji} ({count} ta). Jami: {total} ta. Yana yuboring yoki /tayyor."
+EMOJI_SAMPLE = "🧪 Namuna — a'zolar bot xabarlarida shunday ko'radi:\n{sample}"
+EMOJI_STATUS_WORKING = (
+    "✅ <b>Holat:</b> Telegram premium emojini qabul qilyapti — a'zolar xabarlarda premium emojini ko'radi."
+)
+EMOJI_STATUS_UNKNOWN = "ℹ️ <b>Holat:</b> hali tekshirilmagan — «🧪 Tekshirish» tugmasini bosing."
+EMOJI_STATUS_GROUP = (
+    "ℹ️ <b>Holat:</b> kanal yoki guruhda Telegram premium emojini rad etdi — u yerda oddiy emojilar. "
+    "Kanallarda premium emoji faqat Fragment username bilan ishlaydi; shaxsiy xabarlar uchun «🧪 Tekshirish»ni bosing."
+)
+EMOJI_STATUS_REFUSED = (
+    "⚠️ <b>Holat: Telegram premium emojini rad etdi</b> — shuning uchun xabarlar oddiy emoji bilan ketyapti.\n\n"
+    "<b>Sabab:</b> Telegram qoidasiga ko'ra bot premium emojini faqat <b>bot egasida</b> (botni @BotFather'da yaratgan "
+    "akkauntda) Telegram Premium bo'lsa ishlata oladi. Emojilarni kiritgan adminning Premium'i hisobga olinmaydi.\n\n"
+    "<b>Yechim</b> (bittasi yetarli):\n"
+    "1) bot egasining akkauntiga Telegram Premium olish — eng oson yo'l;\n"
+    "2) @BotFather → botingiz → Bot Settings → Transfer Ownership: botni Premium'i bor ishonchli adminga o'tkazish "
+    "(u botning to'liq egasi bo'ladi — ehtiyot bo'ling);\n"
+    "3) Fragment'da botga qo'shimcha username sotib olish (qimmat, lekin kanallarda ham ishlaydi).\n\n"
+    "Emojilar saqlanib turadi: ruxsat paydo bo'lishi bilan bot ularni o'zi ishlata boshlaydi (har soatda qayta "
+    "urinadi yoki «🧪 Tekshirish»ni bosing)."
+)
+EMOJI_NONE_FOUND = (
+    "Bu xabarda premium emoji topilmadi. Premium emojini oddiy xabar qilib yuboring (Telegram Premium kerak), "
+    "stiker yuboring yoki /tayyor."
+)
+EMOJI_DONE = "✨ Tayyor! Holatini istalgan vaqtda /emoji orqali ko'rasiz."
 EMOJI_CLEARED = "🗑 Barcha premium emojilar o'chirildi — xabarlarda oddiy emojilar."
-EMOJI_PAUSED = (
-    "\n\n⚠️ Telegram hozir botning premium emojilarini qabul qilmadi (Fragment username kerak) — "
-    "vaqtincha oddiy emojilar ishlatilmoqda."
+BTN_EMOJI_TEST = "🧪 Tekshirish"
+DECOR_NO_RIGHT = (
+    "Stiker va premium emojilarni qo'shish uchun «A'zolarga xabar yuborish» yoki «Tizim sozlamalari» huquqi kerak. "
+    "Bosh admin buni Admin panel → 👥 Adminlar bo'limida beradi."
 )
+DECOR_OFFER_STICKER = "🎨 Bu stikerni bot va kanal stikerlari ro'yxatiga qo'shaymi?"
+DECOR_OFFER_EMOJI = "✨ Bu xabarda {count} ta premium emoji bor. Bot xabarlarida ishlatish uchun saqlaymi?"
+BTN_DECOR_SAVE = "✅ Ha, saqlash"
+BTN_DECOR_SKIP = "Yo'q"
+DECOR_SKIPPED = "Mayli, saqlanmadi."
+DECOR_STICKER_ADDED = "✅ Stiker saqlandi ({mood}). Jami stikerlar: {total} ta."
+DECOR_STICKER_KNOWN = "Bu stiker allaqachon saqlangan (jami {total} ta)."
+DECOR_EMOJI_ADDED = "✅ Premium emoji saqlandi: {emoji}. Jami: {total} ta."
+DECOR_EXPIRED = "Bu taklif eskirgan — stikerni yoki emojini qaytadan yuboring."
+STICKER_FROM_EMOJI = "🎨 Bu stiker — stikerlar ro'yxatiga qo'shildi ({mood}). Jami stikerlar: {total} ta."
+EMOJI_FROM_STICKER_MODE = "✨ Xabardagi premium emojilar ham saqlandi: {emoji}. Jami premium emojilar: {total} ta."
 BTN_EMOJI_CLEAR = "🗑 Hammasini o'chirish"
 STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sahifasida ko'rasiz va keraksizini o'chirasiz."
 
 # ---- Portfolio ----
 BTN_PORTFOLIO = "🗂 Portfolio (PDF)"
-BTN_INVITE = "👥 Do'stni taklif qilish"
+BTN_INVITE = "🎁 Sizning foydangiz"
 BTN_SHARE_INVITE = "📤 Do'stlarga yuborish"
 INVITE = (
-    "👥 <b>Do'stingizni kitobxonlar klubiga taklif qiling!</b>\n\n"
-    "Shaxsiy havolangiz:\n{link}\n\n"
-    "Do'stingiz shu havola orqali ro'yxatdan o'tib, birinchi tadbirga kelsa — sizga {reward}.{limit}\n\n"
-    "Taklif qilganlaringiz: <b>{invited}</b> · mukofot olingan: <b>{rewarded}</b>"
+    "🎁 <b>Sizning foydangiz</b>\n\n"
+    "🔗 Shaxsiy taklif havolangiz:\n{link}\n\n"
+    "Do'stingiz shu havola orqali ro'yxatdan o'tib, birinchi tadbirga kelsa — sizga {reward}.{limit}"
 )
-INVITE_IMPACT = (
-    "\n\n💚 <b>Sizning foydangiz</b>\n"
-    "Olib kelgan do'stlaringiz {came} marta tadbirga keldi, {books} ta kitob o'qidi va jami "
-    "<b>{points}</b> ball to'pladi. Sizga taklif uchun: +{earned} ball."
+INVITE_SUMMARY = (
+    "\n\n📊 <b>Qisqacha</b>\n"
+    "👥 Taklif qilganlaringiz: <b>{invited}</b> · tadbirga kelgan: <b>{came}</b>\n"
+    "⭐ Ular to'plagan jami ball: <b>{points}</b>\n"
+    "📚 Ular o'qigan kitoblar: <b>{books}</b>\n"
+    "🎁 Sizga taklif uchun: <b>+{earned} ball</b>{premium}"
 )
-INVITE_PLACE = "\n🏅 Eng faol taklif qiluvchilar orasida: <b>{place}-o'rin</b>"
-BTN_INVITE_DETAILS = "💚 Batafsil: do'stlarim va tanlovlar"
+INVITE_PREMIUM_EARNED = " va <b>{days} kun 💎 Premium</b>"
+INVITE_NONE_YET = "\n\n🌱 Hali hech kimni taklif qilmagansiz — havolani do'stlaringizga yuboring!"
+INVITE_FRIENDS = "\n\n👥 <b>Do'stlaringiz</b>\n{rows}"
+INVITE_FRIEND_POINTS = "{number}. {name} — ⭐ {points} ball{mark}"
+INVITE_FRIEND_NAME = "{number}. {name}{mark}"
+INVITE_FRIEND_CAME = " ✅"
+INVITE_FRIEND_WAITING = " ⏳"
+INVITE_FRIENDS_MORE = "\n… va yana {count} ta — barchasi ilovada"
+INVITE_FRIENDS_LEGEND = "\n<i>✅ tadbirga keldi · ⏳ hali kelmadi</i>"
+INVITE_PLACE = "\n\n🏅 Eng faol taklif qiluvchilar orasida: <b>{place}-o'rin</b>"
+BTN_INVITE_DETAILS = "🎁 Batafsil: do'stlarim va tanlovlar"
 INVITE_LIMIT = " (oyiga {limit} tagacha)"
 INVITE_SHARE_TEXT = "Kitobxonlar klubiga qo'shil! Tadbirlar, testlar, sertifikatlar va sovg'alar 📚"
 INVITE_UNAVAILABLE = "Taklif havolasi hozircha tayyor emas. Birozdan keyin urinib ko'ring."

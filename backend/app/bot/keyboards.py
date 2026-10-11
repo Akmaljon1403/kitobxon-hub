@@ -32,7 +32,8 @@ MEMBER_ROWS = (
     (texts.BTN_ATTENDANCE, texts.BTN_TESTS),
     (texts.BTN_RESULTS, texts.BTN_RANKING),
     (texts.BTN_PASSPORT, texts.BTN_ACHIEVEMENTS),
-    (texts.BTN_SETTINGS, texts.BTN_HELP),
+    (texts.BTN_BENEFIT, texts.BTN_SETTINGS),
+    (texts.BTN_HELP,),
 )
 MENU_BUTTONS = frozenset(label for row in MEMBER_ROWS for label in row) | {texts.BTN_ADMIN, texts.BTN_PREMIUM}
 
@@ -43,10 +44,8 @@ def main_menu(
     """``hidden``: sections switched off by the super admin (the others close up two per row);
     ``premium``: the Premium store is open, so its button is shown."""
     labels = [label for row in MEMBER_ROWS for label in row if label not in hidden]
+    labels += [label for label, shown in ((texts.BTN_PREMIUM, premium), (texts.BTN_ADMIN, is_admin)) if shown]
     rows = [labels[index : index + 2] for index in range(0, len(labels), 2)]
-    extra = [label for label, shown in ((texts.BTN_PREMIUM, premium), (texts.BTN_ADMIN, is_admin)) if shown]
-    if extra:
-        rows.append(extra)
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text=label) for label in row] for row in rows],
         resize_keyboard=True,
@@ -326,3 +325,20 @@ def admin_login(url: str) -> InlineKeyboardMarkup:
 
 def write_again() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✍️ Yana yozish", callback_data="sup:new")]])
+
+
+def emoji_tools(has_any: bool) -> InlineKeyboardMarkup | None:
+    """/emoji: check that Telegram shows the premium emoji, or remove them all."""
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_EMOJI_TEST, callback_data="emj:test")] if has_any else [],
+        [InlineKeyboardButton(text=texts.BTN_EMOJI_CLEAR, callback_data="emj:clear")] if has_any else [],
+    )
+
+
+def decor_offer() -> InlineKeyboardMarkup | None:
+    return inline(
+        [
+            InlineKeyboardButton(text=texts.BTN_DECOR_SAVE, callback_data="dec:save"),
+            InlineKeyboardButton(text=texts.BTN_DECOR_SKIP, callback_data="dec:skip"),
+        ]
+    )

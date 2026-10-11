@@ -4,8 +4,8 @@ Admins save stickers with /stiker in the bot (any sticker, Premium ones included
 mood from its emoji, so a celebrating sticker follows a win and a book-reading one follows a
 reading reminder. Wins also get Telegram's 🎉 message effect (private chats only).
 
-Note: custom (Premium) emoji *inside the text* need a username bought on Fragment for the bot,
-so the bot uses stickers and message effects, which every bot may send.
+Stickers (Premium ones included) and message effects work for every bot, unlike premium emoji
+*inside the text*, which need Telegram Premium on the bot owner's account (see custom_emoji).
 """
 
 from __future__ import annotations

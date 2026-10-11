@@ -250,40 +250,69 @@ async def portfolio_file(event: Message | CallbackQuery, db: AsyncSession, membe
         await message.answer(texts.FILE_FAILED)
 
 
-@router.message(Command("taklif"))
+BOT_FRIENDS_LISTED = 10
+
+
+def _friend_rows(info: dict) -> str:
+    """The invited friends, briefly: name, points (when the club shows them) and whether they came."""
+    listed = info["friends"][:BOT_FRIENDS_LISTED]
+    if not listed:
+        return ""
+    rows = []
+    for number, friend in enumerate(listed, start=1):
+        mark = texts.INVITE_FRIEND_CAME if friend["came_to_event"] else texts.INVITE_FRIEND_WAITING
+        name = html.escape(friend["name"])
+        if friend.get("points") is not None:
+            rows.append(texts.INVITE_FRIEND_POINTS.format(number=number, name=name, points=friend["points"], mark=mark))
+        else:
+            rows.append(texts.INVITE_FRIEND_NAME.format(number=number, name=name, mark=mark))
+    text = texts.INVITE_FRIENDS.format(rows="\n".join(rows))
+    more = info["impact"]["invited"] - len(listed)
+    if more > 0:
+        text += texts.INVITE_FRIENDS_MORE.format(count=more)
+    return text + texts.INVITE_FRIENDS_LEGEND
+
+
+@router.message(Command("taklif", "referal"))
+@router.message(F.text == texts.BTN_BENEFIT)
+@router.message(F.text.in_(texts.LEGACY_INVITE_BUTTONS))
 @router.callback_query(F.data == "ref:open")
-async def invite_friends(event: Message | CallbackQuery, db: AsyncSession, member: User) -> None:
-    """A personal link to invite friends; the reward comes when the friend attends an event."""
-    if await access.gate(event, db, member, "referrals"):
-        return
+async def invite_friends(event: Message | CallbackQuery, state: FSMContext, db: AsyncSession, member: User) -> None:
+    """«🎁 Sizning foydangiz» (always open): the personal link, the reward terms, and briefly what the
+    invited friends did — who they are, their points and the member's own reward."""
     message = event.message if isinstance(event, CallbackQuery) else event
     if isinstance(event, CallbackQuery):
         await event.answer()
+    else:
+        await state.clear()
     if not isinstance(message, Message):
         return
     from app.services import contests
 
-    info = await referrals.overview(db, member)
+    info = await referrals.overview(db, member, message.bot)
     if not info["link"]:
         await message.answer(texts.INVITE_UNAVAILABLE)
         return
     share = "https://t.me/share/url?" + urlencode({"url": info["link"], "text": texts.INVITE_SHARE_TEXT})
-    reward = referrals.reward_text(info)
     text = texts.INVITE.format(
         link=info["link"],
-        reward=reward,
+        reward=referrals.reward_text(info),
         limit=texts.INVITE_LIMIT.format(limit=info["monthly_limit"]) if info["monthly_limit"] else "",
-        invited=info["invited"],
-        rewarded=info["rewarded"],
     )
     impact = info["impact"]
     if impact["invited"]:
-        text += texts.INVITE_IMPACT.format(
-            came=impact["friends_visits"],
-            books=impact["friends_books"],
+        premium = impact["earned_premium_days"]
+        text += texts.INVITE_SUMMARY.format(
+            invited=impact["invited"],
+            came=impact["came_to_events"],
             points=impact["friends_points"],
+            books=impact["friends_books"],
             earned=impact["earned_points"],
+            premium=texts.INVITE_PREMIUM_EARNED.format(days=premium) if premium else "",
         )
+        text += _friend_rows(info)
+    else:
+        text += texts.INVITE_NONE_YET
     if info["leaderboard"] and info["leaderboard"]["my_place"]:
         text += texts.INVITE_PLACE.format(place=info["leaderboard"]["my_place"])
     contest = await contests.running_line(db, member)

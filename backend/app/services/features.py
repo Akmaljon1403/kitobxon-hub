@@ -99,15 +99,6 @@ FEATURES: tuple[Feature, ...] = (
         "profile",
     ),
     Feature(
-        "referrals",
-        "👥 Do'stlarni taklif qilish",
-        "shaxsiy havolangiz orqali do'stingizni taklif qiling — u birinchi tadbirga kelsa, "
-        "sizga ball va Premium kunlar",
-        FeatureMode.ALL,
-        "profile",
-        premium_allowed=False,
-    ),
-    Feature(
         "premium",
         "💎 Premium obuna",
         "Premium a'zolik: qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa",

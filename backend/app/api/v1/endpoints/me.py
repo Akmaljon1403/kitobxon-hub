@@ -19,6 +19,7 @@ from app.schemas.user import (
     MeUpdateIn,
     NotificationSettingsIn,
     NotificationSettingsOut,
+    ReferralBriefOut,
     ReferralOverviewOut,
     SubscriptionChannelOut,
     SubscriptionOut,
@@ -119,6 +120,16 @@ async def my_referrals(current: CurrentUserDep, db: DbSession) -> ReferralOvervi
 
 
 @router.get(
+    "/referrals/brief",
+    response_model=ReferralBriefOut,
+    summary="«🎁 Sizning foydangiz» in short: my link, how many friends I invited and their points",
+)
+async def my_referrals_brief(current: CurrentUserDep, db: DbSession) -> ReferralBriefOut:
+    summary = await referrals.summary(db, current.user)
+    return ReferralBriefOut(**summary, impact=await referrals.impact(db, current.user))
+
+
+@router.get(
     "/referral-contests",
     response_model=list[MemberContestOut],
     summary="Referral contests: running, upcoming and recently finished (as the club lets members see them)",
@@ -126,8 +137,6 @@ async def my_referrals(current: CurrentUserDep, db: DbSession) -> ReferralOvervi
 async def my_referral_contests(current: CurrentUserDep, db: DbSession) -> list[MemberContestOut]:
     from app.services import contests
 
-    if not (await referrals.summary(db, current.user))["enabled"]:
-        return []
     return [MemberContestOut(**item) for item in await contests.for_member(db, current.user)]
 
 

@@ -156,10 +156,10 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     SettingDefinition(
         "notifications.stickers",
-        False,
+        True,
         bool,
-        "Tabrik xabarlaridan keyin alohida stiker ham yuborilsin (odatda o'chiq: premium emojilar xabar ichida "
-        "— botda /emoji). 🎉 animatsiya baribir qoladi",
+        "Tabrik va xush kelibsiz xabarlaridan keyin adminlar /stiker bilan saqlagan stikerlardan biri ham "
+        "yuborilsin (stiker saqlanmagan bo'lsa — yuborilmaydi). 🎉 animatsiya baribir qoladi",
     ),
     # ---- Organisation (used in official reports) ----
     SettingDefinition(

@@ -69,25 +69,32 @@ def _to_channel(session: FakeTelegramSession) -> list[SendMessage]:
 async def test_payment_questions_only_in_the_payments_channel(db: AsyncSession, telegram: ChannelSession) -> None:
     member = await create_user(db)
     helper = await create_user(db)
+    boss = await create_user(db)
     await db.commit()
     await grant_role(db, helper, "ADMIN")
     await grant_permissions(db, helper, Perm.SUPPORT_MANAGE)
+    await grant_role(db, boss, "SUPER_ADMIN")
 
-    # Without a payments channel the question goes to the admins in the bot.
+    def count(user_id: Any) -> Any:
+        return db.scalar(select(func.count()).where(Notification.user_id == user_id))
+
+    # Without a payments channel a money question goes to the super admins only (their conversation).
     await support.member_message(db, user=member, text="Chekim tasdiqlanmadi", topic="payment")
     await db.commit()
-    assert await db.scalar(select(func.count()).where(Notification.user_id == helper.id)) == 1
+    assert (await count(boss.id), await count(helper.id)) == (1, 0)
+    question = await db.scalar(select(Notification).where(Notification.user_id == boss.id))
+    assert question.payload["buttons"][0]["callback"].startswith("sup:pay:")
 
     await update_setting(db, key="payments.chat_id", value=str(CHANNEL), actor_id=None)
     await support.member_message(db, user=member, text="Yana bir savol", topic="payment")
     await db.commit()
     posted = _to_channel(telegram)
     assert len(posted) == 1 and "Yana bir savol" in posted[0].text and "To'lov bo'yicha murojaat" in posted[0].text
-    assert await db.scalar(select(func.count()).where(Notification.user_id == helper.id)) == 1  # no new DM
-    # Other questions still go to the admins.
+    assert (await count(boss.id), await count(helper.id)) == (1, 0)  # no new private message
+    # Other questions still go to the admins who answer questions.
     await support.member_message(db, user=member, text="Tadbir qachon?", topic="general")
     await db.commit()
-    assert await db.scalar(select(func.count()).where(Notification.user_id == helper.id)) == 2
+    assert await count(helper.id) == 1
 
 
 async def test_stars_payments_and_the_weekly_summary(db: AsyncSession, telegram: ChannelSession) -> None:

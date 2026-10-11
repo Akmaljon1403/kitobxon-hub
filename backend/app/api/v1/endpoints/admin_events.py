@@ -10,7 +10,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 
 from app.api.deps import CurrentUser, DbSession, require_permissions
-from app.bot.setup import bot_username
+from app.bot.setup import resolve_bot_username
 from app.core.errors import ForbiddenError
 from app.models import Event
 from app.models.enums import EventStatus
@@ -241,7 +241,7 @@ async def close_attendance(event_id: uuid.UUID, current: AttendanceManager, db: 
 async def attendance_token(event_id: uuid.UUID, _: AttendanceManager, db: DbSession) -> AttendanceTokenOut:
     await attendance_service.open_scheduled_sessions(db, event_id=event_id)
     display = await attendance_service.current_display_token(db, event_id)
-    username = bot_username()
+    username = await resolve_bot_username()
     start = f"{attendance_service.QR_PREFIX}{display.token}"
     payload = f"https://t.me/{username}?start={quote(start)}" if username else start
     return AttendanceTokenOut(

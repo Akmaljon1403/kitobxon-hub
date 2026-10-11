@@ -5,14 +5,16 @@ buy them) but do have a local card, so they transfer the price to the club's car
 receipt (a screenshot). The super admin checks it and confirms in the bot or the Admin Panel:
 
 * Premium switches on by itself (a personal discount, if any, lowers the price);
-* Stars: Telegram does not let bots hand out Stars, so after confirming the bot shows the admin
-  the steps to buy the Stars on Fragment for the member's @username (that is why a username is
-  required), then «✅ Yuborildi» tells the member;
+* Stars (for members who have none): Telegram does not let bots hand out Stars. After the super
+  admin confirms, the order goes to the admins given «⭐ Stars yuborish» (STARS_SEND) — or to the
+  super admins when nobody has it — with the steps to buy the Stars on Fragment for the member's
+  @username (that is why a username is required); their «✅ Stars yuborildi» tells the member;
 * a donation is recorded with thanks.
 
 Every receipt goes to the payments chat (a private group or channel set by the super admin) with
-the decision buttons, or — when no chat is set — to the super admins in the bot. A decision taken by
-mistake can be undone for two days («↩️ Qaytarish»).
+the decision buttons, or — when no chat is set — to the super admins in the bot. Every step after
+that (confirmed, rejected, undone, Stars ordered, Stars sent) is written in the payments chat too,
+wherever it was taken. A decision taken by mistake can be undone for two days («↩️ Qaytarish»).
 
 Nothing is charged by the bot: it only records.
 """
@@ -295,6 +297,101 @@ async def _tell_admins(session: AsyncSession, payment: CardPayment, user: User, 
     await session.commit()
 
 
+# ---------------------------------------------------------------------------- the payments chat and Stars orders
+
+
+def _e(value: str) -> str:
+    import html
+
+    return html.escape(value, quote=False)
+
+
+async def _what(session: AsyncSession, payment: CardPayment) -> str:
+    if payment.kind == PaymentKind.PREMIUM:
+        plan = await session.get(PremiumPlan, payment.plan_id) if payment.plan_id else None
+        return f"💎 Premium «{_e(plan.title if plan else '—')}»"
+    if payment.kind == PaymentKind.STARS:
+        return f"⭐ {payment.stars} Telegram Stars"
+    return "❤️ Hissa"
+
+
+async def _name(session: AsyncSession, user_id: uuid.UUID | None) -> str:
+    user = await session.get(User, user_id) if user_id else None
+    return _e(f"{user.first_name} {user.last_name}".strip()) if user else "—"
+
+
+async def stars_sender_ids(session: AsyncSession) -> list[uuid.UUID]:
+    """Who gifts the Stars of a confirmed order: the admins given «⭐ Stars yuborish», or — when nobody
+    has that right — the super admins themselves."""
+    from app.security.permissions import Perm
+    from app.services.rbac import admins_with_permission, super_admins
+
+    holders = set(await session.scalars(admins_with_permission(Perm.STARS_SEND)))
+    bosses = set(await session.scalars(super_admins()))
+    return sorted(holders - bosses) or sorted(bosses)
+
+
+async def stars_senders_text(session: AsyncSession) -> str:
+    names = [await _name(session, user_id) for user_id in await stars_sender_ids(session)]
+    return ", ".join(names) or "—"
+
+
+async def chat_line(session: AsyncSession, payment: CardPayment, headline: str, *details: str) -> None:
+    """One step of a payment, written in the payments chat (when one is set)."""
+    from app.services import payments_chat as chat_service
+
+    user = await session.get(User, payment.user_id)
+    who = await chat_service._who(session, user) if user else ""
+    parts = [f"{headline} — {await _what(session, payment)}, <b>{format_uzs(payment.amount_uzs)}</b>", who, *details]
+    await chat_service.post(session, "\n".join(part for part in parts if part))
+
+
+async def _order_stars(session: AsyncSession, payment: CardPayment, boss_id: uuid.UUID) -> None:
+    """The confirmed Stars order goes to whoever gifts the Stars, with the steps and «✅ Stars yuborildi»."""
+    from app.utils.timezone import format_datetime
+
+    user = await session.get(User, payment.user_id)
+    if user is None:
+        return
+    ids = await stars_sender_ids(session)
+    if not ids:
+        return
+    member = _e(f"{user.last_name} {user.first_name}")
+    text = (
+        f"✅ <b>Bosh admin tomonidan tasdiqlandi</b> — {await _name(session, boss_id)}, "
+        f"{format_datetime(payment.decided_at or datetime.now(UTC))}\n"
+        f"<b>{member}</b> ga <b>⭐ {payment.stars} Stars</b> kerak (karta orqali to'langan: "
+        f"{format_uzs(payment.amount_uzs)}).\n\n{gift_steps(payment, user)}"
+    )
+    await enqueue_for_members(
+        session,
+        type_=NotificationType.PREMIUM,
+        text=text,
+        dedup_prefix=f"stars-order:{payment.id}:{_stamp(payment)}",
+        members=select(User.id).where(User.id.in_(ids)),
+        payload={"buttons": [{"text": "✅ Stars yuborildi", "callback": f"cp:sent:{payment.id.hex}"}]},
+        priority=1,
+    )
+
+
+async def _cancel_stars_order(session: AsyncSession, payment: CardPayment) -> None:
+    ids = await stars_sender_ids(session)
+    user = await session.get(User, payment.user_id)
+    if not ids or user is None:
+        return
+    await enqueue_for_members(
+        session,
+        type_=NotificationType.PREMIUM,
+        text=(
+            f"↩️ <b>Stars buyurtmasi qaytarildi</b>: {_e(user.last_name)} {_e(user.first_name)} — "
+            f"⭐ {payment.stars} Stars. Hozircha yubormang: bosh admin chekni qayta ko'rib chiqmoqda."
+        ),
+        dedup_prefix=f"stars-order-undo:{payment.id}:{int(datetime.now(UTC).timestamp())}",
+        members=select(User.id).where(User.id.in_(ids)),
+        priority=1,
+    )
+
+
 async def get(session: AsyncSession, payment_id: uuid.UUID) -> CardPayment:
     payment = await session.get(CardPayment, payment_id)
     if payment is None:
@@ -321,7 +418,11 @@ def _stamp(payment: CardPayment) -> int:
     return int((payment.decided_at or datetime.now(UTC)).timestamp() * 1_000_000)
 
 
-async def approve(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID) -> CardPayment:
+async def approve(
+    session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID, announce: bool = True
+) -> CardPayment:
+    """``announce``: write the decision in the payments chat (False when it was taken there and the
+    receipt message itself shows it)."""
     from app.services.premium import _extend
     from app.utils.timezone import format_date
 
@@ -367,7 +468,14 @@ async def approve(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uui
         session, actor_id=actor_id, action="CARD_PAYMENT_APPROVE", entity_type="card_payment", entity_id=payment.id
     )
     await _member_message(session, payment.user_id, message, f"card-payment:{payment.id}:approved:{_stamp(payment)}")
+    if payment.kind == PaymentKind.STARS:
+        await _order_stars(session, payment, actor_id)
     await session.commit()
+    if announce:
+        details = [f"Qaror: {await _name(session, actor_id)}"]
+        if payment.kind == PaymentKind.STARS:
+            details.append(f"⭐ Yuborish topshirildi: {await stars_senders_text(session)}")
+        await chat_line(session, payment, "✅ <b>Tasdiqlandi</b>", *details)
     return payment
 
 
@@ -390,8 +498,10 @@ def gift_steps(payment: CardPayment, user: User) -> str:
     )
 
 
-async def mark_delivered(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID) -> CardPayment:
-    """The admin gifted the Stars in Telegram: the member is told."""
+async def mark_delivered(
+    session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID, announce: bool = True
+) -> CardPayment:
+    """The admin gifted the Stars in Telegram: the member is told (and the payments chat)."""
     payment = await get(session, payment_id)
     await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"card-payment:{payment.id}"))))
     await session.refresh(payment)
@@ -412,10 +522,15 @@ async def mark_delivered(session: AsyncSession, *, actor_id: uuid.UUID, payment_
         f"card-payment:{payment.id}:delivered",
     )
     await session.commit()
+    if announce:
+        sender = await _name(session, actor_id)
+        await chat_line(session, payment, "⭐ <b>Stars yuborildi</b>", f"Yubordi: {sender} · a'zoga xabar berildi")
     return payment
 
 
-async def reject(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID, reason: str) -> CardPayment:
+async def reject(
+    session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID, reason: str, announce: bool = True
+) -> CardPayment:
     payment = await get(session, payment_id)
     await session.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"card-payment:{payment.id}"))))
     await session.refresh(payment)
@@ -440,10 +555,20 @@ async def reject(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid
         f"card-payment:{payment.id}:rejected:{_stamp(payment)}",
     )
     await session.commit()
+    if announce:
+        await chat_line(
+            session,
+            payment,
+            "❌ <b>Rad etildi</b>",
+            f"Sabab: {_e(payment.reject_reason or '—')}",
+            f"Qaror: {await _name(session, actor_id)}",
+        )
     return payment
 
 
-async def undo(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID) -> CardPayment:
+async def undo(
+    session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.UUID, announce: bool = True
+) -> CardPayment:
     """«↩️ Qaytarish»: a decision taken by mistake goes back to «waiting» (for two days).
     A confirmed Premium is taken back; Stars already gifted cannot be taken back."""
     from app.services.premium import cancel_period
@@ -488,7 +613,12 @@ async def undo(session: AsyncSession, *, actor_id: uuid.UUID, payment_id: uuid.U
         "shu yerda xabar qilamiz.",
         f"card-payment:{payment.id}:undo:{stamp}",
     )
+    if previous == CardPaymentStatus.APPROVED and payment.kind == PaymentKind.STARS:
+        await _cancel_stars_order(session, payment)
     await session.commit()
+    if announce:
+        admin = await _name(session, actor_id)
+        await chat_line(session, payment, "↩️ <b>Qaror qaytarildi</b>", f"{admin} · chek qayta ko'rib chiqiladi")
     return payment
 
 

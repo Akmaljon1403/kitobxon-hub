@@ -168,6 +168,12 @@ class InvitersOut(BaseModel):
     my_friends: int
 
 
+class ReferralBriefOut(ReferralsOut):
+    """The short «🎁 Sizning foydangiz» card on the home and profile pages."""
+
+    impact: ReferralImpactOut
+
+
 class ReferralOverviewOut(ReferralsOut):
     impact: ReferralImpactOut
     friend_details: str = Field(description="FULL, NAMES or COUNT: what the club shows about invited friends")

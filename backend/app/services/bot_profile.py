@@ -47,7 +47,7 @@ MEMBER_COMMANDS = [
     BotCommand(command="start", description="🏠 Bosh menyu"),
     BotCommand(command="davomat", description="✅ Tadbirda davomat qilish"),
     BotCommand(command="pasport", description="🪪 Kitobxon pasportim"),
-    BotCommand(command="taklif", description="🤝 Do'stni klubga taklif qilish"),
+    BotCommand(command="referal", description="🎁 Sizning foydangiz: taklif havolasi va do'stlaringiz"),
     BotCommand(command="premium", description="💎 Premium va klubni qo'llab-quvvatlash"),
     BotCommand(command="help", description="❓ Yordam va adminga yozish"),
     BotCommand(command="paysupport", description="💳 To'lov bo'yicha yordam"),

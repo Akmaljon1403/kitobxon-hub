@@ -16,7 +16,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import texts
-from app.bot.access import gate, has_permission
+from app.bot.access import gate, has_permission, is_super_admin
 from app.bot.filters import ActiveMember, CanWriteToAdmins
 from app.bot.states import SupportCompose, SupportReply
 from app.models import User
@@ -64,20 +64,25 @@ async def member_message_unsupported(message: Message) -> None:
 # ---------------------------------------------------------------------------- administrators
 
 
-@router.callback_query(F.data.startswith("sup:ans:"), ActiveMember())
+@router.callback_query(F.data.startswith("sup:ans:") | F.data.startswith("sup:pay:"), ActiveMember())
 async def start_reply(callback: CallbackQuery, state: FSMContext, db: AsyncSession, member: User) -> None:
-    if not await has_permission(db, member, Perm.SUPPORT_MANAGE):
+    """«✍️ Javob yozish». Payment questions (``sup:pay:``) are answered by the super admins only."""
+    payment = (callback.data or "").startswith("sup:pay:")
+    if payment and not await is_super_admin(db, member):
+        await callback.answer(texts.SUPPORT_PAYMENT_SUPER_ONLY, show_alert=True)
+        return
+    if not payment and not await has_permission(db, member, Perm.SUPPORT_MANAGE):
         await callback.answer(texts.SUPPORT_NO_PERMISSION, show_alert=True)
         return
     try:
-        ticket_id = uuid.UUID((callback.data or "").removeprefix("sup:ans:"))
+        ticket_id = uuid.UUID((callback.data or "")[len("sup:ans:") :])
     except ValueError:
         await callback.answer()
         return
     await support_service.get_ticket(db, ticket_id)
     if isinstance(callback.message, Message) and callback.message.chat.type == "private":
         await state.set_state(SupportReply.waiting)
-        await state.update_data(ticket_id=str(ticket_id))
+        await state.update_data(ticket_id=str(ticket_id), payment=payment)
         await callback.answer()
         await callback.message.answer(texts.SUPPORT_REPLY_ASK)
         return
@@ -93,19 +98,21 @@ async def start_reply(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
         await callback.answer(texts.CARD_DM_FIRST, show_alert=True)
         return
     await private.set_state(SupportReply.waiting)
-    await private.update_data(ticket_id=str(ticket_id))
+    await private.update_data(ticket_id=str(ticket_id), payment=payment)
     await callback.answer("✍️")
 
 
 @router.message(StateFilter(SupportReply.waiting), F.text, ~F.text.startswith("/"), ActiveMember())
 async def admin_reply(message: Message, state: FSMContext, db: AsyncSession, member: User) -> None:
-    if not await has_permission(db, member, Perm.SUPPORT_MANAGE):
-        await state.clear()
-        await message.answer(texts.SUPPORT_NO_PERMISSION)
-        return
     data = await state.get_data()
+    payment = bool(data.get("payment"))
+    allowed = await is_super_admin(db, member) if payment else await has_permission(db, member, Perm.SUPPORT_MANAGE)
+    if not allowed:
+        await state.clear()
+        await message.answer(texts.SUPPORT_PAYMENT_SUPER_ONLY if payment else texts.SUPPORT_NO_PERMISSION)
+        return
     await support_service.admin_reply(
-        db, actor_id=member.id, ticket_id=uuid.UUID(data["ticket_id"]), text=message.text or ""
+        db, actor_id=member.id, ticket_id=uuid.UUID(data["ticket_id"]), text=message.text or "", payment=payment
     )
     await state.clear()
     await message.answer(texts.SUPPORT_REPLY_SENT)

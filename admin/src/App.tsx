@@ -25,6 +25,7 @@ import { ReportEditorPage, ReportsPage } from './pages/ReportsPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { StarsOrdersPage } from './pages/StarsOrdersPage'
 import { SupportPage, SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
@@ -52,6 +53,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   certificates: CertificatesPage,
   features: FeaturesPage,
   premium: PremiumPage,
+  stars: StarsOrdersPage,
   analytics: AnalyticsPage,
   faculties: FacultiesPage,
   settings: SettingsPage,

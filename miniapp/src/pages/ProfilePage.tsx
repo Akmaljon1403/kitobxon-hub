@@ -13,6 +13,7 @@ import { useAuth } from '../store/auth'
 import type { Faculty, Me, NotificationSettings } from '../types/api'
 import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
+import { BenefitCard } from '../components/BenefitCard'
 import { haptic } from '../utils/telegram'
 
 const NOTIFICATION_LABELS: Record<keyof NotificationSettings, string> = {
@@ -202,6 +203,8 @@ export function ProfilePage() {
           </Button>
         </Card>
       )}
+
+      <BenefitCard />
 
       <div className="grid grid-cols-3 gap-2">
         {[

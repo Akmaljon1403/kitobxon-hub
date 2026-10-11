@@ -17,7 +17,6 @@ from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboar
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.core.config import get_settings
 from app.models import ChannelPost
 from app.models.enums import ChannelPostKind, ChannelPostStatus, NotificationType
 from app.services import channel
@@ -29,14 +28,12 @@ LEASE = timedelta(minutes=5)
 MAX_ATTEMPTS = 5
 STALE_AFTER = timedelta(days=2)  # an automatic post this late is no longer news
 CAPTION_LIMIT = 1024
-_username: str | None = None
 
 
 async def _bot_username(bot: Bot) -> str | None:
-    global _username
-    if _username is None:
-        _username = get_settings().bot_username or (await bot.me()).username
-    return _username
+    from app.bot.setup import resolve_bot_username
+
+    return await resolve_bot_username(bot)
 
 
 async def _markup(bot: Bot, buttons: list[dict[str, Any]] | None) -> InlineKeyboardMarkup | None:

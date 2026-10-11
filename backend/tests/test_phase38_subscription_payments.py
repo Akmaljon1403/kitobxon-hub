@@ -39,10 +39,10 @@ _ids = itertools.count(1_400_000)
 @pytest.fixture(autouse=True)
 def _fresh_emoji() -> Any:
     custom_emoji.use({})
-    custom_emoji._paused_until = 0.0
+    custom_emoji.reset()
     yield
     custom_emoji.use({})
-    custom_emoji._paused_until = 0.0
+    custom_emoji.reset()
 
 
 class ChannelTelegram(FakeTelegramSession):
@@ -294,7 +294,7 @@ async def test_payment_questions_reach_the_payments_chat(db: AsyncSession, monke
     await harness.send("Premium uchun to'ladim, hali yoqilmadi")
     copy = next(r for r in telegram.requests if isinstance(r, SendMessage))
     assert copy.chat_id == "@club_payments" and "To'lov bo'yicha murojaat" in copy.text
-    assert copy.reply_markup.inline_keyboard[0][0].callback_data.startswith("sup:ans:")
+    assert copy.reply_markup.inline_keyboard[0][0].callback_data.startswith("sup:pay:")
 
 
 async def test_stars_by_card_need_a_username(client: httpx.AsyncClient, db: AsyncSession) -> None:
@@ -426,7 +426,8 @@ async def test_admin_saves_premium_emoji_with_the_bot(db: AsyncSession) -> None:
         entities=[MessageEntity(type="custom_emoji", offset=4, length=1, custom_emoji_id="999")],
     )
     await harness.dispatcher.feed_update(harness.bot, Update(update_id=next(_ids), message=message))
-    assert "Saqlandi" in harness.last_text() and 'emoji-id="999"' in harness.last_text()
+    sent = [message.text for message in harness.session.sent_messages()]
+    assert "Saqlandi: 🔥" in sent[-2] and 'emoji-id="999"' in sent[-1]  # the confirmation, then a live sample
     rows = await custom_emoji.list_all(db)
     assert [(row.emoji, row.custom_emoji_id) for row in rows] == [("🔥", "999")]
     await harness.send("/tayyor")

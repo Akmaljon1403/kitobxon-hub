@@ -20,6 +20,7 @@ const GROUP_TITLES: Record<string, string> = {
   rewards: "Sovg'alar",
   seasons: 'Mavsumlar',
   support: 'Murojaatlar',
+  payments: "To'lovlar",
   system: 'Tizim',
 }
 
