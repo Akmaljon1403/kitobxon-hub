@@ -11,10 +11,8 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import BaseEventIsolation
 from aiogram.fsm.storage.memory import SimpleEventIsolation
-from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
 from aiogram.utils.token import TokenValidationError, validate_token
 
-from app.bot import texts
 from app.bot.errors import on_error
 from app.bot.handlers import (
     admin,
@@ -44,17 +42,6 @@ from app.security.crypto import derive_key
 logger = logging.getLogger(__name__)
 
 WEBHOOK_PATH = "/telegram/webhook"
-
-COMMANDS = [
-    BotCommand(command="start", description="Bosh menyu"),
-    BotCommand(command="davomat", description="Tadbirda davomat qilish"),
-    BotCommand(command="pasport", description="Kitobxon pasportim"),
-    BotCommand(command="premium", description="Premium va klubni qo'llab-quvvatlash"),
-    BotCommand(command="taklif", description="Do'stni klubga taklif qilish"),
-    BotCommand(command="help", description="Yordam va adminga yozish"),
-    BotCommand(command="cancel", description="Joriy amalni bekor qilish"),
-    BotCommand(command="stop", description="Hamma jarayonni to'xtatish va menyuga qaytish"),
-]
 
 
 def webhook_secret(settings: Settings | None = None) -> str:
@@ -168,13 +155,7 @@ async def configure_telegram(runtime: BotRuntime, *, with_webhook: bool) -> None
     bot = runtime.bot
     me = await bot.me()
     runtime.username = me.username
-    await bot.set_my_commands(COMMANDS)
-    await bot.set_my_short_description(short_description=texts.BOT_SHORT_DESCRIPTION)
-    await bot.set_my_description(description=texts.BOT_DESCRIPTION)
-    if settings.webapp_url:
-        await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(text="📱 Ilova", web_app=WebAppInfo(url=settings.webapp_url))
-        )
+    await _apply_profile(bot, settings.webapp_url)
     if with_webhook:
         if not settings.base_url:
             logger.warning("BOT_MODE=webhook but PUBLIC_BASE_URL is not set; the webhook was not registered")
@@ -186,6 +167,19 @@ async def configure_telegram(runtime: BotRuntime, *, with_webhook: bool) -> None
             drop_pending_updates=False,
         )
         logger.info("Telegram webhook registered")
+
+
+async def _apply_profile(bot: Bot, webapp_url: str | None) -> None:
+    """Name, descriptions, command menus, default rights and the avatar (see services/bot_profile.py)."""
+    from app.core.database import get_session_factory
+    from app.services import bot_profile
+
+    try:
+        async with get_session_factory()() as session:
+            result = await bot_profile.apply_all(bot, session, webapp_url)
+        logger.info("Bot profile applied: %s", result)
+    except Exception:
+        logger.exception("The bot profile could not be applied; the bot keeps working")
 
 
 def bot_username() -> str | None:

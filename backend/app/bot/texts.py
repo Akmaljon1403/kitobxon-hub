@@ -292,16 +292,6 @@ TOO_MANY_REQUESTS = "Juda tez yozyapsiz. Biroz kuting."
 BLOCKED_TEXT = "Hisobingiz faol emas."
 
 # ---- Bot profile (shown by Telegram before the user presses Start) ----
-BOT_SHORT_DESCRIPTION = "Kitobxonlar klubi: kitoblar, tadbirlar, davomat, testlar va reyting 📚"
-BOT_DESCRIPTION = (
-    "📚 Kitobxon Hub — kitobxonlar klubining rasmiy boti.\n\n"
-    "• Klub kitoblari va o'qish muddatlari\n"
-    "• Tadbirlar va QR kod orqali davomat\n"
-    "• Kitoblar bo'yicha testlar\n"
-    "• Ballar, reyting, yutuqlar va sertifikatlar\n"
-    "• Kitobxon pasporti\n\n"
-    "Boshlash uchun «Start»ni bosing."
-)
 
 
 # ---- Feature switches ----

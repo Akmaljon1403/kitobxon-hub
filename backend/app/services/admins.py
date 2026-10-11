@@ -16,6 +16,7 @@ from app.core.errors import BadRequestError, ConflictError, ForbiddenError, NotF
 from app.models import Role, RolePermission, User, UserPermission, UserRole
 from app.models.enums import SystemRole, UserStatus
 from app.security.permissions import Perm
+from app.services import bot_profile
 from app.services.audit import record_audit
 from app.services.rbac import ADMIN_ROLES, get_effective_permissions, get_role_by_code, get_role_codes
 
@@ -127,6 +128,7 @@ async def appoint_admin(
         after={"roles": sorted(role.code for role in roles), "permissions": codes},
     )
     await session.commit()
+    await bot_profile.refresh_person(session, user_id)
     return await get_admin_view(session, user_id)
 
 
@@ -146,6 +148,7 @@ async def set_admin_permissions(
         after={"permissions": codes},
     )
     await session.commit()
+    await bot_profile.refresh_person(session, user_id)
     return await get_admin_view(session, user_id)
 
 
@@ -176,6 +179,7 @@ async def set_admin_roles(
         after={"roles": sorted(new_codes)},
     )
     await session.commit()
+    await bot_profile.refresh_person(session, user_id)
     return await get_admin_view(session, user_id)
 
 
@@ -206,6 +210,7 @@ async def dismiss_admin(session: AsyncSession, *, actor_id: uuid.UUID, user_id: 
         reason=reason,
     )
     await session.commit()
+    await bot_profile.refresh_person(session, user_id)
 
 
 # ---------------------------------------------------------------------------- custom roles

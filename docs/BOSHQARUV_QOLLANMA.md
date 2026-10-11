@@ -640,6 +640,28 @@ O'rnatish va sozlash bir martalik 1 500 000 so'm; birinchi oy sinov uchun bepul.
 | `/stiker` | admin | Kanal va tabriklar uchun stikerlarni saqlash (tugatish — `/tayyor`) |
 | `/emoji` | admin | Premium emojilarni o'rgatish (tugatish — `/tayyor`) |
 
+Buyruqlar menyusini (chatdagi «/» yoki «Menu» tugmasi) bot **o'zi sozlaydi**: a'zolar faqat
+a'zolar buyruqlarini ko'radi; admin qilingan odamda darhol `/admin` (va xabar yuborish huquqi
+bo'lsa `/stiker`, `/emoji`) paydo bo'ladi, adminlikdan olinganda yo'qoladi. Kanal va guruhlarda
+menyu chiqmaydi.
+
+### 🤖 Bot profili (nom, tavsif, avatar)
+
+**Sozlamalar** sahifasining yuqorisida **🤖 Bot profili** kartasi bor. @BotFather'ga kirish shart
+emas — bot hammasini o'zi Telegram'ga yozadi:
+
+- **Bot nomi** (bo'sh — @BotFather'dagi nom qoladi), **qisqa tavsif** (profil va ulashilgan
+  havolada) va **to'liq tavsif** (botning bo'sh chatida, «Start» ustida). O'ngda a'zo ko'radigan
+  ko'rinish (oldindan ko'rish). **Saqlash** — darhol Telegram'da yangilanadi.
+- **🔄 Telegram'ga qayta yuborish** — nom, tavsif, buyruqlar menyusi va kanal huquqlarini qayta
+  yozadi (masalan, kimdir @BotFather'da qo'lda o'zgartirib yuborgan bo'lsa).
+- **🖼 Brend avatarini o'rnatish** — botning rasmi klub brendi avatari bilan almashtiriladi. Botda
+  rasm umuman bo'lmasa, bot buni ishga tushganda o'zi qiladi.
+
+Botni kanal yoki guruhga administrator qilib qo'shganingizda, Telegram kerakli huquqlarni (xabar
+joylash, tahrirlash, o'chirish, taklif havolasi) **o'zi belgilab** ko'rsatadi — faqat «Saqlash»ni
+bosasiz.
+
 ## 28. Kundalik ish — qisqa ro'yxat
 
 
