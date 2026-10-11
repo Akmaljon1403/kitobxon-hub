@@ -83,6 +83,22 @@ DEFAULT_ACHIEVEMENTS: tuple[AchievementSeed, ...] = (
         3,
     ),
     AchievementSeed(
+        "FIRST_FRIEND",
+        "Birinchi do'st",
+        "Taklifingiz bilan kelgan do'stingiz klub tadbirida qatnashdi.",
+        "🤗",
+        AchievementCriteria.FRIENDS_INVITED,
+        1,
+    ),
+    AchievementSeed(
+        "FIVE_FRIENDS",
+        "Targ'ibotchi",
+        "Klubga 5 ta yangi kitobxon olib keldingiz — ular tadbirlarda qatnashmoqda.",
+        "📣",
+        AchievementCriteria.FRIENDS_INVITED,
+        5,
+    ),
+    AchievementSeed(
         "TEST_MASTER",
         "Test ustasi",
         "3 ta testdan maksimal ball oldingiz.",

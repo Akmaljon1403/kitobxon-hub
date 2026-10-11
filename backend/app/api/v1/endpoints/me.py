@@ -14,11 +14,12 @@ from app.models import Faculty, UserNotificationSettings
 from app.models.enums import FeatureMode
 from app.schemas.user import (
     FacultyOut,
+    MemberContestOut,
     MeOut,
     MeUpdateIn,
     NotificationSettingsIn,
     NotificationSettingsOut,
-    ReferralsOut,
+    ReferralOverviewOut,
     SubscriptionChannelOut,
     SubscriptionOut,
 )
@@ -107,9 +108,26 @@ async def update_notification_settings(
     return _settings_out(settings)
 
 
-@router.get("/referrals", response_model=ReferralsOut, summary="My invitation link and invited friends")
-async def my_referrals(current: CurrentUserDep, db: DbSession) -> ReferralsOut:
-    return ReferralsOut(**await referrals.summary(db, current.user))
+@router.get(
+    "/referrals",
+    response_model=ReferralOverviewOut,
+    summary="My invitation link, «Sizning foydangiz» (what my friends did) and the inviters' table",
+)
+async def my_referrals(current: CurrentUserDep, db: DbSession) -> ReferralOverviewOut:
+    return ReferralOverviewOut(**await referrals.overview(db, current.user))
+
+
+@router.get(
+    "/referral-contests",
+    response_model=list[MemberContestOut],
+    summary="Referral contests: running, upcoming and recently finished (as the club lets members see them)",
+)
+async def my_referral_contests(current: CurrentUserDep, db: DbSession) -> list[MemberContestOut]:
+    from app.services import contests
+
+    if not (await referrals.summary(db, current.user))["enabled"]:
+        return []
+    return [MemberContestOut(**item) for item in await contests.for_member(db, current.user)]
 
 
 class SupportMessageOut(BaseModel):

@@ -30,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', visible: () => true },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", visible: (can) => can('REWARD_MANAGE') },
   { route: 'giveaways', icon: '🎲', label: "Sovg'a o'yinlari", visible: (can) => can('REWARD_MANAGE') },
+  { route: 'contests', icon: '🏁', label: 'Taklif tanlovlari', visible: (can) => can('REWARD_MANAGE') },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', visible: (can) => can('REWARD_MANAGE') },
   { route: 'support', icon: '📨', label: 'Murojaatlar', visible: (can) => can('SUPPORT_MANAGE') },
   { route: 'notifications', icon: '📢', label: 'Xabarlar', visible: (can) => can('NOTIFICATION_SEND') },

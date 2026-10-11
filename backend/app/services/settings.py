@@ -210,6 +210,28 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=100)],
         "Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz)",
     ),
+    SettingDefinition(
+        "referral.friend_details",
+        "FULL",
+        Literal["FULL", "NAMES", "COUNT"],
+        "«Sizning foydangiz»da a'zo taklif qilgan do'stlari haqida nimani ko'radi: FULL — ismi, ballari, "
+        "o'qigan kitoblari va tadbirlari; NAMES — faqat ismi va tadbirga kelgani; COUNT — faqat sonlar",
+        choices=("FULL", "NAMES", "COUNT"),
+    ),
+    SettingDefinition(
+        "referral.leaderboard_size",
+        10,
+        Annotated[int, Field(ge=0, le=50)],
+        "«Eng faol taklif qiluvchilar» ro'yxatida nechta a'zo ko'rinadi (0 — ro'yxat a'zolarga ko'rinmaydi)",
+    ),
+    SettingDefinition(
+        "referral.leaderboard_rule",
+        "ATTENDED",
+        Literal["ATTENDED", "REGISTERED"],
+        "Umumiy taklif reytingida qaysi do'stlar sanaladi: ATTENDED — kamida bitta tadbirga kelganlar "
+        "(soxta hisoblardan himoya); REGISTERED — ro'yxatdan o'tganlarning hammasi",
+        choices=("ATTENDED", "REGISTERED"),
+    ),
     # ---- Study years ----
     SettingDefinition(
         "academic.year_start",

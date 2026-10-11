@@ -10,6 +10,7 @@ Criteria (``Achievement.criteria``) and their measure:
   with a verified attendance or a passed test. It replaces the "reading streak" ideas of the
   specification, because reading happens outside the app and cannot be measured;
 - MONTHLY_TOP_RANK: place 1..threshold in a finished month's ranking (checked by the scheduler);
+- FRIENDS_INVITED: friends who joined through the member's link and came to a club event;
 - MANUAL: only granted by an admin.
 
 Once unlocked, an achievement stays (a later correction does not take it away automatically;
@@ -59,6 +60,7 @@ AUTOMATIC = (
     AchievementCriteria.TESTS_PASSED,
     AchievementCriteria.PERFECT_TESTS,
     AchievementCriteria.ACTIVITY_STREAK_WEEKS,
+    AchievementCriteria.FRIENDS_INVITED,
 )
 FINISHED = (AttemptStatus.SUBMITTED, AttemptStatus.EXPIRED)
 
@@ -135,7 +137,18 @@ async def progress(session: AsyncSession, user_id: uuid.UUID) -> dict[Achievemen
             TestAttempt.score == Test.max_score,
         )
     )
+    from app.services.referrals import came_to_event
+
+    friends = await session.scalar(
+        select(func.count(User.id)).where(
+            User.referred_by == user_id,
+            User.deleted_at.is_(None),
+            User.status == UserStatus.ACTIVE,
+            came_to_event(User.id),
+        )
+    )
     return {
+        AchievementCriteria.FRIENDS_INVITED: int(friends or 0),
         AchievementCriteria.BOOKS_COMPLETED: int(books or 0),
         AchievementCriteria.EVENTS_ATTENDED: int(events or 0),
         AchievementCriteria.TESTS_PASSED: int(passed_tests or 0),

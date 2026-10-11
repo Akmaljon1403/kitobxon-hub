@@ -10,6 +10,7 @@ import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { HelpPage } from './pages/HelpPage'
 import { HomePage } from './pages/HomePage'
+import { InvitePage } from './pages/InvitePage'
 import { PremiumPage } from './pages/PremiumPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RankingPage } from './pages/RankingPage'
@@ -49,6 +50,7 @@ function Routes() {
   else if (section === 'certificates') page = <FeatureGate code="certificates"><CertificatesPage certificateId={id} /></FeatureGate>
   else if (section === 'premium') page = <PremiumPage />
   else if (section === 'help') page = <HelpPage />
+  else if (section === 'invite') page = <FeatureGate code="referrals"><InvitePage /></FeatureGate>
   else if (section === 'stats') page = <FeatureGate code="personal_stats"><StatsPage /></FeatureGate>
   else page = <NotFoundPage />
   return <AppLayout section={section}>{page}</AppLayout>

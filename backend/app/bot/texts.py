@@ -514,6 +514,13 @@ INVITE = (
     "Do'stingiz shu havola orqali ro'yxatdan o'tib, birinchi tadbirga kelsa — sizga {reward}.{limit}\n\n"
     "Taklif qilganlaringiz: <b>{invited}</b> · mukofot olingan: <b>{rewarded}</b>"
 )
+INVITE_IMPACT = (
+    "\n\n💚 <b>Sizning foydangiz</b>\n"
+    "Olib kelgan do'stlaringiz {came} marta tadbirga keldi, {books} ta kitob o'qidi va jami "
+    "<b>{points}</b> ball to'pladi. Sizga taklif uchun: +{earned} ball."
+)
+INVITE_PLACE = "\n🏅 Eng faol taklif qiluvchilar orasida: <b>{place}-o'rin</b>"
+BTN_INVITE_DETAILS = "💚 Batafsil: do'stlarim va tanlovlar"
 INVITE_LIMIT = " (oyiga {limit} tagacha)"
 INVITE_SHARE_TEXT = "Kitobxonlar klubiga qo'shil! Tadbirlar, testlar, sertifikatlar va sovg'alar 📚"
 INVITE_UNAVAILABLE = "Taklif havolasi hozircha tayyor emas. Birozdan keyin urinib ko'ring."

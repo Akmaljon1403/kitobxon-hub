@@ -44,6 +44,8 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         Index("ix_users_status", "status"),
         Index("ix_users_faculty_id", "faculty_id"),
         Index("ix_users_group_name", "group_name"),
+        # «My invited friends» and the referral contests' tables.
+        Index("ix_users_referred_by", "referred_by", postgresql_where=text("referred_by IS NOT NULL")),
     )
 
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True)
@@ -79,6 +81,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     # The member who invited this one (t.me/<bot>?start=ref_<member number>) and when they were thanked.
     referred_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     referral_rewarded_at: Mapped[datetime | None] = mapped_column()
+    # Finished their studies (asked at the start of a study year in the last course); alumni stay
+    # in the club but leave course statistics and course promotion.
+    graduated_at: Mapped[datetime | None] = mapped_column()
 
     faculty: Mapped[Faculty | None] = relationship(lazy="raise")
 

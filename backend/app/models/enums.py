@@ -143,6 +143,7 @@ class AchievementCriteria(StrEnum):
     ACTIVITY_STREAK_WEEKS = "ACTIVITY_STREAK_WEEKS"
     MONTHLY_TOP_RANK = "MONTHLY_TOP_RANK"
     MANUAL = "MANUAL"
+    FRIENDS_INVITED = "FRIENDS_INVITED"  # invited friends who came to a club event
 
 
 class NotificationType(StrEnum):
@@ -319,3 +320,18 @@ class StickerMood(StrEnum):
     READING = "READING"  # books, reading reminders, quotes
     WELCOME = "WELCOME"  # greetings, new members, invitations
     ANY = "ANY"
+
+
+class ContestStatus(StrEnum):
+    DRAFT = "DRAFT"  # being prepared, members do not see it
+    PUBLISHED = "PUBLISHED"  # announced; runs between starts_at and ends_at
+    FINISHED = "FINISHED"  # winners chosen, prizes given
+    CANCELLED = "CANCELLED"
+
+
+class ContestRule(StrEnum):
+    """Which invited friends count in a referral contest."""
+
+    REGISTERED = "REGISTERED"  # joined the club through the link (active account)
+    ATTENDED = "ATTENDED"  # joined and came to at least one club event before the end
+    POINTS = "POINTS"  # joined and earned at least ``min_friend_points`` points before the end

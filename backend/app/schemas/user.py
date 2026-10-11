@@ -127,3 +127,80 @@ class ReferralsOut(BaseModel):
     points: int = Field(description="Points for each friend who comes to an event")
     premium_days: int
     monthly_limit: int = Field(description="Rewards a month at most (0 — no limit)")
+
+
+class ReferralImpactOut(BaseModel):
+    invited: int
+    came_to_events: int
+    active: int
+    friends_points: int = Field(description="All the points the invited friends earned")
+    friends_books: int
+    friends_visits: int
+    friends_tests: int
+    earned_points: int = Field(description="Points this member got for inviting (rewards and contests)")
+    earned_premium_days: int
+
+
+class InvitedFriendOut(BaseModel):
+    name: str
+    joined_at: datetime | None
+    came_to_event: bool
+    active: bool
+    points: int | None = None
+    books: int | None = None
+    visits: int | None = None
+
+
+class InviterRowOut(BaseModel):
+    place: int
+    name: str
+    friends: int
+    me: bool
+
+
+class InvitersOut(BaseModel):
+    rule: str
+    items: list[InviterRowOut]
+    my_place: int | None
+    my_friends: int
+
+
+class ReferralOverviewOut(ReferralsOut):
+    impact: ReferralImpactOut
+    friend_details: str = Field(description="FULL, NAMES or COUNT: what the club shows about invited friends")
+    friends: list[InvitedFriendOut]
+    leaderboard: InvitersOut | None = Field(description="None when the club hides the all-time table")
+
+
+class ContestPrizeOut(BaseModel):
+    place: int
+    text: str
+
+
+class ContestRowOut(BaseModel):
+    place: int
+    name: str
+    friends: int | None
+    winner: bool
+    me: bool
+
+
+class MemberContestOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: str | None
+    starts_at: datetime
+    ends_at: datetime
+    state: str = Field(description="upcoming, running or finished")
+    rule: str
+    min_friends: int
+    winners_count: int
+    prizes: list[ContestPrizeOut]
+    participation_points: int
+    eligible: bool
+    leaderboard: list[ContestRowOut]
+    leaderboard_hidden: bool
+    show_counts: bool
+    my_friends: int
+    my_place: int | None
+    participants: int

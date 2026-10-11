@@ -17,6 +17,7 @@ export const CRITERIA_LABELS: Record<string, string> = {
   ACTIVITY_STREAK_WEEKS: 'Ketma-ket faol haftalar (tadbir yoki test)',
   MONTHLY_TOP_RANK: "O'tgan oy reytingida shu o'ringacha",
   MANUAL: 'Faqat admin beradi',
+  FRIENDS_INVITED: "Taklif qilgan va tadbirga kelgan do'stlar soni",
 }
 
 function EditModal({ achievement, onClose, onSaved }: { achievement: AdminAchievement | null; onClose: () => void; onSaved: () => void }) {

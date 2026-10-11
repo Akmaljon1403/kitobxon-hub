@@ -27,6 +27,7 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
     ("🏅 Yutuqlar", "achievements", "yutuq nishon chegara tartib", None),
     ("🎁 Sovg'alar", "rewards", "sovg'a promokod kod tarqatish", "REWARD_MANAGE"),
     ("🎲 Sovg'a o'yinlari", "giveaways", "o'yin giveaway random", "REWARD_MANAGE"),
+    ("🏁 Taklif tanlovlari", "contests", "taklif tanlov do'st referal havola sovrin musobaqa", "REWARD_MANAGE"),
     ("🎓 Sertifikatlar", "certificates", "sertifikat dizayn fon rasm", "REWARD_MANAGE"),
     ("📨 Murojaatlar", "support", "murojaat savol yordam adminga yozish", "SUPPORT_MANAGE"),
     ("📢 Xabarlar", "notifications", "xabar e'lon broadcast tugma yuborish", "NOTIFICATION_SEND"),
