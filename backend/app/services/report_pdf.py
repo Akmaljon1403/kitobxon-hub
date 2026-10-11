@@ -29,8 +29,8 @@ def _environment() -> Environment:
     environment.globals.update(
         brand_mark=brand.logo_mark,
         brand_logo=brand.logo_horizontal,
-        brand_icon=lambda: brand.data_uri("logo-mark", 160),
-        brand_favicon=lambda: brand.data_uri("logo-mark", 64),
+        brand_icon=lambda: brand.logo_badge(160),
+        brand_favicon=lambda: brand.logo_badge(64),
     )
     return environment
 

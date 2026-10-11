@@ -39,3 +39,8 @@ backend/static/
 e2e/.state.json
 e2e/test-results/
 e2e/playwright-report/
+
+# Brand kit build output (re-made with: node brand/tools/build.mjs)
+brand/out/
+brand/contact-sheet.png
+brand/*.zip

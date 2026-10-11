@@ -59,3 +59,15 @@ async def test_the_clubs_pictures_fill_their_places(db: AsyncSession, pictures: 
 
     page = _environment().get_template("verify.html").render(heading="Haqiqiy", rows=[], valid=True, club="Klub")
     assert 'class="brand"' in page and "data:image/png;base64," in page
+
+
+async def test_the_shipped_brand_pictures() -> None:
+    """The club's kit (brand/tools/build.mjs) is in place: light and dark marks, both seals, badge, avatar."""
+    brand.data_uri.cache_clear()
+    assert brand.logo_mark("#fffdf7") == brand.data_uri("logo-mark", 512)
+    assert brand.logo_mark("#181a1f") == brand.data_uri("logo-mark-dark", 512)
+    assert brand.seal(True, "#fffdf7") == brand.data_uri("seal", 600)
+    assert brand.seal(True, "#181a1f") == brand.data_uri("seal-light", 600)
+    assert brand.logo_badge() is not None and brand.logo_horizontal() is not None
+    avatar = brand.avatar_jpeg()
+    assert avatar is not None and avatar[:2] == b"\xff\xd8"

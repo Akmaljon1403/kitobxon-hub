@@ -6,13 +6,20 @@ import { useAuth } from '../store/auth'
 import type { SubscriptionChannel } from '../types/api'
 import { haptic, openBot, openTelegramLink } from '../utils/telegram'
 
+const LOGO = `${import.meta.env.BASE_URL}brand/logo-badge.png`
+
+/** `icon` is an emoji, or «logo» for the club's badge. */
 function Shell({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 p-4">
       <Card className="flex flex-col items-center gap-3 py-8 text-center">
-        <span aria-hidden className="text-5xl">
-          {icon}
-        </span>
+        {icon === 'logo' ? (
+          <img src={LOGO} alt="" className="size-24" />
+        ) : (
+          <span aria-hidden className="text-5xl">
+            {icon}
+          </span>
+        )}
         <h1 className="text-xl font-semibold">{title}</h1>
         {children}
       </Card>
@@ -23,7 +30,7 @@ function Shell({ icon, title, children }: { icon: string; title: string; childre
 export function NotRegisteredPage() {
   const { meta } = useAuth()
   return (
-    <Shell icon="👋" title="Xush kelibsiz!">
+    <Shell icon="logo" title="Xush kelibsiz!">
       <p className="text-sm text-app-hint">
         Ilovadan foydalanish uchun avval botda ro'yxatdan o'ting. Bu 1–2 daqiqa vaqt oladi.
       </p>
@@ -85,7 +92,7 @@ export function SubscribePage({ channels }: { channels: SubscriptionChannel[] })
 export function OutsideTelegramPage() {
   const { meta } = useAuth()
   return (
-    <Shell icon="📱" title="Kitobxon Hub">
+    <Shell icon="logo" title="Kitobxon Hub">
       <p className="text-sm text-app-hint">Bu ilova Telegram ichida ishlaydi. Uni bot orqali oching.</p>
       {meta?.bot_username && (
         <Button onClick={() => openBot(meta.bot_username)}>Botni ochish (@{meta.bot_username})</Button>

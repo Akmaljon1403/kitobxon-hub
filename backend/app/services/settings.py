@@ -72,7 +72,8 @@ BOT_SHORT_DESCRIPTION = (
     "📚 Kitobxonlar klubi: kitoblar, tadbirlar, testlar, reyting va sertifikatlar — hammasi bitta botda."
 )
 BOT_DESCRIPTION = (
-    "📚 Kitobxon Hub — Farg'ona jamoat salomatligi tibbiyot instituti kitobxonlar klubining rasmiy boti.\n\n"
+    "📚 Kitobxon Hub — Farg'ona jamoat salomatligi tibbiyot instituti kitobxonlar klubining rasmiy boti.\n"
+    "«Yaxshi kitob — yaxshi kelajak»\n\n"
     "✨ Bu yerda siz:\n"
     "• klub kitoblarini o'qiysiz va muddatlarni kuzatasiz;\n"
     "• tadbirlarda QR kod bilan davomat qilasiz;\n"

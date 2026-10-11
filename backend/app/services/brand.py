@@ -2,7 +2,9 @@
 
 Every picture is optional: when a file is missing, the place it would fill is simply left out.
 
-* ``logo-mark.png`` — the mark: above the certificate title, the report header, the verification page;
+* ``logo-mark.png`` — the mark for light paper: above the certificate title, the report header
+  (``logo-mark-dark.png``, if present, is used on dark certificate designs);
+* ``logo-badge.png`` — the round badge (works on light and dark): the verification page and its icon;
 * ``logo-horizontal.png`` — the horizontal logo: the portfolio header;
 * ``seal.png`` — the round seal over the certificate signature (``seal-light.png``, if present, is used
   on dark certificate designs);
@@ -60,8 +62,17 @@ def seal(enabled: bool, paper: str) -> str | None:
     return data_uri("seal", 600)
 
 
-def logo_mark() -> str | None:
+def logo_mark(paper: str | None = None) -> str | None:
+    if paper is not None and _is_dark(paper) and _find("logo-mark-dark") is not None:
+        return data_uri("logo-mark-dark", 512)
     return data_uri("logo-mark", 512)
+
+
+def logo_badge(max_px: int = 160) -> str | None:
+    """The round badge; without one, the plain mark."""
+    if _find("logo-badge") is not None:
+        return data_uri("logo-badge", max_px)
+    return data_uri("logo-mark", max_px)
 
 
 def logo_horizontal() -> str | None:
