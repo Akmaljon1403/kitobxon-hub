@@ -106,9 +106,12 @@ export function AdminLayout({ section, children }: { section: string; children: 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
       <aside className="hidden border-r border-app-border bg-app-bg lg:flex lg:min-h-screen lg:flex-col">
-        <div className="border-b border-app-border px-5 py-4">
-          <p className="font-semibold">📚 Kitobxon Hub</p>
-          <p className="text-xs text-app-hint">Admin panel</p>
+        <div className="flex items-center gap-3 border-b border-app-border px-5 py-4">
+          <img src={`${import.meta.env.BASE_URL}brand/logo-badge.png`} alt="" className="size-10" />
+          <div>
+            <p className="font-semibold">Kitobxon Hub</p>
+            <p className="text-xs text-app-hint">Admin panel</p>
+          </div>
         </div>
         {nav}
       </aside>

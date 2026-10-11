@@ -663,10 +663,18 @@ emas — bot hammasini o'zi Telegram'ga yozadi:
 - **🖼 Klub avatarini o'rnatish** — botning rasmi klub avatari bilan almashtiriladi. Botda rasm
   umuman bo'lmasa, bot buni ishga tushganda o'zi qiladi.
 
-**Klub rasmlari** (logotip, pechat, bot avatari) tizimga bir marta qo'yiladi (`backend/app/brand`
-papkasi, fayl nomlari o'sha yerdagi README'da). Shundan keyin pechat sertifikatlarda imzo ustida,
-belgi sertifikat va hisobot tepasida, QR tekshirish sahifasida va portfolio sarlavhasida o'zi
-chiqadi. O'chirish: **Sozlamalar** → `certificates.seal`, `certificates.logo`.
+**Brend** (logotip, pechat, avatar) tizimga qo'yilgan: pechat sertifikatlarda imzo ustida (och
+dizaynlarda ko'k siyoh, to'q dizaynlarda oltin), belgi sertifikat va hisobot tepasida, QR tekshirish
+sahifasida, portfolio sarlavhasida, ilova va admin panel ikonkasida chiqadi. O'chirish:
+**Sozlamalar** → `certificates.seal`, `certificates.logo`. To'liq to'plam (4K) —
+`Kitobxon-Brend-4K.zip`; uni ishlab chiquvchi `node brand/tools/build.mjs` bilan qayta yasaydi.
+
+- **Bot rasmi** — yuqoridagi **🖼 Klub avatarini o'rnatish** tugmasi.
+- **Bot tavsif rasmi** (bo'sh chatdagi rasm) — faqat @BotFather orqali: `/mybots` → bot → **Edit Bot**
+  → **Edit Description Picture** → `08_Banner/bot-tavsif-rasmi-640px.png`.
+- **Stiker to'plami** — @Stickers botiga `/newpack` → nom → `10_Stikerlar/*-512px.png` fayllarini
+  **fayl sifatida** yuboring → har biriga emoji. So'ng botga `/stiker` bilan saqlab qo'ying (kanal
+  postlaridan keyin chiqadi).
 
 Botni kanal yoki guruhga administrator qilib qo'shganingizda, Telegram kerakli huquqlarni (xabar
 joylash, tahrirlash, o'chirish, taklif havolasi) **o'zi belgilab** ko'rsatadi — faqat «Saqlash»ni

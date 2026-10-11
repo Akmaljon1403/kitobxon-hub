@@ -29,9 +29,12 @@ export function LoginPage({ linkToken, notice }: { linkToken: string | null; not
   return (
     <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="flex w-full max-w-md flex-col gap-4 p-6">
-        <div>
-          <h1 className="text-xl font-semibold">📚 Kitobxon Hub</h1>
-          <p className="text-sm text-app-hint">Admin panelga kirish</p>
+        <div className="flex items-center gap-3">
+          <img src={`${import.meta.env.BASE_URL}brand/logo-badge.png`} alt="" className="size-14" />
+          <div>
+            <h1 className="text-xl font-semibold">Kitobxon Hub</h1>
+            <p className="text-sm text-app-hint">Admin panelga kirish</p>
+          </div>
         </div>
         {working ? (
           <LoadingState label="Kirilmoqda…" />

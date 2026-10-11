@@ -401,7 +401,7 @@ async def _brand_values(session: AsyncSession, paper: str) -> dict[str, Any]:
 
     return {
         "seal": brand.seal(bool(await get_setting(session, "certificates.seal")), paper),
-        "logo": brand.logo_mark() if await get_setting(session, "certificates.logo") else None,
+        "logo": brand.logo_mark(paper) if await get_setting(session, "certificates.logo") else None,
     }
 
 
