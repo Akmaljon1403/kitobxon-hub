@@ -335,3 +335,37 @@ class ContestRule(StrEnum):
     REGISTERED = "REGISTERED"  # joined the club through the link (active account)
     ATTENDED = "ATTENDED"  # joined and came to at least one club event before the end
     POINTS = "POINTS"  # joined and earned at least ``min_friend_points`` points before the end
+
+
+class ShelfStatus(StrEnum):
+    """«📚 Javonim»: where a book stands for the member."""
+
+    WANT = "WANT"  # o'qimoqchiman
+    READING = "READING"  # o'qiyapman
+    FINISHED = "FINISHED"  # o'qib bo'ldim
+    LATER = "LATER"  # keyinroq
+
+
+class MissionMetric(StrEnum):
+    """What a personal mission counts (from the member's real activity)."""
+
+    PAGES = "PAGES"  # pages written in the reading diary
+    READING_DAYS = "READING_DAYS"  # days with at least one diary entry
+    STREAK = "STREAK"  # longest run of consecutive reading days
+    BOOKS_FINISHED = "BOOKS_FINISHED"  # books finished on the shelf
+    EVENTS = "EVENTS"  # verified club event attendance
+    TESTS = "TESTS"  # tests submitted
+    QUOTES = "QUOTES"  # quotes saved in the quote box
+    REFLECTIONS = "REFLECTIONS"  # «3 savol» answered after a book
+
+
+class MissionStatus(StrEnum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class UserMissionStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    EXPIRED = "EXPIRED"

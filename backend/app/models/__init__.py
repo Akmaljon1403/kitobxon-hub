@@ -13,6 +13,7 @@ from app.models.event import Event, EventFeedback, EventRegistration, EventShift
 from app.models.notification import Notification, NotificationTemplate
 from app.models.premium import CardPayment, FeatureFlag, Payment, PremiumDiscount, PremiumPlan, PremiumSubscription
 from app.models.rbac import LoginToken, Permission, Role, RolePermission, UserPermission, UserRole
+from app.models.reading import BookReflection, Mission, ReadingLog, SavedQuote, ShelfItem, UserMission
 from app.models.report import Report, ReportPhoto
 from app.models.reward import Giveaway, Reward, RewardCode, UserReward
 from app.models.score import ScoreTransaction
@@ -32,6 +33,7 @@ __all__ = [
     "Book",
     "BookQuote",
     "BookRead",
+    "BookReflection",
     "BotFsmState",
     "Campaign",
     "CampaignBook",
@@ -48,6 +50,7 @@ __all__ = [
     "FeatureFlag",
     "Giveaway",
     "LoginToken",
+    "Mission",
     "Notification",
     "NotificationTemplate",
     "Payment",
@@ -55,6 +58,7 @@ __all__ = [
     "PremiumDiscount",
     "PremiumPlan",
     "PremiumSubscription",
+    "ReadingLog",
     "ReferralContest",
     "Report",
     "ReportPhoto",
@@ -62,8 +66,10 @@ __all__ = [
     "RewardCode",
     "Role",
     "RolePermission",
+    "SavedQuote",
     "ScoreTransaction",
     "Season",
+    "ShelfItem",
     "SupportMessage",
     "SupportTicket",
     "SystemSetting",
@@ -75,6 +81,7 @@ __all__ = [
     "TestQuestion",
     "User",
     "UserAchievement",
+    "UserMission",
     "UserNotificationSettings",
     "UserPermission",
     "UserReward",

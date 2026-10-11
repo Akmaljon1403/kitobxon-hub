@@ -681,3 +681,44 @@ CHAT_PAYMENTS_LOST = (
     "⚠️ Bot «<b>{title}</b>» to'lovlar kanalidan chiqarildi yoki adminlikdan olindi. Cheklar endi sizga botda keladi. "
     "Davom ettirish uchun botni kanalga qayta administrator qiling."
 )
+
+# ---- My reading: /oqidim, /javonim, /kartam ----
+BTN_SHELF_APP = "📚 Javonim"
+BTN_MISSIONS_APP = "🎯 Missiyalar"
+BTN_QUOTES_APP = "💬 Iqtiboslarim"
+READ_NO_BOOK = (
+    "📚 Hozir «O'qiyapman» javoningizda kitob yo'q.\n\n"
+    "Ilovada <b>📚 Javonim</b> → kitob qo'shing (klub kitobi yoki o'zingizniki) va «O'qiyapman» deb belgilang. "
+    "So'ng shu yerda yozasiz: <code>/oqidim 25</code> — bugun 25 bet o'qidim."
+)
+READ_HOW = (
+    "📖 <b>Mutolaa kundaligi</b>\n\nHozir o'qiyapsiz: <b>{title}</b>\n"
+    "Bugun: {today} bet · 🔥 seriya: {streak} kun\n\n"
+    "Yozish: <code>/oqidim 25</code> — bugun 25 bet o'qidim.\n"
+    "Izoh bilan: <code>/oqidim 25 Juda qiziq bob edi</code>"
+)
+READ_PROGRESS = "{read}/{total} bet ({percent}%)"
+READ_PROGRESS_PAGES = "{read} bet"
+READ_LOGGED = (
+    "✅ Kundalikka yozildi: <b>{title}</b> — +{pages} bet\n"
+    "📖 {progress}\n"
+    "Bugun jami: {today} bet · 🔥 seriya: {streak} kun"
+)
+READ_MAYBE_DONE = (
+    "\n\n📗 Kitobni tugatdingizmi? Ilovada «O'qib bo'ldim» deb belgilang va «Kitobdan keyin 3 savol»ga "
+    "javob yozing — ball beriladi."
+)
+SHELF_SUMMARY = (
+    "📚 <b>Javonim</b>\n\n"
+    "<b>O'qiyapman:</b>\n{reading}\n\n"
+    "O'qimoqchiman: {want} · O'qib bo'ldim: {finished} · Keyinroq: {later}\n"
+    "📖 Bu hafta: {week} bet · 🔥 seriya: {streak} kun (eng uzuni {best})\n"
+    "🏁 Bu yil o'qilgan kitoblar: {year}\n\n"
+    "Bugun o'qiganingizni yozing: <code>/oqidim 25</code>"
+)
+SHELF_LINE = "• {title} — {progress}"
+SHELF_NOTHING = "• hozircha yo'q"
+CARD_CAPTION = (
+    "🪪 <b>Kitobxonlik kartangiz</b> — o'qigan kitoblar, betlar, seriya va yutuqlaringiz.\n"
+    "Do'stlaringizga ulashing: rasmni bosib turing → «Ulashish»."
+)

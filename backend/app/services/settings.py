@@ -273,6 +273,26 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "(soxta hisoblardan himoya); REGISTERED — ro'yxatdan o'tganlarning hammasi",
         choices=("ATTENDED", "REGISTERED"),
     ),
+    # ---- My reading: shelf, diary, the three questions ----
+    SettingDefinition(
+        "reading.daily_page_limit",
+        500,
+        Annotated[int, Field(ge=50, le=2000)],
+        "Mutolaa kundaligi: bir kunda yozish mumkin bo'lgan eng ko'p bet (haddan tashqari sonlar va missiyalarni "
+        "aldashdan himoya)",
+    ),
+    SettingDefinition(
+        "reading.reflection_points",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "«Kitobdan keyin 3 savol»ga javob yozgan a'zoga ball (har kitob uchun bir marta; 0 — ballsiz)",
+    ),
+    SettingDefinition(
+        "reading.reflection_monthly_limit",
+        4,
+        Annotated[int, Field(ge=0, le=50)],
+        "«3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz)",
+    ),
     # ---- Study years ----
     SettingDefinition(
         "academic.promote_groups",

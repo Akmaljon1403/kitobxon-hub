@@ -350,6 +350,8 @@ async def set_reading_status(session: AsyncSession, *, user_id: uuid.UUID, book_
     if book.status not in MEMBER_VISIBLE_STATUSES:
         raise BadRequestError("BOOK_NOT_AVAILABLE", "Bu kitob hozir o'qish uchun ochiq emas.")
     read = await get_or_create_read(session, book_id, user_id)
+    from app.services import reading_journal
+
     if action == "complete" and read.status != ReadingStatus.COMPLETED:
         read.status = ReadingStatus.COMPLETED
         read.completed_at = datetime.now(UTC)
@@ -359,6 +361,7 @@ async def set_reading_status(session: AsyncSession, *, user_id: uuid.UUID, book_
             await award_book_completion(session, read, None)
             await session.flush()
             await achievements.evaluate(session, user_id)
+    await reading_journal.sync_club_book(session, user_id, book_id, read.status)  # «📚 Javonim» follows
     await session.commit()
     return read
 

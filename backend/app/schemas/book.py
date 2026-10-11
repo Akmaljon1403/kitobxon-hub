@@ -94,6 +94,7 @@ class QuoteOut(BaseModel):
     text: str
     author: str | None
     source: str | None
+    saved: bool = False  # in my «💬 Iqtiboslar sandig'i»
 
 
 class BookDetailOut(BookOut):
