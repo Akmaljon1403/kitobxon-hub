@@ -199,8 +199,9 @@ def decision_markup(payment: CardPayment, *, with_receipt: bool = False) -> Any:
 
 
 async def payments_chat(session: AsyncSession) -> str | None:
-    chat = str(await get_setting(session, "payments.chat_id")).strip()
-    return chat or None
+    from app.services import payments_chat as chat_service
+
+    return await chat_service.chat_id(session)
 
 
 async def _send_to_chat(session: AsyncSession, payment: CardPayment, text: str) -> bool:

@@ -18,6 +18,7 @@ from app.bot import texts
 from app.bot.errors import on_error
 from app.bot.handlers import (
     admin,
+    chats,
     common,
     events,
     fallback,
@@ -90,6 +91,7 @@ def create_dispatcher() -> Dispatcher:
     # Payments first: Telegram's payment updates must never be taken by a waiting-for-text state.
     dispatcher.include_routers(
         payments.router,
+        chats.router,
         membership.router,
         registration.router,
         events.router,

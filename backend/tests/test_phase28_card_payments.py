@@ -252,6 +252,9 @@ async def test_card_payment_in_the_bot(db: AsyncSession) -> None:
     assert "rad etish sababini" in boss.last_text()
     await boss.send("Chek boshqa odamniki")
     assert boss.last_text() == texts.CARD_REJECTED
+    # The receipt message itself shows the decision, as it does for a ready reason.
+    edited = [r for r in boss.session.requests if isinstance(r, EditMessageText)]
+    assert edited and "Sabab: Chek boshqa odamniki" in edited[-1].text
     await db.refresh(second)
     assert second.status == CardPaymentStatus.REJECTED and second.reject_reason == "Chek boshqa odamniki"
     assert card_payments.format_uzs(1234567) == "1 234 567 so'm"

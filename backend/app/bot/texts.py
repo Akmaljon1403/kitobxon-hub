@@ -617,3 +617,27 @@ BOOK_STARTED = "📖 Zo'r! Kitob «O'qiyapman» ro'yxatingizga qo'shildi. Tugatg
 SUPER_ADMIN_ONLY = "Bu amal faqat bosh administrator uchun."
 ATTENDANCE_APPROVED = "✅ Tasdiqlandi — a'zoga ball berildi."
 ATTENDANCE_REJECTED = "❌ So'rov rad etildi."
+
+
+# ---- Channels and groups the bot is added to ----
+CHAT_ROLE_ASK = (
+    "🔔 Bot «<b>{title}</b>» ga administrator qilib qo'shildi.\n\n"
+    "Bu kanal (guruh) nima uchun?\n"
+    "💳 <b>To'lovlar kanali</b> — cheklar (✅/❌ tugmalari bilan), to'lov bo'yicha savollar, Stars to'lovlari va "
+    "haftalik moliyaviy xulosa shu yerga keladi; sizning shaxsiy chatingiz toza qoladi.\n"
+    "📣 <b>Klub kanali</b> — bot yangi kitob, tadbir va natijalar haqida post joylaydi."
+)
+BTN_CHAT_PAYMENTS = "💳 To'lovlar kanali"
+BTN_CHAT_CLUB = "📣 Klub kanali"
+BTN_CHAT_NONE = "Hech biri"
+CHAT_ROLE_NONE = "Mayli, hech narsa o'zgarmadi."
+CHAT_ROLE_UNREACHABLE = "Kanalni ko'ra olmadim. Bot hali ham u yerda administratormi?"
+CHAT_ROLE_PAYMENTS_DONE = (
+    "✅ «<b>{title}</b>» endi <b>to'lovlar kanali</b>. Cheklar, to'lov savollari va Stars to'lovlari faqat shu yerga "
+    "keladi. Kanalga sinov xabari yuborildi."
+)
+CHAT_ROLE_CLUB_DONE = "✅ «<b>{title}</b>» endi <b>klub kanali</b>: bot postlari shu yerga joylanadi."
+CHAT_PAYMENTS_LOST = (
+    "⚠️ Bot «<b>{title}</b>» to'lovlar kanalidan chiqarildi yoki adminlikdan olindi. Cheklar endi sizga botda keladi. "
+    "Davom ettirish uchun botni kanalga qayta administrator qiling."
+)

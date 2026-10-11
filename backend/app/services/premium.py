@@ -706,6 +706,9 @@ async def refund(session: AsyncSession, bot: Bot, *, actor_id: uuid.UUID, paymen
         f"premium:refund:{payment.id}",
     )
     await session.commit()
+    from app.services import payments_chat
+
+    await payments_chat.stars_refund(session, payment, user, await session.get(User, actor_id))
     return payment
 
 

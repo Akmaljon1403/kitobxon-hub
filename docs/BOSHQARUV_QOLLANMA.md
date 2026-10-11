@@ -434,19 +434,37 @@ a'zoga **bir marta** `premium.trial_days` kunlik (odatda 7) bepul Premium beradi
 imkoniyatlar ilovada 💎 belgisi bilan ko'rinadi. Tasdiqlash yoqilgan bo'lsa, sinov admin
 tasdiqlagan kundan boshlanadi.
 
-## 19. To'lovlar guruhi, cheklar va premium emojilar
+## 19. To'lovlar kanali, cheklar va premium emojilar
 
-**To'lovlar guruhi** — barcha cheklar (Premium, Stars, hissa) va to'lov savollari bitta joyga
-kelishi uchun:
+**To'lovlar kanali** — pulga oid hamma narsa sizning shaxsiy chatingizga emas, alohida yopiq kanalga
+keladi:
 
-1. Telegram'da yopiq guruh yarating, botni va to'lovlarni tekshiruvchi adminlarni qo'shing,
-   botni guruhda **administrator** qiling.
-2. **Sozlamalar** → `payments.chat_id` — guruh @username'i yoki `-100…` raqami.
+| Nima | Qayerga |
+|---|---|
+| Karta cheklari (Premium, Stars, hissa) — ✅ / ❌ tugmalari bilan | 💳 To'lovlar kanali |
+| A'zolarning «To'lov bo'yicha» savollari — **✍️ Javob yozish** tugmasi bilan | 💳 To'lovlar kanali |
+| Har bir Telegram Stars to'lovi va qaytarilgan Stars | 💳 To'lovlar kanali |
+| Har dushanba 09:00 — o'tgan haftaning moliyaviy xulosasi | 💳 To'lovlar kanali |
+
+Sozlash (bir daqiqa, hech narsa yozish shart emas):
+
+1. Telegram'da **yopiq kanal** yarating (masalan «Kitobxon — to'lovlar»). Kanalni ko'radigan
+   adminlarni qo'shing.
+2. Kanal → **Administratorlar** → **Administrator qo'shish** → botni toping → **Xabar joylash**
+   huquqi yoqilgan bo'lsin → saqlang.
+3. Bot sizga shaxsiy xabar yozadi: «Bu kanal nima uchun?» → **💳 To'lovlar kanali** ni bosing.
+   Kanalga «✅ Sinov xabari» keladi — tayyor.
+
+Holatni **Premium** sahifasidagi «💳 To'lovlar kanali» kartasida ko'rasiz (✅ ulangan yoki
+muammo nimada), u yerda **🧪 Sinov xabari** tugmasi va oxirgi 30 kunlik moliyaviy xulosa bor.
+Qo'lda sozlash ham mumkin: **Sozlamalar** → `payments.chat_id` (`@username` yoki `-100…`).
+Botni kanaldan chiqarsangiz, bot darhol ogohlantiradi va cheklar vaqtincha botda keladi —
+hech narsa yo'qolmaydi.
 
 Chek kelganda: **✅ Tasdiqlash** yoki **❌ Rad etish** → tayyor sabablardan birini tanlaysiz
 («Chek o'qilmayapti yoki to'liq emas», «Summa tarif narxiga mos emas», «To'lov kartaga kelib
 tushmagan») yoki **✍️ Boshqa sabab** ni yozasiz. Adashib bosilgan qarorni **48 soat ichida**
-**↩️ Qaytarish** bilan bekor qilasiz. Guruh sozlanmagan bo'lsa, cheklar bosh
+**↩️ Qaytarish** bilan bekor qilasiz. Kanal sozlanmagan bo'lsa, cheklar bosh
 administratorlarga botda keladi. Hissa (donat) uchun chek so'ralmaydi.
 
 **Premium emojilar** — bot xabarlaridagi oddiy emojilarni Telegram premium (animatsion) emojilariga

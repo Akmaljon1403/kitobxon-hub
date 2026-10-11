@@ -10,7 +10,15 @@ from collections.abc import Awaitable, Callable
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.services import achievements, admin_digest, announcements, channel, lifecycle, membership
+from app.services import (
+    achievements,
+    admin_digest,
+    announcements,
+    channel,
+    lifecycle,
+    membership,
+    payments_chat,
+)
 from app.services import attendance as attendance_service
 from app.services import certificates as certificate_service
 from app.services import contests as contest_service
@@ -68,6 +76,7 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("referral_contests", contest_service.run_due),
     ("year_summaries", daily_at(10, lifecycle.year_summaries)),
     ("admin_morning_digest", daily_at(8, admin_digest.send)),
+    ("payments_weekly_summary", daily_at(9, payments_chat.weekly_summary)),
 )
 
 

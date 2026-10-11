@@ -5,6 +5,7 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
+import { PaymentsChannel } from '../components/PaymentsChannel'
 import type { AdminUser, Page } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { navigate } from '../utils/router'
@@ -211,6 +212,8 @@ export function PremiumPage() {
           ))}
         </div>
       )}
+
+      <PaymentsChannel />
 
       <CardPayments onChanged={reloadAll} />
 

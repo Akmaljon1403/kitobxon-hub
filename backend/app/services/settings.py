@@ -183,9 +183,10 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "payments.chat_id",
         "",
         ShortText,
-        "To'lovlar guruhi yoki kanali: barcha cheklar (Premium, Stars, hissa) tugmalari bilan va to'lov "
-        "bo'yicha murojaatlar shu yerga keladi. @username yoki -100… raqami; bot u yerda admin bo'lsin "
-        "(bo'sh — bosh administratorlarga botda)",
+        "To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va "
+        "haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga "
+        "administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. "
+        "@username yoki -100… raqami (bo'sh — cheklar bosh administratorlarga botda)",
     ),
     SettingDefinition(
         "payments.stars_packages",

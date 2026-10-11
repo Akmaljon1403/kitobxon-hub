@@ -107,8 +107,8 @@ async def member_message(
     preview = html.escape(body[:PREVIEW] + ("…" if len(body) > PREVIEW else "")) if body else "📷 Rasm yubordi"
     title = "💳 <b>To'lov bo'yicha murojaat</b>" if topic == "payment" else "📨 <b>Yangi murojaat</b>"
     text = f"{title}\n👤 {who}" + (f" · {details}" if details else "") + f"\n\n{preview}"
-    if topic == "payment":
-        await _to_payments_chat(session, text, ticket.id)
+    if topic == "payment" and await _to_payments_chat(session, text, ticket.id):
+        return ticket  # payment questions live in the payments chat, not in the admins' private chats
     await enqueue_for_members(
         session,
         type_=NotificationType.SUPPORT,
@@ -140,24 +140,16 @@ async def member_thread(session: AsyncSession, user_id: uuid.UUID, limit: int = 
     return list(reversed(rows))
 
 
-async def _to_payments_chat(session: AsyncSession, text: str, ticket_id: uuid.UUID) -> None:
-    """A copy of a payment question in the payments chat, with «✍️ Javob yozish»."""
+async def _to_payments_chat(session: AsyncSession, text: str, ticket_id: uuid.UUID) -> bool:
+    """A payment question in the payments chat, with «✍️ Javob yozish». False when it could not go there."""
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-    from app.services.card_payments import payments_chat
-    from app.services.delivery import optional_bot
+    from app.services import payments_chat
 
-    chat = await payments_chat(session)
-    bot = optional_bot() if chat else None
-    if chat is None or bot is None:
-        return
     markup = InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:ans:{ticket_id}")]]
     )
-    try:
-        await bot.send_message(chat, text, reply_markup=markup)
-    except Exception:
-        logger.warning("The payments chat could not be reached with a payment question")
+    return await payments_chat.post(session, text, markup)
 
 
 async def admin_reply(session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: uuid.UUID, text: str) -> SupportMessage:

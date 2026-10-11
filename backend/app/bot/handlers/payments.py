@@ -263,6 +263,11 @@ async def successful_payment(message: Message, db: AsyncSession) -> None:
         await message.answer(texts.PAYMENT_PREMIUM_OK.format(until=format_date(subscription.ends_at)))
     else:
         await message.answer(texts.PAYMENT_DONATION_OK.format(amount=html.escape(str(stored.amount))))
+    buyer = await db.get(User, stored.user_id)
+    if buyer is not None:
+        from app.services import payments_chat
+
+        await payments_chat.stars_payment(db, stored, buyer)  # a line in the payments channel
 
 
 @router.message(Command("terms"))
@@ -598,8 +603,37 @@ async def card_reject_typed(callback: CallbackQuery, state: FSMContext, db: Asyn
         await callback.answer(texts.CARD_DM_FIRST, show_alert=True)
         return
     await private.set_state(CardReject.waiting)
-    await private.update_data(payment_id=payment.id.hex)
+    origin = callback.message if isinstance(callback.message, Message) else None
+    await private.update_data(
+        payment_id=payment.id.hex,
+        # The receipt in the payments channel gets the decision line once the reason is typed.
+        origin_chat=origin.chat.id if origin else None,
+        origin_message=origin.message_id if origin else None,
+        origin_text=(origin.html_text or "") if origin else "",
+        origin_media=bool(origin and (origin.photo or origin.document)),
+    )
     await callback.answer("✍️")
+
+
+async def _mark_origin(bot: Any, data: dict[str, Any], payment: Any, line: str) -> None:
+    """After a typed reason: the receipt message (in the channel or the chat) shows who decided, and why."""
+    chat, message_id = data.get("origin_chat"), data.get("origin_message")
+    if chat is None or message_id is None or bot is None:
+        return
+    text = f"{data.get('origin_text') or ''}\n\n{line}"
+    markup = _decided_markup(payment)
+    try:
+        if data.get("origin_media"):
+            if len(text) > 1000:
+                raise ValueError("caption too long")
+            await bot.edit_message_caption(chat_id=chat, message_id=message_id, caption=text, reply_markup=markup)
+        else:
+            await bot.edit_message_text(text, chat_id=chat, message_id=message_id, reply_markup=markup)
+    except Exception:
+        try:
+            await bot.send_message(chat, line, reply_markup=markup, reply_to_message_id=message_id)
+        except Exception:
+            logger.warning("The receipt message could not be updated after a typed reason")
 
 
 @router.message(StateFilter(CardReject.waiting), F.text, ~F.text.startswith("/"))
@@ -611,13 +645,17 @@ async def card_reject_reason(message: Message, state: FSMContext, db: AsyncSessi
         return
     assert member is not None
     try:
-        await card_payments.reject(
+        payment = await card_payments.reject(
             db, actor_id=member.id, payment_id=uuid.UUID(hex=data["payment_id"]), reason=message.text or ""
         )
     except AppError as exc:
         await message.answer(exc.message)
         return
     await message.answer(texts.CARD_REJECTED)
+    line = texts.CARD_LINE_REJECTED.format(
+        admin=html.escape(member.first_name), time=_now_text(), reason=html.escape(payment.reject_reason or "")
+    )
+    await _mark_origin(message.bot, data, payment, line)
 
 
 @router.callback_query(F.data.startswith("cp:undo:"))
