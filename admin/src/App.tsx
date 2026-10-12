@@ -31,6 +31,7 @@ import { SupportPage, SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
 import { TestsPage } from './pages/TestsPage'
+import { TrustPage } from './pages/TrustPage'
 import { SessionProvider, useSession } from './store/session'
 import { useRoute } from './utils/router'
 
@@ -61,6 +62,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   settings: SettingsPage,
   admins: AdminsPage,
   audit: AuditPage,
+  trust: TrustPage,
 }
 
 function Router() {

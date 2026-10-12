@@ -349,3 +349,123 @@ async def inactive_members(session: AsyncSession, *, days: int, limit: int = 200
         }
         for user, faculty, last_at in rows
     ]
+
+
+# ---------------------------------------------------------------------------- «Faollik va qaytish»
+
+
+def _active_in(start: datetime, end: datetime) -> Any:
+    """Members who did anything in a window: points, a diary entry or a verified visit."""
+    from sqlalchemy import union
+
+    from app.models import ReadingLog
+
+    return union(
+        select(ScoreTransaction.user_id.label("user_id")).where(
+            ScoreTransaction.created_at >= start, ScoreTransaction.created_at < end
+        ),
+        select(ReadingLog.user_id.label("user_id")).where(ReadingLog.created_at >= start, ReadingLog.created_at < end),
+        select(AttendanceRecord.user_id.label("user_id")).where(
+            AttendanceRecord.checked_in_at >= start,
+            AttendanceRecord.checked_in_at < end,
+            AttendanceRecord.status == AttendanceStatus.VERIFIED,
+        ),
+    )
+
+
+async def engagement(session: AsyncSession, *, months: int = 6, now: datetime | None = None) -> dict[str, Any]:
+    """Month by month: who was active, who came back, who stopped; and how the reading tools are used."""
+    from app.models import BookReflection, ReadingLog, SavedQuote, ShelfItem, UserMission
+    from app.models.enums import ShelfStatus, UserMissionStatus
+
+    current = (now or datetime.now(UTC)).astimezone(local_tz())
+    starts = _month_starts(months + 1, current.date())
+    ends = [*starts[1:], datetime.combine(current.date() + timedelta(days=1), time.min, tzinfo=local_tz())]
+    active_sets: list[set[Any]] = []
+    for start, end in zip(starts, ends, strict=True):
+        active_sets.append(set((await session.execute(_active_in(start, end))).scalars().all()))
+    series = []
+    for index in range(1, len(starts)):
+        start, end = starts[index], ends[index]
+        active, previous = active_sets[index], active_sets[index - 1]
+        new = int(
+            await session.scalar(
+                select(func.count()).select_from(User).where(User.registered_at >= start, User.registered_at < end)
+            )
+            or 0
+        )
+        returning = len(active & previous)
+        series.append(
+            {
+                "month": start.strftime("%Y-%m"),
+                "active": len(active),
+                "new": new,
+                "returning": returning,
+                "churned": len(previous - active),
+                "retention": round(returning * 100 / len(previous)) if previous else None,
+            }
+        )
+    month_ago = datetime.now(UTC) - timedelta(days=30)
+    taken = int(
+        await session.scalar(select(func.count()).select_from(UserMission).where(UserMission.started_at >= month_ago))
+        or 0
+    )
+    completed = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(UserMission)
+            .where(UserMission.started_at >= month_ago, UserMission.status == UserMissionStatus.COMPLETED)
+        )
+        or 0
+    )
+    diary_members = int(
+        await session.scalar(
+            select(func.count(func.distinct(ReadingLog.user_id))).where(ReadingLog.created_at >= month_ago)
+        )
+        or 0
+    )
+    pages = int(
+        await session.scalar(
+            select(func.coalesce(func.sum(ReadingLog.pages), 0)).where(ReadingLog.created_at >= month_ago)
+        )
+        or 0
+    )
+    finished = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(ShelfItem)
+            .where(ShelfItem.status == ShelfStatus.FINISHED, ShelfItem.finished_at >= month_ago)
+        )
+        or 0
+    )
+    quotes = int(
+        await session.scalar(select(func.count()).select_from(SavedQuote).where(SavedQuote.created_at >= month_ago))
+        or 0
+    )
+    reflections = int(
+        await session.scalar(
+            select(func.count()).select_from(BookReflection).where(BookReflection.created_at >= month_ago)
+        )
+        or 0
+    )
+    members = int(
+        await session.scalar(
+            select(func.count()).select_from(User).where(User.status == UserStatus.ACTIVE, User.deleted_at.is_(None))
+        )
+        or 0
+    )
+    return {
+        "months": series,
+        "last_30_days": {
+            "members": members,
+            "diary_members": diary_members,
+            "diary_share": round(diary_members * 100 / members) if members else 0,
+            "pages": pages,
+            "books_finished": finished,
+            "quotes": quotes,
+            "reflections": reflections,
+            "missions_taken": taken,
+            "missions_completed": completed,
+            "missions_rate": round(completed * 100 / taken) if taken else None,
+        },
+    }

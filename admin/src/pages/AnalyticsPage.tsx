@@ -42,6 +42,63 @@ const MONTHLY: { key: keyof Analytics['by_month']; title: string; subtitle: stri
   { key: 'books_completed', title: "O'qib tugatilgan kitoblar", subtitle: "A'zolar belgilagan tugatishlar" },
 ]
 
+interface Engagement {
+  months: { month: string; active: number; new: number; returning: number; churned: number; retention: number | null }[]
+  last_30_days: {
+    members: number
+    diary_members: number
+    diary_share: number
+    pages: number
+    books_finished: number
+    quotes: number
+    reflections: number
+    missions_taken: number
+    missions_completed: number
+    missions_rate: number | null
+  }
+}
+
+/** «Faollik va qaytish»: who came back, who stopped, and how the reading tools are used. */
+function EngagementSection() {
+  const { api } = useSession()
+  const { state } = useAsync((signal) => api<Engagement>('/api/v1/admin/analytics/engagement', { signal }))
+  if (state.status !== 'success') return null
+  const { months, last_30_days: last } = state.data
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div>
+        <h2 className="font-semibold">🔁 Faollik va qaytish</h2>
+        <p className="text-sm text-app-hint">
+          Faol — oy davomida ball olgan, kundalikka yozgan yoki tadbirga kelgan a’zo. Qaytgan — o‘tgan oy ham faol bo‘lgan; to‘xtagan — o‘tgan
+          oy faol edi, bu oy yo‘q.
+        </p>
+      </div>
+      <Table head={['Oy', 'Faol', 'Yangi', 'Qaytgan', 'To‘xtagan', 'Saqlanish']}>
+        {months.map((row) => (
+          <tr key={row.month}>
+            <td className="px-4 py-2">{monthLabel(row.month)}</td>
+            <td className="px-4 py-2 tabular-nums">{formatNumber(row.active)}</td>
+            <td className="px-4 py-2 tabular-nums">{formatNumber(row.new)}</td>
+            <td className="px-4 py-2 tabular-nums">{formatNumber(row.returning)}</td>
+            <td className="px-4 py-2 tabular-nums">{formatNumber(row.churned)}</td>
+            <td className="px-4 py-2">{row.retention === null ? '—' : <Meter value={row.retention} label={`${row.retention}%`} />}</td>
+          </tr>
+        ))}
+      </Table>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile label="Kundalik yuritayotganlar (30 kun)" value={`${last.diary_members} (${last.diary_share}%)`} note={`${formatNumber(last.pages)} bet yozildi`} />
+        <StatTile label="O‘qib tugatilgan kitoblar (javon)" value={formatNumber(last.books_finished)} note={`«3 savol» javoblari: ${last.reflections}`} />
+        <StatTile label="Saqlangan iqtiboslar" value={formatNumber(last.quotes)} />
+        <StatTile
+          label="Missiyalar: olindi / bajarildi"
+          value={`${last.missions_taken} / ${last.missions_completed}`}
+          note={last.missions_rate === null ? undefined : `bajarilish ${last.missions_rate}%`}
+        />
+      </div>
+    </Card>
+  )
+}
+
 function Inactive() {
   const { api } = useSession()
   const [days, setDays] = useState(30)
@@ -214,6 +271,8 @@ export function AnalyticsPage() {
               ))}
             </Table>
           </Card>
+
+          <EngagementSection />
 
           {can('USER_VIEW') && <Inactive />}
         </div>

@@ -21,6 +21,7 @@ const SHORTCUTS: { route: string; icon: string; label: string; feature?: string 
   { route: 'results', icon: '📊', label: 'Natijalarim' },
   { route: 'stats', icon: '📈', label: 'Statistikam', feature: 'personal_stats' },
   { route: 'ranking', icon: '🏆', label: 'Reyting', feature: 'ranking' },
+  { route: 'league', icon: '🏛', label: 'Fakultetlar ligasi', feature: 'faculty_league' },
   { route: 'achievements', icon: '🏅', label: 'Yutuqlar', feature: 'achievements' },
   { route: 'profile', icon: '🪪', label: 'Pasportim' },
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", feature: 'rewards' },

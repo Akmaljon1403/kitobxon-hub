@@ -83,3 +83,4 @@ for module in (
     admin_missions,
 ):
     api_router.include_router(module.router)
+api_router.include_router(admin_analytics.trust_router)

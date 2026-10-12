@@ -99,3 +99,16 @@ async def faculty_rankings(
 )
 async def my_stats(current: CurrentUserDep, db: DbSession) -> dict[str, Any]:
     return await insights.personal_stats(db, current.user)
+
+
+@router.get(
+    "/league",
+    dependencies=[feature_required("faculty_league")],
+    summary="«🏛 Fakultetlar ligasi»: faculties by average points, with readers, pages, books and visits",
+)
+async def faculty_league(
+    current: CurrentUserDep, db: DbSession, period: Annotated[Literal["week", "month", "all"], Query()] = "month"
+) -> dict[str, Any]:
+    from app.services import league
+
+    return await league.table(db, period, current.user)
