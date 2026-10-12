@@ -369,3 +369,19 @@ class UserMissionStatus(StrEnum):
     ACTIVE = "ACTIVE"
     COMPLETED = "COMPLETED"
     EXPIRED = "EXPIRED"
+
+
+class ContributionKind(StrEnum):
+    """«💬 A'zolar fikrlari»: what a member sent to the club."""
+
+    QUOTE = "QUOTE"  # a line from a book
+    THOUGHT = "THOUGHT"  # the member's own thought or saying
+    BOOK = "BOOK"  # an impression after a book
+    EVENT = "EVENT"  # an impression after a club event
+    CLUB = "CLUB"  # a testimonial about the club («e'tirof»)
+
+
+class ContributionStatus(StrEnum):
+    PENDING = "PENDING"  # waits for an admin
+    APPROVED = "APPROVED"  # in the common feed
+    HIDDEN = "HIDDEN"  # not shown (kept for the author)

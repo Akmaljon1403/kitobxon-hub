@@ -6,6 +6,7 @@ import { BookDetailPage } from './pages/BookDetailPage'
 import { BooksPage } from './pages/BooksPage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { CheckInPage } from './pages/CheckInPage'
+import { CommunityNewPage, CommunityPage } from './pages/CommunityPage'
 import { EventDetailPage } from './pages/EventDetailPage'
 import { EventsPage } from './pages/EventsPage'
 import { HelpPage } from './pages/HelpPage'
@@ -60,6 +61,8 @@ function Routes() {
   else if (section === 'shelf' && id) page = <FeatureGate code="shelf"><ShelfItemPage itemId={id} /></FeatureGate>
   else if (section === 'shelf') page = <FeatureGate code="shelf"><ShelfPage /></FeatureGate>
   else if (section === 'quotes') page = <FeatureGate code="quote_box"><QuotesPage /></FeatureGate>
+  else if (section === 'community' && id === 'new') page = <FeatureGate code="community"><CommunityNewPage /></FeatureGate>
+  else if (section === 'community') page = <FeatureGate code="community"><CommunityPage /></FeatureGate>
   else if (section === 'missions') page = <FeatureGate code="missions"><MissionsPage /></FeatureGate>
   else if (section === 'league') page = <FeatureGate code="faculty_league"><LeaguePage /></FeatureGate>
   else if (section === 'card') page = <FeatureGate code="reading_card"><ReadingCardPage /></FeatureGate>

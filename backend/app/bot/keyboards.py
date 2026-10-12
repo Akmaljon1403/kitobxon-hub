@@ -350,3 +350,40 @@ def reading_links(*, missions: bool = False) -> InlineKeyboardMarkup | None:
         [app_button("shelf", texts.BTN_SHELF_APP), app_button("quotes", texts.BTN_QUOTES_APP)],
         [app_button("missions", texts.BTN_MISSIONS_APP)] if missions else [],
     )
+
+
+def community_start() -> InlineKeyboardMarkup | None:
+    from app.models.enums import ContributionKind
+    from app.services.community import KINDS
+
+    choices = (ContributionKind.QUOTE, ContributionKind.THOUGHT, ContributionKind.CLUB)
+    return inline(
+        *[[InlineKeyboardButton(text=KINDS[kind][0], callback_data=f"cmw:{kind.value}")] for kind in choices],
+        [app_button("community/new", texts.BTN_COMMUNITY_APP)],
+        [app_button("community", texts.BTN_COMMUNITY_FEED)],
+    )
+
+
+def community_skip() -> InlineKeyboardMarkup | None:
+    return inline([InlineKeyboardButton(text=texts.BTN_SKIP, callback_data="cmw:skip")])
+
+
+def community_sent(contribution_hex: str) -> InlineKeyboardMarkup | None:
+    return inline(
+        [InlineKeyboardButton(text=texts.BTN_COMMUNITY_CARD, callback_data=f"cm:card:{contribution_hex}")],
+        [app_button("community", texts.BTN_COMMUNITY_FEED)],
+    )
+
+
+def community_event_offer(event_hex: str) -> InlineKeyboardMarkup | None:
+    return inline(
+        [
+            InlineKeyboardButton(text=texts.BTN_COMMUNITY_EVENT_YES, callback_data=f"cmfb:{event_hex}"),
+            InlineKeyboardButton(text=texts.BTN_COMMUNITY_EVENT_NO, callback_data="cmfb:no"),
+        ]
+    )
+
+
+def community_admin_after() -> InlineKeyboardMarkup | None:
+    """Under a decided text: the full section (card designs, the channel, members, the quote of the day)."""
+    return inline([admin_panel_button("community", "🛠 Kanalga yoki a'zolarga ulashish — panelda")])

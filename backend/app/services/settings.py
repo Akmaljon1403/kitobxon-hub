@@ -293,6 +293,56 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=50)],
         "«3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz)",
     ),
+    # ---- «💬 A'zolar fikrlari» ----
+    SettingDefinition(
+        "community.auto_publish",
+        False,
+        bool,
+        "A'zolar yuborgan iqtibos va fikrlar admin tasdiqlamasdan umumiy lentada darhol chiqsinmi "
+        "(o'chiq — avval admin ko'rib chiqadi)",
+    ),
+    SettingDefinition(
+        "community.points",
+        2,
+        Annotated[int, Field(ge=0, le=100)],
+        "Fikri yoki iqtibosi umumiy lentaga qabul qilingan a'zoga ball (har biriga bir marta; 0 — ball berilmaydi)",
+    ),
+    SettingDefinition(
+        "community.monthly_points_limit",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "Bir oyda nechta fikr uchun ball beriladi (0 — cheklovsiz)",
+    ),
+    SettingDefinition(
+        "community.featured_points",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "Fikri «⭐ Tanlangan» bo'lgan yoki kanalda e'lon qilingan a'zoga qo'shimcha ball (bir marta)",
+    ),
+    SettingDefinition(
+        "community.daily_limit",
+        5,
+        Annotated[int, Field(ge=1, le=50)],
+        "Bir a'zo bir kunda nechta fikr yubora oladi (spamdan himoya)",
+    ),
+    SettingDefinition(
+        "community.ask_after_book",
+        True,
+        bool,
+        "Kitobni o'qib tugatgan a'zodan iqtibos yoki taassurot yozishni so'rash",
+    ),
+    SettingDefinition(
+        "community.ask_after_event",
+        True,
+        bool,
+        "Tadbirga baho bergan a'zoni tadbir haqida taassurot yozishga taklif qilish",
+    ),
+    SettingDefinition(
+        "community.notify_admins",
+        True,
+        bool,
+        "Yangi fikr kelganda «A'zolar fikrlari» huquqi bor adminlarga botda ✅ / ⭐ / 🙈 tugmalari bilan xabar berish",
+    ),
     # ---- Study years ----
     SettingDefinition(
         "academic.promote_groups",

@@ -118,6 +118,7 @@ class QuoteIn(BaseModel):
     shelf_item_id: uuid.UUID | None = None
     page: int | None = Field(default=None, gt=0, le=20000)
     note: str | None = Field(default=None, max_length=500)
+    source: str | None = Field(default=None, max_length=255, description="«Muallif — Kitob» for a typed quote")
 
 
 class QuoteOut(BaseModel):

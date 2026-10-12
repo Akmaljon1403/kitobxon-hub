@@ -21,6 +21,7 @@ const TITLES: Record<string, string> = {
   missions: '🎯 Missiyalar',
   reading_card: '🪪 Kitobxonlik kartam',
   faculty_league: '🏛 Fakultetlar ligasi',
+  community: "💬 A'zolar fikrlari",
 }
 
 export function useFeature(code: string): FeatureAccess {

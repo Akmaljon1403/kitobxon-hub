@@ -722,3 +722,44 @@ CARD_CAPTION = (
     "🪪 <b>Kitobxonlik kartangiz</b> — o'qigan kitoblar, betlar, seriya va yutuqlaringiz.\n"
     "Do'stlaringizga ulashing: rasmni bosib turing → «Ulashish»."
 )
+
+# ---- «💬 A'zolar fikrlari» (/fikr) ----
+BTN_COMMUNITY_FEED = "📖 Lentani o'qish"
+BTN_COMMUNITY_APP = "📱 Ilovada yozish (kitob yoki tadbir tanlab)"
+COMMUNITY_START = (
+    "💬 <b>A'zolar fikrlari</b>\n\n"
+    "Kitobdan yoqqan iqtibosingiz, o'z fikringiz yoki klub haqidagi e'tirofingizni yozing. Eng yaxshilari "
+    "chiroyli kartochka bo'lib klub kanalida va boshqa kitobxonlarga yuboriladi, sizga esa ball beriladi.\n\n"
+    "Nima yozasiz?"
+)
+COMMUNITY_ASK_TEXT = {
+    "QUOTE": "📖 Iqtibosni yozing (kitobdagidek, {min}–{max} belgi). Bekor qilish: /cancel",
+    "THOUGHT": "💡 Fikringizni yozing ({min}–{max} belgi). Bekor qilish: /cancel",
+    "CLUB": "🌟 Klub haqida e'tirofingizni yozing — klub sizga nima berdi? ({min}–{max} belgi). Bekor qilish: /cancel",
+}
+COMMUNITY_ASK_SOURCE = (
+    "✍️ Kim aytgan yoki qaysi kitobdan? Masalan: <i>Abdulla Qodiriy — O'tkan kunlar</i>.\nBilmasangiz — "
+    "«O'tkazib yuborish»."
+)
+BTN_SKIP = "O'tkazib yuborish"
+COMMUNITY_TEXT_ONLY = "Iltimos, matn yozing yoki /cancel"
+COMMUNITY_SENT_PENDING = (
+    "✅ Rahmat! Yuborildi. Admin ko'rib chiqqach «💬 A'zolar fikrlari» lentasida chiqadi va sizga xabar beramiz.{box}"
+)
+COMMUNITY_SENT_LIVE = "✅ Rahmat! «💬 A'zolar fikrlari» lentasiga qo'shildi.{box}"
+COMMUNITY_SENT_BOX = "\n💬 Nusxasi «Iqtiboslar sandig'i»ngizda ham saqlandi."
+BTN_COMMUNITY_CARD = "🖼 Kartochkasini olish"
+COMMUNITY_CARD_CAPTION = "💬 Kartochka tayyor — do'stlaringizga ulashing (rasmni bosib turing → «Ulashish»)."
+COMMUNITY_EVENT_OFFER = (
+    "💬 Fikringizni boshqa kitobxonlar ham o'qisinmi? «A'zolar fikrlari» lentasiga yuboraymi? "
+    "(eng yaxshilari klub kanalida chiqadi)"
+)
+BTN_COMMUNITY_EVENT_YES = "✅ Ha, yuboring"
+BTN_COMMUNITY_EVENT_NO = "Yo'q, rahmat"
+COMMUNITY_EVENT_NO = "Mayli, fikringiz faqat klub rahbariyatida qoladi."
+COMMUNITY_NO_RIGHT = "Bu tugma «A'zolar fikrlari» huquqi bor adminlar uchun."
+COMMUNITY_DONE = {
+    "approve": "✅ Lentaga qo'shildi — {admin}",
+    "feature": "⭐ Tanlanganlarga qo'shildi — {admin}",
+    "hide": "🙈 Yashirildi — {admin}",
+}

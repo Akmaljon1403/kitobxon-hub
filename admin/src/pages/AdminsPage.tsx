@@ -21,6 +21,7 @@ const GROUP_TITLES: Record<string, string> = {
   seasons: 'Mavsumlar',
   support: 'Murojaatlar',
   payments: "To'lovlar",
+  community: "A'zolar fikrlari",
   system: 'Tizim',
 }
 
@@ -165,8 +166,8 @@ const PRESETS: { label: string; hint: string; permissions?: string[] }[] = [
   },
   {
     label: '📨 Xabar va murojaatlar',
-    hint: "A'zolarga xabar yuborish va murojaatlarga javob berish",
-    permissions: ['USER_VIEW', 'NOTIFICATION_SEND', 'SUPPORT_MANAGE'],
+    hint: "A'zolarga xabar yuborish, murojaatlarga javob berish va a'zolar fikrlarini ulashish",
+    permissions: ['USER_VIEW', 'NOTIFICATION_SEND', 'SUPPORT_MANAGE', 'COMMUNITY_MANAGE'],
   },
   {
     label: '📄 Hisobot va tahlil',

@@ -268,6 +268,27 @@ async def send_due_notifications(
     return report
 
 
+# A picture sent to many members is uploaded once: Telegram's file id is reused after the first send.
+_photo_ids: dict[str, str] = {}
+
+
+async def _photo(notification: Notification) -> str | BufferedInputFile | None:
+    """The picture sent with the message (e.g. a member's quote card), from our storage."""
+    key = (notification.payload or {}).get("photo_key")
+    if not key:
+        return None
+    if key in _photo_ids:
+        return _photo_ids[key]
+    from app.services.storage import get_storage
+
+    try:
+        data = await get_storage().get(key)
+    except Exception:  # the words still matter: send them without the picture
+        logger.exception("Photo %s for notification %s is missing", key, notification.id)
+        return None
+    return BufferedInputFile(data, filename=key.rsplit("/", 1)[-1])
+
+
 async def _document(session: AsyncSession, notification: Notification) -> BufferedInputFile | None:
     """The file sent together with the message (a certificate PDF), if any."""
     certificate_id = (notification.payload or {}).get("certificate_id")
@@ -299,7 +320,21 @@ async def _deliver(
     """Send one message and record the outcome. Returns seconds to wait if rate-limited.
     ``effect``: Telegram's animated message effect (🎉); ``sticker``: sent right after the message."""
 
+    photo = await _photo(notification) if document is None else None
+
     async def send(effect_id: str | None) -> Message:
+        if photo is not None and len(notification.text) <= CAPTION_LIMIT:
+            sent = await bot.send_photo(
+                chat_id=user.telegram_id,
+                photo=photo,
+                caption=notification.text,
+                reply_markup=_markup(notification.payload),
+                message_effect_id=effect_id,
+            )
+            key = (notification.payload or {}).get("photo_key")
+            if key and sent.photo:
+                _photo_ids[key] = sent.photo[-1].file_id
+            return sent
         if document is not None and len(notification.text) <= CAPTION_LIMIT:
             return await bot.send_document(
                 chat_id=user.telegram_id,

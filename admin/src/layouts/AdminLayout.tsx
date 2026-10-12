@@ -34,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'missions', icon: '🎯', label: 'Missiyalar', visible: (can) => can('SEASON_MANAGE') },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', visible: (can) => can('REWARD_MANAGE') },
   { route: 'support', icon: '📨', label: 'Murojaatlar', visible: (can) => can('SUPPORT_MANAGE') },
+  { route: 'community', icon: '💬', label: "A'zolar fikrlari", visible: (can) => can('COMMUNITY_MANAGE') },
   { route: 'notifications', icon: '📢', label: 'Xabarlar', visible: (can) => can('NOTIFICATION_SEND') },
   { route: 'channel', icon: '📣', label: 'Telegram kanal', visible: (can) => can('NOTIFICATION_SEND') },
   { route: 'faculties', icon: '🏛', label: 'Fakultetlar', visible: () => true },

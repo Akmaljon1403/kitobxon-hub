@@ -121,6 +121,18 @@ def _set_status(item: ShelfItem, status: ShelfStatus) -> None:
     item.status = status
 
 
+async def _ask_after_finish(session: AsyncSession, user_id: uuid.UUID, item: ShelfItem) -> None:
+    """A book was just finished: invite a quote or an impression for «💬 A'zolar fikrlari»."""
+    from app.services import community
+
+    user = await session.get(User, user_id)
+    book = await session.get(Book, item.book_id) if item.book_id else None
+    title = book.title if book else item.title
+    if user is None or not title:
+        return
+    await community.ask_after_book(session, user, title=title, book_id=item.book_id, key=str(item.book_id or item.id))
+
+
 async def add(
     session: AsyncSession,
     user: User,
@@ -157,6 +169,8 @@ async def add(
     await session.flush()
     item_id = item.id
     await _club_reading(session, user, item, status)
+    if status == ShelfStatus.FINISHED:
+        await _ask_after_finish(session, user.id, item)
     await session.commit()
     await _after_change(session, user)
     return (await get_item(session, user, item_id))[0]
@@ -181,6 +195,8 @@ async def update(
         _set_status(item, status)
         await session.flush()
         await _club_reading(session, user, item, status)
+        if status == ShelfStatus.FINISHED:
+            await _ask_after_finish(session, user.id, item)
     await session.commit()
     await _after_change(session, user)
     return (await get_item(session, user, item_id))[0]
@@ -464,9 +480,11 @@ async def save_quote(
     shelf_item_id: uuid.UUID | None = None,
     page: int | None = None,
     note: str | None = None,
+    source: str | None = None,
 ) -> SavedQuote:
-    """A line the member typed (from a shelf book or anywhere), or a club quote saved with one tap."""
-    source: str | None = None
+    """A line the member typed (from a shelf book or anywhere, «Muallif — Kitob» in ``source``), or a club
+    quote saved with one tap."""
+    source = _clean(source, 255)
     if book_quote_id is not None:
         club = await session.get(BookQuote, book_quote_id)
         if club is None or club.deleted_at is not None or club.status not in (QuoteStatus.SCHEDULED, QuoteStatus.SENT):
@@ -559,3 +577,6 @@ async def sync_club_book(session: AsyncSession, user_id: uuid.UUID, book_id: uui
         session.add(item)
     if item.status != wanted and not (item.status == ShelfStatus.FINISHED and wanted == ShelfStatus.READING):
         _set_status(item, wanted)
+        if wanted == ShelfStatus.FINISHED:
+            await session.flush()
+            await _ask_after_finish(session, user_id, item)

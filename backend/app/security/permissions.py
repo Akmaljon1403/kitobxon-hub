@@ -42,6 +42,7 @@ class Perm(StrEnum):
     AUDIT_LOG_VIEW = "AUDIT_LOG_VIEW"
     SUPPORT_MANAGE = "SUPPORT_MANAGE"
     STARS_SEND = "STARS_SEND"
+    COMMUNITY_MANAGE = "COMMUNITY_MANAGE"
 
 
 # (group, description shown to administrators)
@@ -79,6 +80,10 @@ PERMISSION_INFO: dict[Perm, tuple[str, str]] = {
     Perm.STARS_SEND: (
         "payments",
         "Telegram Stars'ni a'zolarga yuborish: bosh admin tasdiqlagan Stars buyurtmalari shu adminga keladi",
+    ),
+    Perm.COMMUNITY_MANAGE: (
+        "community",
+        "A'zolar fikrlari va iqtiboslarini ko'rib chiqish, kartochka qilish va kanal yoki a'zolarga ulashish",
     ),
 }
 

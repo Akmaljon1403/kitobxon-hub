@@ -636,3 +636,31 @@ export interface Mission {
   completed_at: string | null
   attempts: number
 }
+
+export type ContributionKind = 'QUOTE' | 'THOUGHT' | 'BOOK' | 'EVENT' | 'CLUB'
+
+export interface Contribution {
+  id: string
+  kind: ContributionKind
+  kind_title: string
+  text: string
+  source: string | null
+  author: string
+  show_name: boolean
+  style: string
+  status: 'PENDING' | 'APPROVED' | 'HIDDEN'
+  featured: boolean
+  likes: number
+  liked: boolean
+  book_id: string | null
+  event_id: string | null
+  in_channel: boolean
+  created_at: string
+}
+
+export interface CommunityOptions {
+  kinds: { code: ContributionKind; title: string }[]
+  styles: { code: string; title: string }[]
+  books: { id: string; title: string; author: string | null }[]
+  events: { id: string; title: string; starts_at: string }[]
+}

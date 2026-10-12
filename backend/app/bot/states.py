@@ -69,3 +69,11 @@ class CustomEmojiCollect(StatesGroup):
     """An admin is sending premium emoji to use inside the bot's messages (/emoji)."""
 
     waiting = State()
+
+
+class CommunityWrite(StatesGroup):
+    """«💬 A'zolar fikrlari» from the bot (/fikr): the kind is chosen, then the text, then (for a quote) its
+    author and book."""
+
+    text = State()
+    source = State()

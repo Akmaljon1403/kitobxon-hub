@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { useFeature } from '../components/FeatureGate'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -14,6 +15,7 @@ import { confirmAction, haptic } from '../utils/telegram'
 /** A saved quote: the card picture (preview), sent to the bot chat to share, and removal. */
 export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: () => void }) {
   const { api, download } = useAuth()
+  const community = useFeature('community')
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
@@ -51,6 +53,20 @@ export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: ()
     }
   }
 
+  async function share() {
+    setBusy('share')
+    setNotice(null)
+    try {
+      await api('/api/v1/community/from-box', { method: 'POST', body: { saved_quote_id: quote.id } })
+      haptic('success')
+      setNotice({ text: '🌍 «A‘zolar fikrlari»ga yuborildi — admin ko‘rib chiqqach lentada chiqadi.' })
+    } catch (err) {
+      setNotice({ text: err instanceof ApiError ? err.message : 'Yuborib bo‘lmadi', error: true })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   async function remove() {
     if (!(await confirmAction('Iqtibos sandiqdan o‘chirilsinmi?'))) return
     await api(`/api/v1/me/quotes/${quote.id}`, { method: 'DELETE' })
@@ -78,6 +94,11 @@ export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: ()
           🗑
         </Button>
       </div>
+      {!quote.book_quote_id && community !== 'off' && (
+        <Button variant="ghost" className="text-sm" loading={busy === 'share'} onClick={() => void share()}>
+          🌍 Hamma bilan ulashish («A‘zolar fikrlari»)
+        </Button>
+      )}
       <p className="text-xs text-app-hint">{formatDate(quote.created_at)}</p>
     </Card>
   )
@@ -108,7 +129,7 @@ export function QuotesPage() {
     setBusy(true)
     setError(null)
     try {
-      await api('/api/v1/me/quotes', { method: 'POST', body: { text, note: source.trim() ? `Manba: ${source.trim()}` : null } })
+      await api('/api/v1/me/quotes', { method: 'POST', body: { text, source: source.trim() || null } })
       haptic('success')
       setText('')
       setSource('')

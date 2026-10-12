@@ -15,6 +15,7 @@ const SHORTCUTS: { route: string; icon: string; label: string; feature?: string 
   { route: 'shelf', icon: '📖', label: 'Javonim', feature: 'shelf' },
   { route: 'missions', icon: '🎯', label: 'Missiyalar', feature: 'missions' },
   { route: 'quotes', icon: '💬', label: 'Iqtiboslarim', feature: 'quote_box' },
+  { route: 'community', icon: '🌍', label: "A'zolar fikrlari", feature: 'community' },
   { route: 'events', icon: '📅', label: 'Tadbirlar' },
   { route: 'checkin', icon: '✅', label: 'Davomat' },
   { route: 'tests', icon: '📝', label: 'Testlar' },
