@@ -36,6 +36,9 @@
   .gold { background: #f6ecd2; color: #7a5410; }
   .code { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; }
   .empty { color: #8a968f; font-style: italic; }
+  .sign { margin-top: 12mm; page-break-inside: avoid; position: relative; font-size: 10.5pt; }
+  .sign .rule { display: inline-block; width: 40mm; border-bottom: 0.3mm solid #222; margin: 0 3mm; }
+  .sign .seal { position: absolute; left: 26mm; top: -13mm; width: 30mm; height: 30mm; opacity: 0.9; }
   .note { margin-top: 7mm; font-size: 7.5pt; color: #6b7a72; border-top: 0.3mm solid #e6ece8; padding-top: 2mm; }
 </style>
 </head>
@@ -49,7 +52,7 @@
     <div class="meta">
       A'zo raqami: <b>{{ number }}</b>{% if faculty %} · {{ faculty }}{% endif %}{% if course %} · {{ course }}-kurs{% endif %}{% if group %} · {{ group }}-guruh{% endif %}
     </div>
-    <div class="meta">Klub a'zosi: {{ since }} dan · Hujjat sanasi: {{ generated }}</div>
+    <div class="meta">Klub a'zosi: {{ since }} dan · Hujjat berilgan: {{ generated }}</div>
   </div>
   {% if qr %}
   <div class="qr"><img src="{{ qr }}" alt="QR"><p>Jonli natijalar va tasdiq</p></div>
@@ -111,6 +114,13 @@
   {% endfor %}
 </table>
 {% else %}<p class="empty">Yutuqlar hali yo'q.</p>{% endif %}
+
+{% if signer %}
+<div class="sign">
+  {% if signer.seal %}<img class="seal" src="{{ signer.seal }}" alt="">{% endif %}
+  <b>{{ signer.title }}:</b><span class="rule"></span><b>{{ signer.name }}</b>
+</div>
+{% endif %}
 
 <p class="note">
   Ushbu hujjat {{ club }} tizimi tomonidan a'zoning klubdagi faoliyati asosida avtomatik tayyorlangan.

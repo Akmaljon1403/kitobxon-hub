@@ -31,6 +31,7 @@ from app.models import (
 )
 from app.models.enums import AttemptStatus, AttendanceStatus, ReadingStatus, ScoreCategory, UserStatus
 from app.security.permissions import Perm
+from app.services import signing
 from app.services.document_render import Document, QrEntry, Table
 from app.services.settings import get_setting
 from app.utils.ordering import member_key, natural_key
@@ -160,12 +161,6 @@ async def _header(session: AsyncSession) -> list[str]:
     organization = str(await get_setting(session, "org.organization_name"))
     club = str(await get_setting(session, "org.club_name"))
     return [line for line in (organization, club) if line]
-
-
-async def _signature(session: AsyncSession) -> str:
-    title = str(await get_setting(session, "certificates.signer_title") or "Klub rahbari")
-    name = str(await get_setting(session, "certificates.signer_name") or "")
-    return f"{title}: ____________________ {name}".rstrip()
 
 
 def _member_filter(params: Params) -> list[Any]:
@@ -373,7 +368,8 @@ async def students(session: AsyncSession, params: Params) -> Document:
             )
         ],
         landscape=True,
-        signature=await _signature(session),
+        signer=await signing.signer(session),
+        issued=signing.issued_now(),
     )
 
 
@@ -450,7 +446,8 @@ async def statistics(session: AsyncSession, params: Params) -> Document:
         ],
         appendix_title=f"Ilova: eng faol {TOP_QR} nafar talaba (QR kod bilan)",
         appendix=appendix,
-        signature=await _signature(session),
+        signer=await signing.signer(session),
+        issued=signing.issued_now(),
     )
 
 
@@ -528,7 +525,8 @@ async def attendance(session: AsyncSession, params: Params) -> Document:
             )
         ],
         landscape=True,
-        signature=await _signature(session),
+        signer=await signing.signer(session),
+        issued=signing.issued_now(),
     )
 
 
@@ -576,7 +574,8 @@ async def test_results(session: AsyncSession, params: Params) -> Document:
             Table(None, ["O'rin", "F.I.Sh.", "Fakultet", "Kurs", "Guruh", "Ball", "To'g'ri", "Vaqt", "Izoh"], rows)
         ],
         landscape=True,
-        signature=await _signature(session),
+        signer=await signing.signer(session),
+        issued=signing.issued_now(),
     )
 
 
@@ -865,12 +864,16 @@ async def portfolio_document(session: AsyncSession, user: User) -> Document:
 
 
 async def statement(session: AsyncSession, user: User) -> Document:
-    """«Faoliyat ma'lumotnomasi»: what the member did in this study year, for the institute."""
+    """«Ma'lumotnoma»: the member's activity in this study year, for the institute or anywhere it is asked for —
+    one page: the letter, the figures, «… taqdim etish uchun berildi», the date and time it was issued, the
+    club leader's name with the seal stamped over the signature, and the QR code to check it, side by side."""
     from app.services.passport import member_number
 
     start, end = academic_year()
     members, data = await _activity_for(session, user, Params(date_from=start, date_to=end))
     faculty = members[0][1] if members else None
+    club = str(await get_setting(session, "org.club_name") or "kitobxonlar klubi")
+    organization = str(await get_setting(session, "org.organization_name") or "")
     rows = [
         ["Tadbirlarda qatnashgan", data["events"].get(user.id, 0)],
         ["Yechgan testlari", data["tests"].get(user.id, 0)],
@@ -881,22 +884,39 @@ async def statement(session: AsyncSession, user: User) -> Document:
         ["Yutuqlari", data["achievements"].get(user.id, 0)],
         ["To'plagan ballari", data["points"].get(user.id, 0)],
     ]
+    study = ", ".join(
+        part
+        for part in (
+            faculty,
+            f"{user.course}-kurs" if user.course else None,
+            f"{user.group_name}-guruh" if user.group_name else None,
+        )
+        if part
+    )
+    who = f"{user.last_name} {user.first_name}"
+    since = user.registered_at or user.created_at
+    org_part = f"{organization} qoshidagi " if organization else ""
+    since_part = f", klubga {_day(since.astimezone(local_tz()).date())} da qo'shilgan" if since else ""
+    body = [
+        f"Ushbu ma'lumotnoma {who}ga ({study + ' talabasi' if study else 'talaba'}) haqiqatan ham {org_part}"
+        f"«{club}» a'zosi ekanligi haqida berildi. A'zo raqami: {member_number(user)}{since_part}.",
+        f"{_day(start)} — {_day(end)} o'quv yilida klubdagi faoliyati:",
+    ]
     url = _member_url(user)
+    issued = datetime.now(local_tz())
     return Document(
-        title="Ma'lumotnoma",
+        title="MA'LUMOTNOMA",
+        number=f"№ {member_number(user)}/{issued:%y%m%d}",
         filename=f"malumotnoma-{member_number(user)}",
-        lines=[
-            *await _header(session),
-            f"{user.last_name} {user.first_name} ({member_number(user)})",
-            " · ".join(
-                part for part in (faculty, f"{user.course}-kurs" if user.course else None, user.group_name) if part
-            ),
-            f"{_day(start)} — {_day(end)} o'quv yilida kitobxonlar klubidagi faoliyati haqida",
-        ],
-        tables=[Table(None, ["Ko'rsatkich", "Soni"], rows)],
+        lines=[line for line in await _header(session)],
+        body=body,
+        tables=[Table(None, ["Ko'rsatkich", "Soni"], rows, widths=[3, 1])],
+        notes=["Ushbu ma'lumotnoma kerakli joyga taqdim etish uchun berildi."],
         appendix_title="Tekshirish uchun QR kod",
-        appendix=[QrEntry(title=f"{user.last_name} {user.first_name}", details=member_number(user), url=url)],
-        signature=await _signature(session),
+        appendix=[QrEntry(title=who, details=member_number(user), url=url)],
+        inline_qr=True,
+        signer=await signing.signer(session),
+        issued=f"{issued:%d.%m.%Y}, soat {issued:%H:%M}",
     )
 
 

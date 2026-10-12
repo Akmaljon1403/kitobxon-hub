@@ -47,6 +47,8 @@
   .sign td { padding: 10pt 8pt 2pt 0; vertical-align: bottom; white-space: nowrap; }
   .sign td:last-child { width: 100%; }
   .sign .line { border-bottom: 0.6pt solid #333; width: 38mm; display: inline-block; height: 12pt; }
+  .sign .stamp { position: relative; }
+  .sign .seal { position: absolute; left: 4mm; top: -9mm; width: 28mm; height: 28mm; opacity: 0.9; }
   .muted { color: #555; font-size: 10pt; }
 </style>
 </head>
@@ -165,6 +167,7 @@
     <table>
       <tr><td>Mas'ul shaxs:</td><td><span class="line"></span></td><td>{{ (facts.event.responsible if facts.event else "") or "" }}</td></tr>
       {% if approved_by %}<tr><td>Tasdiqladi:</td><td><span class="line"></span></td><td>{{ approved_by }}{% if approved_at %} ({{ approved_at }}){% endif %}</td></tr>{% endif %}
+      {% if signer %}<tr><td>{{ signer.title }}:</td><td class="stamp"><span class="line"></span>{% if signer.seal %}<img class="seal" src="{{ signer.seal }}" alt="">{% endif %}</td><td>{{ signer.name }}</td></tr>{% endif %}
     </table>
     <p class="muted" style="text-indent:0; margin-top:14pt">
       Hisobotdagi raqamlar Kitobxon Hub tizimining ma'lumotlar bazasidan olingan (holat: {{ prepared_at }}).

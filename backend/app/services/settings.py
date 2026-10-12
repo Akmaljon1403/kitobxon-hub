@@ -179,10 +179,25 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition(
         "certificates.monthly_top", True, bool, "Oy yakunida reytingdagi 1-3-o'rinlarga sertifikat beriladi"
     ),
-    SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
-    SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
     SettingDefinition(
-        "certificates.seal", True, bool, "Sertifikatda imzo ustida klub pechati (app/brand/seal.png bo'lsa)"
+        "certificates.signer_title",
+        "Klub rahbari",
+        ShortText,
+        "Imzo egasining lavozimi — sertifikat, ma'lumotnoma, hisobot va ro'yxatlarda imzo oldida yoziladi",
+    ),
+    SettingDefinition(
+        "certificates.signer_name",
+        "",
+        ShortText,
+        "Imzo egasining ismi familiyasi (masalan: Akmaljon Bahodirov). Bo'sh bo'lsa — bosh admin (klub rahbari) "
+        "ismi o'zi yoziladi",
+    ),
+    SettingDefinition(
+        "certificates.seal",
+        True,
+        bool,
+        "Klub pechati imzo ustiga avtomatik bosilsin: sertifikat, ma'lumotnoma, portfolio, tasdiqlangan hisobot va "
+        "ro'yxatlarda (app/brand/seal.png)",
     ),
     SettingDefinition(
         "certificates.logo", True, bool, "Sertifikat tepasida klub belgisi (app/brand/logo-mark.png bo'lsa)"
