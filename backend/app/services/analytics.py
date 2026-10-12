@@ -30,6 +30,7 @@ from app.models.enums import (
     ScoreCategory,
     UserStatus,
 )
+from app.utils.ordering import member_key, natural_key
 from app.utils.timezone import local_tz
 
 MIN_GROUP_SIZE = 3
@@ -199,30 +200,45 @@ async def overview(session: AsyncSession, *, months: int = 6, now: datetime | No
     ]
 
     # ---- groups (only groups with at least MIN_GROUP_SIZE members)
-    group_rows = await session.execute(
-        select(
-            User.group_name,
-            Faculty.name,
-            func.count(User.id),
-            func.coalesce(func.sum(points.c.total), 0),
+    group_rows = (
+        await session.execute(
+            select(
+                User.group_name,
+                Faculty.name,
+                Faculty.sort_order,
+                func.min(User.course),
+                func.count(User.id),
+                func.count(User.id).filter(User.id.in_(recent_activity)),
+                func.coalesce(func.sum(points.c.total), 0),
+                func.coalesce(func.sum(attended.c.visits), 0),
+            )
+            .outerjoin(Faculty, Faculty.id == User.faculty_id)
+            .outerjoin(points, points.c.user_id == User.id)
+            .outerjoin(attended, attended.c.user_id == User.id)
+            .where(active_member, User.group_name.is_not(None))
+            .group_by(User.group_name, Faculty.name, Faculty.sort_order)
         )
-        .outerjoin(Faculty, Faculty.id == User.faculty_id)
-        .outerjoin(points, points.c.user_id == User.id)
-        .where(active_member, User.group_name.is_not(None))
-        .group_by(User.group_name, Faculty.name)
-        .having(func.count(User.id) >= MIN_GROUP_SIZE)
-    )
+    ).all()
+    # Every group in the usual order: faculty → group number (5424, 5524, …).
+    groups_all = [
+        {
+            "group": group,
+            "faculty": faculty,
+            "course": course,
+            "members": int(count),
+            "active_30_days": int(active),
+            "attendance": int(visits),
+            "total_points": int(total),
+            "average_points": round(int(total) / int(count), 1),
+        }
+        for group, faculty, _order, course, count, active, total, visits in sorted(
+            group_rows, key=lambda row: member_key(row[2], row[1], None, row[0])
+        )
+    ]
+    # The chart: the ten most active groups (at least MIN_GROUP_SIZE members).
     groups = sorted(
-        (
-            {
-                "group": group,
-                "faculty": faculty,
-                "members": int(count),
-                "average_points": round(int(total) / int(count), 1),
-            }
-            for group, faculty, count, total in group_rows
-        ),
-        key=lambda row: (-row["average_points"], row["group"]),
+        (row for row in groups_all if row["members"] >= MIN_GROUP_SIZE),
+        key=lambda row: (-row["average_points"], natural_key(row["group"])),
     )[:10]
 
     # ---- tests (latest 10 with results)
@@ -305,6 +321,7 @@ async def overview(session: AsyncSession, *, months: int = 6, now: datetime | No
         },
         "points_distribution": [{"bucket": bucket, "members": count} for bucket, count in distribution.items()],
         "faculties": faculties,
+        "groups_all": groups_all,
         "groups": groups,
         "tests": tests,
         "books": books,

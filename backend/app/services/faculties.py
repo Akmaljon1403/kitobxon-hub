@@ -26,6 +26,17 @@ async def list_faculties(session: AsyncSession) -> list[Faculty]:
     return list(await session.scalars(select(Faculty).order_by(Faculty.sort_order, Faculty.name)))
 
 
+async def ordering(session: AsyncSession) -> dict[str, int]:
+    """Faculty name → its place in the faculty list (the order set in the Admin Panel)."""
+    rows = await session.scalars(select(Faculty.name).order_by(Faculty.sort_order, Faculty.name))
+    return {name: index for index, name in enumerate(rows)}
+
+
+def by_faculty_order(counts: dict[str, int], order: dict[str, int]) -> list[tuple[str, int]]:
+    """(faculty, number) pairs in the faculty list order; unknown names (e.g. «Ko'rsatilmagan») last."""
+    return sorted(counts.items(), key=lambda pair: (order.get(pair[0], len(order)), pair[0]))
+
+
 async def create_faculty(
     session: AsyncSession, *, actor_id: uuid.UUID, name: str, short_name: str | None, sort_order: int, is_active: bool
 ) -> Faculty:

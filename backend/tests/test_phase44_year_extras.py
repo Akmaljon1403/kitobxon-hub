@@ -41,7 +41,7 @@ _ids = itertools.count(2_000_000)
 NOW = datetime(2026, 10, 10, 9, 0, tzinfo=UTC)
 
 
-async def test_new_year_moves_groups_and_asks_the_last_course(db: AsyncSession) -> None:
+async def test_new_year_moves_courses_only_and_asks_the_last_course(db: AsyncSession) -> None:
     second = await create_user(db, course=2, group_name="201")
     named = await create_user(db, course=2, group_name="DI-21")
     last = await create_user(db, course=6, group_name="601", telegram_id=next(_ids))
@@ -52,8 +52,8 @@ async def test_new_year_moves_groups_and_asks_the_last_course(db: AsyncSession) 
     assert await lifecycle.new_study_year(db, NOW) == 2
     for user in (second, named, last, alumni):
         await db.refresh(user)
-    assert (second.course, second.group_name) == (3, "301")
-    assert (named.course, named.group_name) == (3, "DI-21")  # named differently: left as it is
+    assert (second.course, second.group_name) == (3, "201")  # only the course moves; the group stays
+    assert (named.course, named.group_name) == (3, "DI-21")
     assert (last.course, last.group_name) == (6, "601")
     asked = set(
         await db.scalars(select(Notification.user_id).where(Notification.dedup_key.like("graduate-question:%")))

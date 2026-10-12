@@ -296,10 +296,10 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     # ---- Study years ----
     SettingDefinition(
         "academic.promote_groups",
-        True,
+        False,
         bool,
-        "Yangi o'quv yilida guruh raqami ham kurs bilan birga oshadi, agar uning birinchi raqami kursga teng "
-        "bo'lsa (2-kursdagi «201» → «301»). Boshqacha nomlangan guruhlar o'zgarmaydi",
+        "Yangi o'quv yilida guruh raqami ham kurs bilan birga oshirilsinmi (2-kursdagi «201» → «301»). Odatda "
+        "o'chiq: 1-sentabrda faqat kurs oshadi, guruh raqami o'zgarmaydi",
     ),
     SettingDefinition(
         "academic.ask_graduates",

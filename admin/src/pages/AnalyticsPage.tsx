@@ -20,6 +20,7 @@ interface Analytics {
   points_distribution: { bucket: string; members: number }[]
   faculties: { name: string; members: number; active_30_days: number; total_points: number; average_points: number; attendance: number }[]
   groups: { group: string; faculty: string | null; members: number; average_points: number }[]
+  groups_all: { group: string; faculty: string | null; course: number | null; members: number; active_30_days: number; attendance: number; total_points: number; average_points: number }[]
   tests: { title: string; participants: number; average_percent: number; pass_rate: number; ends_at: string }[]
   books: { title: string; author: string; status: string; deadline: string | null; readers: number; completed: number; verified: number; completion_rate: number }[]
 }
@@ -140,6 +141,45 @@ function Inactive() {
   )
 }
 
+/** «Guruhlar kesimida»: every group in the usual order — faculty, then the group number (5424, 5524, …). */
+function GroupsTable({ rows }: { rows: Analytics['groups_all'] }) {
+  let faculty: string | null | undefined
+  return (
+    <Card className="flex flex-col gap-2 p-4">
+      <div>
+        <h2 className="font-semibold">Guruhlar kesimida</h2>
+        <p className="text-sm text-app-hint">Fakultet, so‘ng guruh raqami tartibida: 5424, 5524, …</p>
+      </div>
+      <Table head={['Guruh', 'Kurs', "A'zolar", 'Faol (30 kun)', 'Davomat', 'Jami ball', "O'rtacha ball"]}>
+        {rows.length === 0 && <EmptyRow colSpan={7} text="Guruhlar hali yo'q" />}
+        {rows.flatMap((row) => {
+          const header =
+            row.faculty !== faculty ? (
+              <tr key={`f-${row.faculty ?? '—'}`}>
+                <td colSpan={7} className="bg-app-surface px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-app-hint">
+                  {row.faculty ?? 'Fakultetsiz'}
+                </td>
+              </tr>
+            ) : null
+          faculty = row.faculty
+          return [
+            header,
+            <tr key={`${row.faculty ?? '—'}-${row.group}`}>
+              <td className="px-4 py-2 font-medium">{row.group}</td>
+              <td className="px-4 py-2 tabular-nums">{row.course ?? '—'}</td>
+              <td className="px-4 py-2 tabular-nums">{formatNumber(row.members)}</td>
+              <td className="px-4 py-2 tabular-nums">{formatNumber(row.active_30_days)}</td>
+              <td className="px-4 py-2 tabular-nums">{formatNumber(row.attendance)}</td>
+              <td className="px-4 py-2 tabular-nums">{formatNumber(row.total_points)}</td>
+              <td className="px-4 py-2 tabular-nums">{row.average_points}</td>
+            </tr>,
+          ]
+        })}
+      </Table>
+    </Card>
+  )
+}
+
 export function AnalyticsPage() {
   const { api, can } = useSession()
   const [months, setMonths] = useState(6)
@@ -220,6 +260,8 @@ export function AnalyticsPage() {
               )}
             </ChartCard>
           </div>
+
+          <GroupsTable rows={data.groups_all} />
 
           <ChartCard
             title="Ballar taqsimoti"
