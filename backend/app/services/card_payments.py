@@ -220,7 +220,7 @@ async def _send_to_chat(session: AsyncSession, payment: CardPayment, text: str) 
     if chat is None or bot is None:
         return False
     try:
-        await bot.send_photo(
+        sent = await bot.send_photo(
             chat,
             BufferedInputFile(await receipt(session, payment), filename="chek.jpg"),
             caption=text,
@@ -229,6 +229,13 @@ async def _send_to_chat(session: AsyncSession, payment: CardPayment, text: str) 
     except Exception:
         logger.warning("The payments chat could not be reached; the super admins are told in the bot")
         return False
+    from app.services import payments_chat as chat_service
+
+    try:
+        await chat_service.remember(session, sent, ("card", payment.id, payment.user_id))
+    except Exception:  # the receipt is out; only the «Reply» shortcut is lost
+        logger.exception("A payments chat link could not be stored")
+        await session.rollback()
     return True
 
 
@@ -343,7 +350,9 @@ async def chat_line(session: AsyncSession, payment: CardPayment, headline: str, 
     user = await session.get(User, payment.user_id)
     who = await chat_service._who(session, user) if user else ""
     parts = [f"{headline} — {await _what(session, payment)}, <b>{format_uzs(payment.amount_uzs)}</b>", who, *details]
-    await chat_service.post(session, "\n".join(part for part in parts if part))
+    await chat_service.post(
+        session, "\n".join(part for part in parts if part), link=("card", payment.id, payment.user_id)
+    )
 
 
 async def _order_stars(session: AsyncSession, payment: CardPayment, boss_id: uuid.UUID) -> None:

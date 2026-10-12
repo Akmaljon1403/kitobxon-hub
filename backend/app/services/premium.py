@@ -275,7 +275,22 @@ async def grant(
     )
     await _tell(session, user_id, message, f"premium:grant:{subscription.id}", festive=True)
     await session.commit()
+    await _grant_line(session, actor_id, user, "♾ umrbod" if lifetime else f"{days} kun", note)
     return subscription
+
+
+async def _grant_line(session: AsyncSession, actor_id: uuid.UUID, user: User, how_long: str, note: str | None) -> None:
+    """Every Premium given by hand is written in the payments chat too (all money matters in one place)."""
+    from app.services import payments_chat
+
+    actor = await session.get(User, actor_id)
+    await payments_chat.post(
+        session,
+        f"🎁 <b>Premium sovg'a</b> — {how_long}\n{await payments_chat._who(session, user)}"
+        + (f"\nIzoh: {payments_chat._e(note)}" if note else "")
+        + (f"\nBerdi: {payments_chat._e(actor.first_name)}" if actor else ""),
+        link=("user", user.id, user.id),
+    )
 
 
 MAX_BULK_DAYS = 366

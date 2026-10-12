@@ -110,7 +110,7 @@ async def member_message(
     if topic == "payment":
         # Money questions are a conversation between the member and the super admins: they live in the
         # payments chat (or, without one, come to the super admins in the bot).
-        if not await _to_payments_chat(session, text, ticket.id):
+        if not await _to_payments_chat(session, text, ticket):
             from app.services.rbac import super_admins
 
             await enqueue_for_members(
@@ -154,23 +154,32 @@ async def member_thread(session: AsyncSession, user_id: uuid.UUID, limit: int = 
     return list(reversed(rows))
 
 
-async def _to_payments_chat(session: AsyncSession, text: str, ticket_id: uuid.UUID) -> bool:
-    """A payment question in the payments chat, with «✍️ Javob yozish». False when it could not go there."""
+async def _to_payments_chat(session: AsyncSession, text: str, ticket: SupportTicket) -> bool:
+    """A payment question in the payments chat, with «✍️ Javob yozish» — or answered right there by replying
+    to it. False when it could not go there."""
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
     from app.services import payments_chat
 
     markup = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:pay:{ticket_id}")]]
+        inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:pay:{ticket.id}")]]
     )
-    return await payments_chat.post(session, text, markup)
+    hint = "\n\n<i>↩️ Javob berish: shu xabarga «Reply» qilib yozing.</i>"
+    return await payments_chat.post(session, text + hint, markup, link=("ticket", ticket.id, ticket.user_id))
 
 
 async def admin_reply(
-    session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: uuid.UUID, text: str, payment: bool = False
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID | None,
+    ticket_id: uuid.UUID,
+    text: str,
+    payment: bool = False,
+    echo: bool = True,
 ) -> SupportMessage:
     """``payment``: an answer to a money question — the member continues in the same topic, and the
-    answer is written in the payments chat too."""
+    answer is written in the payments chat too (``echo=False``: it was written there already, as a reply).
+    ``actor_id`` is None for an answer posted in the payments channel (the channel signs it)."""
     body = _clean(text)
     if not body:
         raise BadRequestError("SUPPORT_EMPTY", "Javob matnini yozing.")
@@ -203,16 +212,55 @@ async def admin_reply(
         after={"length": len(body)},
     )
     await session.commit()
-    if payment:
+    if payment and echo:
         from app.services import payments_chat
 
         member = await session.get(User, ticket.user_id)
-        admin = await session.get(User, actor_id)
+        admin = await session.get(User, actor_id) if actor_id else None
         await payments_chat.post(
             session,
             f"↪️ <b>Javob</b> — {html.escape(admin.first_name if admin else '—')} → "
             f"{html.escape(member.full_name if member else '—')}\n\n{html.escape(body)}",
+            link=("ticket", ticket.id, ticket.user_id),
         )
+    return message
+
+
+async def club_message(
+    session: AsyncSession, *, actor_id: uuid.UUID | None, user_id: uuid.UUID, text: str, about: str
+) -> SupportMessage:
+    """The club writes to a member first about money (a reply in the payments channel to a receipt or a
+    Stars payment): it goes into the member's conversation, and they can answer with one tap."""
+    body = _clean(text)
+    if not body:
+        raise BadRequestError("SUPPORT_EMPTY", "Xabar matnini yozing.")
+    user = await session.get(User, user_id)
+    if user is None or user.deleted_at is not None or user.erased_at is not None:
+        raise NotFoundError("USER_NOT_FOUND", "A'zo topilmadi.")
+    ticket = await _open_ticket(session, user_id)
+    message = SupportMessage(ticket_id=ticket.id, from_admin=True, admin_id=actor_id, text=body)
+    session.add(message)
+    ticket.status = SupportTicketStatus.ANSWERED
+    ticket.last_message_at = datetime.now(UTC)
+    await session.flush()
+    await enqueue_notification(
+        session,
+        user_id=user_id,
+        type_=NotificationType.SUPPORT,
+        text=f"📩 <b>Klub rahbariyatidan</b> — <i>{html.escape(about, quote=False)}</i>\n\n{html.escape(body, quote=False)}",
+        dedup_key=f"support-reply:{message.id}",
+        payload={"buttons": [{"text": "✍️ Javob yozish", "callback": "sup:new:pay"}], "deliver_to_inactive": True},
+        priority=1,
+    )
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="SUPPORT_CLUB_MESSAGE",
+        entity_type="support_ticket",
+        entity_id=ticket.id,
+        after={"length": len(body), "about": about},
+    )
+    await session.commit()
     return message
 
 

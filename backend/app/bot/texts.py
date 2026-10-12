@@ -763,3 +763,12 @@ COMMUNITY_DONE = {
     "feature": "⭐ Tanlanganlarga qo'shildi — {admin}",
     "hide": "🙈 Yashirildi — {admin}",
 }
+
+# ---- Answers in the payments channel («Reply») ----
+PAYCHAT_SENT = "✅ A'zoga yuborildi: {name}"
+PAYCHAT_TEXT_ONLY = "⚠️ Faqat matn yuboriladi — javobni so'z bilan yozing."
+PAYCHAT_FAILED = "⚠️ Yuborilmadi: {reason}"
+PAYCHAT_SUPER_ONLY = "⚠️ To'lov masalalarida a'zoga faqat bosh admin javob beradi."
+PAYCHAT_ABOUT_CARD = "to'lovingiz bo'yicha: {what}, {amount}"
+PAYCHAT_ABOUT_USER = "to'lovingiz bo'yicha"
+SUPPORT_REPLY_CHANNEL_HINT = "✍️ Javobni bot chatida yozing — yoki kanalda shu xabarga «Reply» qilib yozing."

@@ -97,3 +97,77 @@ async def choose_role(callback: CallbackQuery, db: AsyncSession, member: User | 
         from app.services import payments_chat
 
         await payments_chat.send_test(db)
+
+
+# ---------------------------------------------------------------------------- answers in the payments chat
+
+
+async def _answer_in_payments_chat(message: Message, db: AsyncSession, bot: Bot, actor: User | None) -> None:
+    """An admin replied in the payments chat to a payment question, a receipt or a Stars payment line:
+    the words go to that member (in their conversation with the club), and the reply gets a 👍."""
+    import contextlib
+
+    from aiogram.types import ReactionTypeEmoji
+
+    from app.core.errors import AppError
+    from app.services import card_payments, payments_chat, support
+
+    reply = message.reply_to_message
+    if reply is None or not payments_chat.same_chat(await payments_chat.chat_id(db), message.chat):
+        return
+    link = await payments_chat.find_link(db, message.chat.id, reply.message_id)
+    if link is None:
+        return
+    text = (message.text or message.caption or "").strip()
+    if not text or text.startswith("/"):
+        if not text:
+            await message.reply(texts.PAYCHAT_TEXT_ONLY)
+        return
+    actor_id = actor.id if actor else None
+    try:
+        if link.kind == "ticket":
+            await support.admin_reply(
+                db, actor_id=actor_id, ticket_id=link.target_id, text=text, payment=True, echo=False
+            )
+        else:
+            about = texts.PAYCHAT_ABOUT_USER
+            if link.kind == "card":
+                payment = await db.get(card_payments.CardPayment, link.target_id)
+                if payment is not None:
+                    about = texts.PAYCHAT_ABOUT_CARD.format(
+                        what=html.unescape(await card_payments._what(db, payment)),
+                        amount=card_payments.format_uzs(payment.amount_uzs),
+                    )
+            await support.club_message(db, actor_id=actor_id, user_id=link.user_id, text=text, about=about)
+    except AppError as exc:
+        await message.reply(texts.PAYCHAT_FAILED.format(reason=html.escape(exc.message or "xatolik")))
+        return
+    member = await db.get(User, link.user_id)
+    name = html.escape(member.full_name if member else "—")
+    try:
+        await bot.set_message_reaction(message.chat.id, message.message_id, [ReactionTypeEmoji(emoji="👍")])
+    except Exception:  # reactions may be off in the channel: say it in words
+        with contextlib.suppress(Exception):
+            await message.reply(texts.PAYCHAT_SENT.format(name=name))
+
+
+@router.channel_post(F.reply_to_message)
+async def channel_answer(message: Message, db: AsyncSession, bot: Bot) -> None:
+    """In a channel only its administrators can post, so a reply there is the club's answer."""
+    await _answer_in_payments_chat(message, db, bot, None)
+
+
+@router.message(F.chat.type.in_({"group", "supergroup"}), F.reply_to_message)
+async def group_answer(message: Message, db: AsyncSession, bot: Bot, member: User | None) -> None:
+    """In a payments group anyone may write: only the super administrators' replies reach members."""
+    from app.services import payments_chat
+
+    if not payments_chat.same_chat(await payments_chat.chat_id(db), message.chat):
+        return
+    if not await access.is_super_admin(db, member):
+        if message.reply_to_message and await payments_chat.find_link(
+            db, message.chat.id, message.reply_to_message.message_id
+        ):
+            await message.reply(texts.PAYCHAT_SUPER_ONLY)
+        return
+    await _answer_in_payments_chat(message, db, bot, member)

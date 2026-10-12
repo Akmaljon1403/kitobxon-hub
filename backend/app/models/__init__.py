@@ -8,7 +8,7 @@ from app.models.book import Book, BookQuote, BookRead
 from app.models.bot import BotFsmState
 from app.models.certificate import Certificate
 from app.models.channel import ChannelPost, ChannelSticker, CustomEmoji
-from app.models.community import Contribution, ContributionLike
+from app.models.community import Contribution, ContributionLike, PaymentsChatLink
 from app.models.contest import ReferralContest
 from app.models.event import Event, EventFeedback, EventRegistration, EventShift
 from app.models.notification import Notification, NotificationTemplate
@@ -57,6 +57,7 @@ __all__ = [
     "Notification",
     "NotificationTemplate",
     "Payment",
+    "PaymentsChatLink",
     "Permission",
     "PremiumDiscount",
     "PremiumPlan",

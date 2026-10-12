@@ -109,7 +109,7 @@ CHECK = "sub:check"
 
 # Buttons the bot answers in groups and channels (the payments chat): payment decisions and replies to
 # payment questions. Everything else there is ignored, so the bot never chats in a group.
-GROUP_CALLBACKS = ("cp:", "sup:ans:")
+GROUP_CALLBACKS = ("cp:", "sup:ans:", "sup:pay:")
 
 
 class GroupMiddleware(BaseMiddleware):
@@ -117,6 +117,8 @@ class GroupMiddleware(BaseMiddleware):
         if isinstance(event, Message):
             if event.chat.type == "private":
                 return await handler(event, data)
+            if event.reply_to_message is not None and event.chat.type in ("group", "supergroup"):
+                return await handler(event, data)  # maybe an answer in the payments group (checked there)
             return None
         if isinstance(event, CallbackQuery):
             chat = event.message.chat if event.message is not None else None

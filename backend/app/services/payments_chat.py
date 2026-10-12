@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import html
 import logging
+import uuid
 from datetime import UTC, datetime, time, timedelta
 from typing import Any
 
@@ -47,8 +48,29 @@ async def chat_id(session: AsyncSession) -> str | None:
     return chat or None
 
 
-async def post(session: AsyncSession, text: str, reply_markup: Any = None) -> bool:
-    """A message in the payments chat. False when no chat is set or it cannot be reached."""
+Link = tuple[str, uuid.UUID, uuid.UUID]  # (kind: "ticket" | "card" | "user", what, the member)
+
+
+async def remember(session: AsyncSession, sent: Any, link: Link | None) -> None:
+    """Keep what a message is about, so an admin's «Reply» to it in the channel reaches the member."""
+    if link is None or sent is None or getattr(sent, "chat", None) is None:
+        return
+    from sqlalchemy.dialects.postgresql import insert
+
+    from app.models import PaymentsChatLink
+
+    kind, target, user_id = link
+    await session.execute(
+        insert(PaymentsChatLink)
+        .values(chat_id=sent.chat.id, message_id=sent.message_id, kind=kind, target_id=target, user_id=user_id)
+        .on_conflict_do_nothing()
+    )
+    await session.commit()
+
+
+async def post(session: AsyncSession, text: str, reply_markup: Any = None, *, link: Link | None = None) -> bool:
+    """A message in the payments chat. False when no chat is set or it cannot be reached.
+    ``link``: what the message is about — the admins can answer the member by replying to it."""
     from app.services.delivery import optional_bot
 
     chat = await chat_id(session)
@@ -56,11 +78,31 @@ async def post(session: AsyncSession, text: str, reply_markup: Any = None) -> bo
     if chat is None or bot is None:
         return False
     try:
-        await bot.send_message(chat, text, reply_markup=reply_markup, disable_web_page_preview=True)
+        sent = await bot.send_message(chat, text, reply_markup=reply_markup, disable_web_page_preview=True)
     except Exception:
         logger.warning("The payments chat could not be reached")
         return False
+    try:
+        await remember(session, sent, link)
+    except Exception:  # the message is out; only the «Reply» shortcut is lost
+        logger.exception("A payments chat link could not be stored")
+        await session.rollback()
     return True
+
+
+async def find_link(session: AsyncSession, chat: int, message_id: int) -> Any:
+    from app.models import PaymentsChatLink
+
+    return await session.get(PaymentsChatLink, (chat, message_id))
+
+
+def same_chat(setting: str | None, chat: Any) -> bool:
+    """Is ``chat`` (an aiogram Chat) the payments chat set in the settings (@username or -100…)?"""
+    value = (setting or "").strip().lstrip("@").lower()
+    if not value:
+        return False
+    username = (getattr(chat, "username", None) or "").lower()
+    return value == str(chat.id) or (bool(username) and value == username)
 
 
 async def _who(session: AsyncSession, user: User) -> str:
@@ -86,14 +128,14 @@ async def stars_payment(session: AsyncSession, payment: Payment, user: User) -> 
         f"⭐ <b>Telegram Stars to'lovi</b>\n{await _who(session, user)}\n{what} — <b>{payment.amount} ⭐</b>\n"
         f"🕒 {format_datetime(payment.created_at or datetime.now(UTC))}"
     )
-    return await post(session, text)
+    return await post(session, text, link=("user", user.id, user.id))
 
 
 async def stars_refund(session: AsyncSession, payment: Payment, user: User, actor: User | None) -> bool:
     text = f"↩️ <b>Stars qaytarildi</b>\n{await _who(session, user)}\n{payment.amount} ⭐" + (
         f"\n🛠 {_e(actor.first_name)}" if actor else ""
     )
-    return await post(session, text)
+    return await post(session, text, link=("user", user.id, user.id))
 
 
 async def summary_text(session: AsyncSession, since: datetime, until: datetime) -> str:
