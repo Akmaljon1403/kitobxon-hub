@@ -23,6 +23,13 @@ const GROUP_TITLES: Record<string, string> = {
   referral: "👥 Do'stlarni taklif qilish",
   channel: '📣 Telegram kanal',
   ranking: '📊 Reyting',
+  admin: '🛡 Adminlar',
+  reading: '📚 Mutolaa (javon, kundalik, 3 savol)',
+  missions: '🎯 Missiyalar',
+  community: "💬 A'zolar fikrlari va iqtiboslar sandig'i",
+  academic: "🎓 O'quv yili, kurslar, bitiruvchilar",
+  membership: "🚪 A'zolikdan chiqish",
+  bot: '🤖 Bot',
 }
 
 function toText(setting: Setting, value: unknown): string {

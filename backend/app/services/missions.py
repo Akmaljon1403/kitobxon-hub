@@ -1,5 +1,6 @@
 """«🎯 Shaxsiy missiyalar»: small personal goals set by the admins («7 kunda 100 bet», «5 kun ketma-ket
-o'qish», «2 haftada 2 ta tadbir») that a member takes on in the Mini App.
+o'qish», «2 haftada 2 ta tadbir») that a member takes on in the Mini App — and goals a member sets for
+themself («🎯 O'z missiyam»), seen only by them (and by the admins in the panel).
 
 A taken mission has its own window: from the moment it is taken, ``period_days`` long. Progress is
 always counted from what the member really did in that window (the reading diary, the shelf, verified
@@ -43,6 +44,8 @@ from app.services.audit import record_audit
 from app.utils.timezone import local_tz
 
 MAX_ACTIVE = 5
+MAX_PERSONAL = 10  # a member's own missions kept at once
+PERSONAL_DAYS = (1, 90)
 REFRESH_EVERY = timedelta(minutes=30)
 BATCH = 200
 
@@ -57,6 +60,21 @@ METRICS: dict[MissionMetric, tuple[str, str]] = {
     MissionMetric.QUOTES: ("iqtibos", "saqlangan iqtiboslar"),
     MissionMetric.REFLECTIONS: ("javob", "«3 savol»ga javoblar"),
 }
+
+
+# A member's own mission: (smallest, largest) target, and the smallest target that earns points — so that
+# «1 bet in 7 days» is still a fine goal for oneself, but not a way to collect points.
+PERSONAL_TARGETS: dict[MissionMetric, tuple[int, int, int]] = {
+    MissionMetric.PAGES: (5, 5000, 50),
+    MissionMetric.READING_DAYS: (1, 90, 3),
+    MissionMetric.STREAK: (2, 90, 3),
+    MissionMetric.BOOKS_FINISHED: (1, 30, 1),
+    MissionMetric.EVENTS: (1, 20, 1),
+    MissionMetric.TESTS: (1, 20, 1),
+    MissionMetric.QUOTES: (1, 200, 3),
+    MissionMetric.REFLECTIONS: (1, 20, 1),
+}
+PERSONAL_ICONS = ("🎯", "📖", "🔥", "📚", "💬", "💡", "📅", "🧠", "🏃", "⭐", "🌱", "🏆")
 
 
 # Ready-made missions, so members find something to take on the first day (admins edit or archive them).
@@ -122,7 +140,7 @@ async def seed_defaults(session: AsyncSession) -> int:
     """The ready-made missions, once: only while the club has no missions at all (the caller commits)."""
     # The web process and the worker start together: only one of them seeds.
     await session.execute(select(func.pg_advisory_xact_lock(func.hashtext("missions:seed"))))
-    if await session.scalar(select(func.count()).select_from(Mission)):
+    if await session.scalar(select(func.count()).select_from(Mission).where(Mission.owner_id.is_(None))):
         return 0
     session.add_all(Mission(**values) for values in DEFAULTS)
     return len(DEFAULTS)
@@ -223,6 +241,7 @@ def describe(mission: Mission, mine: UserMission | None) -> dict[str, Any]:
         "deadline": mine.deadline if mine else None,
         "completed_at": mine.completed_at if mine else None,
         "attempts": mine.attempts if mine else 0,
+        "personal": mission.owner_id is not None,
     }
 
 
@@ -231,7 +250,12 @@ async def for_member(session: AsyncSession, user: User) -> list[dict[str, Any]]:
     await refresh(session, user.id)
     missions = list(
         await session.scalars(
-            select(Mission).where(Mission.status == MissionStatus.ACTIVE).order_by(Mission.created_at)
+            select(Mission)
+            .where(
+                Mission.status == MissionStatus.ACTIVE,
+                or_(Mission.owner_id.is_(None), Mission.owner_id == user.id),
+            )
+            .order_by(Mission.created_at)
         )
     )
     mine = {
@@ -246,7 +270,7 @@ async def for_member(session: AsyncSession, user: User) -> list[dict[str, Any]]:
 async def take(session: AsyncSession, user: User, mission_id: uuid.UUID) -> UserMission:
     """Start a mission now (again, if the last try ran out)."""
     mission = await session.get(Mission, mission_id)
-    if mission is None or mission.status != MissionStatus.ACTIVE:
+    if mission is None or mission.status != MissionStatus.ACTIVE or mission.owner_id not in (None, user.id):
         raise NotFoundError("MISSION_NOT_FOUND", "Bu missiya hozir ochiq emas.")
     active = await session.scalar(
         select(func.count())
@@ -296,21 +320,26 @@ async def _finish(session: AsyncSession, mine: UserMission, mission: Mission) ->
 
     mine.status = UserMissionStatus.COMPLETED
     mine.completed_at = datetime.now(UTC)
-    if mission.reward_points:
+    points = mission.reward_points
+    capped = False
+    if mission.owner_id is not None and points:
+        points, capped = await _personal_reward(session, mine, mission)
+    if points:
         await award_points(
             session,
             user_id=mine.user_id,
-            amount=mission.reward_points,
+            amount=points,
             category=ScoreCategory.CAMPAIGN,
             idempotency_key=f"mission:{mine.id}:{mine.attempts}",
             source_type="MISSION",
             source_id=mission.id,
             reason=f"Missiya bajarildi: {mission.title}"[:250],
         )
-    reward = f" Sizga <b>+{mission.reward_points} ball</b>." if mission.reward_points else ""
-    message = (
-        f"{mission.icon} <b>Missiya bajarildi: {html.escape(mission.title)}!</b>{reward} Yangi missiyalar kutmoqda 🎯"
-    )
+    reward = f" Sizga <b>+{points} ball</b>." if points else ""
+    if capped:
+        reward = " Bu oy shaxsiy missiyalar uchun ball chegarasiga yetdingiz — g'alaba baribir sizniki!"
+    tail = "O'zingizga yangi maqsad qo'ying 🎯" if mission.owner_id else "Yangi missiyalar kutmoqda 🎯"
+    message = f"{mission.icon} <b>Missiya bajarildi: {html.escape(mission.title)}!</b>{reward} {tail}"
     await enqueue_notification(
         session,
         user_id=mine.user_id,
@@ -320,6 +349,34 @@ async def _finish(session: AsyncSession, mine: UserMission, mission: Mission) ->
         payload=celebrate({"buttons": [{"text": "🎯 Missiyalarim", "app_route": "missions"}]}),
         priority=3,
     )
+
+
+async def _personal_reward(session: AsyncSession, mine: UserMission, mission: Mission) -> tuple[int, bool]:
+    """(points, capped) for finishing one's own mission: nothing for a very easy goal, and only so many
+    a month (``missions.personal_monthly_limit``)."""
+    from app.models import ScoreTransaction
+    from app.services.settings import get_setting
+
+    _, _, earns_from = PERSONAL_TARGETS[mission.metric]
+    if mission.target < earns_from:
+        return 0, False
+    limit = int(await get_setting(session, "missions.personal_monthly_limit"))
+    if limit:
+        month_start = datetime.now(local_tz()).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        earned = await session.scalar(
+            select(func.count())
+            .select_from(ScoreTransaction)
+            .join(Mission, Mission.id == ScoreTransaction.source_id)
+            .where(
+                ScoreTransaction.user_id == mine.user_id,
+                ScoreTransaction.source_type == "MISSION",
+                ScoreTransaction.created_at >= month_start,
+                Mission.owner_id.is_not(None),
+            )
+        )
+        if (earned or 0) >= limit:
+            return 0, True
+    return mission.reward_points, False
 
 
 async def refresh(session: AsyncSession, user_id: uuid.UUID) -> int:
@@ -372,7 +429,11 @@ async def check_running(session: AsyncSession) -> int:
 
 
 async def admin_list(session: AsyncSession) -> list[dict[str, Any]]:
-    missions = list(await session.scalars(select(Mission).order_by(Mission.status, Mission.created_at)))
+    missions = list(
+        await session.scalars(
+            select(Mission).where(Mission.owner_id.is_(None)).order_by(Mission.status, Mission.created_at)
+        )
+    )
     stats = {
         mission_id: (int(taken), int(done), int(running))
         for mission_id, taken, done, running in (
@@ -415,7 +476,7 @@ async def save(
         action = "MISSION_CREATE"
     else:
         found = await session.get(Mission, mission_id)
-        if found is None:
+        if found is None or found.owner_id is not None:  # a member's own mission is theirs to change
             raise NotFoundError("MISSION_NOT_FOUND", "Missiya topilmadi.")
         mission = found
         taken = await session.scalar(
@@ -434,3 +495,170 @@ async def save(
     await session.commit()
     await session.refresh(mission)
     return mission
+
+
+# ---------------------------------------------------------------------------- «🎯 O'z missiyam» (a member's own)
+
+
+def personal_options() -> list[dict[str, Any]]:
+    """What a member can count in their own mission, with the allowed targets."""
+    return [
+        {
+            "code": metric,
+            "title": title,
+            "unit": unit,
+            "min": PERSONAL_TARGETS[metric][0],
+            "max": PERSONAL_TARGETS[metric][1],
+            "points_from": PERSONAL_TARGETS[metric][2],
+        }
+        for metric, (unit, title) in METRICS.items()
+    ]
+
+
+async def create_personal(session: AsyncSession, user: User, data: dict[str, Any]) -> Mission:
+    """A member's own goal: saved, started at once and counted like any other mission."""
+    from app.services.settings import get_setting
+
+    if not await get_setting(session, "missions.personal_enabled"):
+        raise ConflictError("PERSONAL_MISSIONS_OFF", "Shaxsiy missiya yaratish hozircha yopiq.")
+    metric = MissionMetric(data["metric"])
+    low, high, _ = PERSONAL_TARGETS[metric]
+    target, days = int(data["target"]), int(data["period_days"])
+    if not low <= target <= high:
+        unit = METRICS[metric][0]
+        raise BadRequestError("TARGET_OUT_OF_RANGE", f"Maqsad {low}–{high} {unit} oralig'ida bo'lishi kerak.")
+    if not PERSONAL_DAYS[0] <= days <= PERSONAL_DAYS[1]:
+        raise BadRequestError("PERIOD_OUT_OF_RANGE", f"Muddat {PERSONAL_DAYS[0]}–{PERSONAL_DAYS[1]} kun bo'lsin.")
+    if metric in (MissionMetric.READING_DAYS, MissionMetric.STREAK) and target > days:
+        raise BadRequestError(
+            "TARGET_OUT_OF_RANGE", f"{days} kunda {target} kun o'qib bo'lmaydi — muddatni uzaytiring."
+        )
+    title = " ".join(str(data["title"]).split())
+    if len(title) < 3:
+        raise BadRequestError("TITLE_TOO_SHORT", "Missiyaga nom bering (kamida 3 harf).")
+    kept = await session.scalar(
+        select(func.count())
+        .select_from(Mission)
+        .where(Mission.owner_id == user.id, Mission.status == MissionStatus.ACTIVE)
+    )
+    if (kept or 0) >= MAX_PERSONAL:
+        raise ConflictError(
+            "TOO_MANY_PERSONAL",
+            f"Shaxsiy missiyalar {MAX_PERSONAL} tadan oshmasin — eskisini o'chirib, yangisini qo'shing.",
+        )
+    icon = data.get("icon") if data.get("icon") in PERSONAL_ICONS else "🎯"
+    description = " ".join(str(data.get("description") or "").split()) or None
+    mission = Mission(
+        title=title[:80],
+        description=description[:300] if description else None,
+        icon=icon,
+        metric=metric,
+        target=target,
+        period_days=days,
+        reward_points=int(await get_setting(session, "missions.personal_points")),
+        status=MissionStatus.ACTIVE,
+        owner_id=user.id,
+        created_by=user.id,
+    )
+    session.add(mission)
+    await session.flush()
+    await take(session, user, mission.id)
+    return mission
+
+
+async def delete_personal(session: AsyncSession, user: User, mission_id: uuid.UUID) -> None:
+    mission = await session.get(Mission, mission_id)
+    if mission is None or mission.owner_id != user.id:
+        raise NotFoundError("MISSION_NOT_FOUND", "Missiya topilmadi.")
+    await session.delete(mission)
+    await session.commit()
+
+
+async def personal_overview(session: AsyncSession, limit: int = 100) -> dict[str, Any]:
+    """For the admins: what members set for themselves — the totals and the latest ones."""
+    totals = (
+        await session.execute(
+            select(
+                func.count(Mission.id),
+                func.count(func.distinct(Mission.owner_id)),
+                func.count(UserMission.id).filter(UserMission.status == UserMissionStatus.ACTIVE),
+                func.count(UserMission.id).filter(UserMission.status == UserMissionStatus.COMPLETED),
+            )
+            .select_from(Mission)
+            .outerjoin(UserMission, UserMission.mission_id == Mission.id)
+            .where(Mission.owner_id.is_not(None))
+        )
+    ).one()
+    rows = (
+        await session.execute(
+            select(Mission, UserMission, User)
+            .join(User, User.id == Mission.owner_id)
+            .outerjoin(UserMission, UserMission.mission_id == Mission.id)
+            .where(Mission.owner_id.is_not(None))
+            .order_by(Mission.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    popular = (
+        await session.execute(
+            select(Mission.metric, func.count())
+            .where(Mission.owner_id.is_not(None))
+            .group_by(Mission.metric)
+            .order_by(func.count().desc())
+        )
+    ).all()
+    return {
+        "created": int(totals[0]),
+        "members": int(totals[1]),
+        "running": int(totals[2]),
+        "completed": int(totals[3]),
+        "popular": [{"metric": metric, "title": METRICS[metric][1], "count": int(n)} for metric, n in popular],
+        "items": [
+            {
+                **describe(mission, mine),
+                "owner_id": user.id,
+                "owner_name": f"{user.last_name or ''} {user.first_name}".strip(),
+                "group_name": user.group_name,
+                "created_at": mission.created_at,
+            }
+            for mission, mine, user in rows
+        ],
+    }
+
+
+async def promote_personal(session: AsyncSession, *, actor_id: uuid.UUID, mission_id: uuid.UUID) -> Mission:
+    """A good idea from a member becomes a club mission (a draft the admins finish and open for all)."""
+    source = await session.get(Mission, mission_id)
+    if source is None or source.owner_id is None:
+        raise NotFoundError("MISSION_NOT_FOUND", "Missiya topilmadi.")
+    return await save(
+        session,
+        actor_id=actor_id,
+        data={
+            "title": source.title,
+            "description": source.description,
+            "icon": source.icon,
+            "metric": source.metric,
+            "target": source.target,
+            "period_days": source.period_days,
+            "reward_points": 0,
+            "status": MissionStatus.DRAFT,
+        },
+    )
+
+
+async def remove_personal(session: AsyncSession, *, actor_id: uuid.UUID, mission_id: uuid.UUID) -> None:
+    """The admins remove a member's own mission (an unsuitable name, for instance)."""
+    mission = await session.get(Mission, mission_id)
+    if mission is None or mission.owner_id is None:
+        raise NotFoundError("MISSION_NOT_FOUND", "Missiya topilmadi.")
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="MISSION_PERSONAL_DELETE",
+        entity_type="mission",
+        entity_id=mission.id,
+        before={"title": mission.title, "owner_id": str(mission.owner_id)},
+    )
+    await session.delete(mission)
+    await session.commit()

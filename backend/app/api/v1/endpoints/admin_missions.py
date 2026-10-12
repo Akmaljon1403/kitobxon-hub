@@ -4,6 +4,7 @@ and finished each."""
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -76,3 +77,61 @@ async def create_mission(payload: MissionIn, current: Manager, db: DbSession) ->
 async def update_mission(mission_id: uuid.UUID, payload: MissionIn, current: Manager, db: DbSession) -> dict[str, str]:
     mission = await missions.save(db, actor_id=current.user.id, data=payload.model_dump(), mission_id=mission_id)
     return {"id": str(mission.id)}
+
+
+# ---------------------------------------------------------------------------- members' own missions
+
+
+class PersonalMissionOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    description: str | None
+    icon: str
+    metric: MissionMetric
+    unit: str
+    target: int
+    period_days: int
+    status: str | None
+    progress: int
+    deadline: datetime | None
+    completed_at: datetime | None
+    owner_id: uuid.UUID
+    owner_name: str
+    group_name: str | None
+    created_at: datetime
+
+
+class PopularOut(BaseModel):
+    metric: MissionMetric
+    title: str
+    count: int
+
+
+class PersonalOverviewOut(BaseModel):
+    created: int
+    members: int
+    running: int
+    completed: int
+    popular: list[PopularOut]
+    items: list[PersonalMissionOut]
+
+
+@router.get("/personal", response_model=PersonalOverviewOut, summary="Missions members set for themselves")
+async def personal_missions(_: Manager, db: DbSession) -> PersonalOverviewOut:
+    data = await missions.personal_overview(db)
+    fields = PersonalMissionOut.model_fields
+    items = [
+        PersonalMissionOut(**{key: value for key, value in item.items() if key in fields}) for item in data["items"]
+    ]
+    return PersonalOverviewOut(**{**data, "items": items})
+
+
+@router.post("/personal/{mission_id}/promote", response_model=dict[str, str], summary="Make it a club mission (draft)")
+async def promote_personal(mission_id: uuid.UUID, current: Manager, db: DbSession) -> dict[str, str]:
+    mission = await missions.promote_personal(db, actor_id=current.user.id, mission_id=mission_id)
+    return {"id": str(mission.id)}
+
+
+@router.delete("/personal/{mission_id}", status_code=204, summary="Remove a member's own mission")
+async def remove_personal(mission_id: uuid.UUID, current: Manager, db: DbSession) -> None:
+    await missions.remove_personal(db, actor_id=current.user.id, mission_id=mission_id)

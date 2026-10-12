@@ -231,6 +231,40 @@ async def share_from_box(
     )
 
 
+async def box_states(session: AsyncSession, quote_ids: list[uuid.UUID]) -> dict[uuid.UUID, Contribution]:
+    """For «💬 Iqtiboslar sandig'i»: which saved quotes are in the common pool (and how they are doing)."""
+    if not quote_ids:
+        return {}
+    rows = await session.scalars(select(Contribution).where(Contribution.saved_quote_id.in_(quote_ids)))
+    return {row.saved_quote_id: row for row in rows if row.saved_quote_id is not None}
+
+
+async def set_box_visibility(
+    session: AsyncSession, user: User, saved_quote_id: uuid.UUID, visibility: str, *, show_name: bool = True
+) -> Contribution | None:
+    """«🌍 Umumiy» puts a saved quote into the common pool (as the admins' rules say — straight away or after
+    a look); «🔒 Shaxsiy» takes it back. The quote itself always stays in the member's box."""
+    from app.services import features
+    from app.services.settings import get_setting
+
+    if visibility == "COMMON":
+        if not await get_setting(session, "community.quote_box_common"):
+            raise ConflictError("COMMON_OFF", "Iqtiboslarni umumiy qilish hozircha yopiq.")
+        if await features.allowed(session, user, "community") != "on":
+            raise ConflictError("COMMUNITY_OFF", "«A'zolar fikrlari» bo'limi hozircha yopiq.")
+        return await share_from_box(session, user, saved_quote_id, show_name=show_name)
+    quote = await session.scalar(
+        select(SavedQuote).where(SavedQuote.id == saved_quote_id, SavedQuote.user_id == user.id)
+    )
+    if quote is None:
+        raise NotFoundError("QUOTE_NOT_FOUND", "Iqtibos topilmadi.")
+    await session.execute(
+        delete(Contribution).where(Contribution.saved_quote_id == quote.id, Contribution.user_id == user.id)
+    )
+    await session.commit()
+    return None
+
+
 async def delete_own(session: AsyncSession, user: User, contribution_id: uuid.UUID) -> None:
     """The author takes it back (their quote box keeps the quote)."""
     result = await session.execute(
@@ -536,8 +570,11 @@ async def admin_list(
     q: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    origin: str | None = None,
 ) -> list[dict[str, Any]]:
     query = _with_author()
+    if origin == "BOX":  # made common from members' quote boxes
+        query = query.where(Contribution.saved_quote_id.is_not(None))
     if status == "FEATURED":
         query = query.where(Contribution.featured.is_(True))
     elif status:

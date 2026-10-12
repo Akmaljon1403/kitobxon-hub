@@ -7,11 +7,11 @@ import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { Reflection, ShelfItemDetail, ShelfStatus } from '../types/api'
+import type { QuoteBoxOptions, QuoteVisibility, Reflection, ShelfItemDetail, ShelfStatus } from '../types/api'
 import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
 import { confirmAction, haptic } from '../utils/telegram'
-import { QuoteCard } from './QuotesPage'
+import { QuoteCard, VisibilityChoice } from './QuotesPage'
 import { ProgressBar, STATUS_TITLES } from './ShelfPage'
 
 const QUESTIONS: { key: keyof Pick<Reflection, 'main_idea' | 'favorite_moment' | 'apply_in_life'>; label: string; hint: string }[] = [
@@ -178,11 +178,19 @@ function ReflectionForm({ itemId, saved, onDone }: { itemId: string; saved: Refl
   )
 }
 
-function AddQuote({ itemId, onDone }: { itemId: string; onDone: () => void }) {
+function useQuoteBox(): QuoteBoxOptions | null {
+  const { api } = useAuth()
+  const options = useAsync((signal) => api<QuoteBoxOptions>('/api/v1/me/quotes/options', { signal }))
+  return options.state.status === 'success' ? options.state.data : null
+}
+
+function AddQuote({ itemId, onDone, box }: { itemId: string; onDone: () => void; box: QuoteBoxOptions | null }) {
   const { api } = useAuth()
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [page, setPage] = useState('')
+  const [visibility, setVisibility] = useState<QuoteVisibility | null>(null)
+  const chosen: QuoteVisibility = box?.common_allowed ? (visibility ?? box.default) : 'PERSONAL'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -192,7 +200,7 @@ function AddQuote({ itemId, onDone }: { itemId: string; onDone: () => void }) {
     try {
       await api('/api/v1/me/quotes', {
         method: 'POST',
-        body: { text, shelf_item_id: itemId, page: Number(page) > 0 ? Number(page) : null },
+        body: { text, shelf_item_id: itemId, page: Number(page) > 0 ? Number(page) : null, visibility: chosen },
       })
       haptic('success')
       setText('')
@@ -231,6 +239,7 @@ function AddQuote({ itemId, onDone }: { itemId: string; onDone: () => void }) {
         onChange={(event) => setPage(event.target.value)}
         className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
       />
+      {box?.common_allowed && <VisibilityChoice value={chosen} onChange={setVisibility} />}
       {error && <p className="text-sm text-app-danger">{error}</p>}
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" onClick={() => setOpen(false)}>
@@ -250,6 +259,7 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
   const goBack = useCallback(() => navigate('/shelf'), [])
   useBackButton(goBack)
   const { state, reload } = useAsync((signal) => api<ShelfItemDetail>(`/api/v1/me/shelf/${itemId}`, { signal }), [itemId])
+  const box = useQuoteBox()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pagesTotal, setPagesTotal] = useState('')
@@ -356,9 +366,9 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
 
       <SectionTitle>Iqtiboslar ({item.quotes.length})</SectionTitle>
       {item.quotes.map((quote) => (
-        <QuoteCard key={quote.id} quote={quote} onChange={reload} />
+        <QuoteCard key={quote.id} quote={quote} onChange={reload} commonAllowed={box?.common_allowed ?? false} />
       ))}
-      <AddQuote itemId={item.id} onDone={reload} />
+      <AddQuote itemId={item.id} onDone={reload} box={box} />
 
       <SectionTitle>Kundalik</SectionTitle>
       {item.diary.length === 0 ? (

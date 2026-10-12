@@ -295,7 +295,40 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=50)],
         "«3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz)",
     ),
+    # ---- «🎯 Missiyalar»: the ones members set for themselves ----
+    SettingDefinition(
+        "missions.personal_enabled",
+        True,
+        bool,
+        "A'zolar o'zlari uchun shaxsiy missiya yarata oladimi («🎯 O'z missiyam»)",
+    ),
+    SettingDefinition(
+        "missions.personal_points",
+        2,
+        Annotated[int, Field(ge=0, le=50)],
+        "O'zi yaratgan missiyani bajargan a'zoga ball (juda oson maqsadlarga berilmaydi; 0 — ballsiz)",
+    ),
+    SettingDefinition(
+        "missions.personal_monthly_limit",
+        4,
+        Annotated[int, Field(ge=0, le=31)],
+        "Bir oyda nechta shaxsiy missiya uchun ball beriladi (0 — cheklovsiz)",
+    ),
     # ---- «💬 A'zolar fikrlari» ----
+    SettingDefinition(
+        "community.quote_box_default",
+        "PERSONAL",
+        str,
+        "Iqtiboslar sandig'iga yangi iqtibos saqlanayotganda oldindan tanlangan variant: PERSONAL — «🔒 Faqat "
+        "o'zim uchun», COMMON — «🌍 Umumiy» (hammaga ko'rinadi; a'zo saqlashdan oldin o'zgartira oladi)",
+        choices=("PERSONAL", "COMMON"),
+    ),
+    SettingDefinition(
+        "community.quote_box_common",
+        True,
+        bool,
+        "A'zolar sandiqdagi iqtibosini «🌍 Umumiy» qila oladimi (o'chiq — sandiq faqat shaxsiy bo'ladi)",
+    ),
     SettingDefinition(
         "community.auto_publish",
         False,

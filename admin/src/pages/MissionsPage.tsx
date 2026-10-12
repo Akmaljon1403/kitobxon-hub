@@ -52,6 +52,110 @@ const STATUS: Record<Status, { label: string; tone: 'success' | 'neutral' | 'war
 const EMPTY: Draft = { title: '', description: '', icon: '🎯', metric: 'PAGES', target: 100, period_days: 7, reward_points: 10, status: 'ACTIVE' }
 
 /** «🎯 Missiyalar»: personal goals members take in the Mini App; progress is counted from real activity. */
+interface PersonalMission {
+  id: string
+  title: string
+  description: string | null
+  icon: string
+  unit: string
+  target: number
+  period_days: number
+  status: 'ACTIVE' | 'COMPLETED' | 'EXPIRED' | null
+  progress: number
+  deadline: string | null
+  completed_at: string | null
+  owner_name: string
+  group_name: string | null
+  created_at: string
+}
+
+interface PersonalOverview {
+  created: number
+  members: number
+  running: number
+  completed: number
+  popular: { metric: string; title: string; count: number }[]
+  items: PersonalMission[]
+}
+
+const PERSONAL_STATUS: Record<string, { label: string; tone: 'success' | 'info' | 'neutral' }> = {
+  ACTIVE: { label: 'Davom etmoqda', tone: 'info' },
+  COMPLETED: { label: 'Bajarildi', tone: 'success' },
+  EXPIRED: { label: 'Muddati o‘tdi', tone: 'neutral' },
+}
+
+/** What members set for themselves: the admins see it, take good ideas for everybody, remove unsuitable ones. */
+function PersonalMissions({ onPromoted }: { onPromoted: () => void }) {
+  const { api } = useSession()
+  const overview = useAsync((signal) => api<PersonalOverview>('/api/v1/admin/missions/personal', { signal }))
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function promote(mission: PersonalMission) {
+    await api(`/api/v1/admin/missions/personal/${mission.id}/promote`, { method: 'POST' })
+    setMessage(`«${mission.title}» klub missiyalariga qoralama bo‘lib qo‘shildi — tahrirlab, «Faol» qiling.`)
+    onPromoted()
+  }
+
+  async function remove(mission: PersonalMission) {
+    if (!window.confirm(`«${mission.title}» missiyasini o‘chirasizmi? A’zoning o‘zi ham uni boshqa ko‘rmaydi.`)) return
+    await api(`/api/v1/admin/missions/personal/${mission.id}`, { method: 'DELETE' })
+    overview.reload()
+  }
+
+  if (overview.state.status === 'loading') return <LoadingState />
+  if (overview.state.status === 'error') return <ErrorState message={overview.state.error.message} onRetry={overview.reload} />
+  const data = overview.state.data
+  return (
+    <Card className="flex flex-col gap-3 p-0">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-4">
+        <h2 className="font-semibold">🙋 A’zolarning o‘z missiyalari</h2>
+        <p className="text-sm text-app-hint">
+          {data.created} ta missiya · {data.members} a’zo · hozir {data.running} · bajarilgan {data.completed}
+        </p>
+      </div>
+      {data.popular.length > 0 && (
+        <p className="px-4 text-sm text-app-hint">
+          Eng ko‘p tanlanadigani: {data.popular.slice(0, 3).map((item) => `${item.title} (${item.count})`).join(', ')}
+        </p>
+      )}
+      {message && <p className="mx-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{message}</p>}
+      <Table head={['Missiya', 'A’zo', 'Holat', '']}>
+        {data.items.length === 0 && <EmptyRow colSpan={4} text="A’zolar hali o‘zlariga missiya yaratmagan" />}
+        {data.items.map((mission) => (
+          <tr key={mission.id}>
+            <td className="px-4 py-3">
+              <p className="font-medium">
+                {mission.icon} {mission.title}
+              </p>
+              <p className="text-xs text-app-hint">
+                {mission.period_days} kunda {mission.target} {mission.unit}
+              </p>
+            </td>
+            <td className="px-4 py-3 text-sm">
+              {mission.owner_name}
+              {mission.group_name && <p className="text-xs text-app-hint">{mission.group_name}-guruh</p>}
+            </td>
+            <td className="px-4 py-3 text-sm">
+              {mission.status && <Badge tone={PERSONAL_STATUS[mission.status].tone}>{PERSONAL_STATUS[mission.status].label}</Badge>}
+              <p className="text-xs tabular-nums text-app-hint">
+                {mission.progress}/{mission.target}
+              </p>
+            </td>
+            <td className="whitespace-nowrap px-4 py-3 text-right">
+              <Button variant="ghost" onClick={() => void promote(mission)}>
+                ⬆️ Hammaga
+              </Button>
+              <Button variant="ghost" onClick={() => void remove(mission)}>
+                🗑
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </Card>
+  )
+}
+
 export function MissionsPage() {
   const { api } = useSession()
   const list = useAsync((signal) => api<AdminMission[]>('/api/v1/admin/missions', { signal }))
@@ -149,6 +253,8 @@ export function MissionsPage() {
           </Table>
         </Card>
       )}
+
+      <PersonalMissions onPromoted={list.reload} />
 
       {editing && (
         <Modal

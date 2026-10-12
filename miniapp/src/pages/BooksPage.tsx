@@ -6,6 +6,7 @@ import { useAuth } from '../store/auth'
 import type { Book, Page } from '../types/api'
 import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
+import { LibrarySwitch } from './ShelfPage'
 
 export function ReadingBadge({ book }: { book: Book }) {
   if (!book.my_reading) return null
@@ -15,12 +16,17 @@ export function ReadingBadge({ book }: { book: Book }) {
 }
 
 export function BooksPage() {
-  const { api } = useAuth()
+  const { api, me } = useAuth()
   const { state, reload } = useAsync((signal) => api<Page<Book>>('/api/v1/books?limit=100', { signal }))
 
+  const shelf = me?.features?.shelf === 'on'
   return (
     <>
-      <h1 className="px-1 pt-1 text-xl font-semibold">📚 Kitoblar</h1>
+      {shelf && <LibrarySwitch current="books" />}
+      <h1 className="px-1 pt-1 text-xl font-semibold">{shelf ? '🏛 Klub kitoblari' : '📚 Kitoblar'}</h1>
+      {shelf && (
+        <p className="-mt-2 px-1 text-sm text-app-hint">Klub tavsiya qilgan kitoblar — yoqqanini «Javonim»ga qo‘shing.</p>
+      )}
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.items.length === 0 && (
