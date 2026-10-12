@@ -211,7 +211,9 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va "
         "haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga "
         "administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. "
-        "@username yoki -100… raqami (bo'sh — cheklar bosh administratorlarga botda)",
+        "Ochiq kanal — @username; yopiq kanal — -100 bilan boshlanadigan ID raqami (masalan -1001234567890). "
+        "ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi "
+        "(bo'sh — cheklar bosh administratorlarga botda)",
     ),
     SettingDefinition(
         "payments.stars_packages",
@@ -293,13 +295,63 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=50)],
         "«3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz)",
     ),
+    # ---- «💬 A'zolar fikrlari» ----
+    SettingDefinition(
+        "community.auto_publish",
+        False,
+        bool,
+        "A'zolar yuborgan iqtibos va fikrlar admin tasdiqlamasdan umumiy lentada darhol chiqsinmi "
+        "(o'chiq — avval admin ko'rib chiqadi)",
+    ),
+    SettingDefinition(
+        "community.points",
+        2,
+        Annotated[int, Field(ge=0, le=100)],
+        "Fikri yoki iqtibosi umumiy lentaga qabul qilingan a'zoga ball (har biriga bir marta; 0 — ball berilmaydi)",
+    ),
+    SettingDefinition(
+        "community.monthly_points_limit",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "Bir oyda nechta fikr uchun ball beriladi (0 — cheklovsiz)",
+    ),
+    SettingDefinition(
+        "community.featured_points",
+        5,
+        Annotated[int, Field(ge=0, le=100)],
+        "Fikri «⭐ Tanlangan» bo'lgan yoki kanalda e'lon qilingan a'zoga qo'shimcha ball (bir marta)",
+    ),
+    SettingDefinition(
+        "community.daily_limit",
+        5,
+        Annotated[int, Field(ge=1, le=50)],
+        "Bir a'zo bir kunda nechta fikr yubora oladi (spamdan himoya)",
+    ),
+    SettingDefinition(
+        "community.ask_after_book",
+        True,
+        bool,
+        "Kitobni o'qib tugatgan a'zodan iqtibos yoki taassurot yozishni so'rash",
+    ),
+    SettingDefinition(
+        "community.ask_after_event",
+        True,
+        bool,
+        "Tadbirga baho bergan a'zoni tadbir haqida taassurot yozishga taklif qilish",
+    ),
+    SettingDefinition(
+        "community.notify_admins",
+        True,
+        bool,
+        "Yangi fikr kelganda «A'zolar fikrlari» huquqi bor adminlarga botda ✅ / ⭐ / 🙈 tugmalari bilan xabar berish",
+    ),
     # ---- Study years ----
     SettingDefinition(
         "academic.promote_groups",
-        True,
+        False,
         bool,
-        "Yangi o'quv yilida guruh raqami ham kurs bilan birga oshadi, agar uning birinchi raqami kursga teng "
-        "bo'lsa (2-kursdagi «201» → «301»). Boshqacha nomlangan guruhlar o'zgarmaydi",
+        "Yangi o'quv yilida guruh raqami ham kurs bilan birga oshirilsinmi (2-kursdagi «201» → «301»). Odatda "
+        "o'chiq: 1-sentabrda faqat kurs oshadi, guruh raqami o'zgarmaydi",
     ),
     SettingDefinition(
         "academic.ask_graduates",
@@ -366,7 +418,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"
     ),
     SettingDefinition(
-        "channel.chat_id", "@FJSTIMutolaaxona", ShortText, "Kanal manzili: @username yoki -100... raqami"
+        "channel.chat_id",
+        "@FJSTIMutolaaxona",
+        ShortText,
+        "Kanal manzili: ochiq kanal — @username (masalan @FJSTIMutolaaxona); yopiq kanal — -100 bilan boshlanadigan "
+        "ID raqami. ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi. Eng osoni: "
+        "botni kanalga admin qiling — bot o'zi «Bu kanal nima uchun?» deb so'raydi",
     ),
     SettingDefinition("channel.post_events", True, bool, "Yangi tadbirlar va «ertaga ... o'qib kelamiz» eslatmalari"),
     SettingDefinition("channel.post_books", True, bool, "Yangi kitoblar va «asarni tugatay deb qoldingizmi?» postlari"),

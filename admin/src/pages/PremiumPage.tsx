@@ -6,10 +6,106 @@ import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
 import { PaymentsChannel } from '../components/PaymentsChannel'
-import type { AdminUser, Page } from '../types/api'
+import type { AdminUser, Faculty, Page } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { navigate } from '../utils/router'
 import { MemberPicker } from './ScoresPage'
+
+/** «🎁 Ommaviy sovg'a»: Premium for N days to everybody, a faculty, a course or a group, with a count first. */
+function BulkGift({ onDone }: { onDone: (message: string) => void }) {
+  const { api } = useSession()
+  const faculties = useAsync((signal) => api<Faculty[]>('/api/v1/admin/faculties', { signal }), [])
+  const [days, setDays] = useState('7')
+  const [note, setNote] = useState('')
+  const [facultyId, setFacultyId] = useState('')
+  const [course, setCourse] = useState('')
+  const [group, setGroup] = useState('')
+  const [onlyWithout, setOnlyWithout] = useState(false)
+  const [count, setCount] = useState<number | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const body = {
+    days: Number(days),
+    note: note.trim() || null,
+    faculty_id: facultyId || null,
+    course: course ? Number(course) : null,
+    group_name: group.trim() || null,
+    only_without_premium: onlyWithout,
+  }
+
+  useEffect(() => {
+    setCount(null)
+    if (Number(days) < 1) return
+    const timer = window.setTimeout(() => {
+      api<{ recipients: number }>('/api/v1/admin/premium/grant-bulk', { method: 'POST', body: { ...body, dry_run: true } })
+        .then((result) => setCount(result.recipients))
+        .catch(() => setCount(null))
+    }, 300)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facultyId, course, group, onlyWithout, days])
+
+  async function give() {
+    if (!window.confirm(`${count ?? '?'} nafar a'zoga ${days} kunlik Premium sovg'a qilinsinmi? Har biriga xabar boradi.`)) return
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await api<{ recipients: number }>('/api/v1/admin/premium/grant-bulk', { method: 'POST', body })
+      onDone(`🎁 ${result.recipients} nafar a'zoga ${days} kunlik Premium berildi — har biriga xabar boradi`)
+      setNote('')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Berib bo‘lmadi')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <h2 className="font-semibold">🎁 Ommaviy sovg'a</h2>
+      <p className="text-sm text-app-hint">
+        Hammaga yoki bir fakultet, kurs, guruhga bir vaqtda — masalan, «Bilimlar kuni munosabati bilan hammaga 7 kun». Premium'i borlarga kunlar
+        joriy muddatidan keyin qo‘shiladi. Bosh administratorlar va umrbod Premium egalari hisobga kirmaydi.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-4">
+        <Field label="Fakultet">
+          <select className="min-h-9 w-full rounded-lg border border-app-border bg-app-bg px-2 text-sm" value={facultyId} onChange={(e) => setFacultyId(e.target.value)}>
+            <option value="">Hammasi</option>
+            {faculties.state.status === 'success' &&
+              faculties.state.data.map((faculty) => (
+                <option key={faculty.id} value={faculty.id}>
+                  {faculty.name}
+                </option>
+              ))}
+          </select>
+        </Field>
+        <Field label="Kurs">
+          <Input type="number" min={1} max={10} value={course} placeholder="Hammasi" onChange={(e) => setCourse(e.target.value)} />
+        </Field>
+        <Field label="Guruh">
+          <Input value={group} maxLength={16} placeholder="Hammasi" onChange={(e) => setGroup(e.target.value)} />
+        </Field>
+        <Field label="Kun">
+          <Input type="number" min={1} max={366} value={days} onChange={(e) => setDays(e.target.value)} />
+        </Field>
+      </div>
+      <Field label="Sabab (a'zolarga yoziladi, ixtiyoriy)">
+        <Input value={note} maxLength={200} placeholder="Bilimlar kuni munosabati bilan" onChange={(e) => setNote(e.target.value)} />
+      </Field>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="size-4" checked={onlyWithout} onChange={(e) => setOnlyWithout(e.target.checked)} />
+        Faqat hozir Premium'i yo‘q a‘zolarga
+      </label>
+      <InlineError message={error} />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm text-app-hint">{count === null ? 'Hisoblanmoqda…' : `${count} nafar a'zoga boradi`}</span>
+        <Button loading={busy} disabled={!count || Number(days) < 1} onClick={() => void give()}>
+          🎁 Sovg'a qilish
+        </Button>
+      </div>
+    </Card>
+  )
+}
 
 interface Overview {
   premium_members: number
@@ -273,6 +369,13 @@ export function PremiumPage() {
           </div>
         </div>
       </Card>
+
+      <BulkGift
+        onDone={(done) => {
+          setMessage(done)
+          reloadAll()
+        }}
+      />
 
       <Card>
         <h2 className="px-4 pt-4 font-semibold">Faol Premium a'zolar</h2>

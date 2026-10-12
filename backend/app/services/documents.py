@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
@@ -34,12 +33,13 @@ from app.models.enums import AttemptStatus, AttendanceStatus, ReadingStatus, Sco
 from app.security.permissions import Perm
 from app.services.document_render import Document, QrEntry, Table
 from app.services.settings import get_setting
+from app.utils.ordering import member_key, natural_key
 from app.utils.timezone import format_date, format_datetime, local_tz
 
 logger = logging.getLogger(__name__)
 
 FINISHED = (AttemptStatus.SUBMITTED, AttemptStatus.EXPIRED)
-MAX_APPENDIX = 400  # QR cards in one appendix (a few dozen pages)
+TOP_QR = 5  # the statistics appendix: QR codes of the five most active students only
 
 
 @dataclass(frozen=True)
@@ -194,23 +194,26 @@ async def _filter_lines(session: AsyncSession, params: Params) -> list[str]:
     return ["; ".join(parts)] if parts else []
 
 
+def _row_key(row: Any) -> tuple[Any, ...]:
+    """(User, faculty name, faculty order) → faculty → course → group (by its numbers) → name."""
+    user, faculty, order = row[0], row[1], row[2]
+    return member_key(order, faculty, user.course, user.group_name, user.last_name, user.first_name)
+
+
 # ---------------------------------------------------------------------------- activity of members
 
 
 async def _activity(session: AsyncSession, params: Params) -> tuple[list[tuple[User, str | None]], dict[str, Any]]:
     """Members (with the faculty name) and their activity in the period, counted in a few grouped queries."""
     _, _, since, until = _period(params)
-    members = [
-        (user, faculty)
-        for user, faculty in (
-            await session.execute(
-                select(User, Faculty.name)
-                .outerjoin(Faculty, Faculty.id == User.faculty_id)
-                .where(*_member_filter(params))
-                .order_by(Faculty.sort_order.nulls_last(), Faculty.name, User.course, User.group_name, User.last_name)
-            )
-        ).all()
-    ]
+    rows = (
+        await session.execute(
+            select(User, Faculty.name, Faculty.sort_order)
+            .outerjoin(Faculty, Faculty.id == User.faculty_id)
+            .where(*_member_filter(params))
+        )
+    ).all()
+    members = [(user, faculty) for user, faculty, _ in sorted(rows, key=_row_key)]
     ids = [user.id for user, _ in members]
 
     async def counts(query: Any) -> dict[uuid.UUID, int]:
@@ -379,41 +382,63 @@ async def statistics(session: AsyncSession, params: Params) -> Document:
     members, data = await _activity(session, params)
 
     def summarize(key_of: Any) -> list[list[Any]]:
-        groups: dict[Any, list[int]] = defaultdict(lambda: [0] * 6)
+        """Rows in the order of `members` (faculty → course → group), one per key."""
+        groups: dict[Any, list[int]] = {}
         for user, faculty in members:
             key = key_of(user, faculty)
-            row = groups[key]
+            row = groups.setdefault(key, [0] * 6)
             row[0] += 1
             row[1] += 1 if _active(user.id, data) else 0
             row[2] += data["events"].get(user.id, 0)
             row[3] += data["tests"].get(user.id, 0)
             row[4] += data["books"].get(user.id, 0)
             row[5] += data["points"].get(user.id, 0)
-        return [[key, *values] for key, values in groups.items()]
+        return [[*(key if isinstance(key, tuple) else (key,)), *values] for key, values in groups.items()]
 
     columns = ["A'zolar", "Faol", "Davomatlar", "Testlar", "O'qilgan kitoblar", "Ballar"]
     by_faculty = summarize(lambda user, faculty: faculty or "Fakultetsiz")
-    by_course = sorted(summarize(lambda user, faculty: f"{user.course}-kurs" if user.course else "—"), key=str)
+    by_course = sorted(
+        summarize(lambda user, faculty: user.course or 0),
+        key=lambda row: (row[0] == 0, row[0]),
+    )
+    by_course = [[f"{row[0]}-kurs" if row[0] else "—", *row[1:]] for row in by_course]
+    # Faculty first (in the faculty list order), then the groups by their numbers: 5424, 5524, …
+    faculty_place = {name: index for index, name in enumerate(dict.fromkeys(f or "—" for _, f in members))}
     by_group = sorted(
-        summarize(lambda user, faculty: f"{user.group_name or '—'} ({faculty or '—'})"),
-        key=lambda row: -row[2],
+        summarize(lambda user, faculty: (faculty or "—", user.group_name or "—")),
+        key=lambda row: (faculty_place[row[0]], natural_key(None if row[1] == "—" else row[1])),
     )
     totals = ["Jami", *[sum(row[index] for row in by_faculty) for index in range(1, 7)]]
     active = [(user, faculty) for user, faculty in members if _active(user.id, data)]
+    # The appendix carries only the most active students: by points, then visits, tests and books.
+    leaders = sorted(
+        active,
+        key=lambda pair: (
+            -data["points"].get(pair[0].id, 0),
+            -data["events"].get(pair[0].id, 0),
+            -data["tests"].get(pair[0].id, 0),
+            -data["books"].get(pair[0].id, 0),
+        ),
+    )[:TOP_QR]
     appendix = [
         QrEntry(
-            title=f"{user.last_name} {user.first_name}",
+            title=f"{place}. {user.last_name} {user.first_name}",
             details=" · ".join(
-                part for part in (faculty, f"{user.course}-kurs" if user.course else None, user.group_name) if part
+                part
+                for part in (
+                    faculty,
+                    f"{user.course}-kurs" if user.course else None,
+                    user.group_name,
+                    f"{data['points'].get(user.id, 0)} ball",
+                )
+                if part
             ),
             url=_member_url(user),
         )
-        for user, faculty in active[:MAX_APPENDIX]
+        for place, (user, faculty) in enumerate(leaders, start=1)
     ]
     lines = [*await _header(session), f"Davr: {_day(start)} — {_day(end)}", *await _filter_lines(session, params)]
     lines.append(f"A'zolar: {len(members)} nafar, shundan faol: {len(active)} nafar")
-    if len(active) > MAX_APPENDIX:
-        lines.append(f"Ilovada birinchi {MAX_APPENDIX} nafar faol a'zo (to'liq ro'yxat — «Talabalar faoliyati»)")
     return Document(
         title="Kitobxonlar klubi faoliyati bo'yicha statistik hisobot",
         filename=f"statistika-{start:%Y%m%d}-{end:%Y%m%d}",
@@ -421,9 +446,9 @@ async def statistics(session: AsyncSession, params: Params) -> Document:
         tables=[
             Table("Fakultetlar kesimida", ["Fakultet", *columns], by_faculty, totals=totals),
             Table("Kurslar kesimida", ["Kurs", *columns], by_course),
-            Table("Guruhlar kesimida (eng faollari yuqorida)", ["Guruh", *columns], by_group[:150]),
+            Table("Guruhlar kesimida (fakultet va guruh raqami tartibida)", ["Fakultet", "Guruh", *columns], by_group),
         ],
-        appendix_title="Ilova: faol a'zolar ro'yxati (QR kod bilan)",
+        appendix_title=f"Ilova: eng faol {TOP_QR} nafar talaba (QR kod bilan)",
         appendix=appendix,
         signature=await _signature(session),
     )
@@ -463,15 +488,15 @@ async def attendance(session: AsyncSession, params: Params) -> Document:
         "PENDING": "Kutilmoqda",
     }
     rows = []
-    for record, user, faculty in (
+    found = (
         await session.execute(
-            select(AttendanceRecord, User, Faculty.name)
+            select(AttendanceRecord, User, Faculty.name, Faculty.sort_order)
             .join(User, User.id == AttendanceRecord.user_id)
             .outerjoin(Faculty, Faculty.id == User.faculty_id)
             .where(AttendanceRecord.event_id == event.id)
-            .order_by(Faculty.name, User.course, User.group_name, User.last_name)
         )
-    ).all():
+    ).all()
+    for record, user, faculty, _ in sorted(found, key=lambda row: _row_key(row[1:])):
         shift = shifts.get(registered_shift.get(user.id)) if registered_shift.get(user.id) else None
         rows.append(
             [
@@ -563,14 +588,14 @@ async def members_list(session: AsyncSession, params: Params) -> Document:
 
     statuses = {"ACTIVE": "Faol", "INACTIVE": "Faol emas", "BLOCKED": "Bloklangan", "LEFT": "Chiqqan"}
     rows = []
-    for user, faculty in (
+    found = (
         await session.execute(
-            select(User, Faculty.name)
+            select(User, Faculty.name, Faculty.sort_order)
             .outerjoin(Faculty, Faculty.id == User.faculty_id)
             .where(*_member_filter(params))
-            .order_by(Faculty.name, User.course, User.group_name, User.last_name)
         )
-    ).all():
+    ).all()
+    for user, faculty, _ in sorted(found, key=_row_key):
         rows.append(
             [
                 len(rows) + 1,

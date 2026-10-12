@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     admin_books,
     admin_certificates,
     admin_channel,
+    admin_community,
     admin_contests,
     admin_documents,
     admin_emoji,
@@ -20,6 +21,7 @@ from app.api.v1.endpoints import (
     admin_notifications,
     admin_premium,
     admin_quizzes,
+    admin_rentals,
     admin_reports,
     admin_rewards,
     admin_scores,
@@ -29,6 +31,7 @@ from app.api.v1.endpoints import (
     admin_users,
     auth,
     books,
+    community,
     events,
     faculties,
     files,
@@ -58,6 +61,7 @@ for module in (
     rewards,
     premium,
     reading,
+    community,
     admin_access,
     admin_users,
     admin_books,
@@ -81,6 +85,8 @@ for module in (
     admin_emoji,
     admin_stars,
     admin_missions,
+    admin_community,
+    admin_rentals,
 ):
     api_router.include_router(module.router)
 api_router.include_router(admin_analytics.trust_router)

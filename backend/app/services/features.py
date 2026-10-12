@@ -135,6 +135,14 @@ FEATURES: tuple[Feature, ...] = (
         "league",
     ),
     Feature(
+        "community",
+        "💬 A'zolar fikrlari",
+        "kitobdan iqtiboslar, o'z fikrlaringiz, kitob va tadbir taassurotlari, klub haqidagi e'tiroflar — "
+        "yuborish, boshqalarnikini o'qish, ❤️ bosish va chiroyli kartochka qilib ulashish",
+        FeatureMode.ALL,
+        "community",
+    ),
+    Feature(
         "premium",
         "💎 Premium obuna",
         "Premium a'zolik: qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa",

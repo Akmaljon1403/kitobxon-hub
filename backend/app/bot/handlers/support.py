@@ -99,7 +99,7 @@ async def start_reply(callback: CallbackQuery, state: FSMContext, db: AsyncSessi
         return
     await private.set_state(SupportReply.waiting)
     await private.update_data(ticket_id=str(ticket_id), payment=payment)
-    await callback.answer("✍️")
+    await callback.answer(texts.SUPPORT_REPLY_CHANNEL_HINT, show_alert=True)
 
 
 @router.message(StateFilter(SupportReply.waiting), F.text, ~F.text.startswith("/"), ActiveMember())

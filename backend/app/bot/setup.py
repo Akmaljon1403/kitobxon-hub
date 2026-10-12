@@ -18,6 +18,7 @@ from app.bot.handlers import (
     admin,
     chats,
     common,
+    community,
     events,
     fallback,
     feedback,
@@ -76,10 +77,11 @@ def create_dispatcher() -> Dispatcher:
     dispatcher.message.outer_middleware(SubscriptionMiddleware())
     dispatcher.callback_query.outer_middleware(SubscriptionMiddleware())
     # Order matters: free-text handlers (support messages) come after the menu buttons.
-    # Payments first: Telegram's payment updates must never be taken by a waiting-for-text state.
+    # The chats router first: an admin's answer in the payments group is never a member's message. Then
+    # payments: Telegram's payment updates must never be taken by a waiting-for-text state.
     dispatcher.include_routers(
-        payments.router,
         chats.router,
+        payments.router,
         membership.router,
         registration.router,
         events.router,
@@ -87,6 +89,7 @@ def create_dispatcher() -> Dispatcher:
         admin.router,
         sections.router,
         reading.router,
+        community.router,
         feedback.router,
         support.router,
         fallback.router,

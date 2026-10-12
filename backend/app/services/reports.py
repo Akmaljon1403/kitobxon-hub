@@ -47,6 +47,7 @@ from app.models.enums import (
     ReportStatus,
     UserStatus,
 )
+from app.services import faculties
 from app.services.audit import record_audit
 from app.services.settings import get_setting
 from app.services.storage import get_storage
@@ -165,7 +166,10 @@ async def build_facts(session: AsyncSession, event: Event) -> dict[str, Any]:
             "rate_percent": round(attended_registered / len(registered_ids) * 100, 1) if registered_ids else None,
             "suspicious": sum(1 for row in attended_rows if row.status == AttendanceStatus.SUSPICIOUS),
         },
-        "faculties": [{"name": name, "attended": count} for name, count in sorted(by_faculty.items())],
+        "faculties": [
+            {"name": name, "attended": count}
+            for name, count in faculties.by_faculty_order(by_faculty, await faculties.ordering(session))
+        ],
         "courses": [{"course": course, "attended": count} for course, count in sorted(by_course.items())],
         "tests": tests,
         "feedback": await _feedback(session, [event.id]),
@@ -300,7 +304,10 @@ async def build_period_facts(session: AsyncSession, start: date, end: date) -> d
             {"title": event.title, "date": _uz_date(event.starts_at), "attended": per_event.get(event.id, 0)}
             for event in events
         ],
-        "faculties": [{"name": name, "attended": n} for name, n in sorted(by_faculty.items())],
+        "faculties": [
+            {"name": name, "attended": n}
+            for name, n in faculties.by_faculty_order(by_faculty, await faculties.ordering(session))
+        ],
         "tests": tests,
         "top_members": [
             {"place": row.rank, "name": names.get(row.user_id, row.name), "faculty": row.faculty, "points": row.total}

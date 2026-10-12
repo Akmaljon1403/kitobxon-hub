@@ -115,6 +115,16 @@ async def text(session: AsyncSession, now: datetime) -> str:
         todo.append(f"📨 Javob kutayotgan murojaatlar: <b>{questions}</b>")
     if manual:
         todo.append(f"✅ Tasdiq kutayotgan qo'lda davomat: <b>{manual}</b>")
+    from app.services import community
+
+    thoughts = await community.pending_count(session)
+    if thoughts:
+        todo.append(f"💬 Ko'rib chiqilmagan a'zolar fikrlari: <b>{thoughts}</b>")
+    from app.services import rentals
+
+    for name, left in await rentals.expiring_soon(session):
+        when = f"{left} kun qoldi" if left >= 0 else f"{-left} kun oldin tugagan"
+        todo.append(f"🏢 «{_e(name)}» litsenziyasi: {when} — yangi kalit bering")
     if todo:
         lines += ["", "<b>Sizni kutmoqda:</b>", *todo]
     today = [f"📅 {starts.astimezone(local_tz()):%H:%M} — {_e(title)}" for title, starts in events] + [

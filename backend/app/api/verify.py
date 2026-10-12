@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 
@@ -23,6 +23,34 @@ from app.utils.timezone import format_date, format_datetime
 
 router = APIRouter(tags=["verification"])
 VERIFY_LIMIT = RateLimit("verify", limit=60, window_seconds=60)
+
+
+@router.get(
+    "/v", response_class=HTMLResponse, include_in_schema=False, dependencies=[Depends(limit_by_ip(VERIFY_LIMIT))]
+)
+async def lookup(db: DbSession, code: str | None = None) -> Response:
+    """Type the code printed under the QR code (for anyone without a QR scanner): it opens /v/<code>."""
+    from fastapi.responses import RedirectResponse
+
+    cleaned = certificate_service.normalize_code(code or "")[:40]
+    if cleaned:
+        return RedirectResponse(f"/v/{cleaned}", status_code=303)
+    html = (
+        _environment()
+        .get_template("verify.html")
+        .render(
+            valid=True,
+            icon="🔎",
+            heading="Hujjatni tekshirish",
+            state="Sertifikat yoki kitobxon pasporti haqiqiyligini kod orqali tekshiring",
+            rows=[],
+            lookup=True,
+            organization=await get_setting(db, "org.organization_name"),
+            club=await get_setting(db, "org.club_name"),
+            checked_at=format_datetime(datetime.now(UTC)),
+        )
+    )
+    return HTMLResponse(html)
 
 
 @router.get(
@@ -99,6 +127,8 @@ async def verify(code: str, db: DbSession) -> HTMLResponse:
         .get_template("verify.html")
         .render(
             **page,
+            lookup=not page["rows"],  # not found: let the person type the code again
+            entered=code if not page["rows"] else None,
             organization=await get_setting(db, "org.organization_name"),
             club=await get_setting(db, "org.club_name"),
             checked_at=format_datetime(datetime.now(UTC)),

@@ -214,6 +214,9 @@ export function ProfilePage() {
           { route: '/shelf', label: '📖 Javonim', feature: 'shelf' },
           { route: '/card', label: '🪪 Kartam', feature: 'reading_card' },
           { route: '/missions', label: '🎯 Missiyalar', feature: 'missions' },
+          { route: '/quotes', label: '💬 Iqtiboslarim', feature: 'quote_box' },
+          { route: '/community', label: "🌍 A'zolar fikrlari", feature: 'community' },
+          { route: '/league', label: '🏛 Liga', feature: 'faculty_league' },
         ]
           .filter((item) => me.features[item.feature] !== 'off')
           .map((item) => (

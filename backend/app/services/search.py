@@ -30,6 +30,15 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
     ("🏁 Taklif tanlovlari", "contests", "taklif tanlov do'st referal havola sovrin musobaqa", "REWARD_MANAGE"),
     ("🎓 Sertifikatlar", "certificates", "sertifikat dizayn fon rasm", "REWARD_MANAGE"),
     ("📨 Murojaatlar", "support", "murojaat savol yordam adminga yozish", "SUPPORT_MANAGE"),
+    (
+        "💬 A'zolar fikrlari",
+        "community",
+        "iqtibos fikr e'tirof taassurot kartochka a'zolar lenta",
+        "COMMUNITY_MANAGE",
+    ),
+    ("🎯 Missiyalar", "missions", "missiya maqsad vazifa", "SEASON_MANAGE"),
+    ("⭐ Stars buyurtmalari", "stars", "stars yuborish buyurtma sovg'a", "STARS_SEND"),
+    ("🛡 Ishonch markazi", "trust", "ishonch shubhali sertifikat tekshirish kod", "AUDIT_LOG_VIEW"),
     ("📢 Xabarlar", "notifications", "xabar e'lon broadcast tugma yuborish", "NOTIFICATION_SEND"),
     ("📣 Telegram kanal", "channel", "kanal post stiker sticker tekshiruv", "NOTIFICATION_SEND"),
     ("🏛 Fakultetlar", "faculties", "fakultet", None),
@@ -37,6 +46,7 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
     ("🧩 Imkoniyatlar", "features", "imkoniyat funksiya yoqish o'chirish premium", "SUPER_ADMIN"),
     ("💎 Premium va to'lovlar", "premium", "premium to'lov karta chek stars tarif qaytarish", "SUPER_ADMIN"),
     ("🛡 Adminlar", "admins", "admin rol ruxsat", "SUPER_ADMIN"),
+    ("🏢 Ijara (tashkilotlar)", "rentals", "ijara litsenziya kalit tashkilot kollej maktab", "SUPER_ADMIN"),
     ("🧾 Audit jurnali", "audit", "audit jurnal kim nima qildi", "AUDIT_LOG_VIEW"),
 )
 
@@ -45,6 +55,7 @@ COMMANDS: tuple[tuple[str, str], ...] = (
     ("/stiker", "Botga stikerlarni yuborib, kanal postlari va tabriklar uchun saqlash (adminlar)"),
     ("/emoji", "Premium emojilarni o'rgatish: bot xabarlaridagi oddiy emojilar premiumga almashadi (adminlar)"),
     ("/admin", "Boshqaruv: qisqa holat va admin panel"),
+    ("/fikr", "A'zo iqtibos, fikr yoki klub haqida e'tirof yuboradi («💬 A'zolar fikrlari»)"),
     ("/menu", "Bosh menyu"),
     ("/portfolio", "Kitobxonlik portfoliosi (PDF va Word)"),
     ("/davomat", "Tadbirda davomat qilish"),

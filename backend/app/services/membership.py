@@ -232,6 +232,12 @@ async def erase(
     await session.execute(delete(BotFsmState).where(BotFsmState.key.op("~")(f":{telegram_id}(:|$)")))
     await session.execute(delete(UserNotificationSettings).where(UserNotificationSettings.user_id == user.id))
     await session.execute(delete(Notification).where(Notification.user_id == user.id))
+    # What the member wrote in their own words goes too (the reading diary stays as anonymous numbers).
+    from app.models import BookReflection, Contribution, SavedQuote
+
+    await session.execute(delete(Contribution).where(Contribution.user_id == user.id))
+    await session.execute(delete(SavedQuote).where(SavedQuote.user_id == user.id))
+    await session.execute(delete(BookReflection).where(BookReflection.user_id == user.id))
     tickets = select(SupportTicket.id).where(SupportTicket.user_id == user.id)
     await session.execute(
         update(SupportMessage)

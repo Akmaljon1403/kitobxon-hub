@@ -722,3 +722,69 @@ CARD_CAPTION = (
     "🪪 <b>Kitobxonlik kartangiz</b> — o'qigan kitoblar, betlar, seriya va yutuqlaringiz.\n"
     "Do'stlaringizga ulashing: rasmni bosib turing → «Ulashish»."
 )
+
+# ---- «💬 A'zolar fikrlari» (/fikr) ----
+BTN_COMMUNITY_FEED = "📖 Lentani o'qish"
+BTN_COMMUNITY_APP = "📱 Ilovada yozish (kitob yoki tadbir tanlab)"
+COMMUNITY_START = (
+    "💬 <b>A'zolar fikrlari</b>\n\n"
+    "Kitobdan yoqqan iqtibosingiz, o'z fikringiz yoki klub haqidagi e'tirofingizni yozing. Eng yaxshilari "
+    "chiroyli kartochka bo'lib klub kanalida va boshqa kitobxonlarga yuboriladi, sizga esa ball beriladi.\n\n"
+    "Nima yozasiz?"
+)
+COMMUNITY_ASK_TEXT = {
+    "QUOTE": "📖 Iqtibosni yozing (kitobdagidek, {min}–{max} belgi). Bekor qilish: /cancel",
+    "THOUGHT": "💡 Fikringizni yozing ({min}–{max} belgi). Bekor qilish: /cancel",
+    "CLUB": "🌟 Klub haqida e'tirofingizni yozing — klub sizga nima berdi? ({min}–{max} belgi). Bekor qilish: /cancel",
+}
+COMMUNITY_ASK_SOURCE = (
+    "✍️ Kim aytgan yoki qaysi kitobdan? Masalan: <i>Abdulla Qodiriy — O'tkan kunlar</i>.\nBilmasangiz — "
+    "«O'tkazib yuborish»."
+)
+BTN_SKIP = "O'tkazib yuborish"
+COMMUNITY_TEXT_ONLY = "Iltimos, matn yozing yoki /cancel"
+COMMUNITY_SENT_PENDING = (
+    "✅ Rahmat! Yuborildi. Admin ko'rib chiqqach «💬 A'zolar fikrlari» lentasida chiqadi va sizga xabar beramiz.{box}"
+)
+COMMUNITY_SENT_LIVE = "✅ Rahmat! «💬 A'zolar fikrlari» lentasiga qo'shildi.{box}"
+COMMUNITY_SENT_BOX = "\n💬 Nusxasi «Iqtiboslar sandig'i»ngizda ham saqlandi."
+BTN_COMMUNITY_CARD = "🖼 Kartochkasini olish"
+COMMUNITY_CARD_CAPTION = "💬 Kartochka tayyor — do'stlaringizga ulashing (rasmni bosib turing → «Ulashish»)."
+COMMUNITY_EVENT_OFFER = (
+    "💬 Fikringizni boshqa kitobxonlar ham o'qisinmi? «A'zolar fikrlari» lentasiga yuboraymi? "
+    "(eng yaxshilari klub kanalida chiqadi)"
+)
+BTN_COMMUNITY_EVENT_YES = "✅ Ha, yuboring"
+BTN_COMMUNITY_EVENT_NO = "Yo'q, rahmat"
+COMMUNITY_EVENT_NO = "Mayli, fikringiz faqat klub rahbariyatida qoladi."
+COMMUNITY_NO_RIGHT = "Bu tugma «A'zolar fikrlari» huquqi bor adminlar uchun."
+COMMUNITY_DONE = {
+    "approve": "✅ Lentaga qo'shildi — {admin}",
+    "feature": "⭐ Tanlanganlarga qo'shildi — {admin}",
+    "hide": "🙈 Yashirildi — {admin}",
+}
+
+# ---- Answers in the payments channel («Reply») ----
+PAYCHAT_SENT = "✅ A'zoga yuborildi: {name}"
+PAYCHAT_TEXT_ONLY = "⚠️ Faqat matn yuboriladi — javobni so'z bilan yozing."
+PAYCHAT_FAILED = "⚠️ Yuborilmadi: {reason}"
+PAYCHAT_SUPER_ONLY = "⚠️ To'lov masalalarida a'zoga faqat bosh admin javob beradi."
+PAYCHAT_ABOUT_CARD = "to'lovingiz bo'yicha: {what}, {amount}"
+PAYCHAT_ABOUT_USER = "to'lovingiz bo'yicha"
+SUPPORT_REPLY_CHANNEL_HINT = "✍️ Javobni bot chatida yozing — yoki kanalda shu xabarga «Reply» qilib yozing."
+
+# ---- «What is this channel's id?» (an admin forwards a channel post) ----
+CHAT_ID_INFO = (
+    "🆔 <b>{title}</b>\n\n"
+    "ID raqami: <code>{chat_id}</code>\n"
+    "{username}"
+    "\nSozlamalarda kanal manzili sifatida shu raqamni (yoki @username'ni) yozasiz. «-100» — Telegram kanal va "
+    "guruhlar ID'sining boshidagi belgilanishi, raqamning bir qismi: uni o'chirmang.\n\n"
+    "Eng osoni: botni shu kanalga administrator qiling — bot o'zi «Bu kanal nima uchun?» deb so'raydi va "
+    "hammasini o'zi yozib qo'yadi."
+)
+CHAT_ID_USERNAME = "Ochiq manzil: @{username}\n"
+CHAT_ID_HIDDEN = (
+    "🆔 Bu forward'da kanal ma'lumoti yashirilgan. Kanaldan postni boshqa forward qiling yoki botni kanalga "
+    "administrator qiling — bot o'zi so'raydi."
+)

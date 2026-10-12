@@ -61,3 +61,27 @@ async def save_comment(message: Message, state: FSMContext, db: AsyncSession, me
         await message.answer(texts.FEEDBACK_NOT_ALLOWED)
         return
     await message.answer(texts.FEEDBACK_COMMENT_SAVED)
+    if await _may_share(db, member, data["event_id"]):
+        await message.answer(
+            texts.COMMUNITY_EVENT_OFFER, reply_markup=keyboards.community_event_offer(data["event_id"])
+        )
+
+
+async def _may_share(db: AsyncSession, member: User, event_hex: str) -> bool:
+    """A good comment (4–5 ⭐) may go to «💬 A'zolar fikrlari» — if the club asks and the member agrees."""
+    from sqlalchemy import select
+
+    from app.models import EventFeedback
+    from app.services import community, features
+    from app.services.settings import get_setting
+
+    if not await get_setting(db, "community.ask_after_event"):
+        return False
+    if await features.allowed(db, member, "community") != "on":
+        return False
+    feedback = await db.scalar(
+        select(EventFeedback).where(
+            EventFeedback.event_id == uuid.UUID(hex=event_hex), EventFeedback.user_id == member.id
+        )
+    )
+    return bool(feedback and feedback.rating >= 4 and len((feedback.comment or "").strip()) >= community.MIN_TEXT)

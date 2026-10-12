@@ -458,7 +458,8 @@ async def test_feedback_is_asked_after_the_event_and_saved(client: httpx.AsyncCl
     assert "4/5" in edited.text and edited.reply_markup.inline_keyboard[0][0].callback_data == f"fbc:{event_id.hex}"
     await harness.press(f"fbc:{event_id.hex}")
     await harness.send("Juda yoqdi, keyingi safar ko'proq vaqt bo'lsa")
-    assert harness.last_text() == texts.FEEDBACK_COMMENT_SAVED
+    assert texts.FEEDBACK_COMMENT_SAVED in harness.all_text()
+    assert harness.last_text() == texts.COMMUNITY_EVENT_OFFER  # a good comment may go to «A'zolar fikrlari»
 
     stranger = BotHarness(8602)
     await stranger.press(f"fb:{event_id.hex}:1")
