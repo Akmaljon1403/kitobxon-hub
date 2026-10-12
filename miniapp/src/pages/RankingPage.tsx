@@ -6,6 +6,7 @@ import { Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { FacultyRanking, Ranking, RankingRow } from '../types/api'
+import { navigate } from '../utils/router'
 
 type Period = 'week' | 'month' | 'all'
 type Scope = 'all' | 'faculty' | 'group' | 'faculties'
@@ -165,6 +166,7 @@ export function RankingPage() {
   const [scope, setScope] = useState<Scope>('all')
   // This week's club-wide ranking is free; the other tabs are the «ranking_full» feature.
   const full = useFeature('ranking_full')
+  const league = useFeature('faculty_league')
   const periods = full === 'off' ? PERIODS.filter((p) => p.value === 'week') : PERIODS
   const scopes = full === 'off' ? SCOPES.filter((s) => s.value === 'all') : SCOPES
   const isFree = period === 'week' && scope === 'all'
@@ -183,6 +185,21 @@ export function RankingPage() {
           onChange={setScope}
           locked={full === 'premium' ? ['faculty', 'group', 'faculties'] : []}
         />
+      )}
+      {league === 'on' && (
+        <button type="button" onClick={() => navigate('/league')} className="text-left">
+          <Card className="flex items-center gap-3 py-3">
+            <span aria-hidden className="text-2xl">
+              🏛
+            </span>
+            <span className="min-w-0 flex-1 text-sm">
+              <b>Fakultetlar ligasi</b> — fakultetingiz bilan birga bellashing: ball, betlar, kitoblar va tadbirlar
+            </span>
+            <span aria-hidden className="text-app-hint">
+              ›
+            </span>
+          </Card>
+        </button>
       )}
       {!isFree && full !== 'on' ? (
         <FeatureLocked code="ranking_full" access={full} />

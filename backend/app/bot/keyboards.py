@@ -342,3 +342,11 @@ def decor_offer() -> InlineKeyboardMarkup | None:
             InlineKeyboardButton(text=texts.BTN_DECOR_SKIP, callback_data="dec:skip"),
         ]
     )
+
+
+def reading_links(*, missions: bool = False) -> InlineKeyboardMarkup | None:
+    """«📚 Javonim» (and «🎯 Missiyalar») in the Mini App."""
+    return inline(
+        [app_button("shelf", texts.BTN_SHELF_APP), app_button("quotes", texts.BTN_QUOTES_APP)],
+        [app_button("missions", texts.BTN_MISSIONS_APP)] if missions else [],
+    )

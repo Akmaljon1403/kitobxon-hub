@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     admin_events,
     admin_faculties,
     admin_giveaways,
+    admin_missions,
     admin_notifications,
     admin_premium,
     admin_quizzes,
@@ -36,6 +37,7 @@ from app.api.v1.endpoints import (
     my_documents,
     premium,
     quizzes,
+    reading,
     rewards,
     scores,
 )
@@ -55,6 +57,7 @@ for module in (
     achievements,
     rewards,
     premium,
+    reading,
     admin_access,
     admin_users,
     admin_books,
@@ -77,5 +80,7 @@ for module in (
     admin_documents,
     admin_emoji,
     admin_stars,
+    admin_missions,
 ):
     api_router.include_router(module.router)
+api_router.include_router(admin_analytics.trust_router)

@@ -99,6 +99,42 @@ FEATURES: tuple[Feature, ...] = (
         "profile",
     ),
     Feature(
+        "shelf",
+        "📚 Javonim va mutolaa kundaligi",
+        "shaxsiy kitob javoni (o'qimoqchiman / o'qiyapman / o'qidim / keyinroq), kunlik betlar kundaligi, "
+        "ketma-ket o'qish seriyasi va kitobdan keyin 3 savol",
+        FeatureMode.ALL,
+        "shelf",
+    ),
+    Feature(
+        "quote_box",
+        "💬 Iqtiboslar sandig'i",
+        "yoqqan iqtiboslarni saqlash, izoh yozish va chiroyli kartochka qilib do'stlarga ulashish",
+        FeatureMode.ALL,
+        "quotes",
+    ),
+    Feature(
+        "missions",
+        "🎯 Shaxsiy missiyalar",
+        "«7 kunda 100 bet», «5 kun ketma-ket o'qish» kabi kichik maqsadlar — bajarganga ball",
+        FeatureMode.ALL,
+        "missions",
+    ),
+    Feature(
+        "reading_card",
+        "🪪 Kitobxonlik kartam",
+        "o'qigan kitoblar, betlar, seriya va yutuqlaringiz bitta chiroyli rasmda — ulashish uchun",
+        FeatureMode.ALL,
+        "card",
+    ),
+    Feature(
+        "faculty_league",
+        "🏛 Fakultetlar ligasi",
+        "fakultetlar bellashuvi: o'rtacha ball, faol kitobxonlar ulushi, o'qilgan betlar va kitoblar",
+        FeatureMode.ALL,
+        "league",
+    ),
+    Feature(
         "premium",
         "💎 Premium obuna",
         "Premium a'zolik: qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa",

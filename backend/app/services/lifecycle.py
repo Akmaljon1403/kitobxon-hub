@@ -16,6 +16,7 @@ from __future__ import annotations
 import calendar
 import logging
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import String, delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -310,6 +311,55 @@ async def cleanup(session: AsyncSession, now: datetime | None = None) -> int:
 # ---------------------------------------------------------------------------- «Yil yakuni»
 
 
+async def _reading_trace(session: AsyncSession, start: date, until: date) -> dict[Any, dict[str, int]]:
+    """«Kitobxonlik izi» of the study year from «📚 Mening mutolaam»: diary pages, the longest reading
+    streak, quotes saved and missions completed — per member."""
+    from app.models import ReadingLog, SavedQuote, UserMission
+    from app.models.enums import UserMissionStatus
+    from app.services.reading_journal import streaks
+
+    since = datetime.combine(start, datetime.min.time(), tzinfo=local_tz())
+    trace: dict[Any, dict[str, int]] = {}
+
+    def put(user_id: Any, key: str, value: int) -> None:
+        trace.setdefault(user_id, {})[key] = value
+
+    for user_id, pages in (
+        await session.execute(
+            select(ReadingLog.user_id, func.sum(ReadingLog.pages))
+            .where(ReadingLog.log_date >= start, ReadingLog.log_date <= until)
+            .group_by(ReadingLog.user_id)
+        )
+    ).all():
+        put(user_id, "pages", int(pages or 0))
+    days: dict[Any, list[date]] = {}
+    for user_id, day in (
+        await session.execute(
+            select(ReadingLog.user_id, ReadingLog.log_date)
+            .where(ReadingLog.log_date >= start, ReadingLog.log_date <= until)
+            .distinct()
+        )
+    ).all():
+        days.setdefault(user_id, []).append(day)
+    for user_id, dates in days.items():
+        put(user_id, "streak", streaks(dates, until)[1])
+    for user_id, count in (
+        await session.execute(
+            select(SavedQuote.user_id, func.count()).where(SavedQuote.created_at >= since).group_by(SavedQuote.user_id)
+        )
+    ).all():
+        put(user_id, "quotes", int(count))
+    for user_id, count in (
+        await session.execute(
+            select(UserMission.user_id, func.count())
+            .where(UserMission.status == UserMissionStatus.COMPLETED, UserMission.completed_at >= since)
+            .group_by(UserMission.user_id)
+        )
+    ).all():
+        put(user_id, "missions", int(count))
+    return trace
+
+
 async def year_summaries(session: AsyncSession, now: datetime | None = None) -> int:
     """Scheduler job (daily): on ``academic.summary_day`` every member who did something this study year
     gets their own results. Returns how many messages were queued."""
@@ -337,6 +387,7 @@ async def year_summaries(session: AsyncSession, now: datetime | None = None) -> 
             )
         ).all()
     )
+    reading = await _reading_trace(session, start, today)
     queued = 0
     for user, _faculty in members:
         if user.status != UserStatus.ACTIVE:
@@ -344,7 +395,8 @@ async def year_summaries(session: AsyncSession, now: datetime | None = None) -> 
         values = {key: int(data.get(key, {}).get(user.id, 0)) for key in ("books", "events", "tests", "points")}
         values["certificates"] = int(data.get("certificates", {}).get(user.id, 0))
         values["achievements"] = int(data.get("achievements", {}).get(user.id, 0))
-        if not any(values.values()):
+        trace = reading.get(user.id, {})
+        if not any(values.values()) and not any(trace.values()):
             continue
         lines = [f"📖 <b>{year}–{year + 1} o'quv yilingiz yakunlari</b>", ""]
         lines.append(f"📚 O'qilgan kitoblar: <b>{values['books']}</b>")
@@ -359,7 +411,19 @@ async def year_summaries(session: AsyncSession, now: datetime | None = None) -> 
             lines.append(f"🏅 Yangi yutuqlar: <b>{values['achievements']}</b>")
         if friends.get(user.id):
             lines.append(f"👥 Klubga olib kelgan do'stlar: <b>{friends[user.id]}</b>")
-        lines += ["", "Rahmat, ajoyib yil bo'ldi! Yozgi ta'tilda ham kitobni qo'ldan qo'ymang 📖☀️"]
+        if trace.get("pages"):
+            lines.append(f"📖 Mutolaa kundaligidagi betlar: <b>{trace['pages']}</b>")
+        if trace.get("streak", 0) > 1:
+            lines.append(f"🔥 Eng uzun o'qish seriyasi: <b>{trace['streak']} kun</b>")
+        if trace.get("quotes"):
+            lines.append(f"💬 Saqlangan iqtiboslar: <b>{trace['quotes']}</b>")
+        if trace.get("missions"):
+            lines.append(f"🎯 Bajarilgan missiyalar: <b>{trace['missions']}</b>")
+        lines += [
+            "",
+            "🪪 Kitobxonlik kartangizni oling va do'stlaringizga ulashing: /kartam",
+            "Rahmat, ajoyib yil bo'ldi! Yozgi ta'tilda ham kitobni qo'ldan qo'ymang 📖☀️",
+        ]
         await enqueue_notification(
             session,
             user_id=user.id,

@@ -17,6 +17,7 @@ import { GiveawaysPage } from './pages/GiveawaysPage'
 import { ContestsPage } from './pages/ContestsPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
+import { MissionsPage } from './pages/MissionsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { PremiumPage } from './pages/PremiumPage'
 import { QuotesPage } from './pages/QuotesPage'
@@ -30,6 +31,7 @@ import { SupportPage, SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
 import { TestsPage } from './pages/TestsPage'
+import { TrustPage } from './pages/TrustPage'
 import { SessionProvider, useSession } from './store/session'
 import { useRoute } from './utils/router'
 
@@ -50,6 +52,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   rewards: RewardsPage,
   giveaways: GiveawaysPage,
   contests: ContestsPage,
+  missions: MissionsPage,
   certificates: CertificatesPage,
   features: FeaturesPage,
   premium: PremiumPage,
@@ -59,6 +62,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   settings: SettingsPage,
   admins: AdminsPage,
   audit: AuditPage,
+  trust: TrustPage,
 }
 
 function Router() {

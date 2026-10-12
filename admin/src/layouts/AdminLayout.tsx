@@ -31,6 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'rewards', icon: '🎁', label: "Sovg'alar", visible: (can) => can('REWARD_MANAGE') },
   { route: 'giveaways', icon: '🎲', label: "Sovg'a o'yinlari", visible: (can) => can('REWARD_MANAGE') },
   { route: 'contests', icon: '🏁', label: 'Taklif tanlovlari', visible: (can) => can('REWARD_MANAGE') },
+  { route: 'missions', icon: '🎯', label: 'Missiyalar', visible: (can) => can('SEASON_MANAGE') },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', visible: (can) => can('REWARD_MANAGE') },
   { route: 'support', icon: '📨', label: 'Murojaatlar', visible: (can) => can('SUPPORT_MANAGE') },
   { route: 'notifications', icon: '📢', label: 'Xabarlar', visible: (can) => can('NOTIFICATION_SEND') },
@@ -41,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'premium', icon: '💎', label: 'Premium', visible: (_, isSuper) => isSuper },
   { route: 'stars', icon: '⭐', label: 'Stars buyurtmalari', visible: (can) => can('STARS_SEND') },
   { route: 'admins', icon: '🛡', label: 'Adminlar', visible: (_, isSuper) => isSuper },
+  { route: 'trust', icon: '🛡', label: 'Ishonch markazi', visible: (can) => can('AUDIT_LOG_VIEW') },
   { route: 'audit', icon: '🧾', label: 'Audit jurnali', visible: (can) => can('AUDIT_LOG_VIEW') },
 ]
 

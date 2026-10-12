@@ -1,9 +1,266 @@
-# Kitobxon Hub — boshqaruv qo'llanmasi (klub rahbari uchun)
+# Kitobxon Hub — to'liq qo'llanma
 
-Bu qo'llanma dasturchi bo'lmagan klub rahbari uchun: har bir bo'lim nima qiladi va uni qanday
-sozlash kerak. Hammasi telefondan, Telegram ichida qilinadi.
+Farg'ona jamoat salomatligi tibbiyot instituti kitobxonlar klubi uchun. Bu qo'llanma dasturchi
+bo'lmagan klub rahbari uchun yozilgan: botning va ilovaning **har bir funksiyasi**, **har bir qadami**
+qanday ishlashi, nimani qayerda sozlash, muammo bo'lsa nima qilish — hammasi shu yerda.
+
+**Qanday o'qish kerak.** Avval «A. Tizim nimalardan iborat» bo'limini o'qing. Keyin:
+
+- a'zolar nimani ko'rishini bilish uchun — **B, C, D bo'limlari** (bot, ilova va «Mening mutolaam»);
+- boshqaruv uchun — **1–35-bo'limlar** (admin panel, to'lovlar, kanal, avtomatik ishlar, savol-javob);
+- sozlama, huquq yoki buyruqni tez topish uchun — oxiridagi **ma'lumotnoma jadvallari** (ular
+  dastur kodidan avtomatik olingan, shuning uchun to'liq va aniq);
+- tushunmagan narsangizni menga (Claude'ga) yozib so'rang.
 
 ---
+
+## A. Tizim nimalardan iborat
+
+| Qism | Kim ishlatadi | Nima qiladi |
+|---|---|---|
+| **🤖 Telegram bot** | hamma a'zolar | ro'yxatdan o'tish, menyu, davomat, xabarlar, to'lov, murojaat |
+| **📱 Ilova (Mini App)** | hamma a'zolar | botning ichida ochiladigan sahifalar: kitoblar, testlar, reyting, javon, missiyalar va boshqalar |
+| **🛠 Admin panel** | adminlar | boshqaruv: a'zolar, tadbirlar, testlar, ballar, hisobotlar, sozlamalar |
+| **📣 Klub kanali** | hamma | bot o'zi post joylaydi (tadbir, kitob, iqtibos, g'oliblar) |
+| **💳 To'lovlar kanali** | bosh admin va to'lov adminlari | pulga oid hamma narsa: cheklar, qarorlar, Stars buyurtmalari, to'lov savollari |
+
+**Rollar:**
+
+| Rol | Kim | Nima qila oladi |
+|---|---|---|
+| A'zo | ro'yxatdan o'tgan talaba | botdan va ilovadan foydalanadi |
+| Admin | siz huquq bergan odam | faqat berilgan huquqlar doirasida (masalan, faqat tadbir va davomat) |
+| **⭐ Stars yuboruvchi admin** | `STARS_SEND` huquqi berilgan admin | bosh admin tasdiqlagan Stars buyurtmalarini Telegram'da a'zoga sovg'a qiladi |
+| **Bosh admin** | siz | hamma narsa: to'lovlarni tasdiqlash, imkoniyatlarni yoqish, adminlarni tayinlash |
+
+Bosh adminlar umrbod 💎 Premium'ga ega va hech qachon reyting, tanlov yoki sovg'a o'yinida
+qatnashmaydi (adolat uchun).
+
+---
+
+## B. A'zo nigohida: bot (qadam-baqadam)
+
+### B.1. Ro'yxatdan o'tish
+
+1. A'zo botni ochib **Start** ni bosadi (yoki do'sti yuborgan taklif havolasi orqali kiradi).
+2. Majburiy obuna yoqilgan bo'lsa — avval klub kanaliga obuna bo'lish so'raladi: **📢 kanal** tugmasi
+   va **✅ Obuna bo'ldim**. Obuna bo'lgach, to'xtagan joyidan davom etadi.
+3. Bot savollar beradi:
+   1. **Ismingiz?** (masalan: Akmaljon)
+   2. **Familiyangiz?**
+   3. **Telefon raqami** — pastdagi **📱 Raqamni yuborish** tugmasi bilan (qo'lda yozilmaydi; faqat
+      o'zining raqami qabul qilinadi; raqamni faqat klub rahbariyati ko'radi).
+   4. **Fakultet** (ro'yxatdan tanlanadi; fakultetlar kiritilmagan bo'lsa bu qadam o'tkazib yuboriladi).
+   5. **Kurs** (1-, 2-, … kurs tugmalari).
+   6. **Guruh** (masalan: 301 yoki 301-A).
+4. Ma'lumotlarni tekshirish: **✅ Tasdiqlash** yoki **🔄 Qaytadan to'ldirish**.
+5. Tayyor: qisqa tanishuv (davomat, testlar, kitoblar, ilova), bir martalik **bepul Premium sinov**
+   (odatda 7 kun) va bosh menyu chiqadi. Agar a'zolarni tasdiqlash yoqilgan bo'lsa, admin tasdiqlaguncha
+   kutadi.
+
+To'xtatish: `/cancel` yoki `/stop` — istalgan jarayon to'xtaydi, menyuga qaytadi.
+
+### B.2. Bosh menyu — har bir tugma
+
+| Tugma | Nima qiladi |
+|---|---|
+| **📚 Kitoblar** | joriy klub kitobi, muddati va qancha kun qolgani; «📱 Batafsil — ilovada» |
+| **📅 Tadbirlar** | yaqin tadbir: sana, joy, kitob; ilovada ro'yxatdan o'tish |
+| **✅ Davomat** | tadbirda davomat: QR kodni skanerlash yoki 6 belgili kodni yozish (B.3) |
+| **📝 Testlar** | ochiq testlar va qancha vaqt qolgani; test ilovada ishlanadi |
+| **📊 Natijalarim** | ballar, o'rinlar, so'nggi natijalar |
+| **🏆 Reyting** | haftalik reyting va a'zoning o'rni (to'liq reyting — Premium, sozlanadi) |
+| **🪪 Pasportim** | rasmli a'zolik kartasi (B.4) |
+| **🏅 Yutuqlar** | nishonlar; sertifikatlar, portfolio va «🎁 Sizning foydangiz» tugmalari |
+| **🎁 Sizning foydangiz** | taklif havolasi, taklif qilgan do'stlar va ularning ballari (B.5) |
+| **⚙️ Sozlamalar** | bildirishnomalarni yoqish/o'chirish, ma'lumotlarni o'zgartirish, a'zolikni bekor qilish |
+| **💬 Yordam** | savol-javoblar va «✉️ Adminga yozish» |
+| **💎 Premium** | Premium do'koni ochiq bo'lsa ko'rinadi |
+| **🛠 Boshqaruv** | faqat adminlarga ko'rinadi: qisqa holat va admin panel |
+
+Menyu tugmasi bosilganda bot qisqa xulosa yozadi va «📱 Batafsil — ilovada» tugmasini qo'shadi.
+Bosh admin biror bo'limni o'chirsa (masalan, Reyting), tugma menyudan yo'qoladi.
+
+### B.3. Davomat
+
+1. Tadbirda davomat ochilganda a'zolarga xabar keladi.
+2. A'zo **✅ Davomat** (yoki `/davomat`) → **📷 QR kodni skanerlash** (ekrandagi QR) yoki ekrandagi
+   **6 belgili kodni** yozadi.
+3. «✅ Davomatingiz qayd etildi» va ball. Kod har 10 soniyada yangilanadi — rasmga olib boshqaga
+   yuborish foyda bermaydi. Bir tadbirga ikki marta davomat qilib bo'lmaydi.
+
+### B.4. Kitobxon pasporti
+
+**🪪 Pasportim** (yoki `/pasport`) — ID-karta rasmi: rasm, ism, fakultet, kurs, guruh, a'zo raqami
+(KH-000042) va QR kod. Tugmalar: **📷 Rasmni almashtirish**, **↩️ Telegram rasmiga qaytish**,
+**🎨 Dizayn (Premium)**, **📥 Fayl sifatida (asl sifat)**, **🎓 Sertifikatlarim**. QR kodni
+skanerlagan odam pasport haqiqiyligini va a'zoning jonli natijalarini ko'radi.
+
+### B.5. «🎁 Sizning foydangiz» (do'stlarni taklif qilish)
+
+Bu bo'lim **doim ochiq** — uni o'chirib bo'lmaydi. Uch joydan ochiladi: bot menyusidagi
+**🎁 Sizning foydangiz** tugmasi, `/referal` (yoki eski `/taklif`) buyrug'i va ilovadagi bosh sahifa
+yoki profildagi «🎁 Sizning foydangiz» kartasi.
+
+A'zo ko'radi:
+
+1. **Shaxsiy taklif havolasi** (`https://t.me/<bot>?start=ref_1024`) va **📤 Do'stlarga yuborish**.
+2. Mukofot sharti: do'sti havola orqali ro'yxatdan o'tib, **birinchi tadbirga kelsa** — +20 ball va
+   7 kunlik Premium (sozlanadi; oyiga 5 tagacha).
+3. **📊 Qisqacha**: nechta do'st taklif qilgani, nechtasi tadbirga kelgani, ular to'plagan **jami ball**,
+   o'qigan kitoblari, a'zoning o'zi olgan ball va Premium kunlar.
+4. **Do'stlari ro'yxati**: «1. Bekzod K. — ⭐ 120 ball ✅» (✅ — tadbirga keldi, ⏳ — hali kelmadi).
+   Sozlamaga ko'ra faqat ismlar yoki faqat sonlar ko'rsatilishi mumkin.
+5. Eng faol taklif qiluvchilar orasidagi o'rni va davom etayotgan taklif tanlovi.
+
+> Avval havola ba'zan «yopiq» chiqardi: u faqat `BOT_USERNAME` sozlamasiga bog'liq edi. Endi bot o'z
+> nomini Telegram'dan o'zi so'rab oladi — havola har doim ishlaydi.
+
+### B.6. «📚 Mening mutolaam» botda: /oqidim, /javonim, /kartam
+
+- **`/oqidim 25`** — «O'qiyapman» javonidagi kitobga bugun 25 bet qo'shiladi (mutolaa kundaligi).
+  Izoh bilan: `/oqidim 25 Juda qiziq bob edi`. Javob: kitob nomi, «25/40 bet (62%)», bugungi jami va
+  🔥 seriya (necha kun ketma-ket o'qilgani). Kitob tugasa, «O'qib bo'ldim» deb belgilash va 3 savolga
+  javob yozish taklif qilinadi. Bir kunda yozish mumkin bo'lgan eng ko'p bet — sozlamada (odatda 500).
+- **`/javonim`** — o'qiyotgan kitoblar va progress, javon bo'yicha sonlar, haftalik betlar, seriya,
+  bu yil o'qilgan kitoblar.
+- **`/kartam`** — **«🪪 Kitobxonlik kartam»** rasmi: o'qilgan kitoblar, betlar, eng uzun seriya, jami
+  ball, reytingdagi o'rin, yutuqlar, hozir o'qiyotgan kitob va sevimli iqtibos. Rasmni bosib turib
+  do'stlarga ulashish mumkin.
+
+### B.7. Premium va to'lov
+
+**💎 Premium** tugmasi yoki `/premium`. Avval Premium nima berishi ko'rsatiladi, keyin tarif tanlanadi,
+keyin to'lov usuli:
+
+- **💳 Bank kartasi orqali (Uzcard / Humo)** — summani klub kartasiga o'tkazib, chek rasmini yuboradi.
+  Bosh admin tasdiqlagach Premium **o'zi yoqiladi**.
+- **⭐ Telegram Stars orqali** — Telegram ichida bir zumda.
+- **⭐ Stars'ingiz yo'qmi?** — Stars usuli ichida: Stars'ni karta orqali sotib olish (9-bo'lim,
+  «⭐ Stars karta orqali»). A'zoning Telegram profilida **username** bo'lishi kerak.
+
+To'lov bo'yicha savol: `/paysupport` → yozadi → savol to'lovlar kanaliga boradi, **faqat bosh admin**
+javob beradi, javob a'zoga keladi va kanalga ham yoziladi.
+
+### B.8. Yordam, sozlamalar, chiqish
+
+- **💬 Yordam** → **❓ Savol-javoblar** (mavzular bo'yicha) va **✉️ Adminga yozish** (matn yoki rasm).
+  Javob «Klub rahbariyati» nomidan keladi. Bloklangan yoki klubdan chiqqan a'zo ham yoza oladi.
+- **⚙️ Sozlamalar** → bildirishnomalar (har birini ✅/❌): 📅 Tadbir eslatmalari, 📝 Test eslatmalari,
+  📖 O'qish muddati, 💬 Kun iqtibosi, 🏆 Reyting yangiliklari, 🏅 Yutuqlar; **✏️ Ma'lumotlarimni
+  o'zgartirish**; **🚪 A'zolikni bekor qilish**. To'lov, davomat va natija xabarlari doim keladi.
+
+---
+
+## C. A'zo nigohida: ilova (Mini App)
+
+Ilova botning ichida ochiladi (menyu yonidagi «Ilova» tugmasi yoki «📱 Batafsil — ilovada»). Pastda 5 ta
+asosiy tab: **🏠 Asosiy, 📚 Kitoblar, 📅 Tadbirlar, 🏆 Reyting, 👤 Profil**.
+
+| Sahifa | Nima bor |
+|---|---|
+| **🏠 Asosiy** | salomlashuv va jami ball/o'rin; ochiq davomat va test kartalari; joriy kitob; yaqin tadbir; **🎁 Sizning foydangiz** kartasi; barcha bo'limlar tugmalari |
+| **📚 Kitoblar** | klub kitoblari; kitob sahifasida «O'qishni boshladim / O'qib tugatdim», **📖 Javonimda ochish**, iqtiboslarni **💾 Saqlash** |
+| **📖 Javonim** | shaxsiy javon: O'qiyapman / O'qimoqchiman / O'qib bo'ldim / Keyinroq; 🔥 seriya, haftalik betlar, 14 kunlik grafik; «Bugun necha bet?» — tezkor yozish; ➕ kitob qo'shish (klubdan yoki o'zingizniki) |
+| **Kitob (javonda)** | progress, kundalikka yozish (bugun/kecha/2 kun oldin, betlar, daqiqa, izoh), holatni o'zgartirish, ⭐ baho, **💡 Kitobdan keyin 3 savol**, shu kitob iqtiboslari, kundalik yozuvlari |
+| **💬 Iqtiboslarim** | saqlangan iqtiboslar, qidiruv, yangi iqtibos; har biri **🖼 Kartochka** (chiroyli rasm) va **📤 Ulashish** (bot chatiga yuboriladi) |
+| **🎯 Missiyalar** | davom etayotgan, boshlash mumkin va bajarilgan missiyalar; progress va qolgan vaqt |
+| **🪪 Kartam** | «Kitobxonlik kartam» rasmi va **📤 Botga yuborish** |
+| **🏛 Fakultetlar ligasi** | fakultetlar bellashuvi: o'rtacha ball, faol a'zolar ulushi, betlar, kitoblar, tadbirlar; o'z fakulteti ajratib ko'rsatiladi |
+| **📅 Tadbirlar** | tadbirlar, ro'yxatdan o'tish (smena tanlash), davomat |
+| **📝 Testlar** | testni ishlash (taymer bilan), natija |
+| **📊 Natijalarim / 📈 Statistikam** | ballar tarixi; Premium: oylar bo'yicha grafiklar |
+| **🏆 Reyting** | hafta, oy, mavsum, fakultetim, guruhim, fakultetlar (bir qismi Premium) va **🏛 Fakultetlar ligasi** havolasi |
+| **🏅 Yutuqlar, 🎓 Sertifikatlar, 🎁 Sovg'alar** | nishonlar, sertifikatlar (PDF — Premium), yutilgan promokodlar |
+| **🎁 Sizning foydangiz** | havola, «Qisqacha», taklif qilgan do'stlar va ularning ballari, tanlovlar, eng faollar jadvali |
+| **💎 Premium** | tarif → to'lov usuli → to'lash; «⭐ Stars'ingiz yo'qmi?»; to'lovlarim holati |
+| **👤 Profil** | pasport, ma'lumotlar, bildirishnomalar, sovg'alar, javon, karta, missiyalar, yordam |
+
+---
+
+## D. «📚 Mening mutolaam» — to'liq tushuntirish
+
+Bu yangi to'plam a'zoning **o'z mutolaasini** yuritishga yordam beradi. Hammasi **🧩 Imkoniyatlar**
+sahifasida alohida yoqiladi/o'chiriladi (odatda hammasi «Hammaga» yoqilgan).
+
+### D.1. 📖 Shaxsiy javon
+
+- Kitob qo'shish: klub kitobi (ro'yxatdan) yoki **o'z kitobi** (nomi, muallifi, betlar soni).
+- To'rtta holat: **O'qimoqchiman**, **O'qiyapman**, **O'qib bo'ldim**, **Keyinroq**.
+- Klub kitobini «O'qiyapman / O'qib bo'ldim» qilsangiz, klub ro'yxatida ham belgilanadi (ball va
+  yutuqlar avvalgidek ishlaydi) va aksincha: kitob sahifasida «O'qishni boshladim» bosilsa, kitob javonga
+  o'zi tushadi.
+
+### D.2. ✍️ Mutolaa kundaligi va seriya
+
+- Har kuni o'qilgan betlar yoziladi (ilovada yoki botda `/oqidim 25`). Faqat **oxirgi 7 kun** uchun
+  yozish mumkin; bir kunda eng ko'pi `reading.daily_page_limit` (odatda 500) bet.
+- **🔥 Seriya** — necha kun ketma-ket o'qilgani (bugun yoki kecha yozilgan bo'lsa davom etadi).
+- Kitob «O'qimoqchiman»da turgan bo'lsa, birinchi yozuv bilan o'zi «O'qiyapman»ga o'tadi.
+
+### D.3. 💡 Kitobdan keyin 3 savol
+
+Kitob «O'qib bo'ldim» bo'lgach: 1) asosiy g'oya; 2) eng yoqqan joy; 3) hayotda nimani qo'llaydi.
+Har javob kamida 10 belgi. Ball: `reading.reflection_points` (odatda 5), har kitobga **bir marta**,
+oyiga `reading.reflection_monthly_limit` tagacha (odatda 4). Halollik uchun **o'z kitobi** uchun ball
+faqat kundalikda o'qilgani ko'rinsa beriladi (klub kitobi uchun — har doim).
+
+### D.4. 💬 Iqtiboslar sandig'i
+
+Iqtibos qo'lda yoziladi (bet raqami va izoh bilan) yoki klub kitobidagi iqtibos **💾 Saqlash** bilan
+olinadi. **🖼 Kartochka** — iqtibos to'q ko'k-oltin brend uslubidagi chiroyli rasmga aylanadi (Lora
+yozuvi, klub belgisi, «Saqlagan: Madina K.», bot nomi). **📤 Ulashish** — kartochka bot chatiga keladi,
+u yerdan do'stlarga yuboriladi.
+
+### D.5. 🎯 Shaxsiy missiyalar
+
+Kichik maqsadlar: a'zo **🎯 Boshlash** ni bosadi va shu daqiqadan missiya muddati boshlanadi. Natija
+**qo'lda yozilmaydi** — kundalik, javon, tasdiqlangan davomat, topshirilgan testlar, saqlangan iqtiboslar
+va «3 savol»dan o'zi hisoblanadi. Maqsadga yetganda ball va 🎉 tabrik keladi. Vaqt tugasa — «Qaytadan
+boshlash» mumkin; bajarilgan missiya qayta olinmaydi. Bir vaqtda 5 tagacha missiya.
+
+Tayyor missiyalar (birinchi ishga tushishda o'zi qo'shiladi, keyin o'zgartirasiz):
+
+| Missiya | Shart | Ball |
+|---|---|---|
+| 📖 7 kunda 100 bet | 7 kun ichida kundalikka 100 bet | 15 |
+| 🔥 5 kun ketma-ket o'qish | 7 kun ichida 5 kunlik seriya | 10 |
+| 📚 Bir oyda 2 ta kitob | 30 kunda 2 kitobni tugatish | 25 |
+| 💬 Iqtiboslar sandig'i: 5 ta iqtibos | 14 kunda 5 iqtibos | 5 |
+| 💡 Kitobdan keyin 3 savol | 30 kunda 1 marta | 5 |
+| 📅 2 haftada 2 ta tadbir | 14 kunda 2 ta tasdiqlangan davomat | 10 |
+
+Halollik: missiya **olingandan keyin** qilingan ishlar sanaladi; o'z kitobi «tugatilgan» hisoblanishi
+uchun kundalikda o'qilgani ko'rinishi kerak.
+
+**Admin panel → 🎯 Missiyalar** (huquq: «Mavsumlar va kitobxonlik kampaniyalarini boshqarish»): yangi missiya (belgi, nom,
+tavsif, nima hisoblanadi, maqsad, muddat, ball, holat), tahrirlash va arxivlash; har missiya uchun
+«oldi / bajardi» va bajarilish foizi. A'zolar olgan missiyaning sharti va maqsadi o'zgartirilmaydi —
+yangisini yarating.
+
+### D.6. 🪪 Kitobxonlik kartam
+
+Ilovada **Kartam** yoki botda `/kartam` — 1080×1350 rasm (Telegram/Instagram uchun qulay o'lcham).
+Har safar yangi raqamlar bilan chiziladi.
+
+### D.7. 🏛 Fakultetlar ligasi
+
+Fakultetlar jamoa bo'lib bellashadi (hafta / oy / umumiy). O'rin — **a'zolarning o'rtacha bali**
+bo'yicha (katta-kichik fakultetlar teng). Yonida: faol a'zolar (%), kundalikdagi betlar, o'qilgan
+kitoblar, tadbirlarga kelishlar. Hamma uchun bepul (Imkoniyatlarda o'zgartiriladi).
+
+### D.8. 📖 Kitobxonlik izi (yil yakuni)
+
+`academic.summary_day` kuni (odatda 20-iyun) har faol a'zoga yillik natija keladi. Unda avvalgi
+raqamlar (kitoblar, tadbirlar, testlar, ball, o'rin, sertifikatlar, yutuqlar, do'stlar) bilan birga
+**kundalikdagi betlar, eng uzun seriya, saqlangan iqtiboslar, bajarilgan missiyalar** va `/kartam`
+taklifi ham bor.
+
+---
+
+# Boshqaruv: admin panel va bosh admin uchun
+
+Hammasi telefondan, Telegram ichida qilinadi.
 
 ## 1. Admin panelga kirish
 
@@ -27,6 +284,10 @@ sozlash kerak. Hammasi telefondan, Telegram ichida qilinadi.
 
 «Imkoniyatlar» va «Premium» sahifalari faqat **bosh administrator** (siz) uchun.
 
+To'plamdan tashqari istalgan huquqni alohida berish mumkin. Masalan, **«Telegram Stars'ni a'zolarga yuborish»**
+(`STARS_SEND`) — Premium'i va Stars hamyoni bor ishonchli adminga (29-bo'lim). Barcha huquqlar ro'yxati —
+oxiridagi **II-jadval**.
+
 ## 3. Tadbir va davomat
 
 1. **📅 Tadbirlar** → yangi tadbir: nomi, vaqti, joyi, **davomat oynasi** (masalan, boshlanishidan
@@ -43,6 +304,10 @@ sozlash kerak. Hammasi telefondan, Telegram ichida qilinadi.
 A'zolar botda **💬 Yordam → ✉️ Adminga yozish** orqali yozadi. Xabar `SUPPORT` huquqi bor
 adminlarga keladi. Javobni botning o'zida («Javob yozish») yoki panelda **📨 Murojaatlar**dan
 berasiz — a'zo sizning ismingizni ko'rmaydi, javob «Klub rahbariyati» nomidan boradi.
+
+**To'lov bo'yicha savollar** (`/paysupport` yoki «💳 To'lov bo'yicha» mavzusi) boshqacha: ular **💳 To'lovlar
+kanaliga** «✍️ Javob yozish» tugmasi bilan keladi va ularga **faqat bosh admin** javob beradi. Javob kanalga
+ham «↪️ Javob» bo'lib yoziladi. Kanal sozlanmagan bo'lsa — savol bosh adminlarga botda keladi.
 
 ## 5. Kitobxon pasporti
 
@@ -106,6 +371,9 @@ Tizim bazada yo'q raqamni matnda qoldirmaydi — hisobotdagi har bir raqam teksh
 «Yoqilganda a'zolarga e'lon yuborilsin» belgilangan bo'lsa, bo'lim yoqilganda hamma a'zoga
 **«🎉 Tabriklaymiz, bot yangilandi! Endi sizda yangi imkoniyat bor: …»** xabari boradi.
 
+**«🎁 Sizning foydangiz»** (do'stlarni taklif qilish) bu ro'yxatda yo'q — u **doim ochiq**. Barcha imkoniyatlar va
+ularning odatiy holati — oxiridagi **I-jadval**.
+
 ## 9. Premium obuna va hissalar (daromad)
 
 To'lov **Telegram Stars (⭐)** orqali: karta ma'lumotlari, shartnoma yoki to'lov tizimi kerak emas —
@@ -166,19 +434,22 @@ siz tasdiqlaysiz. Karta orqali uch narsa sotiladi:
 - **❤️ Hissa** — klubga yordam;
 - **⭐ Telegram Stars** — Stars'ni o'zi sotib ololmaydigan a'zolar uchun (quyida).
 
-**⭐ Stars'ni karta orqali sotish.** A'zo kerakli miqdorni tanlaydi (50, 100, 250, 500 ⭐), narx so'mda
-ko'rsatiladi (1 ⭐ ≈ 250 so'm — **⚙️ Sozlamalar → 💳 Karta orqali to'lov** da o'zgartirasiz) va kartangizga
-pul o'tkazadi. Siz chekni tasdiqlaganingizdan keyin bot sizga **qadam-baqadam ko'rsatma** yuboradi:
+**⭐ Stars'ni karta orqali sotish.** Bu xizmat a'zoga **«⭐ Telegram Stars orqali»** usulining ichida
+(«⭐ Stars'ingiz yo'qmi?») ko'rinadi. A'zo to'plamni tanlaydi (50, 100, 250, 500 ⭐). Narx so'mda ko'rsatiladi
+(1 ⭐ ≈ 250 so'm, **⚙️ Sozlamalar → 💳 Karta orqali to'lov** da o'zgartirasiz). A'zo kartangizga pul o'tkazib,
+chekni yuboradi. Keyingi qadamlar:
 
-1. A'zoning ismini bosib, profilini oching.
-2. Profil menyusi (⋮) → **🎁 Sovg'a yuborish → ⭐ Stars** → kerakli miqdor.
-3. Telegram pulni **sizning kartangizdan** yechadi, Stars esa **to'g'ridan-to'g'ri a'zoning hisobiga** tushadi.
-4. Botdagi **«✅ Stars yuborildi»** tugmasini bosing — a'zoga xabar boradi.
+1. **Bosh admin** chekni tasdiqlaydi.
+2. Buyurtma **«⭐ Stars yuborish»** huquqli adminga ketadi: «Bosh admin tomonidan tasdiqlandi, <a'zo> ga N Stars
+   kerak» va qadam-baqadam ko'rsatma bilan.
+3. U Stars'ni Telegram'da yuborib, **«✅ Stars yuborildi»** ni bosadi.
+4. A'zoga xabar boradi. Har bir qadam to'lovlar kanaliga yoziladi.
+
+To'liq jarayon — **29-bo'lim**.
 
 > Nega bot o'zi yubormaydi: Telegram botlarga Stars berishga ruxsat bermaydi — Stars'ni faqat odam
-> sovg'a qila oladi. Shuning uchun bu ishni bosh administrator o'z Telegram'idan qiladi. Payme/Click
-> orqali to'liq avtomatik to'lov uchun klub nomidan merchant (shartnoma) kerak bo'ladi — kerak bo'lsa,
-> keyin qo'shamiz.
+> sovg'a qila oladi. Payme/Click orqali to'liq avtomatik to'lov uchun klub nomidan merchant (shartnoma) kerak
+> bo'ladi — kerak bo'lsa, keyin qo'shamiz.
 
 **Yoqish (bir marta):**
 
@@ -281,9 +552,9 @@ rejalashtirish.
 **Stikerlar:** botga **/stiker** deb yozing va yoqqan stikerlaringizni yuboring (oddiy, animatsion yoki
 Premium stikerlar). Bot har birining kayfiyatini emojisidan aniqlaydi va mos joyda ishlatadi: 🎉 quvnoq
 stikerlar — g'oliblar postidan va a'zolarning g'alaba xabarlaridan keyin, 📚 kitobli stikerlar — kitob
-postlaridan keyin, 👋 salomlashuvchilar — yangi a'zoga. Matn ichidagi Telegram Premium **emojilari**
-esa faqat Fragment'dan sotib olingan bot nomiga ega botlarda ishlaydi — shuning uchun stikerlar va
-Telegram'ning **🎉 animatsion effekti**dan foydalanamiz.
+postlaridan keyin, 👋 salomlashuvchilar — yangi a'zoga. Kanal postlarida premium **emojilar** faqat
+botda Fragment'dan olingan username bo'lsa chiqadi — kanalda stikerlar va oddiy emojilar ishlatiladi
+(batafsil — 30-bo'lim).
 
 ## 12. Bot xabarlari
 
@@ -317,25 +588,35 @@ matnlarini **🔔 Bildirishnomalar → Shablonlar** da o'zingiz o'zgartirasiz.
 Adminlar botni bloklasa, klubdan chiqarilmaydi (adashib bloklash mumkin). A'zo o'zi ham **⚙️ Sozlamalar →
 🚪 A'zolikni bekor qilish** orqali chiqa oladi.
 
-## 14. Do'stlarni taklif qilish
+## 14. 🎁 «Sizning foydangiz» — do'stlarni taklif qilish
 
-Har bir a'zoning shaxsiy havolasi bor (ilovada **Profil → 👥 Do'stni taklif qilish** yoki botda
-**/taklif**). Do'sti shu havola orqali ro'yxatdan o'tib, **birinchi tadbirga kelsa** (davomat
-tasdiqlansa) — taklif qilgan a'zoga **+20 ball** va **7 kunlik Premium**. Tadbirga kelish sharti soxta
-akkauntlardan himoya qiladi. Bir a'zo oyiga 5 tagacha mukofot oladi.
+Bu bo'lim **doim ochiq** (uni o'chirib bo'lmaydi). A'zo uni uch joydan ochadi:
 
-Sozlash: **⚙️ Sozlamalar → 👥 Do'stlarni taklif qilish** (ball, Premium kunlar, oylik chegara); butunlay
-o'chirish — **🧩 Imkoniyatlar → 👥 Do'stlarni taklif qilish**.
+- botning bosh menyusidagi **🎁 Sizning foydangiz** tugmasi;
+- **`/referal`** buyrug'i (eski `/taklif` ham ishlaydi; buyruqlar menyusida ham bor);
+- ilovada bosh sahifa va profildagi **🎁 Sizning foydangiz** kartochkasi (qisqacha: havola, nechta do'st,
+  ular to'plagan ball) → bosilsa, to'liq sahifa.
 
-### 💚 «Sizning foydangiz» — a'zo o'z hissasini ko'radi
+Har bir a'zoning shaxsiy havolasi bor. Do'sti shu havola orqali ro'yxatdan o'tib, **birinchi tadbirga kelsa**
+(davomat tasdiqlansa), taklif qilgan a'zo **+20 ball** va **7 kunlik Premium** oladi. Tadbirga kelish sharti
+soxta akkauntlardan himoya qiladi. Bir a'zo oyiga 5 tagacha mukofot oladi.
 
-Ilovada **👥 Do'stlar** sahifasi (bosh sahifadagi tugma yoki botda /taklif → «💚 Batafsil»):
+Sozlash: **⚙️ Sozlamalar → 👥 Do'stlarni taklif qilish** (`referral.points`, `referral.premium_days`,
+`referral.monthly_limit`).
+
+> Avval havola ba'zan «yopiq» chiqardi: u faqat `BOT_USERNAME` muhit o'zgaruvchisiga bog'liq edi. Endi bot
+> nomini Telegram'dan o'zi so'rab oladi — havola har doim ishlaydi.
+
+### 🎁 «Sizning foydangiz» sahifasi — a'zo o'z hissasini ko'radi
+
+A'zo ko'radi:
 
 - shaxsiy havola, «📤 Yuborish» va «📋 Nusxalash»;
-- **Sizning foydangiz**: nechta do'st taklif qilgan, ulardan nechtasi tadbirga kelgan, olib kelgan
-  do'stlari jami **qancha ball to'plagani**, nechta kitob o'qigani, necha marta tadbirga kelgani va
-  test yechgani; a'zoning o'zi taklif uchun olgan ballar va Premium kunlar;
-- do'stlari ro'yxati (ismi, qachon qo'shilgani, tadbirga kelgan-kelmagani, ballari);
+- **📊 Qisqacha**: nechta do'st taklif qilgan va ulardan nechtasi tadbirga kelgan; olib kelgan do'stlari jami
+  **qancha ball to'plagani**, nechta kitob o'qigani, necha marta tadbirga kelgani va test yechgani; a'zoning o'zi
+  taklif uchun olgan ballar va Premium kunlar;
+- **do'stlari ro'yxati**: ismi, qachon qo'shilgani, tadbirga kelgan-kelmagani (✅/⏳) va **ballari**. Botda
+  10 tagacha, ilovada hammasi;
 - **Eng faol taklif qiluvchilar** — butun klub bo'yicha jadval va a'zoning o'z o'rni;
 - davom etayotgan va yaqinda tugagan **taklif tanlovlari**.
 
@@ -442,7 +723,9 @@ keladi:
 | Nima | Qayerga |
 |---|---|
 | Karta cheklari (Premium, Stars, hissa) — ✅ / ❌ tugmalari bilan | 💳 To'lovlar kanali |
-| A'zolarning «To'lov bo'yicha» savollari — **✍️ Javob yozish** tugmasi bilan | 💳 To'lovlar kanali |
+| A'zolarning «To'lov bo'yicha» savollari — **✍️ Javob yozish** tugmasi bilan (faqat bosh admin javob beradi) va javoblar («↪️ Javob») | 💳 To'lovlar kanali |
+| Stars buyurtmasining har bir qadami: tasdiqlandi → «⭐ Yuborish topshirildi: …» → «⭐ Stars yuborildi» (yoki ↩️ qaytarildi) | 💳 To'lovlar kanali |
+| Stars yuborish bo'yicha ko'rsatma va «✅ Stars yuborildi» tugmasi | «⭐ Stars yuborish» huquqli adminning shaxsiy chati |
 | Har bir Telegram Stars to'lovi va qaytarilgan Stars | 💳 To'lovlar kanali |
 | Har dushanba 09:00 — o'tgan haftaning moliyaviy xulosasi | 💳 To'lovlar kanali |
 | 10:00 va 17:00 — 3 soatdan ko'p kutib qolgan cheklar haqida eslatma | 💳 To'lovlar kanali |
@@ -476,17 +759,20 @@ administratorlarga botda keladi. Hissa (donat) uchun chek so'ralmaydi.
 almashtirish. Masalan, xabarda «Assalomu alaykum ❤️» bo'lsa, ❤️ o'rnida siz oldindan yuklagan premium yurakcha
 turadi — barcha xabarlarda (e'lonlar, eslatmalar, tabriklar) o'zi almashadi:
 
-1. Botga `/emoji` yozing.
+1. Botga `/emoji` yozing (yoki premium emojili xabarni shunchaki yuboring — bot «saqlaymi?» deb so'raydi).
 2. Premium emojili xabar yuboring: bot har bir premium emojini o'zining oddiy «egizagi» o'rniga eslab qoladi.
    Boshqa oddiy emojiga bog'lamoqchi bo'lsangiz — juftlab yozing: `❤️ = <premium emoji>`.
-3. `/tayyor` — tugatish.
+3. **🧪 Tekshirish** — Telegram premium emojini qabul qilyaptimi, aniq javob.
+4. `/tayyor` — tugatish.
 
-Ro'yxatni ko'rish, bittasini yoki hammasini o'chirish va **🧪 O'zimga namuna yuborish** — **📢 Xabarlar** sahifasi
-pastidagi «✨ Premium emojilar» bo'limida.
+Emojilarni Premium'i bor **istalgan admin** kiritadi («A'zolarga xabar yuborish» yoki «Tizim sozlamalari»
+huquqi bilan) — bosh admin bo'lishi shart emas. Ro'yxatni ko'rish, o'chirish va namuna — **📢 Xabarlar**
+sahifasi pastidagi «✨ Premium emojilar» bo'limida.
 
-> ⚠️ Cheklov (Telegram qoidasi): bot premium emojini xabarda faqat **Fragment'da sotib olingan
-> username**ga ega bo'lsa ko'rsata oladi. Aks holda Telegram xatosi chiqadi — bot buni sezib, xabarni
-> oddiy emojilar bilan yuboradi va bir soat urinmaydi. Ya'ni hech narsa buzilmaydi.
+> ⚠️ **Telegram qoidasi:** bot premium emojini faqat **bot egasining** (botni @BotFather'da yaratgan
+> akkauntning) Telegram Premium'i bo'lsa ishlata oladi. Emojini kiritgan adminning Premium'i hisobga olinmaydi.
+> Bo'lmasa, bot buni sezib, xabarni oddiy emoji bilan yuboradi — hech narsa buzilmaydi. Yechim va batafsil —
+> **30-bo'lim**.
 
 ## 20. Testlar: fayldan yuklash, rasmli savollar, natijalar
 
@@ -628,22 +914,25 @@ O'rnatish va sozlash bir martalik 1 500 000 so'm; birinchi oy sinov uchun bepul.
 
 | Buyruq | Kim uchun | Nima qiladi |
 |---|---|---|
-| `/start` | hamma | Boshlash, ro'yxatdan o'tish, menyu |
+| `/start` | hamma | Boshlash, ro'yxatdan o'tish, bosh menyu |
 | `/menu` | a'zo | Bosh menyu |
-| `/help` | hamma | Yordam, savol-javoblar, adminga yozish |
-| `/davomat` | a'zo | Tadbirda davomat |
+| `/davomat` | a'zo | Tadbirda davomat (QR yoki 6 belgili kod) |
 | `/pasport` | a'zo | Kitobxon pasporti |
+| `/oqidim 25` | a'zo | Bugun o'qilgan betlarni kundalikka yozish (izoh bilan ham bo'ladi) |
+| `/javonim` | a'zo | O'qiyotgan kitoblar, progress va 🔥 seriya |
+| `/kartam` | a'zo | «Kitobxonlik kartam» rasmi |
+| `/referal` (yoki `/taklif`) | a'zo | 🎁 Sizning foydangiz: taklif havolasi, do'stlar va ularning ballari |
 | `/premium` | a'zo | Premium va klubni qo'llab-quvvatlash |
-| `/taklif` | a'zo | Do'stni taklif qilish havolasi |
 | `/portfolio` | a'zo | Kitobxonlik portfoliosi (PDF va Word) |
+| `/help` | hamma | Yordam, savol-javoblar, adminga yozish |
+| `/paysupport` | hamma | To'lov bo'yicha savol (bosh adminga) |
+| `/terms` | hamma | To'lov shartlari |
 | `/cancel` | hamma | Joriy amalni bekor qilish |
 | `/stop` | hamma | Hamma jarayonni to'xtatib, menyuga qaytish |
-| `/paysupport` | hamma | To'lov bo'yicha yordam |
-| `/terms` | hamma | To'lov shartlari |
 | `/myid` | hamma | Telegram ID ni bilish |
 | `/admin` | admin | Qisqa holat va admin panel havolasi |
-| `/stiker` | admin | Kanal va tabriklar uchun stikerlarni saqlash (tugatish — `/tayyor`) |
-| `/emoji` | admin | Premium emojilarni o'rgatish (tugatish — `/tayyor`) |
+| `/stiker` | xabar yoki sozlamalar huquqli admin | Stikerlarni saqlash (tugatish — `/tayyor`) |
+| `/emoji` | xabar yoki sozlamalar huquqli admin | Premium emojilarni o'rgatish va 🧪 tekshirish (tugatish — `/tayyor`) |
 
 Buyruqlar menyusini (chatdagi «/» yoki «Menu» tugmasi) bot **o'zi sozlaydi**: a'zolar faqat
 a'zolar buyruqlarini ko'radi; admin qilingan odamda darhol `/admin` (va xabar yuborish huquqi
@@ -682,15 +971,565 @@ bosasiz.
 
 ## 28. Kundalik ish — qisqa ro'yxat
 
-
-
 - Har tadbirdan oldin: tadbir yaratilganini, kitob biriktirilganini va davomat oynasini tekshiring.
 - Tadbirda: Davomat sahifasini ekranga chiqaring.
-- Kelgan cheklarni (karta to'lovlari) bank ilovasi bilan solishtirib tasdiqlang; Stars so'ralgan bo'lsa,
-  Telegram'da sovg'a qilib, «✅ Stars yuborildi» ni bosing.
+- Kelgan cheklarni (karta to'lovlari) bank ilovasi bilan solishtirib tasdiqlang. Stars buyurtmalarini
+  «⭐ Stars yuborish» huquqli admin yuboradi — **⭐ Stars buyurtmalari** sahifasida «Kutilmoqda» bo'sh ekanini
+  ko'rib turing.
+- To'lovlar kanalidagi a'zo savollariga javob bering (ular faqat sizga keladi).
 - Kanal posti haqida xabar kelsa — ko'zdan kechiring (javob bermasangiz ham o'zi chiqadi).
 - Tiklash so'rovlari kelsa — ✅ yoki ❌.
-- Haftada bir: **📨 Murojaatlar**, **⭐ baholar**, **📈 Tahlillar**, **📣 Telegram kanal** (xato yo'qmi).
+- Haftada bir: **📨 Murojaatlar**, **⭐ baholar**, **📈 Tahlillar** («🔁 Faollik va qaytish»), **🛡 Ishonch
+  markazi**, **📣 Telegram kanal** (xato yo'qmi).
 - Oyda bir: **Sozlamalar → 🩺 Tizim holati** (hammasi ✅ mi), bosh sahifadagi ogohlantirishlar.
 - Oy boshida: **🗓 Davr hisoboti** → PDF → institut rahbariyatiga; **🎲 Sovg'a o'yinlari** — kodlar
   yetarlimi.
+
+## 29. ⭐ Stars karta orqali — to'liq jarayon (kim nima qiladi)
+
+**Maqsad:** Telegram Stars'i yo'q a'zo ham Stars bilan to'lay olsin. A'zo so'mda klub kartasiga
+to'laydi, klub esa unga Telegram'da Stars sovg'a qiladi. Bu xizmat **«⭐ Telegram Stars orqali»** to'lov
+usulining ichida turadi.
+
+**Ishtirokchilar:**
+
+| Kim | Vazifasi |
+|---|---|
+| A'zo | to'plamni tanlaydi, kartaga pul o'tkazadi, chek rasmini yuboradi |
+| **Bosh admin** (siz) | chekni bank ilovasi bilan solishtirib **tasdiqlaydi yoki rad etadi**; a'zoning pulga oid savollariga javob beradi |
+| **⭐ Stars yuboruvchi admin** | «⭐ Stars yuborish» (`STARS_SEND`) huquqi berilgan admin: tasdiqlangan buyurtma bo'yicha Stars'ni a'zoga **o'z Telegram'idan** yuboradi va «✅ Stars yuborildi» ni bosadi |
+| 💳 To'lovlar kanali | **har bir qadam** shu yerga yoziladi — kim, qachon, nima qildi |
+
+> Nega shunday: bosh adminda Telegram Premium yo'q, Stars'ni esa Telegram faqat **odam** sovg'a qila
+> oladi (bot qila olmaydi). Shuning uchun Stars'ni Premium'i va Stars hamyoni bor ishonchli admin
+> yuboradi, pulga oid qarorni esa faqat siz qabul qilasiz.
+
+### Qadam-baqadam
+
+**1. A'zo buyurtma beradi.**
+
+- Ilovada: **💎 Premium** → tarif → **⭐ Telegram Stars** usuli → ichida **«⭐ Stars'ingiz yo'qmi?»** →
+  to'plam (50 / 100 / 250 / 500 ⭐; narx so'mda, masalan 100 ⭐ = 25 000 so'm). Botda: **💎 Premium** →
+  **💳 Bank kartasi orqali** → «⭐ N Stars — narx» tugmalari.
+- Kartaga pul o'tkazadi va **chek rasmini (skrinshot)** botga yuboradi. Javob: «⏳ Chekingiz administratorga
+  tekshirish uchun yuborildi».
+- Shart: a'zoning Telegram profilida **username** bo'lishi kerak (Stars shu username'ga yuboriladi). Yo'q
+  bo'lsa, ilova buni oldindan aytadi.
+
+**2. Bosh admin tekshiradi** (💳 To'lovlar kanalida yoki admin panelda **💎 Premium → 💳 Karta orqali
+to'lovlar**).
+
+- Kanalga chek keladi: «🧾 ⭐ 100 Telegram Stars — 25 000 so'm, A'zo: …» va **✅ Tasdiqlash / ❌ Rad etish**
+  tugmalari. Bu tugmalarni **faqat bosh admin** bosa oladi.
+- Pul kartaga **haqiqatan tushganini** bank ilovasida ko'ring, keyin **✅ Tasdiqlash**.
+- Kanalda chek ostiga yoziladi: «✅ Tasdiqlandi — <siz>, <vaqt>» va
+  «⭐ Yuborish topshirildi: <Stars yuboruvchi admin> (ko'rsatma ularga shaxsiy xabarda)».
+- A'zoga: «✅ To'lovingiz tasdiqlandi! ⭐ 100 Stars tez orada Telegram'da sizga sovg'a sifatida yuboriladi —
+  tushishi bilan xabar beramiz.»
+- Rad etsangiz: tayyor sabablardan biri yoki **✍️ Boshqa sabab** — a'zoga sabab bilan xabar boradi, kanalga
+  «❌ Rad etildi — …» yoziladi.
+
+**3. Stars yuboruvchi admin xabar oladi** (botda, shaxsiy):
+
+> ✅ **Bosh admin tomonidan tasdiqlandi** — <siz>, <vaqt>
+> **<A'zo ismi>** ga **⭐ 100 Stars** kerak (karta orqali to'langan: 25 000 so'm).
+>
+> ⭐ **Endi 100 Stars'ni yuboring** — Kimga: <ism>, Username: @…
+> 1. fragment.com/stars/buy sahifasini oching (Telegram yoki TON hamyon bilan kiring).
+> 2. «Recipient» maydoniga a'zoning username'ini yozing, miqdor — 100.
+> 3. To'lovni tasdiqlang: Stars bir necha daqiqada a'zoning hisobiga tushadi.
+> 4. So'ng **«✅ Stars yuborildi»** tugmasini bosing.
+>
+> Fragment ishlamasa: a'zo profilida ⋮ → 🎁 Sovg'a yuborish → ⭐ Stars.
+
+**4. Admin Stars'ni yuboradi va «✅ Stars yuborildi» ni bosadi.**
+
+- A'zoga: «⭐ 100 Stars sizga sovg'a qilindi! Ularni Telegram → Sozlamalar → Telegram Stars bo'limida
+  ko'rasiz. Endi Premium'ni ham bir bosishda olishingiz mumkin.»
+- Kanalga: «⭐ Stars yuborildi — Yubordi: <admin> · a'zoga xabar berildi».
+- Tugmani faqat bir kishi bosadi: boshqasi bossa «allaqachon yuborilgan» deydi (ikki marta yuborilmaydi).
+- Xuddi shu ishni admin panelda **⭐ Stars buyurtmalari** sahifasida qilish mumkin: «Kutilmoqda» va
+  «Yuborilgan» ro'yxatlari, har buyurtmada a'zo, username, miqdor, summa va **✅ Yuborildi** tugmasi.
+
+**5. Adashib tasdiqlangan bo'lsa** — 48 soat ichida **↩️ Qaytarish**. Stars yuboruvchi adminga darhol
+«↩️ Stars buyurtmasi qaytarildi … Hozircha yubormang: bosh admin chekni qayta ko'rib chiqmoqda» xabari boradi,
+kanalga ham yoziladi.
+
+### Muhim qoidalar
+
+- **Hech kim «⭐ Stars yuborish» huquqiga ega bo'lmasa**, buyurtma bosh adminlarning o'ziga keladi (ish to'xtab
+  qolmaydi). Bu huquqni berish: **🛡 Adminlar** → admin → huquqlar → «To'lovlar» guruhi →
+  **«Telegram Stars'ni a'zolarga yuborish»**.
+- Stars yuboruvchi admin Stars'ni **o'z hisobidan** sotib oladi, a'zoning puli esa **klub kartasiga** tushgan.
+  Uning xarajatini qanday qoplashni (masalan, haftada bir marta kanaldagi «⭐ Stars yuborildi» qatorlari bo'yicha)
+  oldindan kelishib oling.
+- A'zoning pulga oid savollari (`/paysupport` yoki «Adminga yozish → 💳 To'lov bo'yicha») ham to'lovlar
+  kanaliga **«✍️ Javob yozish»** tugmasi bilan keladi va ularga **faqat bosh admin** javob beradi. Javob
+  a'zoga «Klub rahbariyati» nomidan boradi, kanalga esa «↪️ Javob» bo'lib yoziladi — keyin hamma ko'rib turadi.
+- To'lovlar kanali sozlanmagan bo'lsa, cheklar va savollar bosh adminlarga botda keladi.
+- Narx: **⚙️ Sozlamalar** → `payments.star_price_uzs` (1 ⭐ narxi, odatda 250 so'm) va
+  `payments.stars_packages` (to'plamlar). Bo'sh qoldirilsa — Stars sotilmaydi.
+
+## 30. 🎨 Stikerlar va ✨ premium emojilar — qanday ishlaydi
+
+### Kim qo'sha oladi
+
+**Bosh admin** va **«A'zolarga xabar yuborish»** yoki **«Tizim sozlamalari»** huquqi bor adminlar. Shuning
+uchun Telegram Premium'i bor admin (bosh admin emas) ham emojilarni bemalol kiritadi. Huquqi yo'q admin
+stiker yuborsa, bot qaysi huquq kerakligini aytadi.
+
+### Uch xil yo'l
+
+1. **`/stiker`** — stikerlar rejimi: stikerlarni birma-bir yuborasiz (oddiy, animatsion, Premium). Bot har
+   birining emojisidan kayfiyatini aniqlaydi: 🎉 — tabriklar uchun, 📚 — kitob postlari uchun, 👋 —
+   salomlashish uchun. Tugatish — `/tayyor`.
+2. **`/emoji`** — premium emojilar rejimi: premium emojili xabar yuborasiz, bot har birini oddiy «egizagi»
+   o'rniga eslab qoladi (masalan, oddiy ❤️ o'rniga sizning animatsion yurakchangiz). Boshqa emojiga bog'lash —
+   `✋ = <premium emoji>`. Rasm izohidagi emojilar ham o'qiladi. Shu rejimda stiker yuborsangiz ham saqlanadi.
+   Tugatish — `/tayyor`.
+3. **Hech qanday buyruqsiz** — admin botga shunchaki stiker yoki premium emojili xabar yuborsa, bot so'raydi:
+   «🎨 Bu stikerni bot va kanal stikerlari ro'yxatiga qo'shaymi?» → **✅ Ha, saqlash / Yo'q**.
+
+### Stikerlar qayerda chiqadi
+
+G'alaba xabarlaridan (test o'rni, yutuq, sertifikat, sovg'a, Premium), yangi a'zoni kutib olishdan va kanal
+postlaridan keyin. Odatda **yoqilgan** (`notifications.stickers`). Stikerlar uchun Telegram Premium **kerak emas** —
+ular har doim ishlaydi.
+
+### Premium emojilar uchun Telegram qoidasi (muhim!)
+
+Telegram 2026-yil fevralidan beri shunday qoida qo'ygan: bot xabarlarida premium (custom) emoji faqat
+**bot egasining** — botni @BotFather'da yaratgan akkauntning — Telegram Premium'i bo'lsa ishlaydi (yoki botda
+Fragment'dan sotib olingan qo'shimcha username bo'lsa). Emojini kiritgan adminning Premium'i hisobga olinmaydi.
+**Kanallarda** esa premium emoji faqat Fragment username bilan ishlaydi.
+
+Shuning uchun bot egasida Premium bo'lmasa, Telegram premium emojini rad etadi. Bot buni o'zi sezadi:
+xabarni **oddiy emoji bilan** yuboradi (hech narsa yo'qolmaydi), bir soatdan keyin yana urinadi. Kanal yoki
+guruh rad etsa — faqat o'sha joyda 6 soat oddiy emoji ishlatiladi, shaxsiy xabarlar bunga bog'liq emas.
+
+**Holatni bilish:** `/emoji` → **🧪 Tekshirish** (yoki admin panel → **📢 Xabarlar** → «✨ Premium emojilar» →
+**🧪 Tekshirish**). Javob uch xil bo'ladi:
+
+- ✅ «Telegram premium emojini qabul qilyapti» — hammasi ishlaydi;
+- ⚠️ «Telegram premium emojini rad etdi» — sabab va yechim yoziladi;
+- ℹ️ «hali tekshirilmagan».
+
+**Yechim (bittasi yetarli):**
+
+1. **Bot egasining akkauntiga Telegram Premium olish** — eng oson yo'l.
+2. @BotFather → botingiz → **Bot Settings → Transfer Ownership**: botni Premium'i bor ishonchli adminga
+   o'tkazish (u botning to'liq egasi bo'ladi — juda ehtiyot bo'ling).
+3. Fragment'da botga qo'shimcha username sotib olish (qimmat, lekin kanallarda ham ishlaydi).
+
+Emojilar saqlanib turadi: ruxsat paydo bo'lishi bilan bot ularni **o'zi** ishlata boshlaydi.
+
+## 31. 📈 Faollik va qaytish (tahlil)
+
+**Admin panel → 📈 Tahlillar → 🔁 Faollik va qaytish** (huquq: «Statistika va tahlillarni ko'rish»). Oxirgi 6 oy, oyma-oy:
+
+| Ustun | Ma'nosi |
+|---|---|
+| Faol | oy davomida ball olgan, kundalikka yozgan yoki tadbirga kelgan a'zolar |
+| Yangi | shu oy birinchi marta faol bo'lganlar |
+| Qaytgan | o'tgan oy ham faol bo'lganlar |
+| To'xtagan | o'tgan oy faol edi, bu oy yo'q |
+| Saqlanish | o'tgan oy faollarning necha foizi bu oy ham faol |
+
+Pastida — **oxirgi 30 kun**: missiyalar (olingan / bajarilgan / foiz), kundalik yuritgan a'zolar, o'qilgan
+betlar, tugatilgan kitoblar, saqlangan iqtiboslar, «3 savol» javoblari. «To'xtagan» ko'payib ketsa —
+missiya, tanlov yoki tadbir e'lon qilish vaqti.
+
+## 32. 🛡 Ishonch markazi
+
+**Admin panel → 🛡 Ishonch markazi** (huquq: «Audit jurnalini ko'rish»). Bu **ayblov emas** — qo'shimcha
+tekshirish kerak bo'lishi mumkin bo'lgan holatlar ro'yxati (7, 30 yoki 90 kun):
+
+| Bo'lim | Nima ko'rsatiladi |
+|---|---|
+| ⚡ Juda tez va juda yuqori test natijalari | ajratilgan vaqtning 25 % idan kam vaqtda 90 %+ ball |
+| ✍️ Qo'lda ko'p o'zgartirilgan ballar | bir a'zoga 3+ marta yoki bitta admin tomonidan 15+ marta qo'lda ball |
+| 📍 Davomat | «shubhali» davomatlar va bitta admin 20+ marta qo'lda tasdiqlagan holatlar |
+| 📖 Kundalikdagi juda katta raqamlar | bir kunda 300+ bet |
+| 🧾 Takroriy cheklar | aynan bir xil chek fayli bir necha marta yuborilgan |
+| 🎓 Sertifikatni tekshirish | sertifikat ostidagi kod bo'yicha: haqiqiymi yoki bekor qilinganmi, kimga, qachon |
+
+Har bo'limda «toza» yoki «N ta» belgisi turadi. Ro'yxatdagi ism bilan ishlang: a'zo bilan gaplashing, chekni
+bankda ko'ring, kerak bo'lsa ballni tuzating (u ham audit jurnaliga yoziladi).
+
+## 33. ⏰ O'zi ishlaydigan ishlar (avtomatik)
+
+Fon xizmati (worker) har daqiqada tekshiradi. Siz hech narsa qilmaysiz — faqat sozlamalarda yoqib/o'chirasiz.
+
+| Ish | Qachon | Nima qiladi |
+|---|---|---|
+| Testlarni yopish | har daqiqa | vaqti tugagan testlarni yopadi, o'rinlar va sertifikatlarni hisoblaydi |
+| Tadbir eslatmalari | tadbirdan 1 kun va 3 soat oldin | ro'yxatdan o'tganlarga va kanalga eslatma |
+| Test boshlandi / tugayapti | test ochilganda va tugashidan oldin | a'zolarga xabar |
+| O'qish eslatmalari | kitob muddatining yarmi va oxiri | kitobdan iqtibos bilan eslatma |
+| Kun iqtibosi | har kuni | iqtibos a'zolarga va kanalga |
+| Yutuqlar | doim | yetishilgan nishonlarni beradi (hech biri tushib qolmasin) |
+| Oy peshqadamlari | oy boshida | oyning eng faollariga nishon va sertifikat (10:00 dan) |
+| Davomatni ochish | tadbir vaqtida | davomat oynasini ochadi va a'zolarga xabar |
+| Tadbirga baho | tadbirdan 30 daqiqa keyin | qatnashganlardan ⭐ baho so'raydi |
+| Haftalik xulosa | dushanba | Premium a'zolarga shaxsiy xulosa |
+| Sovg'a o'yinlari | belgilangan vaqtda | g'oliblarni aniqlaydi, kod yuboradi, e'lon qiladi |
+| Kanal postlari | belgilangan vaqtda | adminlarga 5 daqiqa oldin ko'rsatib, kanalga joylaydi |
+| Premium eslatmasi | tugashidan 1 kun oldin | bitta muloyim eslatma |
+| Chiqib ketganlar ma'lumotini o'chirish | 30 kundan keyin | shaxsiy ma'lumotlarni o'chiradi |
+| Tadbirni yakunlash | tadbir tugagach | «o'tkazildi» qiladi |
+| Yangi o'quv yili | `academic.year_start` | kurs/guruhni oshiradi, mavsum ochadi |
+| Faol bo'lmaganlar | har kuni 11:00 | uzoq kirmaganlarga eslatma, keyin «faol emas» |
+| Eski yozuvlarni tozalash | har kecha 04:00 | eski xabarlar va signallar |
+| Taklif tanlovlari | boshlanish va tugash vaqtida | e'lon, eslatma, g'oliblar va sovrinlar |
+| Yil yakuni | `academic.summary_day`, 10:00 | har faol a'zoga yillik natija va kitobxonlik izi |
+| Xayrli tong | har kuni 08:00 | bosh adminlarga qisqa hisobot |
+| To'lovlar xulosasi | dushanba 09:00 | o'tgan hafta tushumlari — to'lovlar kanaliga |
+| Kutayotgan cheklar | 10:00 va 17:00 | 3 soatdan ko'p kutgan cheklar haqida eslatma |
+| **Shaxsiy missiyalar** | doim | missiya natijasini yangilaydi, bajarilganga ball, vaqti tugaganini yopadi |
+
+Tungi tinchlik vaqtida (`notifications.quiet_hours`, odatda 22:00–08:00) ommaviy xabarlar ertalabgacha kutadi.
+
+## 34. ❓ Savol-javob va muammolar
+
+| Muammo | Sabab va yechim |
+|---|---|
+| Taklif havolasi «yopiq» yoki chiqmayapti | Endi bunday bo'lmaydi: bot o'z nomini Telegram'dan o'zi oladi. Agar baribir chiqmasa — botni qayta ishga tushiring (Render → Manual Deploy) yoki **Sozlamalar → 🤖 Bot profili → 🔄 Telegram'ga qayta yuborish** |
+| Premium emoji chiqmayapti, oddiy emoji ketyapti | 30-bo'lim: bot **egasida** Telegram Premium bo'lishi kerak. `/emoji` → 🧪 Tekshirish |
+| Stiker chiqmayapti | `/stiker` bilan kamida bitta stiker saqlang; **Sozlamalar** → `notifications.stickers` yoqilganini tekshiring |
+| Stars buyurtmasi hech kimga kelmadi | «⭐ Stars yuborish» huquqi kimda borligini **🛡 Adminlar** da tekshiring; hech kimda bo'lmasa, buyurtma bosh adminga keladi. U admin botga `/start` bosgan bo'lishi kerak |
+| «✅ Stars yuborildi» bosilmayapti | tugmani faqat bosh admin va «⭐ Stars yuborish» huquqli admin bosadi; buyurtma qaytarilgan (↩️) bo'lsa — yubormang |
+| A'zo Stars uchun username'i yo'q | Telegram → Sozlamalar → Username yaratishi kerak, keyin qayta buyurtma beradi |
+| Chek kanalga kelmadi | **💎 Premium** sahifasidagi «💳 To'lovlar kanali» kartasi: ✅ ulanganmi; bot kanalda admin va «Xabar joylash» huquqi bormi; **🧪 Sinov xabari** |
+| Menyuda yangi tugma ko'rinmayapti | a'zo `/start` yoki `/menu` bossin — menyu yangilanadi |
+| `/oqidim` «o'qiyotgan kitob yo'q» deydi | avval ilovada **📖 Javonim** ga kitob qo'shib, «O'qiyapman» qiling (yoki klub kitobida «O'qishni boshladim») |
+| Missiya progressi o'zgarmayapti | missiya **olingandan keyingi** ishlar sanaladi; o'z kitobi kundalikda o'qilgan bo'lishi kerak; natija bir necha daqiqada yangilanadi |
+| Bo'lim a'zolarga ko'rinmayapti | **🧩 Imkoniyatlar** da «O'chiq» emasligini tekshiring («🎁 Sizning foydangiz» doim ochiq) |
+| Kanalga post chiqmadi | **📣 Telegram kanal** sahifasidagi xato sababi; ko'pincha bot kanalda admin emas |
+| Biror narsa umuman ishlamayapti | **Sozlamalar → 🩺 Tizim holati** — qizil qator nimani aytsa, shuni tuzating; bo'lmasa menga yozing |
+
+> Xavfsizlik: hech kimga (menga ham) **bot tokeni**, **SECRET_KEY** yoki **DATABASE_URL** ni yubormang. Ular
+> faqat Render'ning «Environment» bo'limida turadi.
+
+## 35. 🆕 So'nggi o'zgarishlar (shu yangilanish)
+
+**🎁 Sizning foydangiz (taklif) — doim ochiq**
+
+- Bot menyusida yangi **🎁 Sizning foydangiz** tugmasi, `/referal` buyrug'i (eski `/taklif` ham ishlaydi),
+  ilovada bosh sahifa va profilda kartochka.
+- Havola endi hech qachon «yopiq» bo'lmaydi (bot o'z nomini Telegram'dan oladi).
+- Taklif qilingan do'stlar ro'yxati va ularning **ballari** ham botda, ham ilovada.
+- Imkoniyatlardan «Do'stlarni taklif qilish» olib tashlandi — o'chirib bo'lmaydi.
+
+**⭐ Stars karta orqali — yangi jarayon**
+
+- Xizmat endi «⭐ Telegram Stars orqali» usulining ichida («⭐ Stars'ingiz yo'qmi?»).
+- Bosh admin tasdiqlaydi → «⭐ Stars yuborish» huquqli adminga buyurtma va ko'rsatma → u yuboradi va belgilaydi
+  → a'zoga xabar.
+- Har bir qadam to'lovlar kanaliga yoziladi.
+- Yangi huquq **«⭐ Stars yuborish»** va admin panelda **⭐ Stars buyurtmalari** sahifasi.
+- To'lov savollariga faqat bosh admin javob beradi, javoblar kanalga ham yoziladi.
+
+**🎨 Stikerlar va ✨ premium emojilar tuzatildi**
+
+- Premium'i bor oddiy admin ham qo'sha oladi (xabar yuborish yoki sozlamalar huquqi bilan).
+- Buyruqsiz yuborilgan stiker yoki emojini bot «saqlaymi?» deb so'raydi.
+- Rasm izohidagi emojilar ham o'qiladi; **🧪 Tekshirish** Telegram nima deyayotganini aniq aytadi.
+- Kanal rad etsa, faqat kanal to'xtaydi. Stikerlar odatda yoqilgan.
+- Premium emoji ishlamasligining asl sababi topildi: bot **egasining** Premium'i (30-bo'lim).
+
+**📚 Mening mutolaam (yangi)**
+
+- Shaxsiy javon, mutolaa kundaligi va 🔥 seriya, «Kitobdan keyin 3 savol».
+- Iqtiboslar sandig'i va chiroyli kartochkalar, **🪪 Kitobxonlik kartam**.
+- Shaxsiy missiyalar (admin panelda **🎯 Missiyalar**).
+- Botda `/oqidim`, `/javonim`, `/kartam`.
+
+**🏛 Fakultetlar ligasi**: fakultetlar bellashuvi (o'rtacha ball, faollar ulushi, betlar, kitoblar).
+
+**📈 Faollik va qaytish** tahlili va **🛡 Ishonch markazi** (shubhali holatlar ro'yxati va sertifikat tekshirish).
+
+**📖 Kitobxonlik izi**: yil yakunida kundalik betlari, eng uzun seriya, iqtiboslar va missiyalar.
+
+**Halollik himoyalari**
+
+- Kundalikda kunlik bet chegarasi va faqat oxirgi 7 kun.
+- Missiyalar faqat olingandan keyingi ishlarni sanaydi.
+- O'z kitobi faqat kundalikda o'qilgan bo'lsa missiya va ball beradi.
+- «3 savol» uchun ball oyiga cheklangan.
+- Faqat e'lon qilingan klub iqtiboslari saqlanadi.
+
+**Qilinmagan g'oyalar va sababi**
+
+| G'oya | Sabab |
+|---|---|
+| Klublar, to'garaklar | klubning o'zi bitta jamoa. Ichida kichik guruhlar a'zolarni bo'lib yuboradi; fakultetlar ligasi va taklif tanlovlari shu ehtiyojni yopadi |
+| O'qish sherigi (buddy) | begona odamlarni juftlash shaxsiy ma'lumot va xavfsizlik masalasini tug'diradi |
+| Mentor | o'qituvchi resursi kerak; avval kerak bo'lsa, «Adminga yozish» orqali boshlash mumkin |
+| Kitoblar xaritasi | xarita uchun tashqi xizmat va joylashuv ma'lumoti kerak; foydasi kichik |
+
+Bularni keyinroq, kerak bo'lsa, alohida qo'shish mumkin.
+
+### Siz qilishingiz kerak bo'lgan ishlar
+
+1. **🛡 Adminlar** → Premium'i bor ishonchli adminga **«⭐ Stars yuborish»** huquqini bering. U botga
+   `/start` bosgan bo'lsin.
+2. U admin bilan Stars xarajatini qanday qoplashni kelishib oling.
+3. Premium emoji kerak bo'lsa: bot **egasining** akkauntiga Telegram Premium oling (yoki 30-bo'limdagi boshqa
+   yo'l). So'ng `/emoji` → **🧪 Tekshirish**.
+4. **🎯 Missiyalar** sahifasini ko'rib chiqing: tayyor 6 ta missiya bor, xohlasangiz o'zgartiring yoki yangisini
+   qo'shing.
+5. A'zolarga yangi imkoniyatlar haqida e'lon qiling: **🧩 Imkoniyatlar** da yangi bo'limni «Hammaga» qayta
+   saqlab, «a'zolarga e'lon» belgisini qo'yasiz, yoki **📢 Xabarlar** dan o'zingiz yozasiz.
+
+---
+
+# Ma'lumotnoma jadvallari (dastur kodidan avtomatik olingan)
+
+Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. Sozlamalar **Admin panel →
+⚙️ Sozlamalar** da, imkoniyatlar **🧩 Imkoniyatlar** da, huquqlar **🛡 Adminlar** da o'zgartiriladi.
+
+## I. Imkoniyatlar (🧩)
+
+| Imkoniyat | Odatiy holat | Nima beradi |
+|---|---|---|
+| 🪪 Kitobxon pasporti | Hammaga | rasmli a'zolik pasporti — yuklab olish va do'stlarga ulashish mumkin |
+| 🎓 Sertifikatlar | Hammaga | g'oliblik sertifikatlari — QR kod orqali istalgan kishi haqiqiyligini tekshira oladi |
+| 📄 Sertifikat PDF | 💎 Premium | sertifikatni PDF shaklida cheksiz yuklab olish va 12 ta dizayndan birini tanlash |
+| 🏆 Reyting | Hammaga | haftalik klub reytingi |
+| 🏆 To'liq reyting | 💎 Premium | oylik va umumiy reyting, fakultetim, guruhim va fakultetlar bellashuvi |
+| 🏅 Yutuqlar | Hammaga | nishonlar va ularga yetish yo'li |
+| 🎁 Sovg'alar | Hammaga | sovg'alar va promo-kodlar |
+| 💬 Adminga yozish | Hammaga | klub rahbariyatiga savol va taklif yuborish |
+| 📜 Kun iqtibosi | Hammaga | har kuni klub kitoblaridan tanlangan iqtibos |
+| ⭐ Tadbirga baho | Hammaga | tadbirdan keyin unga baho berish va fikr qoldirish |
+| 📊 Haftalik xulosa | 💎 Premium | har dushanba shaxsiy xulosa: haftalik ballar, reytingdagi o'rin va keyingi tadbirlar |
+| 📈 Shaxsiy statistika | 💎 Premium | oylar bo'yicha ballaringiz, davomat foizi, test natijalari va reytingdagi o'sishingiz |
+| 🗂 Kitobxonlik portfoliosi | 💎 Premium | barcha natija, sertifikat va yutuqlaringiz bitta chiroyli PDF hujjatda — rezyume va grantlar uchun |
+| 📚 Javonim va mutolaa kundaligi | Hammaga | shaxsiy kitob javoni (o'qimoqchiman / o'qiyapman / o'qidim / keyinroq), kunlik betlar kundaligi, ketma-ket o'qish seriyasi va kitobdan keyin 3 savol |
+| 💬 Iqtiboslar sandig'i | Hammaga | yoqqan iqtiboslarni saqlash, izoh yozish va chiroyli kartochka qilib do'stlarga ulashish |
+| 🎯 Shaxsiy missiyalar | Hammaga | «7 kunda 100 bet», «5 kun ketma-ket o'qish» kabi kichik maqsadlar — bajarganga ball |
+| 🪪 Kitobxonlik kartam | Hammaga | o'qigan kitoblar, betlar, seriya va yutuqlaringiz bitta chiroyli rasmda — ulashish uchun |
+| 🏛 Fakultetlar ligasi | Hammaga | fakultetlar bellashuvi: o'rtacha ball, faol kitobxonlar ulushi, o'qilgan betlar va kitoblar |
+| 💎 Premium obuna | O'chiq | Premium a'zolik: qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa |
+| 💳 Karta orqali to'lov | O'chiq | Premiumni bank kartasiga o'tkazib, chekni yuborish orqali sotib olish |
+| ❤️ Klubni qo'llab-quvvatlash | O'chiq | Telegram Stars orqali klub rivojiga hissa qo'shish |
+
+## II. Admin huquqlari (🛡)
+
+| Bo'lim | Huquq | Kod |
+|---|---|---|
+| A'zolar | A'zolar ro'yxatini va profillarini ko'rish | `USER_VIEW` |
+| A'zolar | A'zolarning telefon raqamlarini ko'rish | `USER_CONTACT_VIEW` |
+| A'zolar | A'zolarni tasdiqlash, bloklash va ma'lumotlarini tahrirlash | `USER_MANAGE` |
+| Kitoblar | Kitoblarni (qoralamalar bilan) ko'rish | `BOOK_VIEW` |
+| Kitoblar | Kitob va iqtibos qo'shish | `BOOK_CREATE` |
+| Kitoblar | Kitob va iqtiboslarni tahrirlash, arxivlash | `BOOK_EDIT` |
+| Kitoblar | Kitob va iqtiboslarni o'chirish | `BOOK_DELETE` |
+| Tadbirlar | Tadbirlarni (qoralamalar bilan) ko'rish | `EVENT_VIEW` |
+| Tadbirlar | Tadbir yaratish | `EVENT_CREATE` |
+| Tadbirlar | Tadbirni tahrirlash va bekor qilish | `EVENT_EDIT` |
+| Tadbirlar | Tadbirni o'chirish | `EVENT_DELETE` |
+| Davomat | Davomatni ko'rish va eksport qilish | `ATTENDANCE_VIEW` |
+| Davomat | Davomatni ochish/yopish, qo'lda tasdiqlash va tuzatish | `ATTENDANCE_MANAGE` |
+| Testlar | Testlar va natijalarni ko'rish | `TEST_VIEW` |
+| Testlar | Test yaratish | `TEST_CREATE` |
+| Testlar | Testni tahrirlash | `TEST_EDIT` |
+| Testlar | Testni o'chirish | `TEST_DELETE` |
+| Testlar | Testni e'lon qilish va yopish | `TEST_PUBLISH` |
+| Ballar | Ballar tarixini ko'rish | `SCORE_VIEW` |
+| Ballar | Ballarni qo'lda o'zgartirish (sabab ko'rsatilishi shart) | `SCORE_MANAGE` |
+| Hisobotlar | Hisobotlarni ko'rish va yuklab olish | `REPORT_VIEW` |
+| Hisobotlar | Hisobot tayyorlash va tahrirlash | `REPORT_CREATE` |
+| Hisobotlar | Hisobotni tasdiqlash va PDF yaratish | `REPORT_APPROVE` |
+| Xabarlar | A'zolarga xabar yuborish | `NOTIFICATION_SEND` |
+| Statistika | Statistika va tahlillarni ko'rish | `ANALYTICS_VIEW` |
+| Sovg'alar | Sovg'alar, promo-kodlar va sertifikatlarni boshqarish | `REWARD_MANAGE` |
+| Mavsumlar | Mavsumlar va kitobxonlik kampaniyalarini boshqarish | `SEASON_MANAGE` |
+| Tizim | Tizim sozlamalari, ball qoidalari va fakultetlarni o'zgartirish | `SETTINGS_MANAGE` |
+| Tizim | Audit jurnalini ko'rish | `AUDIT_LOG_VIEW` |
+| Murojaatlar | A'zolar murojaatlarini o'qish va ularga javob berish | `SUPPORT_MANAGE` |
+| To'lovlar | Telegram Stars'ni a'zolarga yuborish: bosh admin tasdiqlagan Stars buyurtmalari shu adminga keladi | `STARS_SEND` |
+
+## III. Sozlamalar (⚙️)
+
+**`score.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `score.attendance_points` | 30 | Tadbirda tasdiqlangan qatnashuv uchun ball |
+| `score.test_max_points` | 20 | Test uchun maksimal ball |
+| `score.test_rank_bonus` | 10, 5, 3 | Test bo'yicha 1-, 2-, 3-o'rinlar uchun qo'shimcha ball |
+| `score.book_completion_points` | 10 | Kitobni o'qib tugatgani uchun ball |
+| `score.book_completion_requires_verification` | yoqiq | Kitob uchun ball faqat test yoki admin tasdig'idan keyin beriladi |
+
+**`registration.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `registration.require_approval` | o'chiq | Yangi a'zolar admin tasdig'idan so'ng faollashadi |
+| `registration.max_course` | 6 | Eng yuqori kurs raqami |
+
+**`attendance.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `attendance.token_ttl_seconds` | 30 | QR/kodning amal qilish vaqti (soniya) |
+| `attendance.rotation_seconds` | 10 | QR/kod qanchada yangilanadi (soniya) |
+| `attendance.require_registration` | o'chiq | Davomat uchun tadbirga oldindan ro'yxatdan o'tish shart |
+
+**`notifications.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `notifications.event_reminder_minutes` | 1440, 60 | Tadbirdan necha daqiqa oldin eslatma yuboriladi |
+| `notifications.test_ending_minutes` | 60 | Test yopilishidan necha daqiqa oldin eslatiladi (0 = eslatilmaydi) |
+| `notifications.reading_reminder_days` | 2 | Kitob muddati tugashidan necha kun oldin eslatiladi (0 = eslatilmaydi) |
+| `notifications.quote_of_day_time` | 09:00 | Kun iqtibosi yuboriladigan vaqt |
+| `notifications.quiet_hours` | 22:00-08:00 | Tungi tinchlik (SS:DD-SS:DD): shu vaqtda ommaviy xabarlar (e'lonlar, yangi kitob va tadbirlar, yutuqlar, haftalik xulosa) yuborilmaydi — ertalab boradi. Shaxsiy va shoshilinch xabarlar (davomat, to'lov, test natijasi) har doim boradi. Bo'sh — o'chiq |
+| `notifications.stickers` | yoqiq | Tabrik va xush kelibsiz xabarlaridan keyin adminlar /stiker bilan saqlagan stikerlardan biri ham yuborilsin (stiker saqlanmagan bo'lsa — yuborilmaydi). 🎉 animatsiya baribir qoladi |
+
+**`admin.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `admin.morning_digest` | yoqiq | Har kuni soat 08:00 da bosh administratorlarga qisqa hisobot: yangi a'zolar, tekshirilmagan cheklar, javobsiz murojaatlar, tasdiq kutayotgan davomat va bugungi tadbirlar |
+
+**`org.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `org.organization_name` | Farg'ona jamoat salomatligi tibbiyot instituti | Tashkilot (universitet) nomi |
+| `org.club_name` | Kitobxon Hub | Klub nomi |
+
+**`certificates.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `certificates.test_winners` | yoqiq | Test g'oliblariga (1-3-o'rin) sertifikat avtomatik beriladi (tadbir testida — faqat davomatdan o'tganlarga) |
+| `certificates.monthly_top` | yoqiq | Oy yakunida reytingdagi 1-3-o'rinlarga sertifikat beriladi |
+| `certificates.signer_title` | Klub rahbari | Sertifikatdagi imzo egasi lavozimi |
+| `certificates.signer_name` | — | Sertifikatdagi imzo egasining ismi (ixtiyoriy) |
+| `certificates.seal` | yoqiq | Sertifikatda imzo ustida klub pechati (app/brand/seal.png bo'lsa) |
+| `certificates.logo` | yoqiq | Sertifikat tepasida klub belgisi (app/brand/logo-mark.png bo'lsa) |
+| `certificates.free_downloads` | 1 | Premiumsiz a'zo har bir sertifikatini necha marta bepul yuklab oladi (Premium — cheklovsiz) |
+| `certificates.design_changes` | 3 | Premium a'zo bitta sertifikat dizaynini necha marta almashtira oladi |
+
+**`payments.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `payments.card_number` | — | Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012 |
+| `payments.card_holder` | — | Karta egasining ismi (to'lovchi tekshirishi uchun) |
+| `payments.chat_id` | — | To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. @username yoki -100… raqami (bo'sh — cheklar bosh administratorlarga botda) |
+| `payments.stars_packages` | 50, 100, 250, 500 | Karta orqali sotiladigan Stars to'plamlari (bo'sh — sotilmaydi) |
+| `payments.star_price_uzs` | 250 | 1 ta Stars narxi so'mda (Telegram'da sotib olish narxiga qarab; 0 — sotilmaydi) |
+
+**`premium.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `premium.trial_days` | 7 | Har bir a'zoga bir marta bepul Premium sinov (kun; 0 — sinov yo'q) |
+
+**`referral.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `referral.points` | 20 | Do'stini taklif qilgan a'zoga ball (do'sti birinchi tadbirda qatnashganda) |
+| `referral.premium_days` | 7 | Do'stini taklif qilgan a'zoga Premium kunlar (0 — Premium berilmaydi) |
+| `referral.monthly_limit` | 5 | Bir a'zo bir oyda nechta taklif uchun mukofot oladi (0 — cheklovsiz) |
+| `referral.friend_details` | FULL | «Sizning foydangiz»da a'zo taklif qilgan do'stlari haqida nimani ko'radi: FULL — ismi, ballari, o'qigan kitoblari va tadbirlari; NAMES — faqat ismi va tadbirga kelgani; COUNT — faqat sonlar |
+| `referral.leaderboard_size` | 10 | «Eng faol taklif qiluvchilar» ro'yxatida nechta a'zo ko'rinadi (0 — ro'yxat a'zolarga ko'rinmaydi) |
+| `referral.leaderboard_rule` | ATTENDED | Umumiy taklif reytingida qaysi do'stlar sanaladi: ATTENDED — kamida bitta tadbirga kelganlar (soxta hisoblardan himoya); REGISTERED — ro'yxatdan o'tganlarning hammasi |
+
+**`reading.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `reading.daily_page_limit` | 500 | Mutolaa kundaligi: bir kunda yozish mumkin bo'lgan eng ko'p bet (haddan tashqari sonlar va missiyalarni aldashdan himoya) |
+| `reading.reflection_points` | 5 | «Kitobdan keyin 3 savol»ga javob yozgan a'zoga ball (har kitob uchun bir marta; 0 — ballsiz) |
+| `reading.reflection_monthly_limit` | 4 | «3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz) |
+
+**`academic.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `academic.promote_groups` | yoqiq | Yangi o'quv yilida guruh raqami ham kurs bilan birga oshadi, agar uning birinchi raqami kursga teng bo'lsa (2-kursdagi «201» → «301»). Boshqacha nomlangan guruhlar o'zgarmaydi |
+| `academic.ask_graduates` | yoqiq | Yangi o'quv yilida oxirgi kursdagi a'zolardan «Bitirdingizmi?» deb so'raladi; «Ha» deganlar bitiruvchi (alumni) bo'ladi — klubda qoladi, lekin kurs bo'yicha hisobotlarga kirmaydi |
+| `academic.summary_day` | 06-20 | «Yil yakuni»: shu kuni (OO-KK) har bir a'zoga o'quv yili davomidagi natijalari (kitoblar, tadbirlar, testlar, ballar, o'rni, do'stlari) yuboriladi. Bo'sh — yuborilmaydi |
+| `academic.year_start` | 09-01 | O'quv yili boshlanadigan kun (OO-KK): shu kuni kurslar bittaga oshadi va yangi mavsum boshlanadi |
+| `academic.promote_courses` | yoqiq | Yangi o'quv yilida faol a'zolarning kursi avtomatik bittaga oshirilsin (oxirgi kursdan oshmaydi) |
+| `academic.auto_season` | yoqiq | Har o'quv yili uchun alohida mavsum (reyting va hisobotlar yillar bo'yicha aralashmaydi) |
+| `academic.current_year` | 0 | Joriy o'quv yili boshlangan yil (avtomatik yoziladi; 0 — hali aniqlanmagan) |
+
+**`membership.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `membership.inactive_days` | 365 | Shuncha kun botga ham, ilovaga ham kirmagan a'zo eslatmadan 7 kun keyin «faol emas» bo'ladi (ma'lumotlari saqlanadi, qaytsa o'zi tiklanadi; 0 — o'chiq) |
+
+**`subscription.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `subscription.required` | yoqiq | Botdan va ilovadan foydalanish uchun kanal(lar)ga obuna majburiy (adminlardan so'ralmaydi; bot o'sha kanallarda administrator bo'lishi kerak, aks holda tekshiruv o'tkazib yuboriladi) |
+| `subscription.channels` | — | Obuna bo'lish shart bo'lgan kanallar, vergul bilan: @kanal, https://t.me/kanal yoki yopiq kanal uchun -100…=https://t.me/+taklif (bo'sh — faqat klub kanali) |
+
+**`channel.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `channel.enabled` | o'chiq | Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling) |
+| `channel.chat_id` | @FJSTIMutolaaxona | Kanal manzili: @username yoki -100... raqami |
+| `channel.post_events` | yoqiq | Yangi tadbirlar va «ertaga ... o'qib kelamiz» eslatmalari |
+| `channel.post_books` | yoqiq | Yangi kitoblar va «asarni tugatay deb qoldingizmi?» postlari |
+| `channel.post_quotes` | yoqiq | Kun iqtibosi kanalga ham joylanadi |
+| `channel.post_results` | yoqiq | Test g'oliblari, sovg'a o'yinlari va oy peshqadamlari |
+| `channel.post_invites` | yoqiq | Har dushanba botga taklif posti |
+| `channel.post_reports` | yoqiq | Tadbir hisoboti tasdiqlanganda rasmlari bilan «... davra suhbati bo'lib o'tdi» posti |
+| `channel.more_photos_url` | — | Hisobot postidagi «📸 Boshqa rasmlar» tugmasi havolasi (masalan, rasmlar kanali: https://t.me/...) |
+| `channel.stickers` | yoqiq | Avtomatik postlardan keyin saqlangan stikerlardan biri |
+| `channel.review_minutes` | 5 | Avtomatik post kanalga chiqishidan oldin adminlarga ko'rsatiladi; shu daqiqalarda hech kim javob bermasa, o'zi joylanadi (0 — tekshiruvsiz) |
+
+**`bot.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `bot.name` | — | Botning Telegram'dagi nomi (64 belgigacha). Bo'sh — @BotFather'dagi nom o'zgarmaydi |
+| `bot.short_description` | 📚 Kitobxonlar klubi: kitoblar, tadbirlar, testlar, reyting va sertifikatlar — hammasi bitta botda. | Bot profilidagi va ulashilgan havoladagi qisqa matn (120 belgigacha) |
+| `bot.description` | 📚 Kitobxon Hub — Farg'ona jamoat salomatligi tibbiyot instituti kitobxonlar klubining rasmiy boti.
+«Yaxshi kitob — yaxshi kelajak»
+
+✨ Bu yerda siz:
+• klub kitoblarini o'qiysiz va muddatlarni kuzatasiz;
+• tadbirlarda QR kod bilan davomat qilasiz;
+• kitoblar bo'yicha testlar yechasiz;
+• ball, reyting, yutuq va sertifikatlar olasiz;
+• o'z Kitobxon pasportingizga ega bo'lasiz.
+
+👇 Boshlash uchun «Start» tugmasini bosing. | Botning bo'sh chatida «Start» ustida ko'rinadigan matn (512 belgigacha) |
+| `bot.menu_button` | 📱 Ilova | Chat pastidagi ilovani ochadigan tugma matni |
+
+**`ranking.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `ranking.public_name_format` | SHORT | Umumiy reytingda ism ko'rinishi: FULL = to'liq, SHORT = ism va familiyaning bosh harfi |
+
+## IV. Bot buyruqlari menyusi (Telegram'dagi «Menu»)
+
+| Buyruq | Kim ko'radi | Tavsif |
+|---|---|---|
+| `/start` | a'zo | 🏠 Bosh menyu |
+| `/davomat` | a'zo | ✅ Tadbirda davomat qilish |
+| `/pasport` | a'zo | 🪪 Kitobxon pasportim |
+| `/oqidim` | a'zo | 📖 Bugun o'qiganimni yozish: /oqidim 25 |
+| `/javonim` | a'zo | 📚 Javonim: o'qiyotgan kitoblarim va seriyam |
+| `/kartam` | a'zo | 🪪 Kitobxonlik kartam (rasm) |
+| `/referal` | a'zo | 🎁 Sizning foydangiz: taklif havolasi va do'stlaringiz |
+| `/premium` | a'zo | 💎 Premium va klubni qo'llab-quvvatlash |
+| `/help` | a'zo | ❓ Yordam va adminga yozish |
+| `/paysupport` | a'zo | 💳 To'lov bo'yicha yordam |
+| `/stop` | a'zo | ⏹ Jarayonni to'xtatib, menyuga qaytish |
+| `/admin` | admin | 🛠 Admin panel |
+| `/stiker` | xabar yuborish huquqli admin | 🎨 Kanal postlari uchun stikerlar |
+| `/emoji` | xabar yuborish huquqli admin | ✨ Premium emojilarni yuklash |

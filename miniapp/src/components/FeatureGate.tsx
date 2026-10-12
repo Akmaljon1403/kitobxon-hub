@@ -16,6 +16,11 @@ const TITLES: Record<string, string> = {
   ranking_full: "🏆 To'liq reyting",
   certificate_pdf: '📄 Sertifikat PDF',
   portfolio: '🗂 Kitobxonlik portfoliosi',
+  shelf: '📚 Javonim',
+  quote_box: "💬 Iqtiboslar sandig'i",
+  missions: '🎯 Missiyalar',
+  reading_card: '🪪 Kitobxonlik kartam',
+  faculty_league: '🏛 Fakultetlar ligasi',
 }
 
 export function useFeature(code: string): FeatureAccess {

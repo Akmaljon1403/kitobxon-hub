@@ -7,7 +7,8 @@ import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { Book, BookDetail } from '../types/api'
+import { useFeature } from '../components/FeatureGate'
+import type { Book, BookDetail, Shelf, ShelfItem } from '../types/api'
 import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
 import { confirmAction, haptic, openExternalLink } from '../utils/telegram'
@@ -19,6 +20,35 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
   const [actionError, setActionError] = useState<string | null>(null)
   const goBack = useCallback(() => navigate('/books'), [])
   useBackButton(goBack)
+  const shelfOn = useFeature('shelf') === 'on'
+  const quotesOn = useFeature('quote_box') === 'on'
+  const [savedNow, setSavedNow] = useState<Set<string>>(new Set())
+
+  /** The book on «📚 Javonim» (added first when it is not there yet), then its page. */
+  async function openOnShelf() {
+    setSaving(true)
+    setActionError(null)
+    try {
+      const shelf = await api<Shelf>('/api/v1/me/shelf')
+      let item = shelf.items.find((entry) => entry.book_id === bookId)
+      if (!item) item = await api<ShelfItem>('/api/v1/me/shelf', { method: 'POST', body: { book_id: bookId, status: 'READING' } })
+      navigate(`/shelf/${item.id}`)
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : "Ochib bo'lmadi.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveQuote(quoteId: string) {
+    try {
+      await api('/api/v1/me/quotes', { method: 'POST', body: { book_quote_id: quoteId } })
+      haptic('success')
+      setSavedNow((current) => new Set(current).add(quoteId))
+    } catch (error) {
+      setActionError(error instanceof ApiError ? error.message : "Saqlab bo'lmadi.")
+    }
+  }
 
   async function setReading(action: 'start' | 'complete') {
     if (action === 'complete' && !(await confirmAction("Kitobni to'liq o'qib tugatdingizmi?"))) return
@@ -99,6 +129,11 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
             )}
           </div>
         )}
+        {shelfOn && open && (
+          <Button variant="secondary" loading={saving} onClick={() => void openOnShelf()}>
+            📖 Javonimda ochish: kundalik, 3 savol
+          </Button>
+        )}
         {actionError && (
           <p role="alert" className="text-center text-sm text-app-danger">
             {actionError}
@@ -123,6 +158,19 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
                 — {quote.author ?? book.author}
                 {quote.source ? `, ${quote.source}` : ''}
               </p>
+              {quotesOn && (
+                <div className="mt-2 flex justify-end">
+                  {quote.saved || savedNow.has(quote.id) ? (
+                    <button type="button" className="text-sm text-app-link" onClick={() => navigate('/quotes')}>
+                      ✅ Sandiqda
+                    </button>
+                  ) : (
+                    <button type="button" className="text-sm text-app-link" onClick={() => void saveQuote(quote.id)}>
+                      💾 Saqlash
+                    </button>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </>

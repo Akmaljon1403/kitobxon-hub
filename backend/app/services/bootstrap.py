@@ -109,5 +109,8 @@ async def sync_reference_data(session: AsyncSession) -> None:
         )
         .on_conflict_do_nothing(index_elements=[PremiumPlan.code])
     )
+    from app.services import missions
+
+    await missions.seed_defaults(session)  # ready-made personal missions, the first time only
     await session.commit()
     logger.info("Reference data synchronised")

@@ -12,6 +12,7 @@ from app.models import Book, BookRead
 from app.schemas.book import BookDetailOut, BookOut, MyReading, QuoteOut, ReadingActionIn
 from app.schemas.common import Page
 from app.services import books as book_service
+from app.services import reading_journal
 from app.services.settings import get_setting
 
 router = APIRouter(prefix="/books", tags=["books"])
@@ -68,9 +69,10 @@ async def get_book(book_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -
     quotes = await book_service.book_quotes(db, book.id)
     required = await get_setting(db, "score.book_completion_requires_verification")
     base = book_out(book, read, counts, required)
+    saved = await reading_journal.saved_club_quote_ids(db, current.user, [q.id for q in quotes])
     return BookDetailOut(
         **base.model_dump(),
-        quotes=[QuoteOut(id=q.id, text=q.text, author=q.author, source=q.source) for q in quotes],
+        quotes=[QuoteOut(id=q.id, text=q.text, author=q.author, source=q.source, saved=q.id in saved) for q in quotes],
     )
 
 
