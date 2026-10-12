@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
 from aiogram.exceptions import TelegramAPIError
 from fastapi import APIRouter, Query, Response
+from pydantic import BaseModel, Field
 
 from app.api.deps import DbSession, SuperAdminDep
 from app.api.v1.endpoints.premium import card_payment_out
@@ -191,6 +192,23 @@ async def grant(payload: GrantIn, current: SuperAdminDep, db: DbSession) -> Subs
         revoked_at=subscription.revoked_at,
         member=_member(user),
     )
+
+
+class BulkGrantIn(BaseModel):
+    days: int = Field(ge=1, le=premium_service.MAX_BULK_DAYS)
+    note: str | None = Field(
+        default=None, max_length=200, description="Shown to members: «Bilimlar kuni munosabati bilan»"
+    )
+    faculty_id: uuid.UUID | None = None
+    course: int | None = Field(default=None, ge=1, le=10)
+    group_name: str | None = Field(default=None, max_length=16)
+    only_without_premium: bool = False
+    dry_run: bool = False
+
+
+@router.post("/premium/grant-bulk", summary="Give Premium for N days to everybody, a faculty, a course or a group")
+async def grant_bulk(payload: BulkGrantIn, current: SuperAdminDep, db: DbSession) -> dict[str, Any]:
+    return await premium_service.grant_many(db, actor_id=current.user.id, **payload.model_dump())
 
 
 @router.post("/premium/subscriptions/{subscription_id}/revoke", response_model=dict[str, str], summary="End a period")

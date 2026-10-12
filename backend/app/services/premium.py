@@ -278,6 +278,130 @@ async def grant(
     return subscription
 
 
+MAX_BULK_DAYS = 366
+
+
+def gift_audience(
+    *,
+    faculty_id: uuid.UUID | None = None,
+    course: int | None = None,
+    group_name: str | None = None,
+    only_without_premium: bool = False,
+) -> Select[tuple[uuid.UUID]]:
+    """Who a mass gift reaches: active registered members of a faculty / course / group (or everybody),
+    never the super administrators (theirs is for life) nor anyone who already has Premium for life."""
+    from app.services.members import normalize_group
+
+    now = _now()
+    query = active_members().where(User.registered_at.is_not(None), User.id.not_in(lifetime_holders()))
+    query = query.where(
+        ~exists().where(
+            PremiumSubscription.user_id == User.id,
+            PremiumSubscription.revoked_at.is_(None),
+            PremiumSubscription.ends_at >= LIFETIME_UNTIL - timedelta(days=1),
+        )
+    )
+    if faculty_id is not None:
+        query = query.where(User.faculty_id == faculty_id)
+    if course is not None:
+        query = query.where(User.course == course, User.graduated_at.is_(None))
+    if group_name:
+        query = query.where(User.group_name == normalize_group(group_name))
+    if only_without_premium:
+        query = query.where(~premium_condition(User.id, now))
+    return query
+
+
+async def grant_many(
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    days: int,
+    note: str | None,
+    faculty_id: uuid.UUID | None = None,
+    course: int | None = None,
+    group_name: str | None = None,
+    only_without_premium: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Premium for N days to many at once — everybody, or a faculty, a course, a group. Members who have
+    Premium get the days added after their current period. Each is told; the payments chat gets one line."""
+    if not 1 <= days <= MAX_BULK_DAYS:
+        raise BadRequestError("DAYS_RANGE", f"Kunlar soni 1 dan {MAX_BULK_DAYS} gacha bo'lsin.")
+    audience = gift_audience(
+        faculty_id=faculty_id, course=course, group_name=group_name, only_without_premium=only_without_premium
+    )
+    user_ids = list(await session.scalars(audience))
+    if dry_run:
+        return {"recipients": len(user_ids)}
+    if not user_ids:
+        raise ConflictError("NOBODY", "Tanlangan shartga mos a'zo topilmadi.")
+    batch = uuid.uuid4()
+    reason = (note or "").strip()[:200]
+    stored_note = f"Ommaviy sovg'a{': ' + reason if reason else ''} [{batch.hex[:8]}]"
+    for user_id in user_ids:
+        subscription = await _extend(
+            session, user_id=user_id, days=days, source=PremiumSource.MANUAL, granted_by=actor_id, note=stored_note
+        )
+        why = f" ({reason})" if reason else ""
+        await _tell(
+            session,
+            user_id,
+            f"🎁 Klub sizga {days} kunlik Premium a'zolikni sovg'a qildi{why}! Amal qiladi: "
+            f"{format_date(subscription.ends_at)} gacha. Barcha 💎 imkoniyatlardan bemalol foydalaning!",
+            f"premium:gift:{batch}:{user_id}",
+            festive=True,
+        )
+    target = await _gift_target_text(session, faculty_id, course, group_name, only_without_premium)
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="PREMIUM_GRANT_BULK",
+        entity_type="premium_subscription",
+        entity_id=str(batch),
+        after={
+            "recipients": len(user_ids),
+            "days": days,
+            "note": reason or None,
+            "target": target,
+        },
+    )
+    await session.commit()
+    from app.services import payments_chat
+
+    actor = await session.get(User, actor_id)
+    who = f"{actor.first_name} {actor.last_name}" if actor else "—"
+    await payments_chat.post(
+        session,
+        f"🎁 <b>Ommaviy Premium sovg'a</b>: {len(user_ids)} nafar a'zoga {days} kun\n"
+        f"Kimga: {payments_chat._e(target)}"
+        + (f"\nSabab: {payments_chat._e(reason)}" if reason else "")
+        + f"\nBerdi: {payments_chat._e(who)}",
+    )
+    return {"recipients": len(user_ids), "batch": batch.hex[:8]}
+
+
+async def _gift_target_text(
+    session: AsyncSession,
+    faculty_id: uuid.UUID | None,
+    course: int | None,
+    group_name: str | None,
+    only_without_premium: bool,
+) -> str:
+    from app.models import Faculty
+
+    parts = []
+    if faculty_id is not None:
+        faculty = await session.get(Faculty, faculty_id)
+        parts.append(faculty.name if faculty else "fakultet")
+    if course is not None:
+        parts.append(f"{course}-kurs")
+    if group_name:
+        parts.append(f"{group_name} guruh")
+    text = ", ".join(parts) if parts else "barcha a'zolar"
+    return text + (" (faqat Premium'i yo'qlar)" if only_without_premium else "")
+
+
 # ---------------------------------------------------------------------------- trial, discounts
 
 
