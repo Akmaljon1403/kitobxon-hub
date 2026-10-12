@@ -85,7 +85,10 @@ async def _tests_out(db, user_id: uuid.UUID, tests: list[Test]) -> list[TestOut]
     titles = await quiz_service.book_titles(db, {test.book_id for test in tests if test.book_id})
     return [
         _test_out(
-            test, attempts.get(test.id, []), counts.get(test.id, 0), titles.get(test.book_id) if test.book_id else None
+            test,
+            attempts.get(test.id, []),
+            quiz_service.per_attempt(test, counts.get(test.id, 0)),
+            titles.get(test.book_id) if test.book_id else None,
         )
         for test in tests
     ]

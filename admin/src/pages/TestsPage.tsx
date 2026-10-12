@@ -132,7 +132,11 @@ export function TestsPage() {
                 <td className="px-4 py-2.5">
                   <TestStateBadge state={test.state} />
                 </td>
-                <td className="px-4 py-2.5 tabular-nums">{test.question_count}</td>
+                <td className="px-4 py-2.5 tabular-nums">
+                  {test.questions_per_attempt && test.questions_per_attempt < test.question_count
+                    ? `${test.questions_per_attempt} / ${test.question_count}`
+                    : test.question_count}
+                </td>
                 <td className="px-4 py-2.5 tabular-nums">{test.participant_count}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-right">
                   <Button variant="ghost" onClick={() => navigate(`/tests/${test.id}/results`)}>

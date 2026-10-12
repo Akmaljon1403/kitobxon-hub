@@ -293,6 +293,7 @@ export interface AdminTest {
   status: TestStatus
   state: TestState
   question_count: number
+  questions_per_attempt: number | null
   participant_count: number
   published_at: string | null
   rank_bonus_awarded: boolean

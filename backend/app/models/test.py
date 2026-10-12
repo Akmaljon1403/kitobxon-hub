@@ -39,6 +39,10 @@ class Test(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint("max_score > 0", name="max_score_positive"),
         CheckConstraint("passing_score BETWEEN 0 AND max_score", name="passing_score_range"),
         CheckConstraint("attempts_allowed BETWEEN 1 AND 10", name="attempts_range"),
+        CheckConstraint(
+            "questions_per_attempt IS NULL OR questions_per_attempt BETWEEN 1 AND 500",
+            name="questions_per_attempt_range",
+        ),
         Index("ix_tests_status_starts_at", "status", "starts_at"),
         Index("ix_tests_book_id", "book_id"),
     )
@@ -56,6 +60,9 @@ class Test(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     passing_score: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
     attempts_allowed: Mapped[int] = mapped_column(Integer, default=1, server_default=sql_text("1"))
     shuffle_questions: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sql_text("true"))
+    # The questions are a bank: every member gets this many of them, picked at random for each attempt
+    # (empty: everybody answers all of them).
+    questions_per_attempt: Mapped[int | None] = mapped_column(Integer)
     shuffle_options: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sql_text("true"))
     status: Mapped[TestStatus] = mapped_column(
         enum_column(TestStatus), default=TestStatus.DRAFT, server_default=TestStatus.DRAFT.value
