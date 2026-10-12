@@ -55,7 +55,7 @@ brauzerda a'zo va admin yo'llari, zaxira nusxadan tiklash sinovi. Yashil ✅ bel
 
 * [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — botni bepul serverga joylab sinash (egasi uchun)
 * [docs/ISHGA_TUSHIRISH.md](docs/ISHGA_TUSHIRISH.md) — doimiy ishga tushirish: zaxira, fayllar, kuzatuv (egasi uchun)
-* [docs/BOSHQARUV_QOLLANMA.md](docs/BOSHQARUV_QOLLANMA.md) — kundalik boshqaruv: adminlar, davomat, sertifikatlar, hisobotlar, imkoniyatlar, Premium, hujjatlar, o'quv yillari, litsenziya, bot buyruqlari (egasi uchun)
+* [docs/BOSHQARUV_QOLLANMA.md](docs/BOSHQARUV_QOLLANMA.md) — to'liq qo'llanma (egasi uchun): a'zo nigohida bot va ilova, «Mening mutolaam», boshqaruvning har bir bo'limi, to'lovlar va Stars jarayoni, stiker va premium emoji, avtomatik ishlar, savol-javob, sozlamalar/huquqlar/imkoniyatlar jadvallari
 * [docs/INSTITUT_SERVERI.md](docs/INSTITUT_SERVERI.md) — institut serveriga ko'chirish va yillar davomida ishlatish (IT mutaxassisi va egasi uchun)
 * [docs/SETUP.md](docs/SETUP.md) — loyihani ishga tushirish (egasi va dasturchilar uchun)
 * [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — doimiy serverga joylash (dasturchilar uchun)
