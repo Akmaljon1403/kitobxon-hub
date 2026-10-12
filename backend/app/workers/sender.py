@@ -268,6 +268,55 @@ async def send_due_notifications(
     return report
 
 
+async def _edit(bot: Bot, notification: Notification, user: User, report: SendReport, message_id: int) -> int | None:
+    """Change a message already sent (a copy of an admin request that someone has dealt with)."""
+    markup = _markup(notification.payload)
+    try:
+        try:
+            await bot.edit_message_text(
+                chat_id=user.telegram_id,
+                message_id=message_id,
+                text=notification.text,
+                reply_markup=markup,
+                disable_web_page_preview=True,
+            )
+        except TelegramBadRequest as exc:
+            if "no text in the message" not in str(exc).lower():
+                raise
+            await bot.edit_message_caption(  # the copy was a picture with a caption
+                chat_id=user.telegram_id,
+                message_id=message_id,
+                caption=notification.text[:CAPTION_LIMIT],
+                reply_markup=markup,
+            )
+    except TelegramRetryAfter as exc:
+        notification.scheduled_at = datetime.now(UTC) + timedelta(seconds=exc.retry_after)
+        notification.attempts -= 1
+        report.retried += 1
+        return int(exc.retry_after)
+    except (TelegramForbiddenError, TelegramBadRequest) as exc:
+        if "not modified" in str(exc).lower():
+            _finish(notification, NotificationStatus.SENT)
+            report.sent += 1
+        else:  # deleted by the admin, too old to edit: nothing to update
+            _finish(notification, NotificationStatus.SKIPPED, str(exc))
+            report.skipped += 1
+        return None
+    except Exception as exc:
+        if notification.attempts >= MAX_ATTEMPTS:
+            _finish(notification, NotificationStatus.FAILED, str(exc))
+            report.failed += 1
+        else:
+            notification.scheduled_at = datetime.now(UTC) + timedelta(seconds=30 * 2 ** (notification.attempts - 1))
+            notification.last_error = str(exc)[:500]
+            report.retried += 1
+        return None
+    notification.telegram_message_id = message_id
+    _finish(notification, NotificationStatus.SENT)
+    report.sent += 1
+    return None
+
+
 # A picture sent to many members is uploaded once: Telegram's file id is reused after the first send.
 _photo_ids: dict[str, str] = {}
 
@@ -320,6 +369,9 @@ async def _deliver(
     """Send one message and record the outcome. Returns seconds to wait if rate-limited.
     ``effect``: Telegram's animated message effect (🎉); ``sticker``: sent right after the message."""
 
+    edit_of = (notification.payload or {}).get("edit_of")
+    if edit_of:
+        return await _edit(bot, notification, user, report, int(edit_of))
     photo = await _photo(notification) if document is None else None
 
     async def send(effect_id: str | None) -> Message:

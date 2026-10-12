@@ -124,9 +124,9 @@ async def test_answers_written_in_the_payments_channel(
     after = await db.scalar(select(Notification.id).order_by(Notification.created_at.desc()).limit(1))
     assert before == after
 
-    # «✍️ Javob yozish» pressed in the channel is no longer lost: the answer is asked in the private chat
+    # «✍️ Javob yozish» pressed in the channel: the admin answers right there, with a «Reply»
     await _press_in_channel(admin, f"sup:pay:{ticket.id}")
-    assert texts.SUPPORT_REPLY_ASK in admin.all_text()
+    assert texts.SUPPORT_REPLY_CHANNEL_HINT in admin.session.alerts()
 
     # Premium given by hand is written in the channel too
     granted = await client.post(

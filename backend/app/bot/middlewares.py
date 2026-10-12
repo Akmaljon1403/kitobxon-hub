@@ -109,7 +109,7 @@ CHECK = "sub:check"
 
 # Buttons the bot answers in groups and channels (the payments chat): payment decisions and replies to
 # payment questions. Everything else there is ignored, so the bot never chats in a group.
-GROUP_CALLBACKS = ("cp:", "sup:ans:", "sup:pay:")
+GROUP_CALLBACKS = ("cp:", "sup:ans:", "sup:pay:", "sup:full:", "sup:close:")
 
 
 class GroupMiddleware(BaseMiddleware):

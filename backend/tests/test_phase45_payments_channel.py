@@ -78,12 +78,12 @@ async def test_payment_questions_only_in_the_payments_channel(db: AsyncSession, 
     def count(user_id: Any) -> Any:
         return db.scalar(select(func.count()).where(Notification.user_id == user_id))
 
-    # Without a payments channel a money question goes to the super admins only (their conversation).
+    # Without a payments channel a money question goes to the super admins (and «💳 To'lov savollari» holders).
     await support.member_message(db, user=member, text="Chekim tasdiqlanmadi", topic="payment")
     await db.commit()
     assert (await count(boss.id), await count(helper.id)) == (1, 0)
     question = await db.scalar(select(Notification).where(Notification.user_id == boss.id))
-    assert question.payload["buttons"][0]["callback"].startswith("sup:pay:")
+    assert question.payload["buttons"][0]["row"][0]["callback"].startswith("sup:pay:")
 
     await update_setting(db, key="payments.chat_id", value=str(CHANNEL), actor_id=None)
     await support.member_message(db, user=member, text="Yana bir savol", topic="payment")

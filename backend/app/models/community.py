@@ -66,6 +66,7 @@ class PaymentsChatLink(Base):
     or a member (``user``, e.g. a Telegram Stars payment)."""
 
     __tablename__ = "payments_chat_links"
+    __table_args__ = (Index("ix_payments_chat_links_kind_target_id", "kind", "target_id"),)
 
     chat_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     message_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -73,3 +74,8 @@ class PaymentsChatLink(Base):
     target_id: Mapped[uuid.UUID] = mapped_column()
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # The question as posted, so its state («⏳ Javob kutmoqda» → «✅ Javob berildi — …») can be shown under it.
+    base_text: Mapped[str | None] = mapped_column(Text)
+    # «✍️ Javob yozish» pressed in the channel: who is answering (a channel reply itself has no author).
+    claimed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    claimed_at: Mapped[datetime | None] = mapped_column()

@@ -9,10 +9,18 @@ from datetime import UTC, datetime
 from typing import Any
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
-from aiogram.types import BufferedInputFile, CallbackQuery, InlineKeyboardButton, Message, PreCheckoutQuery
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+    PreCheckoutQuery,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import access, keyboards, texts
@@ -21,7 +29,7 @@ from app.core.errors import AppError
 from app.models import User
 from app.models.enums import CardPaymentStatus, FeatureMode, PaymentKind, StickerMood, UserStatus
 from app.security.permissions import Perm
-from app.services import card_payments, features, stickers
+from app.services import card_payments, copies, features, stickers
 from app.services import premium as premium_service
 from app.utils.timezone import format_date
 
@@ -289,6 +297,21 @@ async def paysupport(message: Message, member: User | None) -> None:
 # ---------------------------------------------------------------------------- card payments (member)
 
 
+async def _card_menu(db: AsyncSession, member: User) -> tuple[str, InlineKeyboardMarkup | None]:
+    """The card menu: Premium plans, and one «⭐ Stars sotib olish» button when Stars are sold."""
+    discount = await premium_service.active_discount(db, member.id)
+    store_open = await features.mode(db, "premium") != FeatureMode.OFF
+    plans = [plan for plan in await premium_service.list_plans(db) if plan.price_uzs] if store_open else []
+    labels = []
+    for plan in plans:
+        price = card_payments.discounted_uzs(plan.price_uzs, discount.percent if discount else None)
+        assert price is not None
+        labels.append((plan.id.hex, texts.CARD_PLAN.format(title=plan.title, price=card_payments.format_uzs(price))))
+    stars = bool(await card_payments.stars_offer(db))
+    text = texts.CARD_CHOOSE if labels or not stars else texts.CARD_CHOOSE_STARS_ONLY
+    return text, keyboards.card_plans(labels, stars=stars)
+
+
 @router.callback_query(F.data == "card:open")
 async def card_open(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
     await callback.answer()
@@ -298,19 +321,52 @@ async def card_open(callback: CallbackQuery, db: AsyncSession, member: User | No
         await callback.message.answer(texts.CARD_OFF)
         return
     assert member is not None
-    discount = await premium_service.active_discount(db, member.id)
-    store_open = await features.mode(db, "premium") != FeatureMode.OFF
-    plans = [plan for plan in await premium_service.list_plans(db) if plan.price_uzs] if store_open else []
-    labels = []
-    for plan in plans:
-        price = card_payments.discounted_uzs(plan.price_uzs, discount.percent if discount else None)
-        assert price is not None
-        labels.append((plan.id.hex, texts.CARD_PLAN.format(title=plan.title, price=card_payments.format_uzs(price))))
-    stars = [
-        (item["stars"], texts.CARD_STARS.format(stars=item["stars"], price=card_payments.format_uzs(item["price_uzs"])))
-        for item in await card_payments.stars_offer(db)
-    ]
-    await callback.message.answer(texts.CARD_CHOOSE, reply_markup=keyboards.card_plans(labels, stars))
+    text, markup = await _card_menu(db, member)
+    await callback.message.answer(text, reply_markup=markup)
+
+
+@router.callback_query(F.data == "card:back")
+async def card_back(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    await callback.answer()
+    if not _active(member) or not isinstance(callback.message, Message):
+        return
+    assert member is not None
+    text, markup = await _card_menu(db, member)
+    await _edit_or_send(callback.message, text, markup)
+
+
+@router.callback_query(F.data == "card:starsmenu")
+async def card_stars_menu(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    """«⭐ Stars sotib olish»: now the amounts and their prices."""
+    await callback.answer()
+    if not _active(member) or not isinstance(callback.message, Message):
+        return
+    packages = await card_payments.stars_offer(db)
+    if not packages or await card_payments.card_details(db) is None:
+        await callback.message.answer(texts.CARD_OFF)
+        return
+    lines = "\n".join(
+        texts.CARD_STARS_LINE.format(stars=item["stars"], price=card_payments.format_uzs(item["price_uzs"]))
+        for item in packages
+    )
+    markup = keyboards.card_stars_menu(
+        [
+            (
+                item["stars"],
+                texts.CARD_STARS.format(stars=item["stars"], price=card_payments.format_uzs(item["price_uzs"])),
+            )
+            for item in packages
+        ]
+    )
+    await _edit_or_send(callback.message, texts.CARD_STARS_MENU.format(packages=lines), markup)
+
+
+async def _edit_or_send(message: Message, text: str, markup: InlineKeyboardMarkup | None) -> None:
+    """Change the menu in place (one message, not a pile); a new one when Telegram refuses to edit."""
+    try:
+        await message.edit_text(text, reply_markup=markup)
+    except TelegramBadRequest:
+        await message.answer(text, reply_markup=markup)
 
 
 async def _instructions(message: Message, db: AsyncSession, what: str, price: str) -> bool:
@@ -419,6 +475,7 @@ async def _decision_target(callback: CallbackQuery, db: AsyncSession, member: Us
     if not await access.is_super_admin(db, member):
         await callback.answer(texts.CARD_ADMIN_ONLY, show_alert=True)
         return None
+    copies.pressed_here(callback)  # this message shows the decision itself; the other copies are updated
     try:
         return await card_payments.get(db, uuid.UUID(hex=(callback.data or "").removeprefix(prefix)[:32]))
     except (ValueError, AppError):
@@ -446,6 +503,7 @@ async def _sender_target(callback: CallbackQuery, db: AsyncSession, member: User
     if not (await access.is_super_admin(db, member) or await access.has_permission(db, member, Perm.STARS_SEND)):
         await callback.answer(texts.STARS_SENDER_ONLY, show_alert=True)
         return None
+    copies.pressed_here(callback)
     try:
         return await card_payments.get(db, uuid.UUID(hex=(callback.data or "").removeprefix(prefix)[:32]))
     except (ValueError, AppError):

@@ -613,7 +613,9 @@ async def _ask_super_admins(
         text=text,
         dedup_prefix=f"attendance_request:{record.id}",
         members=super_admins(),
+        sync=f"attendance:{record.id}",
         payload={
+            "base": text,
             "buttons": [
                 {
                     "row": [
@@ -622,10 +624,21 @@ async def _ask_super_admins(
                     ]
                 },
                 {"text": "📋 Davomat sahifasi", "admin_route": f"events/{event.id}/attendance"},
-            ]
+            ],
         },
         priority=2,
     )
+
+
+async def _settle_request(
+    session: AsyncSession, record: AttendanceRecord, event: Any, actor_id: uuid.UUID, what: str
+) -> None:
+    """Every super admin's copy of the request shows the decision."""
+    from app.services import copies
+
+    status = f"{what} — {await copies.admin_name(session, actor_id)}, {copies.stamp()}"
+    buttons = [{"text": "📋 Davomat sahifasi", "admin_route": f"events/{event.id}/attendance"}]
+    await copies.settle(session, f"attendance:{record.id}", status, buttons=buttons)
 
 
 async def decide_request(
@@ -652,8 +665,10 @@ async def decide_request(
             entity_id=record.id,
             after={"points": points},
         )
+        await _settle_request(session, record, event, actor_id, "✅ <b>Tasdiqlandi</b>")
         await session.commit()
         return record
+    await _settle_request(session, record, event, actor_id, "❌ <b>Rad etildi</b>")
     record_audit(
         session,
         actor_id=actor_id,

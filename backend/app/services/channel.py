@@ -738,7 +738,9 @@ async def request_reviews(session: AsyncSession, now: datetime | None = None) ->
             text=text,
             dedup_prefix=f"channel-review:{post.id}",
             members=admins_with_permission(Perm.NOTIFICATION_SEND),
+            sync=f"channel-review:{post.id}",
             payload={
+                "base": text,
                 "buttons": [
                     {
                         "row": [
@@ -747,7 +749,7 @@ async def request_reviews(session: AsyncSession, now: datetime | None = None) ->
                         ]
                     },
                     {"text": "✏️ Matnni o'zgartirish", "callback": f"chp:edit:{post.id.hex}"},
-                ]
+                ],
             },
             priority=1,
         )
@@ -780,6 +782,14 @@ def _reviewed(post: ChannelPost, actor_id: uuid.UUID, now: datetime) -> None:
     post.reviewed_by = actor_id
 
 
+async def _settle_review(session: AsyncSession, post: ChannelPost, actor_id: uuid.UUID, what: str) -> None:
+    """Every admin's preview of this post shows what happened to it (and who did it)."""
+    from app.services import copies
+
+    status = f"{what} — {await copies.admin_name(session, actor_id)}, {copies.stamp()}"
+    await copies.settle(session, f"channel-review:{post.id}", status, buttons=[])
+
+
 async def publish_now(
     session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID, by_preview: bool = False
 ) -> ChannelPost:
@@ -791,6 +801,7 @@ async def publish_now(
     record_audit(
         session, actor_id=actor_id, action="CHANNEL_POST_APPROVE", entity_type="channel_post", entity_id=post.id
     )
+    await _settle_review(session, post, actor_id, "✅ <b>Kanalga joylashga yuborildi</b>")
     await session.commit()
     wake_sender()
     return post
@@ -802,6 +813,7 @@ async def hold_for_edit(session: AsyncSession, *, actor_id: uuid.UUID, post_id: 
     now = datetime.now(UTC)
     _reviewed(post, actor_id, now)
     post.scheduled_at = max(post.scheduled_at, now + EDIT_HOLD)
+    await _settle_review(session, post, actor_id, "✏️ <b>Matni o'zgartirilmoqda</b>")
     await session.commit()
     return post
 
@@ -828,6 +840,7 @@ async def edit_post(session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid
         before={"text": before[:500]},
         after={"text": body[:500]},
     )
+    await _settle_review(session, post, actor_id, "✏️ <b>Matn o'zgartirildi va joylashga yuborildi</b>")
     await session.commit()
     wake_sender()
     return post
@@ -905,6 +918,7 @@ async def cancel_post(
     record_audit(
         session, actor_id=actor_id, action="CHANNEL_POST_CANCEL", entity_type="channel_post", entity_id=post.id
     )
+    await _settle_review(session, post, actor_id, "❌ <b>Bekor qilindi</b>")
     await session.commit()
     return post
 

@@ -1,8 +1,11 @@
 """Members' messages to the club administrators and the administrators' answers.
 
-Members write through the bot. Every administrator who may answer (``SUPPORT_MANAGE``) gets a
-Telegram message with a reply button; they answer in the bot or in the Admin Panel. Answers reach
-the member signed by "Klub rahbariyati" — never with the administrator's name or account.
+Members write through the bot. Every administrator who may answer (``SUPPORT_MANAGE``; for money
+questions the super admins and ``PAYMENT_SUPPORT``) gets the whole message with «✍️ Javob yozish» and
+«📄 Batafsil»; they answer in the bot, in the payments channel (a «Reply») or in the Admin Panel. Every
+copy shows the state — «⏳ Javob kutmoqda», «✍️ … javob yozmoqda», «✅ Javob berildi — who, when, what» —
+the same for all admins (``copies.settle``). Answers reach the member signed by "Klub rahbariyati" —
+never with the administrator's name or account.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from app.core.errors import BadRequestError, NotFoundError, RateLimitedError
 from app.models import Faculty, SupportMessage, SupportTicket, User
 from app.models.enums import NotificationType, SupportTicketStatus
 from app.security.permissions import Perm
+from app.services import copies
 from app.services.audit import record_audit
 from app.services.notifications import enqueue_for_members, enqueue_notification
 
@@ -89,55 +93,157 @@ async def member_message(
     ticket.last_message_at = now
     await session.flush()
 
-    from app.services.rbac import admins_with_permission
-
     faculty = (
         await session.scalar(select(Faculty.name).where(Faculty.id == user.faculty_id)) if user.faculty_id else None
     )
-    who = html.escape(user.full_name)
+    who = html.escape(user.full_name, quote=False)
+    if user.telegram_username:
+        who += f" (@{html.escape(user.telegram_username)})"
     details = ", ".join(
         part
         for part in (
-            html.escape(faculty) if faculty else None,
+            html.escape(faculty, quote=False) if faculty else None,
             f"{user.course}-kurs" if user.course else None,
-            html.escape(user.group_name) if user.group_name else None,
+            f"{html.escape(user.group_name, quote=False)}-guruh" if user.group_name else None,
         )
         if part
     )
-    preview = html.escape(body[:PREVIEW] + ("…" if len(body) > PREVIEW else "")) if body else "📷 Rasm yubordi"
+    waiting = await session.scalar(
+        select(func.count())
+        .select_from(SupportMessage)
+        .where(
+            SupportMessage.ticket_id == ticket.id,
+            SupportMessage.from_admin.is_(False),
+            SupportMessage.created_at > _last_answer_at(ticket.id),
+        )
+    )
     title = "💳 <b>To'lov bo'yicha murojaat</b>" if topic == "payment" else "📨 <b>Yangi murojaat</b>"
-    text = f"{title}\n👤 {who}" + (f" · {details}" if details else "") + f"\n\n{preview}"
+    if (waiting or 0) > 1:
+        title += f" <i>({waiting}-xabar, javob kutilmoqda)</i>"
+    # The whole message (up to 3000 characters fits Telegram's 4096); «📄 Batafsil» shows the conversation.
+    body_html = html.escape(body, quote=False) if body else ""
+    if photo_file_id:
+        body_html = (body_html + "\n\n" if body_html else "") + "📷 <i>Rasm ilova qilingan — «📄 Batafsil»</i>"
+    base = f"{title}\n👤 {who}" + (f"\n🎓 {details}" if details else "") + f"\n\n{body_html}"
+    sync = f"ticket:{ticket.id}"
     if topic == "payment":
-        # Money questions are a conversation between the member and the super admins: they live in the
-        # payments chat (or, without one, come to the super admins in the bot).
-        if not await _to_payments_chat(session, text, ticket):
-            from app.services.rbac import super_admins
+        # Money questions are a conversation between the member and the super admins (and the admins given
+        # «💳 To'lov savollari»): they live in the payments chat, or come to them in the bot without one.
+        if not await _to_payments_chat(session, base, ticket):
+            from app.services.rbac import admins_with_permission
 
             await enqueue_for_members(
                 session,
                 type_=NotificationType.SUPPORT,
-                text=text,
+                text=copies.compose(base, WAITING),
                 dedup_prefix=f"support:{message.id}",
-                members=super_admins(),
-                payload={"buttons": [{"text": "✍️ Javob yozish", "callback": f"sup:pay:{ticket.id}"}]},
+                members=admins_with_permission(Perm.PAYMENT_SUPPORT),
+                payload={"base": base, "buttons": waiting_buttons(ticket.id, payment=True)},
                 priority=1,
+                sync=sync,
             )
         return ticket
+    from app.services.rbac import admins_with_permission
+
     await enqueue_for_members(
         session,
         type_=NotificationType.SUPPORT,
-        text=text,
+        text=copies.compose(base, WAITING),
         dedup_prefix=f"support:{message.id}",
         members=admins_with_permission(Perm.SUPPORT_MANAGE),
-        payload={
-            "buttons": [
-                {"text": "✍️ Javob yozish", "callback": f"sup:ans:{ticket.id}"},
-                {"text": "🛠 Admin panelda ochish", "admin_route": f"support/{ticket.id}"},
-            ]
-        },
+        payload={"base": base, "buttons": waiting_buttons(ticket.id, payment=False)},
         priority=2,
+        sync=sync,
     )
     return ticket
+
+
+WAITING = "⏳ <b>Holat:</b> javob kutmoqda"
+PAY_HINT = "\n\n<i>↩️ Javob berish: shu xabarga «Reply» qilib yozing (yoki «✍️ Javob yozish»).</i>"
+
+
+def _last_answer_at(ticket_id: uuid.UUID) -> Any:
+    """When the club last wrote in this conversation (the start of time when never)."""
+    return (
+        select(func.coalesce(func.max(SupportMessage.created_at), datetime(2000, 1, 1, tzinfo=UTC)))
+        .where(SupportMessage.ticket_id == ticket_id, SupportMessage.from_admin.is_(True))
+        .scalar_subquery()
+    )
+
+
+def waiting_buttons(ticket_id: uuid.UUID, *, payment: bool, answered: bool = False) -> list[dict[str, Any]]:
+    """The buttons under every copy: answer, the whole conversation, the panel, close."""
+    answer = {"text": "✍️ Yana yozish" if answered else "✍️ Javob yozish", "callback": _answer_cb(ticket_id, payment)}
+    full = {"text": "📄 Batafsil", "callback": _full_cb(ticket_id, payment)}
+    rows: list[dict[str, Any]] = [{"row": [answer, full]}]
+    if not payment:
+        rows.append({"text": "🛠 Admin panelda ochish", "admin_route": f"support/{ticket_id}"})
+    rows.append({"text": "🔒 Yopish", "callback": f"sup:close:{ticket_id}"})
+    return rows
+
+
+def _answer_cb(ticket_id: uuid.UUID, payment: bool) -> str:
+    return f"{'sup:pay:' if payment else 'sup:ans:'}{ticket_id}"
+
+
+def _full_cb(ticket_id: uuid.UUID, payment: bool) -> str:
+    return f"{'sup:full:p:' if payment else 'sup:full:'}{ticket_id}"
+
+
+def payments_markup(ticket_id: uuid.UUID, *, answered: bool = False) -> Any:
+    """The buttons of a payment question in the payments chat."""
+    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✍️ Yana yozish" if answered else "✍️ Javob yozish", callback_data=_answer_cb(ticket_id, True)
+                ),
+                InlineKeyboardButton(text="📄 Batafsil", callback_data=_full_cb(ticket_id, True)),
+            ]
+        ]
+    )
+
+
+async def _is_payment(session: AsyncSession, ticket_id: uuid.UUID) -> bool:
+    """Was this conversation about money (its questions went to the payments chat or its people)?"""
+    from app.models import PaymentsChatLink
+
+    linked = await session.scalar(
+        select(PaymentsChatLink.message_id)
+        .where(PaymentsChatLink.kind == "ticket", PaymentsChatLink.target_id == ticket_id)
+        .limit(1)
+    )
+    if linked is not None:
+        return True
+    from app.models import Notification
+
+    first = await session.scalar(
+        select(Notification.payload)
+        .where(Notification.sync_key == f"ticket:{ticket_id}")
+        .order_by(Notification.created_at)
+        .limit(1)
+    )
+    return bool(first and any("sup:pay:" in str(button) for button in first.get("buttons", [])))
+
+
+async def settle_ticket(
+    session: AsyncSession, ticket_id: uuid.UUID, status: str, *, answered: bool, closed: bool = False
+) -> None:
+    """Show the conversation's state under every admin's copy and in the payments chat."""
+    payment = await _is_payment(session, ticket_id)
+    if closed:
+        buttons: list[dict[str, Any]] = [{"text": "📄 Batafsil", "callback": _full_cb(ticket_id, payment)}]
+    else:
+        buttons = waiting_buttons(ticket_id, payment=payment, answered=answered)
+    await copies.settle(
+        session,
+        f"ticket:{ticket_id}",
+        status,
+        buttons=buttons,
+        payments_buttons=payments_markup(ticket_id, answered=answered),
+    )
 
 
 async def member_thread(session: AsyncSession, user_id: uuid.UUID, limit: int = 50) -> list[SupportMessage]:
@@ -154,18 +260,19 @@ async def member_thread(session: AsyncSession, user_id: uuid.UUID, limit: int = 
     return list(reversed(rows))
 
 
-async def _to_payments_chat(session: AsyncSession, text: str, ticket: SupportTicket) -> bool:
-    """A payment question in the payments chat, with «✍️ Javob yozish» — or answered right there by replying
-    to it. False when it could not go there."""
-    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
+async def _to_payments_chat(session: AsyncSession, base: str, ticket: SupportTicket) -> bool:
+    """A payment question in the payments chat, with «✍️ Javob yozish» and «📄 Batafsil» — or answered right
+    there by replying to it. False when it could not go there."""
     from app.services import payments_chat
 
-    markup = InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="✍️ Javob yozish", callback_data=f"sup:pay:{ticket.id}")]]
+    text = base + PAY_HINT
+    return await payments_chat.post(
+        session,
+        copies.compose(text, WAITING),
+        payments_markup(ticket.id),
+        link=("ticket", ticket.id, ticket.user_id),
+        base_text=text,
     )
-    hint = "\n\n<i>↩️ Javob berish: shu xabarga «Reply» qilib yozing.</i>"
-    return await payments_chat.post(session, text + hint, markup, link=("ticket", ticket.id, ticket.user_id))
 
 
 async def admin_reply(
@@ -176,10 +283,12 @@ async def admin_reply(
     text: str,
     payment: bool = False,
     echo: bool = True,
+    signature: str | None = None,
 ) -> SupportMessage:
     """``payment``: an answer to a money question — the member continues in the same topic, and the
     answer is written in the payments chat too (``echo=False``: it was written there already, as a reply).
-    ``actor_id`` is None for an answer posted in the payments channel (the channel signs it)."""
+    ``actor_id`` is None for an answer posted in the payments channel by an admin we cannot name
+    (``signature``: the channel's «signed by» name, when it signs posts)."""
     body = _clean(text)
     if not body:
         raise BadRequestError("SUPPORT_EMPTY", "Javob matnini yozing.")
@@ -194,7 +303,7 @@ async def admin_reply(
         session,
         user_id=ticket.user_id,
         type_=NotificationType.SUPPORT,
-        text=f"📩 <b>Klub rahbariyatidan javob</b>\n\n{html.escape(body)}",
+        text=f"📩 <b>Klub rahbariyatidan javob</b>\n\n{html.escape(body, quote=False)}",
         dedup_key=f"support-reply:{message.id}",
         # A blocked member gets the answer too: writing to the club is how they sort it out.
         payload={
@@ -209,21 +318,112 @@ async def admin_reply(
         action="SUPPORT_REPLY",
         entity_type="support_ticket",
         entity_id=ticket.id,
-        after={"length": len(body)},
+        after={"length": len(body), **({"signature": signature} if signature else {})},
     )
+    who = await copies.admin_name(session, actor_id) if actor_id else html.escape(signature or "kanal orqali")
+    preview = body if len(body) <= 300 else body[:300] + "…"
+    status = f"✅ <b>Javob berildi</b> — {who}, {copies.stamp()}\n💬 <i>{html.escape(preview, quote=False)}</i>"
+    await settle_ticket(session, ticket.id, status, answered=True)
     await session.commit()
     if payment and echo:
         from app.services import payments_chat
 
         member = await session.get(User, ticket.user_id)
-        admin = await session.get(User, actor_id) if actor_id else None
         await payments_chat.post(
             session,
-            f"↪️ <b>Javob</b> — {html.escape(admin.first_name if admin else '—')} → "
-            f"{html.escape(member.full_name if member else '—')}\n\n{html.escape(body)}",
+            f"↪️ <b>Javob</b> — {who} → {html.escape(member.full_name if member else '—', quote=False)}\n\n"
+            f"{html.escape(body, quote=False)}",
             link=("ticket", ticket.id, ticket.user_id),
         )
     return message
+
+
+async def claim(
+    session: AsyncSession, *, actor_id: uuid.UUID, ticket_id: uuid.UUID, chat_id: int, message_id: int
+) -> None:
+    """«✍️ Javob yozish» pressed in the payments channel: this admin answers (their «Reply» there is theirs),
+    and everybody sees who took it."""
+    from app.models import PaymentsChatLink
+
+    link = await session.get(PaymentsChatLink, (chat_id, message_id))
+    if link is not None:
+        link.claimed_by = actor_id
+        link.claimed_at = datetime.now(UTC)
+    ticket = await get_ticket(session, ticket_id)
+    if ticket.status != SupportTicketStatus.CLOSED:
+        status = f"✍️ <b>{await copies.admin_name(session, actor_id)}</b> javob yozmoqda… ({copies.stamp()})"
+        await settle_ticket(session, ticket.id, status, answered=ticket.status == SupportTicketStatus.ANSWERED)
+    await session.commit()
+
+
+CLAIM_VALID = timedelta(minutes=30)
+
+
+async def claimer(session: AsyncSession, chat_id: int, message_id: int, ticket_id: uuid.UUID) -> uuid.UUID | None:
+    """Who pressed «✍️ Javob yozish» on this question in the last half hour (their reply is theirs)."""
+    from app.models import PaymentsChatLink
+
+    recent = datetime.now(UTC) - CLAIM_VALID
+    link = await session.get(PaymentsChatLink, (chat_id, message_id))
+    if link is not None and link.claimed_by and link.claimed_at and link.claimed_at >= recent:
+        return link.claimed_by
+    return await session.scalar(
+        select(PaymentsChatLink.claimed_by)
+        .where(
+            PaymentsChatLink.kind == "ticket",
+            PaymentsChatLink.target_id == ticket_id,
+            PaymentsChatLink.claimed_at >= recent,
+        )
+        .order_by(PaymentsChatLink.claimed_at.desc())
+        .limit(1)
+    )
+
+
+async def thread_text(session: AsyncSession, ticket_id: uuid.UUID, limit: int = 20) -> tuple[list[str], list[str]]:
+    """«📄 Batafsil»: the conversation for the admins, as Telegram messages (each under 4096 characters),
+    and the members' photos (file ids) to send after it."""
+    ticket = await get_ticket(session, ticket_id)
+    user = await session.get(User, ticket.user_id)
+    rows = (
+        await session.execute(
+            select(SupportMessage, User.first_name, User.last_name)
+            .outerjoin(User, User.id == SupportMessage.admin_id)
+            .where(SupportMessage.ticket_id == ticket.id)
+            .order_by(SupportMessage.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    states = {
+        SupportTicketStatus.OPEN: "⏳ javob kutmoqda",
+        SupportTicketStatus.ANSWERED: "✅ javob berilgan",
+        SupportTicketStatus.CLOSED: "🔒 yopilgan",
+    }
+    head = (
+        f"📄 <b>Murojaat to'liq</b> — {html.escape(user.full_name if user else '—', quote=False)}\n"
+        f"Holat: {states.get(ticket.status, '—')} · xabarlar: {len(rows)}"
+        + (f" (oxirgi {limit} tasi)" if len(rows) == limit else "")
+    )
+    parts: list[str] = []
+    photos: list[str] = []
+    for message, first, last in reversed(rows):
+        when = copies.stamp(message.created_at)
+        if message.from_admin:
+            name = html.escape(f"{first} {last or ''}".strip(), quote=False) if first else "Klub"
+            parts.append(f"🛡 <b>{name}</b> · {when}\n{html.escape(message.text, quote=False)}")
+        else:
+            parts.append(f"👤 <b>A'zo</b> · {when}\n{html.escape(message.text, quote=False)}")
+            if message.photo_file_id:
+                photos.append(message.photo_file_id)
+    chunks: list[str] = []
+    current = head
+    for part in parts:
+        if len(current) + len(part) + 2 > 4000:
+            chunks.append(current)
+            current = part
+        else:
+            current = f"{current}\n\n{part}"
+    chunks.append(current)
+    return chunks, photos
 
 
 async def club_message(
@@ -282,6 +482,14 @@ async def set_status(
     ticket.status = status
     if status == SupportTicketStatus.CLOSED:
         ticket.unread_for_admin = False
+    if status != before:
+        who = await copies.admin_name(session, actor_id)
+        if status == SupportTicketStatus.CLOSED:
+            await settle_ticket(
+                session, ticket.id, f"🔒 <b>Yopildi</b> — {who}, {copies.stamp()}", answered=True, closed=True
+            )
+        elif status == SupportTicketStatus.OPEN:
+            await settle_ticket(session, ticket.id, f"{WAITING} <i>(qayta ochdi: {who})</i>", answered=False)
     record_audit(
         session,
         actor_id=actor_id,

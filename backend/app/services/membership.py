@@ -153,8 +153,17 @@ async def restore(session: AsyncSession, user: User, *, actor_id: uuid.UUID | No
             "Qaytganingizdan xursandmiz — /start",
             f"membership:restored:{user.id}:{_now():%Y%m%d%H%M}",
         )
+    await _settle_restore(session, user.id, actor_id, "♻️ <b>Tiklandi</b>")
     await session.commit()
     return user
+
+
+async def _settle_restore(session: AsyncSession, user_id: uuid.UUID, actor_id: uuid.UUID | None, what: str) -> None:
+    """Every admin's copy of the restore request shows the decision."""
+    from app.services import copies
+
+    who = await copies.admin_name(session, actor_id) if actor_id and actor_id != user_id else "a'zoning o'zi"
+    await copies.settle(session, f"restore:{user_id}", f"{what} — {who}, {copies.stamp()}", buttons=[])
 
 
 async def request_restore(session: AsyncSession, user: User) -> None:
@@ -180,7 +189,9 @@ async def request_restore(session: AsyncSession, user: User) -> None:
         text=text,
         dedup_prefix=f"restore-request:{user.id}:{user.restore_requested_at:%Y%m%d}",
         members=admins_with_permission(Perm.USER_MANAGE),
+        sync=f"restore:{user.id}",
         payload={
+            "base": text,
             "buttons": [
                 {
                     "row": [
@@ -188,7 +199,7 @@ async def request_restore(session: AsyncSession, user: User) -> None:
                         {"text": "❌ Rad etish", "callback": f"mem:no:{user.id.hex}"},
                     ]
                 }
-            ]
+            ],
         },
         priority=2,
     )
@@ -201,6 +212,7 @@ async def decline_restore(session: AsyncSession, user: User, *, actor_id: uuid.U
     if user.status != UserStatus.LEFT or user.erased_at is not None:
         raise ConflictError("NOT_LEFT", "Bu a'zo klubdan chiqmagan yoki ma'lumotlari o'chirilgan.")
     telegram_id = user.telegram_id
+    await _settle_restore(session, user.id, actor_id, "❌ <b>Rad etildi</b> (ma'lumotlari o'chirildi)")
     await erase(session, user, actor_id=actor_id, reason="tiklash so'rovi rad etildi", commit=False)
     await session.commit()
     logger.info("Restore declined; the account was erased (telegram id kept private: %s)", bool(telegram_id))

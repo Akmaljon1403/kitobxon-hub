@@ -25,7 +25,7 @@ from app.core.errors import AppError
 from app.models import EventFeedback, User
 from app.models.enums import ContributionKind, ContributionStatus
 from app.security.permissions import Perm
-from app.services import community
+from app.services import community, copies
 
 router = Router(name="community")
 router.message.filter(ActiveMember())
@@ -159,6 +159,7 @@ async def decide(callback: CallbackQuery, db: AsyncSession, member: User) -> Non
         return
     _, verb, value = (callback.data or "").split(":")
     action = {"ok": "approve", "star": "feature", "hide": "hide"}[verb]
+    copies.pressed_here(callback)  # this copy is changed below; the other moderators' copies by the service
     try:
         await community.moderate(db, actor_id=member.id, contribution_id=uuid.UUID(hex=value), action=action)
     except AppError as exc:

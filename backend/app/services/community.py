@@ -524,7 +524,9 @@ async def _tell_moderators(session: AsyncSession, item: Contribution, author: Us
         text=text,
         dedup_prefix=f"contribution-new:{item.id}",
         members=admins_with_permission(Perm.COMMUNITY_MANAGE),
+        sync=f"contribution:{item.id}",
         payload={
+            "base": text,
             "buttons": [
                 {
                     "row": [
@@ -534,7 +536,7 @@ async def _tell_moderators(session: AsyncSession, item: Contribution, author: Us
                     ]
                 },
                 {"text": "🛠 Hammasi panelda", "admin_route": "community"},
-            ]
+            ],
         },
     )
 
@@ -653,9 +655,27 @@ async def moderate(
         before={key: str(value) for key, value in before.items()},
         after={"status": str(item.status), "featured": item.featured},
     )
+    from app.services import copies
+
+    # every moderator's copy in the bot shows the decision (whoever took it, in the bot or the panel)
+    await copies.settle(
+        session,
+        f"contribution:{item.id}",
+        f"{DECIDED[action]} — {await copies.admin_name(session, actor_id)}, {copies.stamp()}",
+        buttons=[{"text": "🛠 Hammasi panelda", "admin_route": "community"}],
+    )
     await session.commit()
     await session.refresh(item)
     return item
+
+
+DECIDED = {
+    "approve": "✅ <b>Lentaga chiqarildi</b>",
+    "feature": "⭐ <b>Tanlanganlarga qo'shildi</b>",
+    "hide": "🙈 <b>Yashirildi</b>",
+    "pending": "⏳ <b>Qayta ko'rib chiqishga qaytarildi</b>",
+    "unfeature": "☆ <b>Tanlanganlardan olindi</b>",
+}
 
 
 async def edit(

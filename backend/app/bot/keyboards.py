@@ -231,15 +231,22 @@ def premium_plans(plans: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
     )
 
 
-def card_plans(plans: list[tuple[str, str]], stars: list[tuple[int, str]] | None = None) -> InlineKeyboardMarkup | None:
-    """plans: (plan id hex, button text); stars: (amount, button text) — Stars bought with the card."""
-    star_buttons = [
-        InlineKeyboardButton(text=label, callback_data=f"card:stars:{amount}") for amount, label in stars or []
-    ]
+def card_plans(plans: list[tuple[str, str]], *, stars: bool = False) -> InlineKeyboardMarkup | None:
+    """plans: (plan id hex, button text). Stars bought with the card hide behind one «⭐ Stars sotib olish»
+    button, so the Premium plans are not lost among the packages."""
     return inline(
         *[[InlineKeyboardButton(text=label, callback_data=f"card:plan:{plan_id}")] for plan_id, label in plans],
-        *[star_buttons[index : index + 2] for index in range(0, len(star_buttons), 2)],
+        [InlineKeyboardButton(text=texts.BTN_BUY_STARS, callback_data="card:starsmenu")] if stars else [],
         [InlineKeyboardButton(text=texts.BTN_BACK_TO_METHODS, callback_data="prem:open")],
+    )
+
+
+def card_stars_menu(stars: list[tuple[int, str]]) -> InlineKeyboardMarkup | None:
+    """stars: (amount, button text) — the packages, two in a row, and back to the card menu."""
+    buttons = [InlineKeyboardButton(text=label, callback_data=f"card:stars:{amount}") for amount, label in stars]
+    return inline(
+        *[buttons[index : index + 2] for index in range(0, len(buttons), 2)],
+        [InlineKeyboardButton(text=texts.BTN_BACK, callback_data="card:back")],
     )
 
 

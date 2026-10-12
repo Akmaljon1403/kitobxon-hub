@@ -43,6 +43,8 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             postgresql_where=sql_text("status = 'PENDING'"),
         ),
         Index("ix_notifications_user_id_created_at", "user_id", "created_at"),
+        # Copies of one admin request are found together to show who acted (services/copies).
+        Index("ix_notifications_sync_key", "sync_key", postgresql_where=sql_text("sync_key IS NOT NULL")),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
@@ -62,3 +64,6 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Prevents duplicates, e.g. "event_reminder:<event id>:<user id>:60".
     dedup_key: Mapped[str | None] = mapped_column(String(160), unique=True)
     telegram_message_id: Mapped[int | None] = mapped_column(BigInteger)
+    # The request this message is a copy of (``ticket:<id>``, ``card:<id>``, …): when one admin acts, every
+    # copy shows it (services/copies.py).
+    sync_key: Mapped[str | None] = mapped_column(String(80))

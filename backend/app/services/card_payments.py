@@ -288,7 +288,9 @@ async def _tell_admins(session: AsyncSession, payment: CardPayment, user: User, 
         text=text,
         dedup_prefix=f"card-payment:{payment.id}",
         members=super_admins(),
+        sync=f"card:{payment.id}",
         payload={
+            "base": text,
             "buttons": [
                 {"text": "🧾 Chekni ko'rish", "callback": f"cp:view:{payment.id.hex}"},
                 {
@@ -297,7 +299,7 @@ async def _tell_admins(session: AsyncSession, payment: CardPayment, user: User, 
                         {"text": "❌ Rad etish", "callback": f"cp:no:{payment.id.hex}"},
                     ]
                 },
-            ]
+            ],
         },
         priority=2,
     )
@@ -378,7 +380,8 @@ async def _order_stars(session: AsyncSession, payment: CardPayment, boss_id: uui
         text=text,
         dedup_prefix=f"stars-order:{payment.id}:{_stamp(payment)}",
         members=select(User.id).where(User.id.in_(ids)),
-        payload={"buttons": [{"text": "✅ Stars yuborildi", "callback": f"cp:sent:{payment.id.hex}"}]},
+        sync=f"stars:{payment.id}",
+        payload={"base": text, "buttons": [{"text": "✅ Stars yuborildi", "callback": f"cp:sent:{payment.id.hex}"}]},
         priority=1,
     )
 
@@ -420,6 +423,34 @@ async def _member_message(session: AsyncSession, user_id: uuid.UUID, message: st
             payload={"buttons": [{"text": "💎 Premium", "app_route": "premium"}]},
             priority=2,
         )
+
+
+async def _settle_card(session: AsyncSession, payment: CardPayment, status: str) -> None:
+    """Every super admin's copy of the receipt shows the decision (whoever took it, wherever)."""
+    from app.services import copies
+
+    hexed = payment.id.hex
+    if payment.status == CardPaymentStatus.PENDING:
+        buttons: list[dict[str, Any]] = [
+            {"text": "🧾 Chekni ko'rish", "callback": f"cp:view:{hexed}"},
+            {
+                "row": [
+                    {"text": "✅ Tasdiqlash", "callback": f"cp:ok:{hexed}"},
+                    {"text": "❌ Rad etish", "callback": f"cp:no:{hexed}"},
+                ]
+            },
+        ]
+    else:
+        buttons = [{"text": "🧾 Chekni ko'rish", "callback": f"cp:view:{hexed}"}]
+        if (
+            payment.kind == PaymentKind.STARS
+            and payment.status == CardPaymentStatus.APPROVED
+            and not payment.delivered_at
+        ):
+            buttons.append({"text": "✅ Stars yuborildi", "callback": f"cp:sent:{hexed}"})
+        if payment.delivered_at is None:
+            buttons.append({"text": "↩️ Qaytarish", "callback": f"cp:undo:{hexed}"})
+    await copies.settle(session, f"card:{payment.id}", status, buttons=buttons)
 
 
 def _stamp(payment: CardPayment) -> int:
@@ -479,6 +510,12 @@ async def approve(
     await _member_message(session, payment.user_id, message, f"card-payment:{payment.id}:approved:{_stamp(payment)}")
     if payment.kind == PaymentKind.STARS:
         await _order_stars(session, payment, actor_id)
+    from app.services import copies
+
+    status = f"✅ <b>Tasdiqlandi</b> — {await _name(session, actor_id)}, {copies.stamp()}"
+    if payment.kind == PaymentKind.STARS:
+        status += f"\n⭐ Yuborish topshirildi: {await stars_senders_text(session)}"
+    await _settle_card(session, payment, status)
     await session.commit()
     if announce:
         details = [f"Qaror: {await _name(session, actor_id)}"]
@@ -530,6 +567,11 @@ async def mark_delivered(
         "ko'rasiz. Endi Premium'ni ham bir bosishda olishingiz mumkin. Rahmat!",
         f"card-payment:{payment.id}:delivered",
     )
+    from app.services import copies
+
+    done = f"⭐ <b>Stars yuborildi</b> — {await _name(session, actor_id)}, {copies.stamp()}"
+    await copies.settle(session, f"stars:{payment.id}", done, buttons=[])
+    await _settle_card(session, payment, f"✅ Tasdiqlangan · {done}")
     await session.commit()
     if announce:
         sender = await _name(session, actor_id)
@@ -562,6 +604,14 @@ async def reject(
         payment.user_id,
         f"To'lovingiz tasdiqlanmadi. Sabab: {payment.reject_reason}\nSavol bo'lsa — botda /paysupport.",
         f"card-payment:{payment.id}:rejected:{_stamp(payment)}",
+    )
+    from app.services import copies
+
+    await _settle_card(
+        session,
+        payment,
+        f"❌ <b>Rad etildi</b> — {await _name(session, actor_id)}, {copies.stamp()}\n"
+        f"Sabab: {_e(payment.reject_reason or '—')}",
     )
     await session.commit()
     if announce:
@@ -624,6 +674,16 @@ async def undo(
     )
     if previous == CardPaymentStatus.APPROVED and payment.kind == PaymentKind.STARS:
         await _cancel_stars_order(session, payment)
+        from app.services import copies
+
+        await copies.settle(session, f"stars:{payment.id}", "↩️ <b>Buyurtma qaytarildi</b> — yubormang", buttons=[])
+    from app.services import copies
+
+    await _settle_card(
+        session,
+        payment,
+        f"↩️ <b>Qaror qaytarildi</b> — {await _name(session, actor_id)}, {copies.stamp()}: qayta ko'rib chiqing",
+    )
     await session.commit()
     if announce:
         admin = await _name(session, actor_id)
