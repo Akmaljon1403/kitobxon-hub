@@ -28,7 +28,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import text_store
-from app.core.errors import BadRequestError, NotFoundError
+from app.core.errors import BadRequestError, ForbiddenError, NotFoundError
 from app.models import NotificationTemplate, TextOverride, User
 from app.services.audit import record_audit
 
@@ -331,9 +331,30 @@ def validate(key: str, variants: list[str]) -> tuple[dict[str, Any], list[str]]:
     return item, clean
 
 
+MONEY_GROUPS = ("💳", "💎")
+MONEY_KEYS = ("CARD_", "PAY", "PREMIUM", "DONAT", "STARS")
+
+
+def money_text(key: str) -> bool:
+    """Texts about payments (card numbers, prices, how to pay): only the super admins rewrite them — a changed
+    instruction could send members' money elsewhere."""
+    if key.startswith(MONEY_KEYS):
+        return True
+    item = next((item for item in _bot_texts() if item["key"] == key), None)
+    return bool(item and item["group"].startswith(MONEY_GROUPS))
+
+
 async def save(
-    session: AsyncSession, *, actor_id: uuid.UUID, key: str, variants: list[str], rotate: bool = True
+    session: AsyncSession,
+    *,
+    actor_id: uuid.UUID,
+    key: str,
+    variants: list[str],
+    rotate: bool = True,
+    super_admin: bool = True,
 ) -> None:
+    if money_text(key) and not super_admin:
+        raise ForbiddenError("OWNER_ONLY_TEXT", "To'lovga oid matnlarni faqat bosh admin o'zgartiradi.")
     _, clean = validate(key, variants)
     before = await session.get(TextOverride, key)
     previous = list(before.variants) if before else None
@@ -352,6 +373,12 @@ async def save(
         before={"key": key, "variants": previous},
         after={"key": key, "variants": clean, "rotate": rotate},
     )
+    if not super_admin:  # the owners see every change of the bot's words made by someone else
+        from app.services import security_alerts
+
+        await security_alerts.rights_changed(
+            session, actor_id=actor_id, user_id=actor_id, what=f"bot matnini o'zgartirdi: {key}"
+        )
     await session.commit()
     await text_store.refresh(session, force=True)
 

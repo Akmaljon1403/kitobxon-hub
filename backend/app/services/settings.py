@@ -523,6 +523,15 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)],
         "Chat pastidagi ilovani ochadigan tugma matni",
     ),
+    # ---- Protection from being reported as spam ----
+    SettingDefinition(
+        "notifications.daily_limit",
+        6,
+        Annotated[int, Field(ge=0, le=50)],
+        "Bitta a'zoga bir kunda ko'pi bilan nechta ommaviy xabar (yangiliklar, eslatmalar, kun iqtibosi, reyting...) "
+        "boradi. Shaxsiy va muhim xabarlar (javoblar, to'lovlar, davomat, test natijasi) bunga kirmaydi. Ko'p xabar "
+        "a'zolarni bezdiradi va Telegram botni spam deb bloklashi mumkin (0 — cheklovsiz)",
+    ),
     # ---- «📝 Matnlar»: the bot's words ----
     SettingDefinition(
         "texts.rotate",
@@ -542,6 +551,22 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
 )
 
 SETTINGS_BY_KEY: dict[str, SettingDefinition] = {definition.key: definition for definition in SETTING_DEFINITIONS}
+
+# Settings that move money or speak in the club's name: only the super admins change them, and every change is
+# reported to all of them at once (a card number swapped by someone else would send members' money elsewhere).
+OWNER_ONLY = (
+    "payments.",
+    "subscription.",
+    "channel.chat_id",
+    "certificates.signer",
+    "certificates.seal",
+    "org.",
+    "bot.",
+)
+
+
+def owner_only(key: str) -> bool:
+    return key.startswith(OWNER_ONLY)
 
 
 def get_definition(key: str) -> SettingDefinition:
@@ -628,6 +653,10 @@ async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_i
         before={"value": before},
         after={"value": validated},
     )
+    if owner_only(key) and before != validated:
+        from app.services import security_alerts
+
+        await security_alerts.setting_changed(session, key=key, actor_id=actor_id, before=before, after=validated)
     await session.commit()
     forget_cache()
     if key.startswith("subscription.") or key == "channel.chat_id":

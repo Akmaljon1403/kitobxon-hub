@@ -16,7 +16,7 @@ from app.core.errors import BadRequestError, ConflictError, ForbiddenError, NotF
 from app.models import Role, RolePermission, User, UserPermission, UserRole
 from app.models.enums import SystemRole, UserStatus
 from app.security.permissions import Perm
-from app.services import bot_profile
+from app.services import bot_profile, security_alerts
 from app.services.audit import record_audit
 from app.services.rbac import ADMIN_ROLES, get_effective_permissions, get_role_by_code, get_role_codes
 
@@ -127,6 +127,9 @@ async def appoint_admin(
         before={"roles": sorted(current_roles)},
         after={"roles": sorted(role.code for role in roles), "permissions": codes},
     )
+    await security_alerts.rights_changed(
+        session, actor_id=actor_id, user_id=user_id, what=f"admin qilindi ({len(codes)} ta huquq)"
+    )
     await session.commit()
     await bot_profile.refresh_person(session, user_id)
     return await get_admin_view(session, user_id)
@@ -147,6 +150,12 @@ async def set_admin_permissions(
         before={"permissions": before.direct_permissions},
         after={"permissions": codes},
     )
+    added = sorted(set(codes) - set(before.direct_permissions))
+    removed = sorted(set(before.direct_permissions) - set(codes))
+    if added or removed:
+        what = "huquqlari o'zgartirildi" + (f"; qo'shildi: {', '.join(added)}" if added else "")
+        what += f"; olindi: {', '.join(removed)}" if removed else ""
+        await security_alerts.rights_changed(session, actor_id=actor_id, user_id=user_id, what=what)
     await session.commit()
     await bot_profile.refresh_person(session, user_id)
     return await get_admin_view(session, user_id)
@@ -178,6 +187,10 @@ async def set_admin_roles(
         before={"roles": before.roles},
         after={"roles": sorted(new_codes)},
     )
+    if set(before.roles) != new_codes:
+        await security_alerts.rights_changed(
+            session, actor_id=actor_id, user_id=user_id, what=f"rollari: {', '.join(sorted(new_codes))}"
+        )
     await session.commit()
     await bot_profile.refresh_person(session, user_id)
     return await get_admin_view(session, user_id)
@@ -209,6 +222,7 @@ async def dismiss_admin(session: AsyncSession, *, actor_id: uuid.UUID, user_id: 
         after={"roles": [], "permissions": []},
         reason=reason,
     )
+    await security_alerts.rights_changed(session, actor_id=actor_id, user_id=user_id, what="adminlikdan olindi")
     await session.commit()
     await bot_profile.refresh_person(session, user_id)
 

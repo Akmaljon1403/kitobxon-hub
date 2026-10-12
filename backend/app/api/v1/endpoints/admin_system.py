@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from app.api.deps import CurrentAdminDep, CurrentUser, DbSession, require_permissions
+from app.core.errors import ForbiddenError
 from app.schemas.settings import SettingOut, SettingUpdateIn
 from app.security.permissions import Perm
 from app.services import settings as settings_service
@@ -42,6 +43,11 @@ async def update_setting(
     db: DbSession,
 ) -> SettingOut:
     definition = settings_service.get_definition(key)
+    if settings_service.owner_only(key) and "SUPER_ADMIN" not in current.roles:
+        raise ForbiddenError(
+            "OWNER_ONLY_SETTING",
+            "Bu sozlamani faqat bosh admin o'zgartiradi (to'lov, kanal, tashkilot va imzo ma'lumotlari).",
+        )
     value = await settings_service.update_setting(db, key=key, value=payload.value, actor_id=current.user.id)
     return SettingOut(
         key=definition.key,

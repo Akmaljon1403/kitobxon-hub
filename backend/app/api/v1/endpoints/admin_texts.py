@@ -64,7 +64,14 @@ async def list_texts(_: Editor, db: DbSession) -> TextsOut:
 
 @router.put("/{key}", response_model=dict[str, bool], summary="Save the owner's wording (one or more variants)")
 async def save_text(key: str, payload: TextIn, current: Editor, db: DbSession) -> dict[str, bool]:
-    await texts_admin.save(db, actor_id=current.user.id, key=key, variants=payload.variants, rotate=payload.rotate)
+    await texts_admin.save(
+        db,
+        actor_id=current.user.id,
+        key=key,
+        variants=payload.variants,
+        rotate=payload.rotate,
+        super_admin="SUPER_ADMIN" in current.roles,
+    )
     return {"saved": True}
 
 
@@ -108,7 +115,7 @@ async def export_texts(_: Editor, db: DbSession) -> dict[str, Any]:
 
 
 @router.post("/import/all", response_model=dict[str, Any], summary="Bring saved edits back")
-async def import_texts(payload: dict[str, Any], current: Editor, db: DbSession) -> dict[str, Any]:
+async def import_texts(payload: dict[str, Any], current: SuperAdminDep, db: DbSession) -> dict[str, Any]:
     return await texts_admin.import_(db, actor_id=current.user.id, data=payload)
 
 

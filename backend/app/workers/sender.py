@@ -18,7 +18,7 @@ from typing import Any
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramRetryAfter
 from aiogram.types import BufferedInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import get_settings
@@ -88,6 +88,19 @@ QUIET_TYPES = (
     NotificationType.ACHIEVEMENT_UNLOCKED,
     NotificationType.CERTIFICATE,
     NotificationType.REWARD,
+    NotificationType.FEEDBACK_REQUEST,
+)
+
+
+# Club-wide messages counted against ``notifications.daily_limit`` (personal and urgent ones never are).
+MASS_TYPES = (
+    NotificationType.ANNOUNCEMENT,
+    NotificationType.NEW_BOOK,
+    NotificationType.EVENT_CREATED,
+    NotificationType.DIGEST,
+    NotificationType.RANKING_UPDATE,
+    NotificationType.QUOTE_OF_DAY,
+    NotificationType.READING_REMINDER,
     NotificationType.FEEDBACK_REQUEST,
 )
 
@@ -205,6 +218,7 @@ async def send_due_notifications(
         )
         now = datetime.now(UTC)
         staff_only = await _licence_staff(session, set(users))
+        daily_limit, mass_today = await _mass_today(session, set(users), now)
         for index, notification in enumerate(batch):
             user = users.get(notification.user_id)
             type_ = NotificationType(notification.type)
@@ -228,6 +242,11 @@ async def send_due_notifications(
                 report.skipped += 1
             elif not is_critical and stale_after and notification.created_at < now - stale_after:
                 _finish(notification, NotificationStatus.SKIPPED, "outdated")
+                report.skipped += 1
+            elif _over_daily_limit(notification, type_, is_critical, daily_limit, mass_today):
+                # Too many club-wide messages today: members who feel spammed report the bot, and Telegram
+                # may limit it. Personal and important messages are never held back.
+                _finish(notification, NotificationStatus.SKIPPED, "daily limit of mass messages")
                 report.skipped += 1
             else:
                 document = await _document(session, notification)
@@ -315,6 +334,39 @@ async def _edit(bot: Bot, notification: Notification, user: User, report: SendRe
     _finish(notification, NotificationStatus.SENT)
     report.sent += 1
     return None
+
+
+async def _mass_today(session: AsyncSession, user_ids: set[Any], now: datetime) -> tuple[int, dict[Any, int]]:
+    """(``notifications.daily_limit``, club-wide messages each member got in the last 24 hours)."""
+    from app.services.settings import get_setting
+
+    limit = int(await get_setting(session, "notifications.daily_limit") or 0)
+    if not limit or not user_ids:
+        return limit, {}
+    rows = await session.execute(
+        select(Notification.user_id, func.count())
+        .where(
+            Notification.user_id.in_(user_ids),
+            Notification.status == NotificationStatus.SENT,
+            Notification.type.in_(MASS_TYPES),
+            Notification.sent_at >= now - timedelta(hours=24),
+        )
+        .group_by(Notification.user_id)
+    )
+    return limit, {user_id: int(count) for user_id, count in rows}
+
+
+def _over_daily_limit(
+    notification: Notification, type_: NotificationType, critical: bool, limit: int, counts: dict[Any, int]
+) -> bool:
+    """A club-wide message beyond today's limit for this member (counted as it goes out)."""
+    if not limit or critical or type_ not in MASS_TYPES or (notification.payload or {}).get("edit_of"):
+        return False
+    sent = counts.get(notification.user_id, 0)
+    if sent >= limit:
+        return True
+    counts[notification.user_id] = sent + 1
+    return False
 
 
 # A picture sent to many members is uploaded once: Telegram's file id is reused after the first send.

@@ -285,6 +285,9 @@ ADMIN_LINK = (
     "Havola bir marta ishlaydi va {minutes} daqiqada eskiradi. Uni hech kimga yubormang."
 )
 ADMIN_ONLY = "Bu bo'lim faqat klub administratorlari uchun."
+ADMIN_LOGGED_OUT = (
+    "🔒 Admin paneldagi barcha seanslaringiz yopildi. Qayta kirish uchun — «🛠 Boshqaruv» → «🔐 Admin panelga kirish»."
+)
 ADMIN_URL_NOT_CONFIGURED = "Admin panel manzili (PUBLIC_BASE_URL) hali sozlanmagan."
 
 # ---- Misc ----
