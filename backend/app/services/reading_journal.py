@@ -401,7 +401,11 @@ async def save_reflection(
     saved.main_idea, saved.favorite_moment, saved.apply_in_life = answers
     await session.flush()
     points = 0
-    if not saved.points_awarded:
+    # Points for a club book, or for a book of one's own that the diary shows was really read.
+    really_read = item.book_id is not None or bool(
+        await session.scalar(select(func.count()).select_from(ReadingLog).where(ReadingLog.shelf_item_id == item.id))
+    )
+    if not saved.points_awarded and really_read:
         value = int(await get_setting(session, "reading.reflection_points"))
         limit = int(await get_setting(session, "reading.reflection_monthly_limit"))
         given = await session.scalar(

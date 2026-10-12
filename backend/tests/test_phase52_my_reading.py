@@ -154,6 +154,15 @@ async def test_three_questions_after_a_book(client: httpx.AsyncClient, db: Async
     }
     early = await client.put(f"/api/v1/me/shelf/{first['id']}/reflection", json=answers, headers=headers)
     assert early.status_code == 409
+
+    # A book of one's own that was never read (no diary) earns nothing — answers are still kept.
+    unread = (
+        await client.post("/api/v1/me/shelf", json={"title": "Bo'sh", "status": "FINISHED"}, headers=headers)
+    ).json()
+    nothing = await client.put(f"/api/v1/me/shelf/{unread['id']}/reflection", json=answers, headers=headers)
+    assert nothing.status_code == 200 and nothing.json()["points"] == 0
+
+    await client.post(f"/api/v1/me/shelf/{first['id']}/logs", json={"pages": 40}, headers=headers)
     await client.patch(f"/api/v1/me/shelf/{first['id']}", json={"status": "FINISHED"}, headers=headers)
     short = await client.put(
         f"/api/v1/me/shelf/{first['id']}/reflection", json={**answers, "main_idea": "Yaxshi"}, headers=headers
@@ -173,6 +182,7 @@ async def test_three_questions_after_a_book(client: httpx.AsyncClient, db: Async
     second = (
         await client.post("/api/v1/me/shelf", json={"title": "Kecha va kunduz", "status": "FINISHED"}, headers=headers)
     ).json()
+    await client.post(f"/api/v1/me/shelf/{second['id']}/logs", json={"pages": 30}, headers=headers)
     capped = await client.put(f"/api/v1/me/shelf/{second['id']}/reflection", json=answers, headers=headers)
     assert capped.json()["points"] == 0  # this month's limit is reached
     detail = (await client.get(f"/api/v1/me/shelf/{second['id']}", headers=headers)).json()
@@ -337,3 +347,28 @@ async def test_the_bot_diary_shelf_and_card(db: AsyncSession) -> None:
     await harness.send("/kartam")
     photo = next(request for request in reversed(harness.session.requests) if isinstance(request, SendPhoto))
     assert "Kitobxonlik kartangiz" in photo.caption
+
+
+async def test_unread_own_books_do_not_finish_a_mission(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    member = await create_user(db, telegram_id=next(_ids))
+    await db.commit()
+    headers = member_headers(member)
+    books = next(
+        m for m in (await client.get("/api/v1/me/missions", headers=headers)).json() if m["metric"] == "BOOKS_FINISHED"
+    )
+    await client.post(f"/api/v1/me/missions/{books['id']}/take", headers=headers)
+    for title in ("Bir", "Ikki"):
+        await client.post("/api/v1/me/shelf", json={"title": title, "status": "FINISHED"}, headers=headers)
+    mine = next(m for m in (await client.get("/api/v1/me/missions", headers=headers)).json() if m["id"] == books["id"])
+    assert (mine["status"], mine["progress"]) == ("ACTIVE", 0)  # nothing was read
+
+    club = await create_book(db, title="Klub kitobi", status=BookStatus.ACTIVE)
+    await db.commit()
+    own = (
+        await client.post("/api/v1/me/shelf", json={"title": "O'qilgan", "status": "READING"}, headers=headers)
+    ).json()
+    await client.post(f"/api/v1/me/shelf/{own['id']}/logs", json={"pages": 25}, headers=headers)
+    await client.patch(f"/api/v1/me/shelf/{own['id']}", json={"status": "FINISHED"}, headers=headers)
+    await client.post("/api/v1/me/shelf", json={"book_id": str(club.id), "status": "FINISHED"}, headers=headers)
+    done = next(m for m in (await client.get("/api/v1/me/missions", headers=headers)).json() if m["id"] == books["id"])
+    assert (done["status"], done["progress"]) == ("COMPLETED", 2)

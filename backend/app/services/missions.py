@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ConflictError, NotFoundError
@@ -153,6 +153,8 @@ async def count(
             return len(days)
         return streaks(days, last)[1]
     if metric == MissionMetric.BOOKS_FINISHED:
+        # A club book, or a book of one's own that the diary shows was really read.
+        read_in_diary = exists().where(ReadingLog.shelf_item_id == ShelfItem.id)
         query = (
             select(func.count())
             .select_from(ShelfItem)
@@ -161,6 +163,7 @@ async def count(
                 ShelfItem.status == ShelfStatus.FINISHED,
                 ShelfItem.finished_at >= start,
                 ShelfItem.finished_at <= end,
+                or_(ShelfItem.book_id.is_not(None), read_in_diary),
             )
         )
     elif metric == MissionMetric.EVENTS:
