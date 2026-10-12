@@ -13,6 +13,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { route: '', icon: '📊', label: 'Bosh sahifa', visible: () => true },
+  { route: 'control', icon: '🛰', label: 'Nazorat markazi', visible: (_, isSuper) => isSuper },
   { route: 'analytics', icon: '📈', label: 'Tahlillar', visible: (can) => can('ANALYTICS_VIEW') },
   { route: 'members', icon: '👥', label: "A'zolar", visible: (can) => can('USER_VIEW') },
   { route: 'books', icon: '📚', label: 'Kitoblar', visible: (can) => can('BOOK_VIEW') },
@@ -39,6 +40,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'channel', icon: '📣', label: 'Telegram kanal', visible: (can) => can('NOTIFICATION_SEND') },
   { route: 'faculties', icon: '🏛', label: 'Fakultetlar', visible: () => true },
   { route: 'settings', icon: '⚙️', label: 'Sozlamalar', visible: () => true },
+  { route: 'texts', icon: '📝', label: 'Matnlar (bot va kanal)', visible: (can) => can('TEXTS_MANAGE') },
   { route: 'features', icon: '🧩', label: 'Imkoniyatlar', visible: (_, isSuper) => isSuper },
   { route: 'premium', icon: '💎', label: 'Premium', visible: (_, isSuper) => isSuper },
   { route: 'stars', icon: '⭐', label: 'Stars buyurtmalari', visible: (can) => can('STARS_SEND') },

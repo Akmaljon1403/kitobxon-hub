@@ -508,6 +508,14 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)],
         "Chat pastidagi ilovani ochadigan tugma matni",
     ),
+    # ---- «📝 Matnlar»: the bot's words ----
+    SettingDefinition(
+        "texts.rotate",
+        True,
+        bool,
+        "Bir xil xabar qayta-qayta takrorlanmasin: bir nechta varianti bor xabarlar (salomlashish, eslatmalar, "
+        "tabriklar, kanal postlari) navbatma-navbat yuboriladi. O'chirilsa — doim birinchi varianti",
+    ),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",

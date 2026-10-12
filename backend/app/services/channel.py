@@ -345,7 +345,30 @@ BOOK_ENDINGS = (
     "Birga o'qiymiz, birga muhokama qilamiz — marra hammamizniki! 💪",
     "Kitob — eng sodiq do'st. Bu do'st bilan tanishishni kechiktirmang 📖",
     "Sahifalar sizni kutyapti. Birinchi qadam — bugun! 🚀",
+    "Kuniga 20 daqiqa — va kitob tugaydi. Boshladikmi? 📚",
+    "Har bir sahifa — yangi fikr. O'qing, belgilang, ball to'plang 🏆",
+    "O'qiganlaringizni tadbirda muhokama qilamiz — fikringizni tayyorlab qo'ying ☕",
 )
+
+
+# The phrase lists the owner can rewrite in the Admin Panel («📝 Matnlar» → «📣 Kanal postlari»):
+# (title, the built-in phrases, what each phrase may contain).
+EDITABLE: dict[str, tuple[str, tuple[str, ...], str]] = {}
+
+
+def _editable(key: str, title: str, phrases: tuple[str, ...], hint: str = "") -> None:
+    EDITABLE[key] = (title, phrases, hint)
+
+
+def phrases(key: str) -> tuple[str, ...]:
+    """The phrases in use: the owner's own, or the built-in ones."""
+    from app.bot import text_store
+
+    return text_store.options(key, EDITABLE[key][1])
+
+
+_editable("channel.book_hooks", "Yangi kitob posti — boshlanish jumlasi", BOOK_HOOKS)
+_editable("channel.book_endings", "Yangi kitob posti — yakunlovchi jumla", BOOK_ENDINGS)
 
 
 def book_button(book: Book) -> dict[str, Any]:
@@ -358,7 +381,7 @@ async def book_announced(session: AsyncSession, book: Book) -> bool:
     if book.status != BookStatus.ACTIVE or book.deleted_at is not None:
         return False
     key = f"book:{book.id}"
-    lines = [_pick(BOOK_HOOKS, key), "", f"📖 <b>«{_e(book.title)}»</b>", f"✍️ {_e(book.author)}"]
+    lines = [_pick(phrases("channel.book_hooks"), key), "", f"📖 <b>«{_e(book.title)}»</b>", f"✍️ {_e(book.author)}"]
     if book.description:
         lines += ["", _e(book.description.strip()[:450])]
     quote = await literary.book_line(session, book.id, key)
@@ -384,7 +407,7 @@ async def book_announced(session: AsyncSession, book: Book) -> bool:
         "🏅 O'qib tugatganlarga — ball, testda g'oliblarga — sertifikat.",
         "👇 «📖 O'qiyman» tugmasini bosing — eslatma va maslahatlar bilan birga marraga yetamiz!",
         "",
-        _pick(BOOK_ENDINGS, key + ":end"),
+        _pick(phrases("channel.book_endings"), key + ":end"),
     ]
     return await queue(
         session,
@@ -563,12 +586,38 @@ NUDGES_END = (
     "Kuniga 30–40 bet — va kitob tugaydi. Tugatganlar botda belgilab, ball oladi 🏅",
     "☕ <b>Bugun kitobga 20 daqiqa ajrating</b>\n\n«{title}» sizni kutyapti. Muddat: {deadline}.\n"
     "Kim allaqachon tugatdi? Botda belgilang ✅",
+    "🏁 <b>Marra yaqin!</b>\n\n«{title}» — {author}\n{days} kun qoldi ({deadline} gacha).\n"
+    "Tugatganlar uchun test va ball tayyor 🎯",
+    "📚 <b>Oxirgi boblar — eng qiziqlari!</b>\n\n«{title}» — {author}\nMuddat: {deadline} ({days} kun).\n"
+    "Bugun bir bob — ertaga yana bittasi 💪",
+    "🔔 <b>Eslatma: «{title}»</b>\n\n{days} kundan so'ng ({deadline}) muhokama vaqti. Kitobni tugatib "
+    "qo'ying — botda «O'qib tugatdim» deb belgilang ✅",
 )
 NUDGES_MIDDLE = (
     "📚 <b>Yarmiga yetdingizmi?</b>\n\n«{title}» — {author}\n"
     "O'qish muddatining yarmi o'tdi. Qaysi qahramon sizga ko'proq yoqyapti? 🤔",
     "🔖 <b>Kitobxonlar, qayerga yetdik?</b>\n\n«{title}» ni o'qish davom etmoqda. Muddat: {deadline}.\n"
     "Hali boshlamagan bo'lsangiz ham kech emas! 📖",
+    "☕ <b>Yo'lning yarmi!</b>\n\n«{title}» — {author}\nMuddat: {deadline}. Eng yoqqan jumlangizni "
+    "«Iqtiboslar sandig'i»ga saqlang 💬",
+    "📖 <b>«{title}» qanday ketyapti?</b>\n\nMuddat: {deadline}. Mutolaa kundaligiga betlarni yozib "
+    "boring — seriyangiz o'ssin 🔥",
+    "🤔 <b>Savol: «{title}»da sizni nima hayratga soldi?</b>\n\n{author} asarini o'qish davom etmoqda "
+    "({deadline} gacha). Fikrlaringizni tadbirda aytasiz!",
+)
+
+
+_editable(
+    "channel.nudges_end",
+    "Kitob muddati tugashiga 1–3 kun qolganda",
+    NUDGES_END,
+    "{title} — kitob, {author} — muallif, {deadline} — muddat, {days} — qolgan kunlar",
+)
+_editable(
+    "channel.nudges_middle",
+    "Kitob o'qish muddatining yarmida",
+    NUDGES_MIDDLE,
+    "{title} — kitob, {author} — muallif, {deadline} — muddat, {days} — qolgan kunlar",
 )
 
 
@@ -595,7 +644,7 @@ async def _reading_nudges(session: AsyncSession, now: datetime) -> int:
             "days": days_left,
         }
         if 1 <= days_left <= 3:
-            text = _pick(NUDGES_END, f"nudge:{book.id}:end").format(**values)
+            text = _pick(phrases("channel.nudges_end"), f"nudge:{book.id}:end").format(**values)
             queued += await queue(
                 session, kind=ChannelPostKind.READING_NUDGE, text=text, dedup_key=f"nudge:{book.id}:end"
             )
@@ -604,7 +653,7 @@ async def _reading_nudges(session: AsyncSession, now: datetime) -> int:
         if start is not None and (book.deadline - start).days >= 10:
             middle = start + (book.deadline - start) / 2
             if today >= middle and days_left > 3:
-                text = _pick(NUDGES_MIDDLE, f"nudge:{book.id}:middle").format(**values)
+                text = _pick(phrases("channel.nudges_middle"), f"nudge:{book.id}:middle").format(**values)
                 queued += await queue(
                     session, kind=ChannelPostKind.READING_NUDGE, text=text, dedup_key=f"nudge:{book.id}:middle"
                 )
@@ -620,7 +669,20 @@ INVITES = (
     "{members} nafar talaba allaqachon biz bilan. Navbat sizda 👇",
     "🪪 <b>O'z Kitobxon pasportingizni oling!</b>\n\nBotda ro'yxatdan o'ting — rasmli a'zolik kartasi, "
     "natijalaringiz va yutuqlaringiz bir joyda.\nTadbirlar, testlar, reyting va sovg'alar sizni kutmoqda 👇",
+    "📖 <b>Kitob o'qiysizmi? Unda siz bizniki!</b>\n\nJavoningiz, mutolaa kundaligingiz, iqtiboslar "
+    "sandig'ingiz va shaxsiy missiyalaringiz — barchasi bitta botda.\n{members} kitobxon allaqachon shu yerda 👇",
+    "🏆 <b>Bu hafta kim yetakchi bo'ladi?</b>\n\nTadbirlarga keling, testlarni yeching, kitoblarni o'qib "
+    "tugating — har biri ball. Eng faollar sertifikat va sovg'a oladi 🎁\n{members} nafar a'zo kutmoqda 👇",
+    "💬 <b>Fikringiz bilan bo'lishing!</b>\n\nKlub a'zolari iqtibos va taassurotlarini yozadi, eng "
+    "yaxshilari chiroyli kartochka bo'lib kanalda chiqadi. {members} kitobxon bilan birga bo'ling 👇",
 )
+
+
+_editable("channel.invites", "Haftalik taklif posti (dushanba)", INVITES, "{members} — a'zolar soni")
+
+
+def _pick_week(options: tuple[str, ...], week: int) -> str:
+    return options[week % len(options)]
 
 
 async def _weekly_invite(session: AsyncSession, now: datetime) -> int:
@@ -639,7 +701,7 @@ async def _weekly_invite(session: AsyncSession, now: datetime) -> int:
         await queue(
             session,
             kind=ChannelPostKind.INVITE,
-            text=INVITES[week % len(INVITES)].format(members=members),
+            text=_pick_week(phrases("channel.invites"), week).format(members=members),
             dedup_key=key,
         )
     )

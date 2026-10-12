@@ -5,6 +5,9 @@ Style: short sentences, one idea per line, "siz" form, the same names as in the 
 
 from __future__ import annotations
 
+import sys as _sys
+import types as _types
+
 # ---- Main menu (the same names are used in the Mini App) ----
 BTN_BOOKS = "📚 Kitoblar"
 BTN_EVENTS = "📅 Tadbirlar"
@@ -812,3 +815,23 @@ CHAT_ID_HIDDEN = (
     "🆔 Bu forward'da kanal ma'lumoti yashirilgan. Kanaldan postni boshqa forward qiling yoki botni kanalga "
     "administrator qiling — bot o'zi so'raydi."
 )
+
+
+# ---- Live wording -------------------------------------------------------------------------------------
+# The owner can rewrite any text above in the Admin Panel («📝 Matnlar»), and many have several variants so
+# members do not read the same sentence every time (``text_store``). Button captions stay as they are: the
+# bot recognises the menu by them.
+FIXED_PREFIXES = ("BTN_",)
+
+
+class _LiveTexts(_types.ModuleType):
+    def __getattribute__(self, name: str) -> object:
+        value = _types.ModuleType.__getattribute__(self, name)
+        if type(value) is str and name[:1].isupper() and not name.startswith(FIXED_PREFIXES):
+            from app.bot import text_store
+
+            return text_store.pick(name, value)
+        return value
+
+
+_sys.modules[__name__].__class__ = _LiveTexts

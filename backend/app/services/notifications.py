@@ -89,13 +89,21 @@ async def render(session: AsyncSession, type_: NotificationType, **values: Any) 
 
     Values are HTML-escaped because the bot sends messages in HTML mode.
     """
+    from app.bot import text_store
+
     template = await session.scalar(select(NotificationTemplate).where(NotificationTemplate.type == type_))
     if template is None or not template.is_active:
         return None
+    await text_store.refresh(session)
     safe = _Values(
         str, {key: html.escape(str(value), quote=False) if value is not None else "—" for key, value in values.items()}
     )
-    return template.body.format_map(safe).strip()
+    # the owner's wording from «📝 Matnlar», or one of the built-in variants (so it does not repeat)
+    body = text_store.pick(f"notify.{type_.value}", template.body)
+    try:
+        return body.format_map(safe).strip()
+    except (ValueError, IndexError):  # a broken edit must not stop the message: the template as it was
+        return template.body.format_map(safe).strip()
 
 
 def celebrate(payload: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -30,6 +30,7 @@ const GROUP_TITLES: Record<string, string> = {
   academic: "🎓 O'quv yili, kurslar, bitiruvchilar",
   membership: "🚪 A'zolikdan chiqish",
   bot: '🤖 Bot',
+  texts: '📝 Matnlar',
 }
 
 function toText(setting: Setting, value: unknown): string {

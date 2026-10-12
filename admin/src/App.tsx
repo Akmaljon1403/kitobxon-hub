@@ -15,6 +15,7 @@ import { FacultiesPage } from './pages/FacultiesPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { GiveawaysPage } from './pages/GiveawaysPage'
 import { ContestsPage } from './pages/ContestsPage'
+import { ControlPage } from './pages/ControlPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { MissionsPage } from './pages/MissionsPage'
@@ -33,6 +34,7 @@ import { SupportPage, SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
 import { TestsPage } from './pages/TestsPage'
+import { TextsPage } from './pages/TextsPage'
 import { TrustPage } from './pages/TrustPage'
 import { SessionProvider, useSession } from './store/session'
 import { useRoute } from './utils/router'
@@ -57,6 +59,8 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   missions: MissionsPage,
   community: CommunityPage,
   rentals: RentalsPage,
+  texts: TextsPage,
+  control: ControlPage,
   certificates: CertificatesPage,
   features: FeaturesPage,
   premium: PremiumPage,

@@ -44,6 +44,7 @@ class Perm(StrEnum):
     STARS_SEND = "STARS_SEND"
     COMMUNITY_MANAGE = "COMMUNITY_MANAGE"
     PAYMENT_SUPPORT = "PAYMENT_SUPPORT"
+    TEXTS_MANAGE = "TEXTS_MANAGE"
 
 
 # (group, description shown to administrators)
@@ -90,6 +91,10 @@ PERMISSION_INFO: dict[Perm, tuple[str, str]] = {
         "payments",
         "To'lov bo'yicha savollarga javob berish — botda va to'lovlar kanalining o'zida («✍️ Javob yozish» yoki "
         "«Reply»)",
+    ),
+    Perm.TEXTS_MANAGE: (
+        "system",
+        "«📝 Matnlar»: bot xabarlari, a'zolarga bildirishnomalar va kanal postlari matnini o'zgartirish",
     ),
 }
 

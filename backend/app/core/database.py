@@ -60,6 +60,9 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     Anything not committed is rolled back when the request ends.
     """
     async with get_session_factory()() as session:
+        from app.bot import text_store
+
+        await text_store.refresh(session)  # texts used by channel posts and notifications made here
         try:
             yield session
         except Exception:
