@@ -772,3 +772,19 @@ PAYCHAT_SUPER_ONLY = "⚠️ To'lov masalalarida a'zoga faqat bosh admin javob b
 PAYCHAT_ABOUT_CARD = "to'lovingiz bo'yicha: {what}, {amount}"
 PAYCHAT_ABOUT_USER = "to'lovingiz bo'yicha"
 SUPPORT_REPLY_CHANNEL_HINT = "✍️ Javobni bot chatida yozing — yoki kanalda shu xabarga «Reply» qilib yozing."
+
+# ---- «What is this channel's id?» (an admin forwards a channel post) ----
+CHAT_ID_INFO = (
+    "🆔 <b>{title}</b>\n\n"
+    "ID raqami: <code>{chat_id}</code>\n"
+    "{username}"
+    "\nSozlamalarda kanal manzili sifatida shu raqamni (yoki @username'ni) yozasiz. «-100» — Telegram kanal va "
+    "guruhlar ID'sining boshidagi belgilanishi, raqamning bir qismi: uni o'chirmang.\n\n"
+    "Eng osoni: botni shu kanalga administrator qiling — bot o'zi «Bu kanal nima uchun?» deb so'raydi va "
+    "hammasini o'zi yozib qo'yadi."
+)
+CHAT_ID_USERNAME = "Ochiq manzil: @{username}\n"
+CHAT_ID_HIDDEN = (
+    "🆔 Bu forward'da kanal ma'lumoti yashirilgan. Kanaldan postni boshqa forward qiling yoki botni kanalga "
+    "administrator qiling — bot o'zi so'raydi."
+)

@@ -30,6 +30,10 @@
   .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; font-weight: 700; letter-spacing: .2px; }
   .brand img { width: 40px; height: 40px; }
   footer { color: var(--hint); font-size: 13px; text-align: center; margin-top: 18px; }
+  form.lookup { display: flex; gap: 8px; margin-top: 16px; }
+  form.lookup input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); text-transform: uppercase; letter-spacing: 1px; }
+  form.lookup button { font: inherit; font-weight: 600; padding: 10px 14px; border: 0; border-radius: 12px; background: var(--ok); color: #fff; }
+  .lookup-hint { color: var(--hint); font-size: 13px; margin: 18px 0 0; }
 </style>
 </head>
 <body>
@@ -52,6 +56,13 @@
     <dl>
       {% for label, value in rows %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
     </dl>
+    {% endif %}
+    {% if lookup %}
+    <p class="lookup-hint">Sertifikat yoki pasport ostidagi kodni kiriting (masalan: K7F2Q-9XA3B) — QR kodni skanerlash shart emas.</p>
+    <form class="lookup" method="get" action="/v">
+      <input name="code" required minlength="4" maxlength="40" autocomplete="off" placeholder="Tekshirish kodi" value="{{ entered or '' }}">
+      <button type="submit">Tekshirish</button>
+    </form>
     {% endif %}
   </div>
   <footer>{{ organization }} · {{ club }}<br>Tekshirilgan vaqt: {{ checked_at }}</footer>

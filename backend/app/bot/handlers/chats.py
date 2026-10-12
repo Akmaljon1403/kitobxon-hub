@@ -171,3 +171,29 @@ async def group_answer(message: Message, db: AsyncSession, bot: Bot, member: Use
             await message.reply(texts.PAYCHAT_SUPER_ONLY)
         return
     await _answer_in_payments_chat(message, db, bot, member)
+
+
+# ---------------------------------------------------------------------------- «what is this channel's id?»
+
+
+@router.message(F.chat.type == "private", F.forward_origin)
+async def forwarded_from_a_chat(message: Message, db: AsyncSession, member: User | None) -> None:
+    """An admin forwards a post from a channel: the bot tells its id (the «-100…» number for the settings).
+    Members' forwards go on to the other handlers (e.g. a question to the admins)."""
+    from aiogram.dispatcher.event.bases import SkipHandler
+    from aiogram.types import MessageOriginChannel, MessageOriginChat
+
+    if not await access.is_admin(db, member):
+        raise SkipHandler
+    origin = message.forward_origin
+    chat = origin.chat if isinstance(origin, MessageOriginChannel | MessageOriginChat) else None
+    if chat is None:
+        await message.answer(texts.CHAT_ID_HIDDEN)
+        return
+    await message.answer(
+        texts.CHAT_ID_INFO.format(
+            title=html.escape(chat.title or str(chat.id), quote=False),
+            chat_id=chat.id,
+            username=texts.CHAT_ID_USERNAME.format(username=chat.username) if chat.username else "",
+        )
+    )

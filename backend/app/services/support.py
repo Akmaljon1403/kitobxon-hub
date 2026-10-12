@@ -247,7 +247,10 @@ async def club_message(
         session,
         user_id=user_id,
         type_=NotificationType.SUPPORT,
-        text=f"📩 <b>Klub rahbariyatidan</b> — <i>{html.escape(about, quote=False)}</i>\n\n{html.escape(body, quote=False)}",
+        text=(
+            f"📩 <b>Klub rahbariyatidan</b> — <i>{html.escape(about, quote=False)}</i>\n\n"
+            f"{html.escape(body, quote=False)}"
+        ),
         dedup_key=f"support-reply:{message.id}",
         payload={"buttons": [{"text": "✍️ Javob yozish", "callback": "sup:new:pay"}], "deliver_to_inactive": True},
         priority=1,

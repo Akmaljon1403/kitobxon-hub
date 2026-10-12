@@ -211,7 +211,9 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va "
         "haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga "
         "administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. "
-        "@username yoki -100… raqami (bo'sh — cheklar bosh administratorlarga botda)",
+        "Ochiq kanal — @username; yopiq kanal — -100 bilan boshlanadigan ID raqami (masalan -1001234567890). "
+        "ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi "
+        "(bo'sh — cheklar bosh administratorlarga botda)",
     ),
     SettingDefinition(
         "payments.stars_packages",
@@ -416,7 +418,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "channel.enabled", False, bool, "Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling)"
     ),
     SettingDefinition(
-        "channel.chat_id", "@FJSTIMutolaaxona", ShortText, "Kanal manzili: @username yoki -100... raqami"
+        "channel.chat_id",
+        "@FJSTIMutolaaxona",
+        ShortText,
+        "Kanal manzili: ochiq kanal — @username (masalan @FJSTIMutolaaxona); yopiq kanal — -100 bilan boshlanadigan "
+        "ID raqami. ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi. Eng osoni: "
+        "botni kanalga admin qiling — bot o'zi «Bu kanal nima uchun?» deb so'raydi",
     ),
     SettingDefinition("channel.post_events", True, bool, "Yangi tadbirlar va «ertaga ... o'qib kelamiz» eslatmalari"),
     SettingDefinition("channel.post_books", True, bool, "Yangi kitoblar va «asarni tugatay deb qoldingizmi?» postlari"),

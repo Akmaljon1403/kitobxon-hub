@@ -166,6 +166,7 @@ asosiy tab: **🏠 Asosiy, 📚 Kitoblar, 📅 Tadbirlar, 🏆 Reyting, 👤 Pro
 | **💬 Iqtiboslarim** | saqlangan iqtiboslar, qidiruv, yangi iqtibos; har biri **🖼 Kartochka** (chiroyli rasm) va **📤 Ulashish** (bot chatiga yuboriladi) |
 | **🎯 Missiyalar** | davom etayotgan, boshlash mumkin va bajarilgan missiyalar; progress va qolgan vaqt |
 | **🪪 Kartam** | «Kitobxonlik kartam» rasmi va **📤 Botga yuborish** |
+| **🌍 A'zolar fikrlari** | boshqa kitobxonlarning iqtiboslari, fikrlari, taassurotlari va e'tiroflari (yangi / ❤️ eng yoqqan / meniki), ❤️ bosish, kartochka; **✍️ Yozish** — tur, matn, kitob yoki tadbir, 6 xil kartochka dizayni |
 | **🏛 Fakultetlar ligasi** | fakultetlar bellashuvi: o'rtacha ball, faol a'zolar ulushi, betlar, kitoblar, tadbirlar; o'z fakulteti ajratib ko'rsatiladi |
 | **📅 Tadbirlar** | tadbirlar, ro'yxatdan o'tish (smena tanlash), davomat |
 | **📝 Testlar** | testni ishlash (taymer bilan), natija |
@@ -248,6 +249,30 @@ Har safar yangi raqamlar bilan chiziladi.
 Fakultetlar jamoa bo'lib bellashadi (hafta / oy / umumiy). O'rin — **a'zolarning o'rtacha bali**
 bo'yicha (katta-kichik fakultetlar teng). Yonida: faol a'zolar (%), kundalikdagi betlar, o'qilgan
 kitoblar, tadbirlarga kelishlar. Hamma uchun bepul (Imkoniyatlarda o'zgartiriladi).
+
+### D.9. 💬 A'zolar fikrlari — iqtibos, fikr, e'tirof
+
+A'zo istalgan vaqtda yozadi: ilovada **🌍 A'zolar fikrlari → ✍️ Yozish** yoki botda **`/fikr`**. Besh xil:
+
+| Tur | Nima |
+|---|---|
+| 📖 Kitobdan iqtibos | kitobdagi yoqqan jumla (muallif va kitob bilan) |
+| 💡 O'z fikrim | o'z hikmati yoki fikri |
+| 📚 Kitob haqida taassurot | o'qigan kitobi haqida |
+| 📅 Tadbir haqida taassurot | faqat o'zi qatnashgan tadbir haqida |
+| 🌟 Klub haqida e'tirof | klub unga nima bergani haqida |
+
+- Iqtibos va fikrlar a'zoning **«💬 Iqtiboslar sandig'i»**ga ham saqlanadi (o'zi uchun). Sandiqdagi o'zi yozgan
+  iqtibosni **🌍 Hamma bilan ulashish** bilan umumiy lentaga yuborish ham mumkin.
+- Matn admin tasdiqlagach **umumiy lentada** chiqadi (sozlamada «darhol chiqsin» ham qilish mumkin). A'zo
+  «Meniki» bo'limida holatni ko'radi: ⏳ ko'rib chiqilmoqda / ✅ lentada / 🙈 yashirilgan.
+- **6 xil kartochka dizayni**: Klassik (to'q ko'k va oltin), Qog'oz, Tungi osmon, Zumrad, Tong, Minimal.
+  Kartochkada matn, manba, «Yubordi: Madina K., fakulteti» va bot nomi bo'ladi.
+- **Ball**: qabul qilingan har bir matn uchun (odatda 2, oyiga 5 tagacha) va «⭐ Tanlangan» bo'lsa yoki kanalda
+  e'lon qilinsa yana bir marta (odatda 5).
+- **O'zi so'raydi**: kitobni o'qib tugatganda — «eng yoqqan iqtibosingizni yozing»; tadbirga 4–5 ⭐ baho berib
+  izoh yozganda — «fikringizni boshqalar ham o'qisinmi?» (rozilik bilan).
+- «Ismim ko'rinsin» o'chirilsa, matn «Klub a'zosi» nomi bilan chiqadi.
 
 ### D.8. 📖 Kitobxonlik izi (yil yakuni)
 
@@ -341,6 +366,27 @@ qilasiz.
 **Sozlash:** **⚙️ Sozlamalar → 🎓 Sertifikatlar** — imzo egasining lavozimi va ismi (masalan,
 «Klub rahbari — A. Bahodirov»), avtomatik berishni o'chirish.
 
+### 🔐 Sertifikatdagi kod nima va undan qanday foydalaniladi
+
+Har bir sertifikatning **yagona tekshirish kodi** bor (masalan `K7F2Q-9XA3B`) — u QR kod yonida yozilgan.
+Kod sertifikatning «pasport raqami»: soxta sertifikatni haqiqiysidan ajratadi.
+
+| Kim | Qanday tekshiradi | Nima ko'radi |
+|---|---|---|
+| Istalgan kishi (ish beruvchi, institut, grant komissiyasi) | QR kodni telefon kamerasi bilan skanerlaydi **yoki** `https://<sizning-manzilingiz>/v` sahifasida kodni yozadi (QR shart emas) | ✅ Haqiqiy sertifikat: kimga, nima uchun, qachon berilgan; bekor qilingan bo'lsa — ⛔ va sanasi |
+| Siz (admin) | **🛡 Ishonch markazi → 🎓 Sertifikatni tekshirish** yoki **🎓 Sertifikatlar** dagi qidiruv | yuqoridagilar + bekor qilish sababi |
+| A'zo | ilovada sertifikatini ochib, **onlayn tasdiq havolasini** ulashadi | — |
+
+Imkoniyatlari:
+
+- Sertifikat qaysi dizaynda yuklab olinmasin, **kod bitta** — barcha nusxalar shu kod bilan tasdiqlanadi.
+- Sertifikatni **bekor qilsangiz** (masalan, adashib berilgan), kod tekshirilganda «⛔ Bekor qilingan» chiqadi —
+  qog'ozdagi nusxa ham kuchini yo'qotadi.
+- Kod rezyume, grant va stipendiya hujjatlariga yoziladi: tekshiruvchi sizga qo'ng'iroq qilmasdan o'zi
+  ishonch hosil qiladi.
+- **Kitobxon pasporti**dagi kod ham xuddi shu sahifada tekshiriladi (a'zoning jonli natijalari chiqadi).
+- **🗂 Hujjatlar → Sertifikatlar reyestri** — davr bo'yicha barcha sertifikatlar va kodlari (Excel/Word/PDF).
+
 ## 7. Rasmiy hisobotlar (PDF)
 
 **📄 Hisobotlar → + Yangi hisobot** va turini tanlang:
@@ -409,7 +455,13 @@ reytingning **«Hafta»** va **«Hammasi»** bo'limlari — **bepul**. Premium a
 
 **Bosh administratorlar** umrbod Premium'ga ega (♾) — hech narsa qilish shart emas.
 
-**Premium sovg'a qilish:** o'sha sahifada a'zoni tanlab, kunlar sonini yozasiz (masalan, oy
+**🎁 Ommaviy sovg'a:** **💎 Premium** sahifasidagi «🎁 Ommaviy sovg'a» bo'limida bir vaqtda **hammaga** yoki
+bir **fakultet, kurs, guruh**ga N kunlik Premium berasiz (masalan, «Bilimlar kuni munosabati bilan hammaga 7 kun»).
+Avval necha kishiga borishi ko'rsatiladi, keyin tasdiqlaysiz. «Faqat Premium'i yo'qlarga» belgisi bor. Premium'i
+borlarga kunlar joriy muddatidan keyin qo'shiladi; bosh adminlar va umrbod Premium egalari kirmaydi. Har bir
+a'zoga 🎉 tabrik boradi, to'lovlar kanaliga va audit jurnaliga bitta qator yoziladi.
+
+**Premium sovg'a qilish (bitta a'zoga):** o'sha sahifada a'zoni tanlab, kunlar sonini yozasiz (masalan, oy
 g'olibiga 30 kun yoki naqd to'laganga) yoki **«Umrbod»** belgisini qo'yasiz.
 
 **Qaytarish (refund):** «To'lovlar» jadvalida **Qaytarish** — Stars a'zoga qaytadi, Premium muddati
@@ -742,6 +794,35 @@ Sozlash (bir daqiqa, hech narsa yozish shart emas):
 Holatni **Premium** sahifasidagi «💳 To'lovlar kanali» kartasida ko'rasiz (✅ ulangan yoki
 muammo nimada), u yerda **🧪 Sinov xabari** tugmasi va oxirgi 30 kunlik moliyaviy xulosa bor.
 Qo'lda sozlash ham mumkin: **Sozlamalar** → `payments.chat_id` (`@username` yoki `-100…`).
+
+### «-100…» nima va uni qayerdan olamiz
+
+Telegram har bir kanal va guruhga **ID raqami** beradi. Kanal va superguruhlarniki doim **-100** bilan
+boshlanadi, masalan `-1001234567890`. «-100» — raqamning bir qismi, uni o'chirmang.
+
+- **Ochiq kanal** (manzili bor): ID shart emas — `@kanal_nomi` yozasiz.
+- **Yopiq kanal** (manzilsiz): ID kerak. Uni bilishning 2 yo'li:
+  1. **Eng osoni:** botni kanalga **administrator** qiling — bot sizga o'zi «Bu kanal nima uchun?» deb yozadi,
+     tugmani bosasiz va hammasi o'zi yoziladi (hech narsa terish shart emas).
+  2. Kanaldagi istalgan postni **botga forward** qiling (siz admin bo'lishingiz kerak) — bot ID raqamini va
+     ochiq manzilini aytadi. Shu raqamni Sozlamalarga yozasiz.
+
+### Kanal ichida javob berish («Reply»)
+
+To'lov bo'yicha hamma narsa **bitta kanalda**: cheklar, qarorlar, Stars buyurtmalari, Telegram Stars to'lovlari,
+Premium sovg'alari (bitta yoki ommaviy), a'zolarning to'lov savollari, haftalik xulosa va eslatmalar.
+
+Endi kanalning o'zida javob berasiz: kanaldagi xabarga **«Reply» (Javob)** qilib yozing —
+
+- **to'lov savoliga** reply → javob a'zoga «Klub rahbariyatidan javob» bo'lib boradi (uning murojaatlar tarixiga
+  ham yoziladi), a'zo «✍️ Yana yozish» bilan davom etadi;
+- **chekka** yoki to'lov qatoriga reply → a'zoga «Klub rahbariyatidan — to'lovingiz bo'yicha: ⭐ 100 Telegram
+  Stars, 23 000 so'm» sarlavhasi bilan boradi (masalan: «Chekning to'liq rasmini yuboring»), a'zo «✍️ Javob
+  yozish» bilan javob qaytaradi — u ham shu kanalga keladi.
+
+Yuborilgach, xabaringizga 👍 reaksiya qo'yiladi (reaksiyalar o'chiq bo'lsa — «✅ A'zoga yuborildi» qatori).
+Kanalda faqat siz qo'shgan adminlar yoza oladi; to'lovlar **guruh** bo'lsa, faqat **bosh admin**ning replylari
+a'zoga boradi. «✍️ Javob yozish» tugmasi ham ishlaydi — javobni bot chatida yozasiz.
 Botni kanaldan chiqarsangiz, bot darhol ogohlantiradi va cheklar vaqtincha botda keladi —
 hech narsa yo'qolmaydi.
 
@@ -829,6 +910,10 @@ PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlan
 
 - Kompyuterda — **📥** (yuklab olish); telefonda — **📨 Botga** (fayl bot chatingizga keladi).
 - Har bir hujjat faqat tegishli huquqi bor adminga ko'rinadi.
+- **Tartib hamma joyda bir xil**: fakultet (fakultetlar ro'yxatidagi tartibda) → kurs → guruh **raqami bo'yicha**
+  (301, 1001, 5424, 5524 …) → familiya. «Guruhlar kesimida» jadvalida fakultet alohida ustunda turadi.
+- **Statistik hisobot + QR**: ilovada faqat **eng faol 5 nafar** talabaning QR kodi (ball, keyin tadbir, test va
+  kitoblar bo'yicha), o'rni bilan. **📈 Tahlillar** da ham «Guruhlar kesimida» jadvali shu tartibda.
 - A'zo o'zi ham ilovada portfolio kartasidagi **Ma'lumotnoma (PDF / Word)** tugmasi bilan o'z
   faoliyati haqida ma'lumotnoma oladi (bot chatiga keladi).
 
@@ -848,8 +933,8 @@ PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlan
 
 ### Yangi o'quv yilida yana nimalar o'zi bo'ladi
 
-- **Guruh raqami**: 2-kursdagi «201» guruh avtomatik «301» bo'ladi (agar guruh nomining birinchi raqami kursga
-  teng bo'lsa). «DI-21» kabi boshqacha nomlangan guruhlar o'zgarmaydi. O'chirish: `academic.promote_groups`.
+- **Guruh raqami o'zgarmaydi**: 1-sentabrda faqat **kurs** oshadi, guruh raqami a'zo yozganicha qoladi.
+  (Xohlasangiz, `academic.promote_groups` ni yoqib, «201» → «301» kabi avtomatik oshirishni qaytarish mumkin.)
 - **Bitiruvchilar**: oxirgi kursdagi a'zolarga «🎓 Bitirdingizmi?» savoli boradi — «Ha, bitirdim» deganlar
   **bitiruvchi** bo'ladi: klubda qoladi (ballari, kitoblari, sertifikatlari joyida), lekin kurs bo'yicha
   hisobotlarga kirmaydi. Admin ham **👥 A'zolar** → a'zo → «🎓 Bitiruvchi» belgisi bilan qo'yishi mumkin.
@@ -862,7 +947,8 @@ PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlan
 
 - **🌅 Xayrli tong** (`admin.morning_digest`): har kuni soat 08:00 da bosh administratorlarga qisqa hisobot —
   kecha qo'shilgan a'zolar, tasdiq kutayotganlar, tekshirilmagan cheklar, javobsiz murojaatlar, tasdiq kutayotgan
-  qo'lda davomat, bugungi tadbirlar, bugun tugaydigan testlar va davom etayotgan tanlovlar.
+  qo'lda davomat, ko'rib chiqilmagan a'zolar fikrlari, litsenziyasi 30 kun ichida tugaydigan ijarachilar, bugungi
+  tadbirlar, bugun tugaydigan testlar va davom etayotgan tanlovlar.
 - **🌙 Tungi tinchlik** (`notifications.quiet_hours`, odatda 22:00–08:00): bu vaqtda ommaviy xabarlar (e'lonlar,
   yangi kitob va tadbirlar, yutuqlar, haftalik xulosa) yuborilmaydi — ertalab boradi. Shaxsiy va shoshilinch
   xabarlar (davomat, to'lov, test natijasi) har doim darhol boradi.
@@ -876,27 +962,42 @@ KH-raqam, kitob, tadbir, test): a'zolar, kitoblar, tadbirlar, testlar, sovg'alar
 sozlamalar va **bot buyruqlari** bitta ro'yxatda chiqadi. Natijani bosing — kerakli joy ochiladi
 (sozlama bo'lsa, o'sha qatorga olib boradi). Har kim faqat ruxsati bor narsani ko'radi.
 
-## 26. Boshqa tashkilotlarga ijaraga berish (litsenziya)
+## 26. 🏢 Boshqa tashkilotlarga ijaraga berish (litsenziya)
 
 Kitobxon Hub'ni boshqa institut, kollej yoki maktabga ijaraga berish mumkin. Har bir tashkilot
-**o'z nusxasini** oladi: o'z serveri (yoki Render), o'z bazasi, o'z boti, o'z bosh administratori —
-ma'lumotlari sizniki bilan hech qachon aralashmaydi.
+**o'z nusxasini** oladi: o'z serveri (Render), o'z bazasi, o'z boti, o'z bosh administratori —
+**ma'lumotlari sizniki bilan ham, bir-biriniki bilan ham hech qachon aralashmaydi** (ular umuman boshqa
+bazalarda turadi).
 
-Litsenziya kalitini **faqat siz** chiqarasiz (maxfiy kalit sizning kompyuteringizda):
+Hammasini **Admin panel → 🏢 Ijara (tashkilotlar)** sahifasida boshqarasiz (faqat sizda — bosh admin, va faqat
+asosiy serveringizda; ijarachilar nusxasida bu sahifa ko'rinmaydi):
 
-```bash
-cd backend
-python -m app.licence_tool keygen owner-key.pem          # bir marta; owner-key.pem ni hech kimga bermang
-python -m app.licence_tool issue owner-key.pem "Namuna kolleji" 2027-12-31 --members 2000
-```
+1. **🔑 Kalit yaratish** — bir marta. Bu sizning imzo kalitingiz: u bilan berilgan litsenziyani hech kim qalbaki
+   qila olmaydi. Maxfiy qismi bazada shifrlangan holda turadi (`SECRET_KEY` ni o'zgartirmang). Avval
+   `licence_tool` bilan kalit yaratgan bo'lsangiz — «Avval yaratilgan kalitim bor» orqali qo'yasiz.
+2. **+ Yangi tashkilot** — nomi, mas'ul shaxs, telefon, Telegram, tarif (Kichik / O'rta / Katta / Kelishilgan —
+   a'zolar chegarasi va narx o'zi to'ladi), to'lov davri (yillik/oylik), ularning server manzili va boti.
+3. Tashkilot → **🔐 Kalit berish**: qachongacha va necha a'zogacha. Panel tayyor **3 qatorni** ko'rsatadi:
+   ```
+   LICENCE_REQUIRED=true
+   LICENCE_PUBLIC_KEY=…
+   LICENCE_KEY=…
+   ```
+   **📋 Nusxalash** → ularning Render xizmatida **Environment** ga qo'yasiz → **Save**.
+4. **💵 To'lovlar** — har to'lovni yozib borasiz; sahifa tepasida **bu yilgi tushum**, faol va muddati tugayotgan
+   tashkilotlar soni.
+5. Muddatni uzaytirish — yangi kalit berish (eski kalitlar tarixda qoladi).
 
-Ijarachi nusxasiga `LICENCE_REQUIRED=true`, `LICENCE_PUBLIC_KEY=…` va `LICENCE_KEY=…` qo'yiladi.
+Yangi tashkilotni ulash qadamlari sahifaning pastida ham yozilgan: ular o'z botini @BotFather'da yaratadi; Render'da
+alohida xizmat va alohida baza ochiladi; Environment'ga ularning `BOT_TOKEN`, `SUPER_ADMIN_TELEGRAM_IDS` va 3 ta
+`LICENCE_…` qatori yoziladi.
 
-- Muddat tugashiga 30 kun qolganda admin panel bosh sahifasida ogohlantirish chiqadi.
-- Muddat tugagach **7 kun** imtiyoz; keyin a'zolar uchun xizmat to'xtaydi («vaqtincha to'xtatilgan»
-  xabari), xabarlar yuborilmaydi. **Adminlar ishlashda davom etadi** va hamma hujjatlarni yuklab
-  oladi. Yangi kalit qo'yilishi bilan hammasi joyidan davom etadi.
-- `--members` — a'zolar chegarasi (to'lsa, yangi ro'yxatdan o'tish to'xtaydi).
+- Litsenziya tugashiga **30 kun** qolganda: sizga «🌅 Xayrli tong» xabarida eslatma; ularning admin panelida ham
+  ogohlantirish chiqadi.
+- Muddat tugagach **7 kun** imtiyoz; keyin a'zolar uchun xizmat to'xtaydi («vaqtincha to'xtatilgan» xabari),
+  xabarlar yuborilmaydi. **Ularning adminlari ishlashda davom etadi** va hamma hujjatlarni yuklab oladi. Yangi
+  kalit qo'yilishi bilan hammasi joyidan davom etadi.
+- A'zolar chegarasi to'lsa, yangi ro'yxatdan o'tish to'xtaydi.
 - O'z klubingiz serverida litsenziya **kerak emas** (`LICENCE_REQUIRED` o'chiq).
 
 **Narx taklifi** (bitta tashkilot uchun, server xarajati alohida):
@@ -921,6 +1022,7 @@ O'rnatish va sozlash bir martalik 1 500 000 so'm; birinchi oy sinov uchun bepul.
 | `/oqidim 25` | a'zo | Bugun o'qilgan betlarni kundalikka yozish (izoh bilan ham bo'ladi) |
 | `/javonim` | a'zo | O'qiyotgan kitoblar, progress va 🔥 seriya |
 | `/kartam` | a'zo | «Kitobxonlik kartam» rasmi |
+| `/fikr` | a'zo | 💬 Iqtibos, fikr yoki klub haqida e'tirof yuborish («A'zolar fikrlari») |
 | `/referal` (yoki `/taklif`) | a'zo | 🎁 Sizning foydangiz: taklif havolasi, do'stlar va ularning ballari |
 | `/premium` | a'zo | Premium va klubni qo'llab-quvvatlash |
 | `/portfolio` | a'zo | Kitobxonlik portfoliosi (PDF va Word) |
@@ -1210,7 +1312,32 @@ Tungi tinchlik vaqtida (`notifications.quiet_hours`, odatda 22:00–08:00) ommav
 > Xavfsizlik: hech kimga (menga ham) **bot tokeni**, **SECRET_KEY** yoki **DATABASE_URL** ni yubormang. Ular
 > faqat Render'ning «Environment» bo'limida turadi.
 
-## 35. 🆕 So'nggi o'zgarishlar (shu yangilanish)
+## 35. 🆕 So'nggi o'zgarishlar
+
+### Oktabr, 2-yangilanish
+
+**💬 A'zolar fikrlari (yangi bo'lim)** — a'zolar iqtibos, o'z fikri, kitob va tadbir taassuroti, klub haqida
+e'tirof yuboradi (ilovada yoki `/fikr`). Umumiy lenta, ❤️, 6 xil kartochka dizayni, kitob tugaganda va tadbirdan
+keyin o'zi so'raydi. Admin panelda **💬 A'zolar fikrlari**: tasdiqlash, ⭐ tanlash, yashirish, tuzatish va istalgan
+joyga uzatish — kanalga (hozir yoki rejali), a'zolarga kartochka bilan, kun iqtibosi, o'zingizga botda. Yangi
+huquq «A'zolar fikrlari». Batafsil — D.9 va 9-bo'lim.
+
+**📊 Statistika** — hamma joyda bir tartib: fakultet → kurs → guruh raqami (5424 dan keyin 5524); statistik
+hisobot QR ilovasida faqat **eng faol 5 talaba**; «Tahlillar»da «Guruhlar kesimida» jadvali.
+
+**🎓 1-sentabr** — endi faqat **kurs** oshadi, guruh raqami o'zgarmaydi.
+
+**🎁 Ommaviy Premium sovg'a** — hammaga yoki fakultet/kurs/guruhga N kun (9-bo'lim).
+
+**💳 To'lovlar kanali** — kanalda **«Reply»** qilib javob berish (savolga, chekka, to'lov qatoriga); kanaldagi
+«✍️ Javob yozish» tugmasi ishlamay qolgan xato tuzatildi; Premium sovg'alari ham kanalga yoziladi (19-bo'lim).
+
+**🏢 Ijara paneli** — tashkilotlar, kalit berish (3 qator), to'lovlar va eslatmalar (26-bo'lim).
+
+**🔐 Sertifikat kodi** — `…/v` sahifasida kodni yozib tekshirish (6-bo'lim). **«-100…»** — kanal postini botga
+forward qilsangiz, bot ID'ni aytadi (19-bo'lim).
+
+### Oktabr, 1-yangilanish
 
 **🎁 Sizning foydangiz (taklif) — doim ochiq**
 
@@ -1271,6 +1398,9 @@ Bularni keyinroq, kerak bo'lsa, alohida qo'shish mumkin.
 
 ### Siz qilishingiz kerak bo'lgan ishlar
 
+0. **💬 A'zolar fikrlari**: yangi bo'limni ko'rib chiqing; xabar va murojaatlar bilan ishlaydigan adminlarga
+   «A'zolar fikrlari» huquqini bering (to'plam «📨 Xabar va murojaatlar»da u bor). Ijaraga berishni boshlasangiz —
+   **🏢 Ijara** → **🔑 Kalit yaratish**.
 1. **🛡 Adminlar** → Premium'i bor ishonchli adminga **«⭐ Stars yuborish»** huquqini bering. U botga
    `/start` bosgan bo'lsin.
 2. U admin bilan Stars xarajatini qanday qoplashni kelishib oling.
@@ -1310,6 +1440,7 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | 🎯 Shaxsiy missiyalar | Hammaga | «7 kunda 100 bet», «5 kun ketma-ket o'qish» kabi kichik maqsadlar — bajarganga ball |
 | 🪪 Kitobxonlik kartam | Hammaga | o'qigan kitoblar, betlar, seriya va yutuqlaringiz bitta chiroyli rasmda — ulashish uchun |
 | 🏛 Fakultetlar ligasi | Hammaga | fakultetlar bellashuvi: o'rtacha ball, faol kitobxonlar ulushi, o'qilgan betlar va kitoblar |
+| 💬 A'zolar fikrlari | Hammaga | kitobdan iqtiboslar, o'z fikrlaringiz, kitob va tadbir taassurotlari, klub haqidagi e'tiroflar — yuborish, boshqalarnikini o'qish, ❤️ bosish va chiroyli kartochka qilib ulashish |
 | 💎 Premium obuna | O'chiq | Premium a'zolik: qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa |
 | 💳 Karta orqali to'lov | O'chiq | Premiumni bank kartasiga o'tkazib, chekni yuborish orqali sotib olish |
 | ❤️ Klubni qo'llab-quvvatlash | O'chiq | Telegram Stars orqali klub rivojiga hissa qo'shish |
@@ -1349,6 +1480,7 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | Tizim | Audit jurnalini ko'rish | `AUDIT_LOG_VIEW` |
 | Murojaatlar | A'zolar murojaatlarini o'qish va ularga javob berish | `SUPPORT_MANAGE` |
 | To'lovlar | Telegram Stars'ni a'zolarga yuborish: bosh admin tasdiqlagan Stars buyurtmalari shu adminga keladi | `STARS_SEND` |
+| community | A'zolar fikrlari va iqtiboslarini ko'rib chiqish, kartochka qilish va kanal yoki a'zolarga ulashish | `COMMUNITY_MANAGE` |
 
 ## III. Sozlamalar (⚙️)
 
@@ -1420,7 +1552,7 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 |---|---|---|
 | `payments.card_number` | — | Klub kartasi raqami (Uzcard/Humo), masalan 8600 1234 5678 9012 |
 | `payments.card_holder` | — | Karta egasining ismi (to'lovchi tekshirishi uchun) |
-| `payments.chat_id` | — | To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. @username yoki -100… raqami (bo'sh — cheklar bosh administratorlarga botda) |
+| `payments.chat_id` | — | To'lovlar kanali yoki guruhi: cheklar (✅/❌ tugmalari bilan), to'lov savollari, Stars to'lovlari va haftalik moliyaviy xulosa faqat shu yerga keladi. Qo'lda yozish shart emas: botni kanalga administrator qilsangiz, bot sizdan «💳 To'lovlar kanali» tugmasini bosishni so'raydi. Ochiq kanal — @username; yopiq kanal — -100 bilan boshlanadigan ID raqami (masalan -1001234567890). ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi (bo'sh — cheklar bosh administratorlarga botda) |
 | `payments.stars_packages` | 50, 100, 250, 500 | Karta orqali sotiladigan Stars to'plamlari (bo'sh — sotilmaydi) |
 | `payments.star_price_uzs` | 250 | 1 ta Stars narxi so'mda (Telegram'da sotib olish narxiga qarab; 0 — sotilmaydi) |
 
@@ -1449,11 +1581,24 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | `reading.reflection_points` | 5 | «Kitobdan keyin 3 savol»ga javob yozgan a'zoga ball (har kitob uchun bir marta; 0 — ballsiz) |
 | `reading.reflection_monthly_limit` | 4 | «3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz) |
 
+**`community.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `community.auto_publish` | o'chiq | A'zolar yuborgan iqtibos va fikrlar admin tasdiqlamasdan umumiy lentada darhol chiqsinmi (o'chiq — avval admin ko'rib chiqadi) |
+| `community.points` | 2 | Fikri yoki iqtibosi umumiy lentaga qabul qilingan a'zoga ball (har biriga bir marta; 0 — ball berilmaydi) |
+| `community.monthly_points_limit` | 5 | Bir oyda nechta fikr uchun ball beriladi (0 — cheklovsiz) |
+| `community.featured_points` | 5 | Fikri «⭐ Tanlangan» bo'lgan yoki kanalda e'lon qilingan a'zoga qo'shimcha ball (bir marta) |
+| `community.daily_limit` | 5 | Bir a'zo bir kunda nechta fikr yubora oladi (spamdan himoya) |
+| `community.ask_after_book` | yoqiq | Kitobni o'qib tugatgan a'zodan iqtibos yoki taassurot yozishni so'rash |
+| `community.ask_after_event` | yoqiq | Tadbirga baho bergan a'zoni tadbir haqida taassurot yozishga taklif qilish |
+| `community.notify_admins` | yoqiq | Yangi fikr kelganda «A'zolar fikrlari» huquqi bor adminlarga botda ✅ / ⭐ / 🙈 tugmalari bilan xabar berish |
+
 **`academic.*`**
 
 | Sozlama | Odatiy qiymat | Ma'nosi |
 |---|---|---|
-| `academic.promote_groups` | yoqiq | Yangi o'quv yilida guruh raqami ham kurs bilan birga oshadi, agar uning birinchi raqami kursga teng bo'lsa (2-kursdagi «201» → «301»). Boshqacha nomlangan guruhlar o'zgarmaydi |
+| `academic.promote_groups` | o'chiq | Yangi o'quv yilida guruh raqami ham kurs bilan birga oshirilsinmi (2-kursdagi «201» → «301»). Odatda o'chiq: 1-sentabrda faqat kurs oshadi, guruh raqami o'zgarmaydi |
 | `academic.ask_graduates` | yoqiq | Yangi o'quv yilida oxirgi kursdagi a'zolardan «Bitirdingizmi?» deb so'raladi; «Ha» deganlar bitiruvchi (alumni) bo'ladi — klubda qoladi, lekin kurs bo'yicha hisobotlarga kirmaydi |
 | `academic.summary_day` | 06-20 | «Yil yakuni»: shu kuni (OO-KK) har bir a'zoga o'quv yili davomidagi natijalari (kitoblar, tadbirlar, testlar, ballar, o'rni, do'stlari) yuboriladi. Bo'sh — yuborilmaydi |
 | `academic.year_start` | 09-01 | O'quv yili boshlanadigan kun (OO-KK): shu kuni kurslar bittaga oshadi va yangi mavsum boshlanadi |
@@ -1479,7 +1624,7 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | Sozlama | Odatiy qiymat | Ma'nosi |
 |---|---|---|
 | `channel.enabled` | o'chiq | Bot klub kanaliga post joylaydi (avval botni kanalga admin qiling) |
-| `channel.chat_id` | @FJSTIMutolaaxona | Kanal manzili: @username yoki -100... raqami |
+| `channel.chat_id` | @FJSTIMutolaaxona | Kanal manzili: ochiq kanal — @username (masalan @FJSTIMutolaaxona); yopiq kanal — -100 bilan boshlanadigan ID raqami. ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi. Eng osoni: botni kanalga admin qiling — bot o'zi «Bu kanal nima uchun?» deb so'raydi |
 | `channel.post_events` | yoqiq | Yangi tadbirlar va «ertaga ... o'qib kelamiz» eslatmalari |
 | `channel.post_books` | yoqiq | Yangi kitoblar va «asarni tugatay deb qoldingizmi?» postlari |
 | `channel.post_quotes` | yoqiq | Kun iqtibosi kanalga ham joylanadi |
@@ -1525,6 +1670,7 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | `/oqidim` | a'zo | 📖 Bugun o'qiganimni yozish: /oqidim 25 |
 | `/javonim` | a'zo | 📚 Javonim: o'qiyotgan kitoblarim va seriyam |
 | `/kartam` | a'zo | 🪪 Kitobxonlik kartam (rasm) |
+| `/fikr` | a'zo | 💬 Iqtibos, fikr yoki e'tirof yuborish |
 | `/referal` | a'zo | 🎁 Sizning foydangiz: taklif havolasi va do'stlaringiz |
 | `/premium` | a'zo | 💎 Premium va klubni qo'llab-quvvatlash |
 | `/help` | a'zo | ❓ Yordam va adminga yozish |
