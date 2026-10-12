@@ -5,7 +5,7 @@ rented copy itself."""
 from __future__ import annotations
 
 import itertools
-from datetime import date, timedelta
+from datetime import timedelta
 
 import httpx
 import pytest
@@ -61,7 +61,7 @@ async def test_rent_a_copy_from_the_panel(client: httpx.AsyncClient, db: AsyncSe
     assert "PRIVATE KEY" not in stored.private_key_enc  # kept encrypted
     assert (await client.post(f"{URL}/key", json={}, headers=headers)).status_code == 409
 
-    until = date.today() + timedelta(days=365)
+    until = rentals._today() + timedelta(days=365)
     issued = await client.post(
         f"{URL}/organizations/{org['id']}/licences",
         json={"expires_on": until.isoformat(), "max_members": 300},
@@ -82,7 +82,7 @@ async def test_rent_a_copy_from_the_panel(client: httpx.AsyncClient, db: AsyncSe
 
     paid = await client.post(
         f"{URL}/organizations/{org['id']}/payments",
-        json={"amount_uzs": 3_000_000, "paid_on": date.today().isoformat(), "note": "2026–2027"},
+        json={"amount_uzs": 3_000_000, "paid_on": rentals._today().isoformat(), "note": "2026–2027"},
         headers=headers,
     )
     assert paid.status_code == 201
@@ -96,7 +96,7 @@ async def test_rent_a_copy_from_the_panel(client: httpx.AsyncClient, db: AsyncSe
     assert removed.status_code == 204
 
     # a licence ending soon shows up in the owner's morning message
-    soon = date.today() + timedelta(days=5)
+    soon = rentals._today() + timedelta(days=5)  # the club's own date (Tashkent), not the server's
     await client.post(
         f"{URL}/organizations/{org['id']}/licences", json={"expires_on": soon.isoformat()}, headers=headers
     )
