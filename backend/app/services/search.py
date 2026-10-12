@@ -46,6 +46,7 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
     ("🧩 Imkoniyatlar", "features", "imkoniyat funksiya yoqish o'chirish premium", "SUPER_ADMIN"),
     ("💎 Premium va to'lovlar", "premium", "premium to'lov karta chek stars tarif qaytarish", "SUPER_ADMIN"),
     ("🛡 Adminlar", "admins", "admin rol ruxsat", "SUPER_ADMIN"),
+    ("🏢 Ijara (tashkilotlar)", "rentals", "ijara litsenziya kalit tashkilot kollej maktab", "SUPER_ADMIN"),
     ("🧾 Audit jurnali", "audit", "audit jurnal kim nima qildi", "AUDIT_LOG_VIEW"),
 )
 

@@ -43,6 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'premium', icon: '💎', label: 'Premium', visible: (_, isSuper) => isSuper },
   { route: 'stars', icon: '⭐', label: 'Stars buyurtmalari', visible: (can) => can('STARS_SEND') },
   { route: 'admins', icon: '🛡', label: 'Adminlar', visible: (_, isSuper) => isSuper },
+  { route: 'rentals', icon: '🏢', label: 'Ijara (tashkilotlar)', visible: (_, isSuper) => isSuper },
   { route: 'trust', icon: '🛡', label: 'Ishonch markazi', visible: (can) => can('AUDIT_LOG_VIEW') },
   { route: 'audit', icon: '🧾', label: 'Audit jurnali', visible: (can) => can('AUDIT_LOG_VIEW') },
 ]
@@ -69,11 +70,27 @@ function useUnreadSupport(): number {
   return count
 }
 
+/** A rented copy (it runs on a licence) never shows the owner's «🏢 Ijara» panel. */
+function useRentedCopy(): boolean {
+  const { api, admin } = useSession()
+  const [rented, setRented] = useState(true)
+  useEffect(() => {
+    if (!admin?.is_super_admin) return
+    api<{ required: boolean }>('/api/v1/admin/system/licence')
+      .then((result) => setRented(result.required))
+      .catch(() => setRented(true))
+  }, [admin?.is_super_admin, api])
+  return rented
+}
+
 export function AdminLayout({ section, children }: { section: string; children: ReactNode }) {
   const { admin, can, logout } = useSession()
   const [menuOpen, setMenuOpen] = useState(false)
   const unread = useUnreadSupport()
-  const items = NAV_ITEMS.filter((item) => item.visible(can, Boolean(admin?.is_super_admin)))
+  const rented = useRentedCopy()
+  const items = NAV_ITEMS.filter(
+    (item) => item.visible(can, Boolean(admin?.is_super_admin)) && !(item.route === 'rentals' && rented),
+  )
 
   const nav = (
     <nav aria-label="Bo'limlar" className="flex flex-col gap-0.5 p-3">

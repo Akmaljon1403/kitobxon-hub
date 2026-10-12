@@ -15,6 +15,7 @@ from app.models.notification import Notification, NotificationTemplate
 from app.models.premium import CardPayment, FeatureFlag, Payment, PremiumDiscount, PremiumPlan, PremiumSubscription
 from app.models.rbac import LoginToken, Permission, Role, RolePermission, UserPermission, UserRole
 from app.models.reading import BookReflection, Mission, ReadingLog, SavedQuote, ShelfItem, UserMission
+from app.models.rental import LicenceIssuer, RentalLicence, RentalOrganization, RentalPayment
 from app.models.report import Report, ReportPhoto
 from app.models.reward import Giveaway, Reward, RewardCode, UserReward
 from app.models.score import ScoreTransaction
@@ -52,6 +53,7 @@ __all__ = [
     "Faculty",
     "FeatureFlag",
     "Giveaway",
+    "LicenceIssuer",
     "LoginToken",
     "Mission",
     "Notification",
@@ -64,6 +66,9 @@ __all__ = [
     "PremiumSubscription",
     "ReadingLog",
     "ReferralContest",
+    "RentalLicence",
+    "RentalOrganization",
+    "RentalPayment",
     "Report",
     "ReportPhoto",
     "Reward",
