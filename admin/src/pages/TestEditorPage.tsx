@@ -550,15 +550,22 @@ export function TestEditorPage({ testId }: { testId: string }) {
         }
       />
       <InlineError message={error} />
-      <SettingsForm key={test.id + test.status} test={test} readOnlyScores={locked} onSaved={reload} />
-      {can('TEST_EDIT') && (
-        <Card className="p-4">
-          {test.event_id && !test.certificate_background && (
-            <p className="mb-2 text-xs text-app-hint">Test tadbirga bog'langan: bu yerda rasm yuklanmasa, tadbirning sertifikat dizayni ishlatiladi.</p>
+      {/* Settings were set when the test was created — tuck them away so the editor opens straight to the
+          questions (the test-building part). The owner opens this only to change dates, time or scoring. */}
+      <details className="rounded-xl border border-app-border bg-app-bg">
+        <summary className="cursor-pointer px-4 py-3 font-medium">⚙️ Test sozlamalari va sertifikat dizayni</summary>
+        <div className="flex flex-col gap-3 border-t border-app-border p-3">
+          <SettingsForm key={test.id + test.status} test={test} readOnlyScores={locked} onSaved={reload} />
+          {can('TEST_EDIT') && (
+            <Card className="p-4">
+              {test.event_id && !test.certificate_background && (
+                <p className="mb-2 text-xs text-app-hint">Test tadbirga bog'langan: bu yerda rasm yuklanmasa, tadbirning sertifikat dizayni ishlatiladi.</p>
+              )}
+              <CertificateDesignBox base={`/api/v1/admin/tests/${test.id}`} hasBackground={test.certificate_background} onChanged={reload} />
+            </Card>
           )}
-          <CertificateDesignBox base={`/api/v1/admin/tests/${test.id}`} hasBackground={test.certificate_background} onChanged={reload} />
-        </Card>
-      )}
+        </div>
+      </details>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Savollar ({questions.length})</h2>
