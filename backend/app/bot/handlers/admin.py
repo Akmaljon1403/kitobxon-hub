@@ -62,6 +62,21 @@ async def computer_link(callback: CallbackQuery, db: AsyncSession, member: User 
         await callback.message.answer(texts.ADMIN_LINK.format(minutes=minutes), reply_markup=keyboards.admin_login(url))
 
 
+@router.callback_query(F.data == "adm:logoutall")
+async def logout_all(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    """«🔒 Barcha seanslarni yopish»: every Admin Panel session of this person ends now (a stolen link is useless)."""
+    from app.services.auth import logout_everywhere
+
+    if member is None:
+        await callback.answer()
+        return
+    await logout_everywhere(db, member.id)
+    await callback.answer(texts.ADMIN_LOGGED_OUT, show_alert=True)
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(TelegramBadRequest):
+            await callback.message.edit_reply_markup(reply_markup=None)
+
+
 # ---------------------------------------------------------------------------- stickers and premium emoji
 # Any admin with the right may teach the bot stickers (/stiker) and premium emoji (/emoji): both kinds
 # are accepted in both modes, and outside them the bot offers to save what an admin sends.

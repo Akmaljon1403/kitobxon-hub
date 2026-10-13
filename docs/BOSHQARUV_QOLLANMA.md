@@ -213,6 +213,11 @@ olinadi. **🖼 Kartochka** — iqtibos to'q ko'k-oltin brend uslubidagi chiroyl
 yozuvi, klub belgisi, «Saqlagan: Madina K.», bot nomi). **📤 Ulashish** — kartochka bot chatiga keladi,
 u yerdan do'stlarga yuboriladi.
 
+Saqlashdan oldin a'zo tanlaydi: **🔒 Faqat o'zim uchun** (hech kim ko'rmaydi) yoki **🌍 Umumiy** (admin tasdiqlagach
+«💬 A'zolar fikrlari» lentasida hamma ko'radi). Keyin ham o'zgartiradi: «🌍 Umumiy qilish» / «Shaxsiyga qaytarish».
+Oldindan tanlangan variant va «Umumiy» umuman bo'ladimi — **⚙️ Sozlamalar → community** (`community.quote_box_default`,
+`community.quote_box_common`). Admin panelda umumiylari **💬 A'zolar fikrlari**da, filtr «📦 Iqtiboslar sandig'idan».
+
 ### D.5. 🎯 Shaxsiy missiyalar
 
 Kichik maqsadlar: a'zo **🎯 Boshlash** ni bosadi va shu daqiqadan missiya muddati boshlanadi. Natija
@@ -238,6 +243,13 @@ uchun kundalikda o'qilgani ko'rinishi kerak.
 tavsif, nima hisoblanadi, maqsad, muddat, ball, holat), tahrirlash va arxivlash; har missiya uchun
 «oldi / bajardi» va bajarilish foizi. A'zolar olgan missiyaning sharti va maqsadi o'zgartirilmaydi —
 yangisini yarating.
+
+**🎯 O'z missiyam** — a'zo o'zi uchun ham maqsad qo'yadi: nima hisoblanadi (bet, o'qilgan kun, seriya, kitob,
+tadbir, test, iqtibos, «3 savol»), maqsad, necha kunda (1–90) va belgi. Bir vaqtda 10 tagacha. Bajarsa —
+kichik ball (`missions.personal_points`, standart 2), bir oyda ko'pi bilan `missions.personal_monthly_limit` (4) tasiga;
+juda oson maqsadga (masalan 1 bet) ball berilmaydi — halollik uchun. O'chirish: `missions.personal_enabled`.
+Admin panelda **🎯 Missiyalar** pastida «🙋 A'zolarning o'z missiyalari»: kim nima qo'ydi, eng ko'p tanlanganlari;
+**⬆️ Hammaga** — yaxshi missiyani klub missiyasiga qoralama qiladi, 🗑 — noo'rin bo'lsa o'chiradi.
 
 ### D.6. 🪪 Kitobxonlik kartam
 
@@ -305,13 +317,27 @@ Hammasi telefondan, Telegram ichida qilinadi.
 | 📚 Kitob va testlar | kitob/test tayyorlovchilarga |
 | 🏆 Ballar va sovg'alar | ball va sovg'a bilan ishlovchilarga |
 | 📨 Xabar va murojaatlar | a'zolar savollariga javob beruvchilarga |
+| 💳 To'lov savollari | to'lov bo'yicha savollarga (botda va to'lovlar kanalida) javob beruvchilarga |
 | 📄 Hisobot va tahlil | rasmiy hisobot tayyorlovchilarga |
 
 «Imkoniyatlar» va «Premium» sahifalari faqat **bosh administrator** (siz) uchun.
 
 To'plamdan tashqari istalgan huquqni alohida berish mumkin. Masalan, **«Telegram Stars'ni a'zolarga yuborish»**
-(`STARS_SEND`) — Premium'i va Stars hamyoni bor ishonchli adminga (29-bo'lim). Barcha huquqlar ro'yxati —
-oxiridagi **II-jadval**.
+(`STARS_SEND`) — Premium'i va Stars hamyoni bor ishonchli adminga (29-bo'lim). **«📝 Matnlar»** (`TEXTS_MANAGE`) —
+bot va kanal matnlarini o'zgartirish (12-bo'lim). Barcha huquqlar ro'yxati — oxiridagi **II-jadval**.
+
+**🛡 Bosh admin nazorati.** Pul, kanallar, imzo-muhr, bot va klub nomiga oid sozlamalarni (`payments.*`,
+`subscription.*`, `channel.chat_id`, `certificates.signer_*`, `certificates.seal`, `org.*`, `bot.*`) faqat bosh admin
+o'zgartiradi — Sozlamalarda ular «🔒 faqat bosh admin» deb belgilangan. Ularning har bir o'zgarishi, kimgadir admin
+huquqi berilishi yoki olinishi haqida barcha bosh adminlarga darhol «🛡 Xavfsizlik» xabari keladi (kim, qachon,
+avval va endi; karta raqami yashirilgan holda). Admin panelga kompyuterdan (havola orqali) kirilsa, o'sha adminga
+xabar keladi — o'zi kirmagan bo'lsa **«🔒 Barcha seanslarni yopish»**ni bosadi. **🛰 Nazorat markazi** — 12-bo'lim.
+
+> **«Server dasturchilari sezmasin» haqida.** Matnlar va sozlamalar muharriri — tizimning **oddiy, rasmiy**
+> qismi: hamma o'zgarish ma'lumotlar bazasida va audit jurnalida yoziladi, server uni xato deb ko'rmaydi
+> (dastur kodi o'zgarmaydi, qayta ishga tushirish kerak emas). Lekin u yashirin «orqa eshik» emas — buni
+> ataylab shunday qildik: yashirin kirish yo'li xavfsizlik teshigi bo'lardi va uni boshqalar ham topib qolishi
+> mumkin edi. Sizning nazoratingiz — bosh admin huquqi orqali.
 
 ## 3. Tadbir va davomat
 
@@ -330,9 +356,16 @@ A'zolar botda **💬 Yordam → ✉️ Adminga yozish** orqali yozadi. Xabar `SU
 adminlarga keladi. Javobni botning o'zida («Javob yozish») yoki panelda **📨 Murojaatlar**dan
 berasiz — a'zo sizning ismingizni ko'rmaydi, javob «Klub rahbariyati» nomidan boradi.
 
+Har bir adminga kelgan nusxada holat yoziladi: **⏳ javob kutmoqda** → kimdir javob bersa, **hamma adminning
+nusxasida** (bosh adminnikida ham) «✅ Javob berildi — Ism, vaqt» va javobning boshi. Uzun xabar to'liq keladi;
+**📄 Batafsil** — butun yozishma (savollar, javoblar, kim javob bergani); **🔒 Yopish** — murojaatni yopadi
+(hamma nusxada «🔒 Yopildi»). Kanalda kimdir «✍️ Javob yozish»ni bossa, hamma nusxada «✍️ Ism javob yozmoqda…»
+chiqadi — ikki admin bir savolga ikki marta javob yozib o'tirmaydi.
+
 **To'lov bo'yicha savollar** (`/paysupport` yoki «💳 To'lov bo'yicha» mavzusi) boshqacha: ular **💳 To'lovlar
-kanaliga** «✍️ Javob yozish» tugmasi bilan keladi va ularga **faqat bosh admin** javob beradi. Javob kanalga
-ham «↪️ Javob» bo'lib yoziladi. Kanal sozlanmagan bo'lsa — savol bosh adminlarga botda keladi.
+kanaliga** «✍️ Javob yozish» tugmasi bilan keladi. Ularga **bosh admin** va **«💳 To'lov savollari»** huquqi
+berilgan adminlar javob beradi — kanalning o'zida («Reply» yoki tugma), guruhda yoki botda. Javob kanalga
+ham «↪️ Javob» bo'lib yoziladi. Kanal sozlanmagan bo'lsa — savol shu adminlarga botda keladi.
 
 ## 5. Kitobxon pasporti
 
@@ -619,6 +652,34 @@ G'alaba xabarlari (testda 1–3-o'rin, yutuq, sertifikat, sovg'a, Premium) Teleg
 effekti** va quvnoq stiker bilan keladi. O'chirish: **⚙️ Sozlamalar → 🔔 Bildirishnomalar**. Xabar
 matnlarini **🔔 Bildirishnomalar → Shablonlar** da o'zingiz o'zgartirasiz.
 
+### 📝 Matnlar — botning har bir so'zi sizning qo'lingizda
+
+Admin panel → **📝 Matnlar (bot va kanal)** (huquq: «📝 Matnlar», bosh adminda doim bor). Bo'limlar: ro'yxatdan
+o'tish, salomlashish, menyu javoblari, yordam va murojaatlar, Premium, karta orqali to'lov, mutolaa, a'zolar fikrlari,
+a'zolarga bildirishnomalar, **📣 Kanal postlari** (kanalga chiqadigan postlar iboralari) va boshqalar.
+
+- Xabarni bosing → o'zingizcha yozing → **Saqlash**. `{first_name}` kabi qavsdagi so'zlar o'rniga bot o'zi
+  ism, sana, summa qo'yadi — ularni o'chirmang (o'chirsangiz, saqlashdan oldin ogohlantiradi).
+- **5 tagacha variant**: bot ularni navbatma-navbat yuboradi, bir xil xabar ketma-ket takrorlanmaydi. Ko'p xabarda
+  tayyor 5 tadan variant bor. Hammasi uchun o'chirish — `texts.rotate`.
+- **📤 Botda ko'rish** — xabar sizga botda keladi, Telegram'da qanday chiqishini ko'rasiz. **↩️ Asl holiga
+  qaytarish** — dasturdagi matn.
+- **⬇️ Nusxa (fayl)** — hamma o'zgarishlaringiz bitta faylga; **⬆️ Fayldan tiklash** (faqat bosh admin) — qaytarish.
+- To'lov matnlari (karta raqami, narxlar) faqat bosh adminniki. Har bir o'zgarish audit jurnalida va bosh adminga
+  xabar qilinadi.
+
+**Kanal postlari qayerdan keladi?** Ular dasturdagi tayyor shablonlardan tuziladi (tadbir, yangi kitob, kun
+iqtibosi, kitob yakuni, eslatmalar, taklif postlari); iboralari endi **📝 Matnlar → 📣 Kanal postlari**da.
+Har bir post chiqishdan oldin **📣 Telegram kanal** sahifasida turadi (5 daqiqa admin ko'rigi) — u yerda tahrirlaysiz
+yoki bekor qilasiz.
+
+### 🛰 Nazorat markazi (faqat bosh admin)
+
+Bir sahifada: murojaatlar, cheklar, Stars buyurtmalari, a'zolar fikrlari, qo'lda davomat va boshqa navbatlar —
+nechta kutmoqda va eng eskisi qancha vaqtdan beri; bot xabarlari navbati (yuborildi / xato / o'tkazildi);
+kanalga chiqmagan postlar; so'nggi harakatlar (kim nima qildi) va shu hafta kim nechta murojaatga javob berdi.
+Qatorni bosing — o'sha bo'limda o'zingiz hal qilasiz; qaroringiz boshqa adminlarning botdagi nusxalarida ham ko'rinadi.
+
 ## 13. A'zolikni bekor qilish va ma'lumotlarni o'chirish
 
 **A'zolar** → a'zo → «Bloklash» yonida:
@@ -821,8 +882,9 @@ Endi kanalning o'zida javob berasiz: kanaldagi xabarga **«Reply» (Javob)** qil
   yozish» bilan javob qaytaradi — u ham shu kanalga keladi.
 
 Yuborilgach, xabaringizga 👍 reaksiya qo'yiladi (reaksiyalar o'chiq bo'lsa — «✅ A'zoga yuborildi» qatori).
-Kanalda faqat siz qo'shgan adminlar yoza oladi; to'lovlar **guruh** bo'lsa, faqat **bosh admin**ning replylari
-a'zoga boradi. «✍️ Javob yozish» tugmasi ham ishlaydi — javobni bot chatida yozasiz.
+Kanalda faqat siz qo'shgan adminlar yoza oladi; to'lovlar **guruh** bo'lsa, faqat **bosh admin** va
+**«💳 To'lov savollari»** huquqi borlarning replylari a'zoga boradi. Kanalda javob kim nomidan yozilgani
+(kanal imzosi yoki «✍️ Javob yozish»ni bosgan admin) panelda va boshqa nusxalarda ko'rinadi. «✍️ Javob yozish» tugmasi ham ishlaydi — javobni bot chatida yozasiz.
 Botni kanaldan chiqarsangiz, bot darhol ogohlantiradi va cheklar vaqtincha botda keladi —
 hech narsa yo'qolmaydi.
 
@@ -856,6 +918,11 @@ sahifasi pastidagi «✨ Premium emojilar» bo'limida.
 > **30-bo'lim**.
 
 ## 20. Testlar: fayldan yuklash, rasmli savollar, natijalar
+
+**Savollar bazasi**: testga ko'p savol yuklang (500 tagacha) va **«Har bir a'zoga nechta savol»**ga son yozing —
+har a'zoga bazadan shuncha tasodifiy savol, tasodifiy tartibda tushadi (ko'chirish qiyin bo'ladi). Qayta urinishda
+avval ko'rmagan savollari beriladi. Son bazadagi savollardan oshmasligi kerak; a'zolar yechishni boshlagach, son
+o'zgarmaydi. Bo'sh qoldirilsa — hamma hamma savolni yechadi.
 
 **Fayldan yuklash** — test sahifasida **Fayldan yuklash (TXT, Word, PDF)**, 15 MB gacha:
 
@@ -916,6 +983,13 @@ PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlan
   kitoblar bo'yicha), o'rni bilan. **📈 Tahlillar** da ham «Guruhlar kesimida» jadvali shu tartibda.
 - A'zo o'zi ham ilovada portfolio kartasidagi **Ma'lumotnoma (PDF / Word)** tugmasi bilan o'z
   faoliyati haqida ma'lumotnoma oladi (bot chatiga keladi).
+- **Ma'lumotnoma** bitta sahifada: raqami, a'zo haqidagi matn, faoliyati, **«…kerakli joyga taqdim etish uchun
+  berildi»**, **berilgan sana va vaqt** (masalan «13.10.2026, soat 14:20»), imzo, muhr va haqiqiyligini
+  tekshirish uchun QR kod.
+- **Imzo va muhr hamma hujjatda**: «Klub rahbari: ____ Ism Familiya» va klub muhri imzo ustiga o'zi bosiladi
+  (PDF va Word'da rasm, Excel'da imzo qatori). Lavozim va ism — **⚙️ Sozlamalar → certificates**
+  («Imzo egasining lavozimi», «…ismi familiyasi»; ism bo'sh bo'lsa — birinchi bosh admin). Muhrni o'chirish —
+  `certificates.seal`. Bu sozlamalarni faqat bosh admin o'zgartiradi.
 
 ## 24. O'quv yillari va faol bo'lmagan a'zolar (o'zi ishlaydi)
 
@@ -1314,6 +1388,64 @@ Tungi tinchlik vaqtida (`notifications.quiet_hours`, odatda 22:00–08:00) ommav
 
 ## 35. 🆕 So'nggi o'zgarishlar
 
+### Oktabr, 3-yangilanish
+
+**🧪 Savollar bazasi** — testga istalgancha savol yuklaysiz (500 tagacha), **«Har bir a'zoga nechta savol»**
+maydoniga son yozasiz (masalan 20): har a'zoga bazadan tasodifiy 20 ta savol, tasodifiy tartibda tushadi. Qayta
+urinishda avval ko'rmagan savollari beriladi. Bo'sh qoldirsangiz — hamma hamma savolni yechadi (20-bo'lim).
+
+**🎯 O'z missiyam** — a'zo ilovada o'zi uchun maqsad qo'yadi (masalan «7 kunda 150 bet»). Kichik ball (2) beriladi,
+bir oyda ko'pi bilan 4 tasiga; juda oson maqsadga ball yo'q. Adminlar **🎯 Missiyalar** sahifasida
+ko'radi (pastdagi «🙋 A'zolarning o'z missiyalari»), yaxshisini bir bosishda klub missiyasiga aylantirasiz (D.5).
+
+**💬 Iqtiboslar sandig'i** — saqlashdan oldin a'zo tanlaydi: **🔒 Faqat o'zim uchun** yoki **🌍 Umumiy**. Umumiylari
+admin panelda **💬 A'zolar fikrlari**ga keladi (filtr «📦 Iqtiboslar sandig'idan») — tasdiqlaysiz, yashirasiz,
+kanalga uzatasiz (D.4).
+
+**📚 Javonim** — ilovaning pastki menyusida «Kitoblar» o'rniga **«Javonim»**: a'zoning o'z javoni, ichida
+«🏛 Klub kitoblari» ham bor. Javon o'chiq bo'lsa — eskicha «Kitoblar».
+
+**⭐ Stars sotib olish** — «💳 Bank kartasi orqali» bosilganda tariflar ostida bitta **⭐ Stars sotib olish**
+tugmasi; bosilsa Stars miqdorlari va narxlari chiqadi.
+
+**💳 To'lov savollariga kanalning o'zida javob** — bosh admin va yangi **«💳 To'lov savollari»** huquqi berilgan
+adminlar javob beradi (kanalda «Reply» yoki «✍️ Javob yozish»; guruh bo'lsa ham). Admin panelda tayyor to'plam ham
+qo'shildi: **💳 To'lov savollari** (19-bo'lim).
+
+**🔄 Hamma adminning nusxasi bir xil** — murojaat har bir adminda «⏳ javob kutmoqda» deb turadi; kimdir javob
+bersa, **hamma nusxada** «✅ Javob berildi — Ism, vaqt» bo'ladi (bosh adminnikida ham). Xuddi shunday: cheklar,
+Stars buyurtmalari, a'zolar fikrlari, qo'lda davomat so'rovlari, a'zolikni tiklash, kanal postlari ko'rigi.
+
+**📄 Batafsil** — uzun murojaat endi to'liq keladi; **📄 Batafsil** tugmasi butun yozishmani ko'rsatadi
+(a'zoning savollari, javoblar, kim javob bergani). **🔒 Yopish** ham botning o'zida (4-bo'lim).
+
+**🛰 Nazorat markazi** (faqat bosh admin) — nima kutmoqda va qancha vaqtdan beri, bot xabarlari navbati,
+so'nggi harakatlar, shu hafta kim nechta javob berdi. Istalgan qatorni bosib o'sha joyda o'zingiz hal qilasiz.
+
+**📝 Matnlar** — botning har bir xabari, a'zolarga boradigan bildirishnomalar va kanal postlari iboralari endi
+sizning qo'lingizda: o'zgartirasiz, **5 tagacha variant** yozasiz (bot navbatma-navbat yuboradi, takrorlanmaydi),
+oldindan ko'rasiz, asliga qaytarasiz. Ko'p xabarda 5 tadan tayyor variant bor. Yangi huquq: **«📝 Matnlar»** (12-bo'lim).
+
+**🔏 Muhr va imzo** — barcha hujjatlarda (ma'lumotnoma, ro'yxatlar, statistika, portfolio, hisobotlar,
+sertifikat) **«Klub rahbari: ____ Ism Familiya»** va muhr imzo ustiga o'zi bosiladi. Ism Sozlamalardagi
+«Imzo egasining ismi familiyasi»dan, bo'sh bo'lsa — birinchi bosh admin (siz).
+
+**📄 Ma'lumotnoma** — bitta sahifada: raqami, matn, **«…kerakli joyga taqdim etish uchun berildi»**, **berilgan
+sana va vaqt**, imzo, muhr va QR kod (23-bo'lim).
+
+**🛡 Xavfsizlik** — pul, kanallar, imzo-muhr va klub nomiga oid sozlamalarni **faqat bosh admin** o'zgartiradi
+(Sozlamalarda «🔒 faqat bosh admin» belgisi); ularning har bir o'zgarishi, adminlarga huquq berish/olish haqida
+sizga darhol xabar keladi. Admin panelga kompyuterdan kirilsa — o'sha adminga xabar va **«🔒 Barcha seanslarni
+yopish»** tugmasi. A'zoga bir kunda 6 tadan ortiq ommaviy xabar bormaydi (spam deb bloklanmaslik uchun).
+
+**Siz qilishingiz kerak bo'lgan ishlar (3-yangilanish):**
+
+1. **⚙️ Sozlamalar → «certificates»**: «Imzo egasining ismi familiyasi»ni tekshiring (bo'sh bo'lsa — sizning ismingiz yoziladi).
+2. **🛡 Adminlar**: to'lov savollariga javob beradigan adminlarga **«💳 To'lov savollari»** huquqini bering.
+   Matnlarni o'zgartiradigan ishonchli adminga — **«📝 Matnlar»** huquqi.
+3. **📝 Matnlar**ni bir ko'rib chiqing: yoqmagan xabarni o'zingizcha yozing.
+4. Testlarda savollar bazasidan foydalanmoqchi bo'lsangiz — testni ochib «Har bir a'zoga nechta savol»ni yozing.
+
 ### Oktabr, 2-yangilanish
 
 **💬 A'zolar fikrlari (yangi bo'lim)** — a'zolar iqtibos, o'z fikri, kitob va tadbir taassuroti, klub haqida
@@ -1480,7 +1612,9 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | Tizim | Audit jurnalini ko'rish | `AUDIT_LOG_VIEW` |
 | Murojaatlar | A'zolar murojaatlarini o'qish va ularga javob berish | `SUPPORT_MANAGE` |
 | To'lovlar | Telegram Stars'ni a'zolarga yuborish: bosh admin tasdiqlagan Stars buyurtmalari shu adminga keladi | `STARS_SEND` |
-| community | A'zolar fikrlari va iqtiboslarini ko'rib chiqish, kartochka qilish va kanal yoki a'zolarga ulashish | `COMMUNITY_MANAGE` |
+| A'zolar fikrlari | A'zolar fikrlari va iqtiboslarini ko'rib chiqish, kartochka qilish va kanal yoki a'zolarga ulashish | `COMMUNITY_MANAGE` |
+| To'lovlar | To'lov bo'yicha savollarga javob berish — botda va to'lovlar kanalining o'zida («✍️ Javob yozish» yoki «Reply») | `PAYMENT_SUPPORT` |
+| Tizim | «📝 Matnlar»: bot xabarlari, a'zolarga bildirishnomalar va kanal postlari matnini o'zgartirish | `TEXTS_MANAGE` |
 
 ## III. Sozlamalar (⚙️)
 
@@ -1519,6 +1653,7 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | `notifications.quote_of_day_time` | 09:00 | Kun iqtibosi yuboriladigan vaqt |
 | `notifications.quiet_hours` | 22:00-08:00 | Tungi tinchlik (SS:DD-SS:DD): shu vaqtda ommaviy xabarlar (e'lonlar, yangi kitob va tadbirlar, yutuqlar, haftalik xulosa) yuborilmaydi — ertalab boradi. Shaxsiy va shoshilinch xabarlar (davomat, to'lov, test natijasi) har doim boradi. Bo'sh — o'chiq |
 | `notifications.stickers` | yoqiq | Tabrik va xush kelibsiz xabarlaridan keyin adminlar /stiker bilan saqlagan stikerlardan biri ham yuborilsin (stiker saqlanmagan bo'lsa — yuborilmaydi). 🎉 animatsiya baribir qoladi |
+| `notifications.daily_limit` | 6 | Bitta a'zoga bir kunda ko'pi bilan nechta ommaviy xabar (yangiliklar, eslatmalar, kun iqtibosi, reyting...) boradi. Shaxsiy va muhim xabarlar (javoblar, to'lovlar, davomat, test natijasi) bunga kirmaydi. Ko'p xabar a'zolarni bezdiradi va Telegram botni spam deb bloklashi mumkin (0 — cheklovsiz) |
 
 **`admin.*`**
 
@@ -1539,9 +1674,9 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 |---|---|---|
 | `certificates.test_winners` | yoqiq | Test g'oliblariga (1-3-o'rin) sertifikat avtomatik beriladi (tadbir testida — faqat davomatdan o'tganlarga) |
 | `certificates.monthly_top` | yoqiq | Oy yakunida reytingdagi 1-3-o'rinlarga sertifikat beriladi |
-| `certificates.signer_title` | Klub rahbari | Sertifikatdagi imzo egasi lavozimi |
-| `certificates.signer_name` | — | Sertifikatdagi imzo egasining ismi (ixtiyoriy) |
-| `certificates.seal` | yoqiq | Sertifikatda imzo ustida klub pechati (app/brand/seal.png bo'lsa) |
+| `certificates.signer_title` | Klub rahbari | Imzo egasining lavozimi — sertifikat, ma'lumotnoma, hisobot va ro'yxatlarda imzo oldida yoziladi |
+| `certificates.signer_name` | — | Imzo egasining ismi familiyasi (masalan: Akmaljon Bahodirov). Bo'sh bo'lsa — bosh admin (klub rahbari) ismi o'zi yoziladi |
+| `certificates.seal` | yoqiq | Klub pechati imzo ustiga avtomatik bosilsin: sertifikat, ma'lumotnoma, portfolio, tasdiqlangan hisobot va ro'yxatlarda (app/brand/seal.png) |
 | `certificates.logo` | yoqiq | Sertifikat tepasida klub belgisi (app/brand/logo-mark.png bo'lsa) |
 | `certificates.free_downloads` | 1 | Premiumsiz a'zo har bir sertifikatini necha marta bepul yuklab oladi (Premium — cheklovsiz) |
 | `certificates.design_changes` | 3 | Premium a'zo bitta sertifikat dizaynini necha marta almashtira oladi |
@@ -1581,10 +1716,20 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 | `reading.reflection_points` | 5 | «Kitobdan keyin 3 savol»ga javob yozgan a'zoga ball (har kitob uchun bir marta; 0 — ballsiz) |
 | `reading.reflection_monthly_limit` | 4 | «3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz) |
 
+**`missions.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `missions.personal_enabled` | yoqiq | A'zolar o'zlari uchun shaxsiy missiya yarata oladimi («🎯 O'z missiyam») |
+| `missions.personal_points` | 2 | O'zi yaratgan missiyani bajargan a'zoga ball (juda oson maqsadlarga berilmaydi; 0 — ballsiz) |
+| `missions.personal_monthly_limit` | 4 | Bir oyda nechta shaxsiy missiya uchun ball beriladi (0 — cheklovsiz) |
+
 **`community.*`**
 
 | Sozlama | Odatiy qiymat | Ma'nosi |
 |---|---|---|
+| `community.quote_box_default` | PERSONAL | Iqtiboslar sandig'iga yangi iqtibos saqlanayotganda oldindan tanlangan variant: PERSONAL — «🔒 Faqat o'zim uchun», COMMON — «🌍 Umumiy» (hammaga ko'rinadi; a'zo saqlashdan oldin o'zgartira oladi) |
+| `community.quote_box_common` | yoqiq | A'zolar sandiqdagi iqtibosini «🌍 Umumiy» qila oladimi (o'chiq — sandiq faqat shaxsiy bo'ladi) |
 | `community.auto_publish` | o'chiq | A'zolar yuborgan iqtibos va fikrlar admin tasdiqlamasdan umumiy lentada darhol chiqsinmi (o'chiq — avval admin ko'rib chiqadi) |
 | `community.points` | 2 | Fikri yoki iqtibosi umumiy lentaga qabul qilingan a'zoga ball (har biriga bir marta; 0 — ball berilmaydi) |
 | `community.monthly_points_limit` | 5 | Bir oyda nechta fikr uchun ball beriladi (0 — cheklovsiz) |
@@ -1653,6 +1798,12 @@ Bu jadvallar dasturning o'zidan chiqarilgan — shuning uchun to'liq va aniq. So
 
 👇 Boshlash uchun «Start» tugmasini bosing. | Botning bo'sh chatida «Start» ustida ko'rinadigan matn (512 belgigacha) |
 | `bot.menu_button` | 📱 Ilova | Chat pastidagi ilovani ochadigan tugma matni |
+
+**`texts.*`**
+
+| Sozlama | Odatiy qiymat | Ma'nosi |
+|---|---|---|
+| `texts.rotate` | yoqiq | Bir xil xabar qayta-qayta takrorlanmasin: bir nechta varianti bor xabarlar (salomlashish, eslatmalar, tabriklar, kanal postlari) navbatma-navbat yuboriladi. O'chirilsa — doim birinchi varianti |
 
 **`ranking.*`**
 

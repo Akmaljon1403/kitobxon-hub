@@ -13,6 +13,7 @@ class SettingOut(BaseModel):
     default: Any
     description: str
     choices: list[str]
+    owner_only: bool = False  # changed by the super admins only (money, channels, the club's name)
 
 
 class SettingUpdateIn(BaseModel):

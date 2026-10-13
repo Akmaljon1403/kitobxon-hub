@@ -1,21 +1,56 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { useFeature } from '../components/FeatureGate'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Button, Card } from '../components/ui'
+import { Badge, Button, Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { SavedQuote } from '../types/api'
+import type { QuoteBoxOptions, QuoteVisibility, SavedQuote } from '../types/api'
 import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
 import { confirmAction, haptic } from '../utils/telegram'
 
-/** A saved quote: the card picture (preview), sent to the bot chat to share, and removal. */
-export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: () => void }) {
+const SHARED: Record<string, { label: string; tone: 'success' | 'info' | 'neutral' | 'warning' }> = {
+  APPROVED: { label: '🌍 Umumiy', tone: 'success' },
+  PENDING: { label: '⏳ Umumiyga — ko‘rib chiqilmoqda', tone: 'warning' },
+  HIDDEN: { label: '🙈 Admin yashirgan', tone: 'neutral' },
+}
+
+/** «🔒 Faqat o‘zim uchun» / «🌍 Umumiy» — chosen before saving, changeable any time. */
+export function VisibilityChoice({ value, onChange }: { value: QuoteVisibility; onChange: (value: QuoteVisibility) => void }) {
+  const items: { code: QuoteVisibility; title: string; hint: string }[] = [
+    { code: 'PERSONAL', title: '🔒 Shaxsiy', hint: 'faqat sizga ko‘rinadi' },
+    { code: 'COMMON', title: '🌍 Umumiy', hint: 'hamma ko‘radi, karta bo‘lib ulashiladi' },
+  ]
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {items.map((item) => (
+        <button
+          key={item.code}
+          type="button"
+          onClick={() => onChange(item.code)}
+          className={`rounded-xl px-3 py-2 text-left ${value === item.code ? 'bg-app-button text-app-button-text' : 'bg-app-surface'}`}
+        >
+          <span className="block text-sm font-medium">{item.title}</span>
+          <span className={`block text-xs ${value === item.code ? 'opacity-80' : 'text-app-hint'}`}>{item.hint}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** A saved quote: the card picture (preview), sent to the bot chat to share, personal/common, and removal. */
+export function QuoteCard({
+  quote,
+  onChange,
+  commonAllowed = true,
+}: {
+  quote: SavedQuote
+  onChange: () => void
+  commonAllowed?: boolean
+}) {
   const { api, download } = useAuth()
-  const community = useFeature('community')
   const [preview, setPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null)
@@ -53,13 +88,21 @@ export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: ()
     }
   }
 
-  async function share() {
+  async function setVisibility(visibility: QuoteVisibility) {
     setBusy('share')
     setNotice(null)
     try {
-      await api('/api/v1/community/from-box', { method: 'POST', body: { saved_quote_id: quote.id } })
+      const saved = await api<SavedQuote>(`/api/v1/me/quotes/${quote.id}/visibility`, { method: 'POST', body: { visibility } })
       haptic('success')
-      setNotice({ text: '🌍 «A‘zolar fikrlari»ga yuborildi — admin ko‘rib chiqqach lentada chiqadi.' })
+      setNotice({
+        text:
+          visibility === 'PERSONAL'
+            ? '🔒 Endi faqat o‘zingizga ko‘rinadi.'
+            : saved.shared === 'APPROVED'
+              ? '🌍 Umumiy lentada — hamma ko‘radi.'
+              : '🌍 Umumiyga yuborildi — admin ko‘rib chiqqach lentada chiqadi.',
+      })
+      onChange()
     } catch (err) {
       setNotice({ text: err instanceof ApiError ? err.message : 'Yuborib bo‘lmadi', error: true })
     } finally {
@@ -75,6 +118,11 @@ export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: ()
 
   return (
     <Card className="flex flex-col gap-2">
+      {!quote.book_quote_id && (
+        <div className="flex justify-end">
+          {quote.shared ? <Badge tone={SHARED[quote.shared].tone}>{SHARED[quote.shared].label}</Badge> : <Badge>🔒 Shaxsiy</Badge>}
+        </div>
+      )}
       <blockquote className="whitespace-pre-line text-[15px] italic leading-relaxed">«{quote.text}»</blockquote>
       <p className="text-right text-sm text-app-hint">
         {quote.source ? `— ${quote.source}` : ''}
@@ -94,9 +142,14 @@ export function QuoteCard({ quote, onChange }: { quote: SavedQuote; onChange: ()
           🗑
         </Button>
       </div>
-      {!quote.book_quote_id && community !== 'off' && (
-        <Button variant="ghost" className="text-sm" loading={busy === 'share'} onClick={() => void share()}>
-          🌍 Hamma bilan ulashish («A‘zolar fikrlari»)
+      {!quote.book_quote_id && quote.shared && (
+        <Button variant="ghost" className="text-sm" loading={busy === 'share'} onClick={() => void setVisibility('PERSONAL')}>
+          🔒 Shaxsiyga qaytarish
+        </Button>
+      )}
+      {!quote.book_quote_id && !quote.shared && commonAllowed && (
+        <Button variant="ghost" className="text-sm" loading={busy === 'share'} onClick={() => void setVisibility('COMMON')}>
+          🌍 Umumiy qilish (hamma ko‘rsin)
         </Button>
       )}
       <p className="text-xs text-app-hint">{formatDate(quote.created_at)}</p>
@@ -115,10 +168,15 @@ export function QuotesPage() {
     (signal) => api<SavedQuote[]>(`/api/v1/me/quotes${query ? `?search=${encodeURIComponent(query)}` : ''}`, { signal }),
     [query],
   )
+  const options = useAsync((signal) => api<QuoteBoxOptions>('/api/v1/me/quotes/options', { signal }))
   const [text, setText] = useState('')
   const [source, setSource] = useState('')
+  const [visibility, setVisibility] = useState<QuoteVisibility | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const box = options.state.status === 'success' ? options.state.data : null
+  const chosen: QuoteVisibility = box?.common_allowed ? (visibility ?? box.default) : 'PERSONAL'
 
   useEffect(() => {
     const timer = window.setTimeout(() => setQuery(search.trim()), 350)
@@ -129,10 +187,20 @@ export function QuotesPage() {
     setBusy(true)
     setError(null)
     try {
-      await api('/api/v1/me/quotes', { method: 'POST', body: { text, source: source.trim() || null } })
+      const saved = await api<SavedQuote>('/api/v1/me/quotes', {
+        method: 'POST',
+        body: { text, source: source.trim() || null, visibility: chosen },
+      })
       haptic('success')
       setText('')
       setSource('')
+      setNotice(
+        saved.shared === 'APPROVED'
+          ? '✅ Saqlandi va umumiy lentaga chiqdi 🌍'
+          : saved.shared === 'PENDING'
+            ? '✅ Saqlandi. Umumiy lentada admin ko‘rib chiqqach chiqadi ⏳'
+            : '✅ Saqlandi — faqat sizga ko‘rinadi 🔒',
+      )
       reload()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Saqlab bo‘lmadi')
@@ -163,7 +231,17 @@ export function QuotesPage() {
           onChange={(event) => setSource(event.target.value)}
           className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
         />
+        {box?.common_allowed && (
+          <>
+            <p className="text-sm font-medium">Kim ko‘radi?</p>
+            <VisibilityChoice value={chosen} onChange={setVisibility} />
+            {chosen === 'COMMON' && !box.auto_publish && (
+              <p className="text-xs text-app-hint">Umumiy iqtiboslar «A‘zolar fikrlari» lentasida admin ko‘rib chiqqach chiqadi.</p>
+            )}
+          </>
+        )}
         {error && <p className="text-sm text-app-danger">{error}</p>}
+        {notice && <p className="text-sm text-app-link">{notice}</p>}
         <Button loading={busy} disabled={!text.trim()} onClick={() => void add()}>
           💾 Saqlash
         </Button>
@@ -182,7 +260,9 @@ export function QuotesPage() {
           <EmptyState icon="💬" title={query ? 'Hech narsa topilmadi' : 'Sandiq hozircha bo‘sh'} />
         </Card>
       )}
-      {state.status === 'success' && state.data.map((quote) => <QuoteCard key={quote.id} quote={quote} onChange={reload} />)}
+      {state.status === 'success' && state.data.map((quote) => (
+          <QuoteCard key={quote.id} quote={quote} onChange={reload} commonAllowed={box?.common_allowed ?? false} />
+        ))}
     </div>
   )
 }

@@ -217,7 +217,7 @@ async def test_money_questions_are_answered_by_the_super_admin(db: AsyncSession,
 
     helper = BotHarness(club["helper"].telegram_id)
     await helper.press(f"sup:pay:{ticket.id}")
-    assert helper.session.alerts()[-1] == texts.SUPPORT_PAYMENT_SUPER_ONLY
+    assert helper.session.alerts()[-1] == texts.SUPPORT_PAYMENT_NO_RIGHT  # no «💳 To'lov savollari» right
 
     boss = BotHarness(club["boss"].telegram_id)
     await boss.press(f"sup:pay:{ticket.id}")

@@ -5,7 +5,7 @@ from app.models.attendance import AttendanceRecord, AttendanceSession, Attendanc
 from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.book import Book, BookQuote, BookRead
-from app.models.bot import BotFsmState
+from app.models.bot import BotFsmState, TextOverride
 from app.models.certificate import Certificate
 from app.models.channel import ChannelPost, ChannelSticker, CustomEmoji
 from app.models.community import Contribution, ContributionLike, PaymentsChatLink
@@ -88,6 +88,7 @@ __all__ = [
     "TestAttempt",
     "TestOption",
     "TestQuestion",
+    "TextOverride",
     "User",
     "UserAchievement",
     "UserMission",

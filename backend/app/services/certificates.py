@@ -382,8 +382,7 @@ async def _template_values(session: AsyncSession, certificate: Certificate, desi
         "description": certificate.description,
         "issued_on": format_date(certificate.issued_at),
         "number": member_number(user),
-        "signer_title": await get_setting(session, "certificates.signer_title"),
-        "signer_name": await get_setting(session, "certificates.signer_name"),
+        **await _signer_values(session),
         "code": display_code(certificate.verify_code),
         "qr": segno.make(url, error="m").svg_data_uri(dark="#14402c", border=0) if url else None,
         "revoked": certificate.revoked_at is not None,
@@ -393,6 +392,14 @@ async def _template_values(session: AsyncSession, certificate: Certificate, desi
         "p": palette,
         **await _brand_values(session, palette.paper),
     }
+
+
+async def _signer_values(session: AsyncSession) -> dict[str, Any]:
+    """«Klub rahbari» and the leader's name — the owner's when the setting is empty (see services/signing)."""
+    from app.services import signing
+
+    signer = await signing.signer(session)
+    return {"signer_title": signer.title, "signer_name": signer.name}
 
 
 async def _brand_values(session: AsyncSession, paper: str) -> dict[str, Any]:
@@ -478,8 +485,7 @@ async def sample_png(session: AsyncSession, sample: Certificate, *, width: int =
         "description": sample.description,
         "issued_on": format_date(sample.issued_at),
         "number": "KH-000042",
-        "signer_title": await get_setting(session, "certificates.signer_title"),
-        "signer_name": await get_setting(session, "certificates.signer_name"),
+        **await _signer_values(session),
         "code": display_code(sample.verify_code),
         "qr": segno.make("https://example.org/v/NAMUNA2026", error="m").svg_data_uri(dark="#14402c", border=0),
         "revoked": False,

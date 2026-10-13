@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.models import Report, User
+from app.services import signing
 from app.services.storage import get_storage
 from app.utils.timezone import format_datetime
 
@@ -85,6 +86,8 @@ async def render_report_pdf(session: AsyncSession, report: Report, *, draft: boo
             photos=await _photos(session, report),
             draft=draft,
             approved_by=f"{approver.first_name} {approver.last_name}" if approver else None,
+            # an approved report carries the club leader's name and the seal, as the other papers do
+            signer=None if draft or report.approved_at is None else await signing.signer(session),
             approved_at=format_datetime(report.approved_at) if report.approved_at else None,
             prepared_at=format_datetime(datetime.fromisoformat(prepared)) if prepared else "—",
             footer_left=f"Hisobot {str(report.id)[:8]} · {report.version}-versiya",

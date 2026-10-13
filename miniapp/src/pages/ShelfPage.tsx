@@ -253,6 +253,29 @@ function AddBook({ onAdded, existing }: { onAdded: () => void; existing: Set<str
 }
 
 /** «📚 Javonim»: my books by status, the reading diary numbers and a quick «+ bet». */
+/** «📚 Javonim | 🏛 Klub kitoblari» — the two halves of the library tab. */
+export function LibrarySwitch({ current }: { current: 'shelf' | 'books' }) {
+  const items = [
+    { code: 'shelf' as const, title: '📚 Javonim' },
+    { code: 'books' as const, title: '🏛 Klub kitoblari' },
+  ]
+  return (
+    <div className="grid grid-cols-2 gap-1 rounded-2xl bg-app-surface p-1">
+      {items.map((item) => (
+        <button
+          key={item.code}
+          type="button"
+          onClick={() => current !== item.code && navigate(`/${item.code}`)}
+          aria-current={current === item.code ? 'page' : undefined}
+          className={`rounded-xl py-2 text-sm font-medium ${current === item.code ? 'bg-app-bg shadow-sm' : 'text-app-hint'}`}
+        >
+          {item.title}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function ShelfPage() {
   const { api } = useAuth()
   const goBack = useCallback(() => navigate('/'), [])
@@ -271,6 +294,7 @@ export function ShelfPage() {
 
   return (
     <div className="flex flex-col gap-3">
+      <LibrarySwitch current="shelf" />
       <div className="px-1">
         <h1 className="text-xl font-semibold">📚 Javonim</h1>
         <p className="text-sm text-app-hint">Kitoblaringiz, mutolaa kundaligi va seriyangiz</p>

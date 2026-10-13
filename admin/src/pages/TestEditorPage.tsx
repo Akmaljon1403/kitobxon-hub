@@ -54,6 +54,7 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
     attempts_allowed: String(test.attempts_allowed),
     shuffle_questions: test.shuffle_questions,
     shuffle_options: test.shuffle_options,
+    questions_per_attempt: test.questions_per_attempt ? String(test.questions_per_attempt) : '',
   }
   const [form, setForm] = useState(initial)
   const [busy, setBusy] = useState(false)
@@ -83,6 +84,7 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
           attempts_allowed: Number(form.attempts_allowed),
           shuffle_questions: form.shuffle_questions,
           shuffle_options: form.shuffle_options,
+          questions_per_attempt: form.questions_per_attempt ? Number(form.questions_per_attempt) : null,
         },
       })
       setSaved(true)
@@ -130,7 +132,32 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
         <Field label="O'tish bali" hint="Bundan kam natija ball bermaydi (0 — chegarasiz)">
           <Input type="number" min={0} max={1000} value={form.passing_score} onChange={set('passing_score')} disabled={!editable || readOnlyScores} />
         </Field>
+        <Field
+          label="Har bir a'zoga nechta savol"
+          hint={
+            readOnlyScores
+              ? "Test boshlangan — o'zgartirib bo'lmaydi"
+              : `Bazada ${test.question_count} ta savol. Bo'sh qoldirilsa — hammasi; son yozilsa, har bir a'zoga shuncha savol tasodifiy tanlanadi`
+          }
+        >
+          <Input
+            type="number"
+            min={1}
+            max={Math.max(1, test.question_count)}
+            placeholder={`Hammasi (${test.question_count})`}
+            value={form.questions_per_attempt}
+            onChange={set('questions_per_attempt')}
+            disabled={!editable || readOnlyScores}
+          />
+        </Field>
       </div>
+      {form.questions_per_attempt && Number(form.questions_per_attempt) < test.question_count && (
+        <p className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
+          🎲 Har bir a'zo {test.question_count} ta savoldan tasodifiy <b>{form.questions_per_attempt}</b> tasini oladi —
+          yonidagi talabaning savollari boshqacha bo'ladi. Ball savollar soniga emas, to'g'ri javoblar ulushiga qarab
+          hisoblanadi, shuning uchun hamma teng sharoitda. Qayta urinishda avval ko'rmagan savollari beriladi.
+        </p>
+      )}
       <Field label="Tavsif">
         <Textarea value={form.description} onChange={set('description')} maxLength={5000} disabled={!editable} />
       </Field>
@@ -432,7 +459,7 @@ export function TestEditorPage({ testId }: { testId: string }) {
         window.confirm(
           `Fayldan ${result.questions.length} ta savol o'qildi.\n\nOK — hozirgi ${questions.length} ta savol o'rniga qo'yiladi.\nBekor qilish — oxiriga qo'shiladi.`,
         )
-      update((replace ? result.questions : [...questions, ...result.questions]).slice(0, 200))
+      update((replace ? result.questions : [...questions, ...result.questions]).slice(0, 500))
       setWarnings(result.warnings)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Faylni o'qib bo'lmadi.")
@@ -463,7 +490,7 @@ export function TestEditorPage({ testId }: { testId: string }) {
     <>
       <PageHeader
         title={test.title}
-        subtitle={`${formatDateTime(test.starts_at)} — ${formatDateTime(test.ends_at)} · ${test.question_count} ta savol · ${test.participant_count} qatnashchi`}
+        subtitle={`${formatDateTime(test.starts_at)} — ${formatDateTime(test.ends_at)} · ${test.question_count} ta savol${test.questions_per_attempt && test.questions_per_attempt < test.question_count ? ` (har a'zoga ${test.questions_per_attempt} ta tasodifiy)` : ''} · ${test.participant_count} qatnashchi`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <TestStateBadge state={test.state} />
@@ -612,7 +639,7 @@ Javob: A, B`}</pre>
       ))}
       {!readOnly && (
         <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-2 border-t border-app-border bg-app-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
-          <Button variant="secondary" disabled={questions.length >= 200} onClick={() => update([...questions, blankQuestion()])}>
+          <Button variant="secondary" disabled={questions.length >= 500} onClick={() => update([...questions, blankQuestion()])}>
             + Savol qo'shish
           </Button>
           <div className="flex items-center gap-3">

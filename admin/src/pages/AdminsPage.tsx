@@ -170,6 +170,11 @@ const PRESETS: { label: string; hint: string; permissions?: string[] }[] = [
     permissions: ['USER_VIEW', 'NOTIFICATION_SEND', 'SUPPORT_MANAGE', 'COMMUNITY_MANAGE'],
   },
   {
+    label: "💳 To'lov savollari",
+    hint: "To'lov bo'yicha savollarga botda va to'lovlar kanalining o'zida javob berish",
+    permissions: ['USER_VIEW', 'SUPPORT_MANAGE', 'PAYMENT_SUPPORT'],
+  },
+  {
     label: '📄 Hisobot va tahlil',
     hint: 'Rasmiy hisobotlar va statistika',
     permissions: ['EVENT_VIEW', 'REPORT_VIEW', 'REPORT_CREATE', 'REPORT_APPROVE', 'ANALYTICS_VIEW'],

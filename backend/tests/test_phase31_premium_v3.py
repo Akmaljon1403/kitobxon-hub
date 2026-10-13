@@ -397,7 +397,18 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
     student = _harness(9611)
     await student.press("card:open")
     keyboard = student.session.sent_messages()[-1].reply_markup.inline_keyboard
-    assert any(b.callback_data == "card:stars:100" for row in keyboard for b in row)
+    buttons = [b.callback_data for row in keyboard for b in row]
+    assert "card:starsmenu" in buttons and "card:stars:100" not in buttons  # one «⭐ Stars sotib olish» button
+    await student.press("card:starsmenu")  # now the amounts with their prices (the menu changes in place)
+    menu = student.session.requests[-1]
+    assert "<b>100 ⭐</b> — 23 000 so'm" in menu.text
+    assert any(b.callback_data == "card:stars:100" for row in menu.reply_markup.inline_keyboard for b in row)
+    await student.press("card:back")
+    assert any(
+        b.callback_data == "card:starsmenu"
+        for row in student.session.requests[-1].reply_markup.inline_keyboard
+        for b in row
+    )
     await student.press("card:stars:100")
     assert "100 Telegram Stars" in student.last_text() and "23 000 so'm" in student.last_text()
     await student.send_photo("receipt")

@@ -214,7 +214,10 @@ async def test_member_writes_admin_answers_in_the_bot(client: httpx.AsyncClient,
     alerts = list(await db.scalars(select(Notification).where(Notification.type == NotificationType.SUPPORT)))
     assert [n.user_id for n in alerts] == [support_admin_id]  # not the admin without the permission
     assert "Dilnoza Karimova" in alerts[0].text and "Test qachon ochiladi?" in alerts[0].text
-    assert alerts[0].payload["buttons"][0]["callback"] == f"sup:ans:{ticket.id}"
+    assert [b["callback"] for b in alerts[0].payload["buttons"][0]["row"]] == [
+        f"sup:ans:{ticket.id}",
+        f"sup:full:{ticket.id}",
+    ]  # «✍️ Javob yozish» and «📄 Batafsil»
     assert other_admin_id not in {n.user_id for n in alerts}
 
     admin_bot = BotHarness(6101)

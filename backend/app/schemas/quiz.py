@@ -25,6 +25,9 @@ class TestCreateIn(BaseModel):
     attempts_allowed: int = Field(default=1, ge=1, le=10)
     shuffle_questions: bool = True
     shuffle_options: bool = True
+    questions_per_attempt: int | None = Field(
+        default=None, ge=1, le=500, description="Random questions per member from the bank; empty = all"
+    )
 
     @model_validator(mode="after")
     def _times(self) -> TestCreateIn:
@@ -45,6 +48,7 @@ class TestUpdateIn(BaseModel):
     attempts_allowed: int | None = Field(default=None, ge=1, le=10)
     shuffle_questions: bool | None = None
     shuffle_options: bool | None = None
+    questions_per_attempt: int | None = Field(default=None, ge=1, le=500, description="null = all questions")
 
 
 class OptionIn(BaseModel):
@@ -74,7 +78,7 @@ class QuestionIn(BaseModel):
 
 
 class QuestionsIn(BaseModel):
-    questions: list[QuestionIn] = Field(min_length=1, max_length=200)
+    questions: list[QuestionIn] = Field(min_length=1, max_length=500)
 
 
 class OptionAdminOut(BaseModel):
@@ -133,6 +137,7 @@ class TestAdminOut(BaseModel):
     status: TestStatus
     state: TestState
     question_count: int
+    questions_per_attempt: int | None = None
     participant_count: int
     published_at: datetime | None
     rank_bonus_awarded: bool

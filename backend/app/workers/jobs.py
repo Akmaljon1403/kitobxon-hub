@@ -101,6 +101,9 @@ async def run_scheduled_jobs(session_factory: async_sessionmaker[AsyncSession]) 
                 locked = await session.scalar(select(func.pg_try_advisory_xact_lock(LOCK_NAMESPACE, index)))
                 if not locked:
                     continue  # another worker is running this job right now
+                from app.bot import text_store
+
+                await text_store.refresh(session)  # the owner's wording for channel posts and reminders
                 results[name] = await job(session)
                 await session.commit()
             except Exception:

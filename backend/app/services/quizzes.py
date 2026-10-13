@@ -89,9 +89,10 @@ _TEST_FIELDS = (
     "attempts_allowed",
     "shuffle_questions",
     "shuffle_options",
+    "questions_per_attempt",
 )
 # Changing these after someone has answered would make results incomparable.
-_LOCKED_AFTER_ATTEMPTS = ("max_score", "passing_score")
+_LOCKED_AFTER_ATTEMPTS = ("max_score", "passing_score", "questions_per_attempt")
 _random = random.SystemRandom()
 
 
@@ -135,6 +136,32 @@ def scale(raw: int, raw_max: int, max_score: int) -> int:
     if raw_max <= 0:
         return 0
     return (2 * raw * max_score + raw_max) // (2 * raw_max)
+
+
+def per_attempt(test: Test, bank: int) -> int:
+    """How many questions one attempt has: the test's number, never more than the bank holds."""
+    if test.questions_per_attempt:
+        return min(test.questions_per_attempt, bank)
+    return bank
+
+
+def _pick(test: Test, bank: list[uuid.UUID], seen: set[uuid.UUID]) -> list[uuid.UUID]:
+    """The questions for a new attempt. From a bank every member gets ``questions_per_attempt`` of them at
+    random; on another attempt the questions this member has not had yet come first."""
+    take = per_attempt(test, len(bank))
+    if take < len(bank):
+        fresh = [question for question in bank if question not in seen]
+        chosen = _random.sample(fresh, min(take, len(fresh)))
+        if len(chosen) < take:
+            others = [question for question in bank if question in seen]
+            chosen += _random.sample(others, take - len(chosen))
+        position = {question: index for index, question in enumerate(bank)}
+        chosen.sort(key=position.__getitem__)  # the bank's order unless shuffled below
+    else:
+        chosen = list(bank)
+    if test.shuffle_questions:
+        _random.shuffle(chosen)
+    return chosen
 
 
 def ledger_value(test: Test, score: int | None) -> int:
@@ -264,6 +291,12 @@ async def update_test(
         if field in _TEST_FIELDS:
             setattr(test, field, value)
     _validate(test)
+    if test.status == TestStatus.PUBLISHED and test.questions_per_attempt:
+        bank = (await question_counts(session, [test.id])).get(test.id, 0)
+        if test.questions_per_attempt > bank:
+            raise BadRequestError(
+                "TOO_FEW_QUESTIONS", f"Bazada {bank} ta savol bor — har bir a'zoga ko'pi bilan {bank} ta beriladi."
+            )
     after = _snapshot(test)
     if before != after:
         record_audit(
@@ -345,11 +378,19 @@ async def question_image(
     question = await session.get(TestQuestion, question_id)
     if question is None or question.test_id != test.id or not question.image_key:
         raise NotFoundError("IMAGE_NOT_FOUND", "Rasm topilmadi.")
-    started = await session.scalar(
-        select(TestAttempt.id).where(TestAttempt.test_id == test.id, TestAttempt.user_id == user_id).limit(1)
-    )
-    if started is None and state(test) != "CLOSED":
-        raise ForbiddenError("TEST_NOT_STARTED", "Rasm test boshlanganda ko'rinadi.")
+    if state(test) != "CLOSED":
+        # before the close only the questions of the member's own attempts (a bank's others stay unseen)
+        mine = await session.scalar(
+            select(TestAttempt.id)
+            .where(
+                TestAttempt.test_id == test.id,
+                TestAttempt.user_id == user_id,
+                TestAttempt.question_order.any(question.id),
+            )
+            .limit(1)
+        )
+        if mine is None:
+            raise ForbiddenError("TEST_NOT_STARTED", "Rasm test boshlanganda ko'rinadi.")
     return await get_storage().get(question.image_key)
 
 
@@ -381,6 +422,12 @@ async def publish_test(session: AsyncSession, *, actor_id: uuid.UUID, test_id: u
         raise BadRequestError("TEST_QUESTIONS_INVALID", "Ba'zi savollar to'liq emas.", details=problems)
     if test.ends_at <= _now():
         raise BadRequestError("TEST_ALREADY_ENDED", "Test yopilish vaqti o'tib ketgan. Vaqtni o'zgartiring.")
+    if test.questions_per_attempt and test.questions_per_attempt > len(questions):
+        raise BadRequestError(
+            "TOO_FEW_QUESTIONS",
+            f"Bazada {len(questions)} ta savol bor, har bir a'zoga esa {test.questions_per_attempt} ta "
+            "berilishi belgilangan. Savollar qo'shing yoki sonini kamaytiring.",
+        )
     test.status = TestStatus.PUBLISHED
     test.published_at = _now()
     test.published_by = actor_id
@@ -825,11 +872,17 @@ async def start_attempt(session: AsyncSession, *, user: User, test_id: uuid.UUID
     if not questions:
         raise ConflictError("TEST_HAS_NO_QUESTIONS", "Testda savollar yo'q.")
 
-    question_ids = [question.id for question, _ in questions]
-    if test.shuffle_questions:
-        _random.shuffle(question_ids)
+    seen: set[uuid.UUID] = set()
+    for earlier in await session.scalars(
+        select(TestAttempt.question_order).where(TestAttempt.test_id == test.id, TestAttempt.user_id == user.id)
+    ):
+        seen.update(earlier)
+    question_ids = _pick(test, [question.id for question, _ in questions], seen)
+    chosen = set(question_ids)
     option_order: dict[str, list[str]] = {}
     for question, options in questions:
+        if question.id not in chosen:
+            continue
         ids = [str(option.id) for option in options]
         if test.shuffle_options:
             _random.shuffle(ids)

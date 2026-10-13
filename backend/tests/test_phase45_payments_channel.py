@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot import texts
 from app.models import CardPayment, Notification, Payment
-from app.models.enums import CardPaymentStatus, PaymentKind, PaymentStatus
+from app.models.enums import CardPaymentStatus, NotificationType, PaymentKind, PaymentStatus
 from app.security.permissions import Perm
 from app.services import payments_chat, support
 from app.services.settings import get_setting, update_setting
@@ -75,15 +75,17 @@ async def test_payment_questions_only_in_the_payments_channel(db: AsyncSession, 
     await grant_permissions(db, helper, Perm.SUPPORT_MANAGE)
     await grant_role(db, boss, "SUPER_ADMIN")
 
-    def count(user_id: Any) -> Any:
-        return db.scalar(select(func.count()).where(Notification.user_id == user_id))
+    def count(user_id: Any) -> Any:  # questions only (changing the payments chat also alerts the owners)
+        return db.scalar(
+            select(func.count()).where(Notification.user_id == user_id, Notification.type == NotificationType.SUPPORT)
+        )
 
-    # Without a payments channel a money question goes to the super admins only (their conversation).
+    # Without a payments channel a money question goes to the super admins (and «💳 To'lov savollari» holders).
     await support.member_message(db, user=member, text="Chekim tasdiqlanmadi", topic="payment")
     await db.commit()
     assert (await count(boss.id), await count(helper.id)) == (1, 0)
     question = await db.scalar(select(Notification).where(Notification.user_id == boss.id))
-    assert question.payload["buttons"][0]["callback"].startswith("sup:pay:")
+    assert question.payload["buttons"][0]["row"][0]["callback"].startswith("sup:pay:")
 
     await update_setting(db, key="payments.chat_id", value=str(CHANNEL), actor_id=None)
     await support.member_message(db, user=member, text="Yana bir savol", topic="payment")

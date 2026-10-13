@@ -16,7 +16,7 @@ from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Select, func, literal, select
+from sqlalchemy import Select, String, func, literal, select
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -89,13 +89,21 @@ async def render(session: AsyncSession, type_: NotificationType, **values: Any) 
 
     Values are HTML-escaped because the bot sends messages in HTML mode.
     """
+    from app.bot import text_store
+
     template = await session.scalar(select(NotificationTemplate).where(NotificationTemplate.type == type_))
     if template is None or not template.is_active:
         return None
+    await text_store.refresh(session)
     safe = _Values(
         str, {key: html.escape(str(value), quote=False) if value is not None else "—" for key, value in values.items()}
     )
-    return template.body.format_map(safe).strip()
+    # the owner's wording from «📝 Matnlar», or one of the built-in variants (so it does not repeat)
+    body = text_store.pick(f"notify.{type_.value}", template.body)
+    try:
+        return body.format_map(safe).strip()
+    except (ValueError, IndexError, KeyError, AttributeError):  # a broken edit must not stop the message
+        return template.body.format_map(safe).strip()
 
 
 def celebrate(payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -118,6 +126,7 @@ async def enqueue_notification(
     payload: dict[str, Any] | None = None,
     priority: int = 5,
     scheduled_at: datetime | None = None,
+    sync: str | None = None,
 ) -> None:
     values: dict[str, Any] = {
         "user_id": user_id,
@@ -126,6 +135,7 @@ async def enqueue_notification(
         "dedup_key": dedup_key,
         "payload": payload,
         "priority": priority,
+        "sync_key": sync,
     }
     if scheduled_at is not None:
         values["scheduled_at"] = scheduled_at
@@ -150,15 +160,17 @@ async def enqueue_for_members(
     payload: dict[str, Any] | None = None,
     priority: int = 5,
     scheduled_at: datetime | None = None,
+    sync: str | None = None,
 ) -> int:
     """Queue the same message for many members in one statement. Returns how many were new.
 
     ``members`` is a SELECT of user ids (default: every active member). The dedup key is
     ``<dedup_prefix>:<user id>``, so calling this again never duplicates a message.
-    ``scheduled_at``: send later (a planned announcement).
+    ``scheduled_at``: send later (a planned announcement). ``sync``: these are copies of one request to the
+    admins — when one acts, every copy shows it (``copies.settle``).
     """
     recipients = (members if members is not None else active_members()).subquery()
-    columns = ["user_id", "type", "text", "payload", "priority", "dedup_key"]
+    columns = ["user_id", "type", "text", "payload", "priority", "dedup_key", "sync_key"]
     values: list[Any] = [
         recipients.c.id,
         literal(type_.value),
@@ -166,6 +178,7 @@ async def enqueue_for_members(
         literal(payload, JSONB) if payload is not None else literal(None, JSONB),
         literal(priority),
         func.concat(dedup_prefix, ":", recipients.c.id),
+        literal(sync, String) if sync is not None else literal(None, String),
     ]
     if scheduled_at is not None:
         columns.append("scheduled_at")

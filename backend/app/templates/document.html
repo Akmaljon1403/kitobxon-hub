@@ -8,30 +8,47 @@
     @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #777; } }
   html { font-family: "Liberation Serif", "Times New Roman", "DejaVu Serif", serif; font-size: 10pt; color: #1b1b1b; }
   h1 { font-size: 15pt; text-align: center; margin: 0 0 2mm; color: #14402c; }
+  .number { text-align: center; font-weight: bold; margin: 0 0 2mm; }
   .line { text-align: center; color: #555; margin: 0.6mm 0; }
+  .body p { text-align: justify; text-indent: 10mm; margin: 2.5mm 0; font-size: 11.5pt; line-height: 1.45; }
   h2 { font-size: 11.5pt; margin: 6mm 0 2mm; color: #14402c; }
-  table { width: 100%; border-collapse: collapse; margin-top: 2mm; }
-  th { background: #1f5132; color: #fff; font-weight: bold; text-align: left; padding: 1.4mm 1.6mm; font-size: 8.8pt; }
-  td { border-bottom: 0.25mm solid #d8e0da; padding: 1.2mm 1.6mm; font-size: 8.8pt; vertical-align: top; }
-  tr:nth-child(even) td { background: #f5f8f6; }
-  tr.totals td { font-weight: bold; border-top: 0.4mm solid #1f5132; background: #eef4f0; }
+  table.data { width: 100%; border-collapse: collapse; margin-top: 2mm; }
+  table.data th { background: #1f5132; color: #fff; font-weight: bold; text-align: left; padding: 1.4mm 1.6mm; font-size: 8.8pt; }
+  table.data td { border-bottom: 0.25mm solid #d8e0da; padding: 1.2mm 1.6mm; font-size: 8.8pt; vertical-align: top; }
+  table.data tr:nth-child(even) td { background: #f5f8f6; }
+  table.data tr.totals td { font-weight: bold; border-top: 0.4mm solid #1f5132; background: #eef4f0; }
+  .letter table.data td, .letter table.data th { font-size: 10.5pt; padding: 1.6mm 2mm; }
+  .notes p { text-indent: 10mm; margin: 2mm 0; font-size: 11pt; }
+  /* the signature, the seal over it and the QR code stay together on one page */
+  .sign { margin-top: 9mm; page-break-inside: avoid; display: flex; align-items: flex-end; justify-content: space-between; gap: 6mm; }
+  .sign .who { font-size: 11.5pt; }
+  .sign .issued { margin: 0 0 17mm; font-size: 10pt; color: #333; }
+  .sign .row { position: relative; padding-bottom: 2mm; }
+  .sign .who .rule { display: inline-block; width: 42mm; border-bottom: 0.3mm solid #222; margin: 0 3mm; }
+  /* the seal sits over the signature line, as a real stamp does */
+  .sign .seal { position: absolute; left: 28mm; top: -13mm; width: 32mm; height: 32mm; opacity: 0.9; }
+  .sign .qr { text-align: center; width: 34mm; }
+  .sign .qr img { width: 30mm; height: 30mm; }
+  .sign .qr p { margin: 1mm 0 0; font-size: 7pt; color: #555; }
   .appendix { page-break-before: always; }
   .grid { display: flex; flex-wrap: wrap; gap: 3mm; }
   .card { width: 58mm; border: 0.3mm solid #c9d3cc; border-radius: 2mm; padding: 2mm; text-align: center; page-break-inside: avoid; }
   .card img { width: 26mm; height: 26mm; }
   .card .name { font-weight: bold; font-size: 9pt; margin-top: 1mm; }
   .card .details { color: #555; font-size: 8pt; }
-  .signature { margin-top: 10mm; }
   .empty { color: #777; font-style: italic; }
 </style>
 </head>
-<body>
+<body class="{{ 'letter' if doc.body else '' }}">
   <h1>{{ doc.title }}</h1>
+  {% if doc.number %}<p class="number">{{ doc.number }}</p>{% endif %}
   {% for line in doc.lines %}<p class="line">{{ line }}</p>{% endfor %}
+  {% if doc.body %}<div class="body">{% for paragraph in doc.body %}<p>{{ paragraph }}</p>{% endfor %}</div>{% endif %}
   {% for table in doc.tables %}
     {% if table.title %}<h2>{{ table.title }}</h2>{% endif %}
     {% if table.rows %}
-    <table>
+    <table class="data">
+      {% if table.widths %}<colgroup>{% for width in table.widths %}<col style="width: {{ (100 * width / table.widths|sum)|round(1) }}%">{% endfor %}</colgroup>{% endif %}
       <thead><tr>{% for column in table.columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
       <tbody>
         {% for row in table.rows %}<tr>{% for value in row %}<td>{{ '' if value is none else value }}</td>{% endfor %}</tr>{% endfor %}
@@ -40,8 +57,24 @@
     </table>
     {% else %}<p class="empty">Ma'lumot yo'q.</p>{% endif %}
   {% endfor %}
-  {% if doc.signature %}<p class="signature">{{ doc.signature }}</p>{% endif %}
-  {% if appendix %}
+  {% if doc.notes %}<div class="notes">{% for note in doc.notes %}<p>{{ note }}</p>{% endfor %}</div>{% endif %}
+  {% if doc.signer or doc.signature or doc.issued %}
+  <div class="sign">
+    <div class="who">
+      {% if doc.issued %}<div class="issued">Berilgan sana va vaqt: <b>{{ doc.issued }}</b></div>{% endif %}
+      <div class="row">
+      {% if doc.signer %}
+        {% if doc.signer.seal %}<img class="seal" src="{{ doc.signer.seal }}" alt="">{% endif %}
+        <b>{{ doc.signer.title }}:</b><span class="rule"></span><b>{{ doc.signer.name }}</b>
+      {% elif doc.signature %}{{ doc.signature }}{% endif %}
+      </div>
+    </div>
+    {% if doc.inline_qr and appendix %}
+    <div class="qr"><img src="{{ appendix[0].qr }}" alt="QR"><p>Haqiqiyligini tekshirish uchun QR kodni skanerlang</p></div>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% if appendix and not doc.inline_qr %}
   <section class="appendix">
     <h1>{{ doc.appendix_title or 'Ilova' }}</h1>
     <p class="line">QR kodni telefon kamerasi bilan skanerlang — a'zoning klubdagi faoliyati ochiladi.</p>

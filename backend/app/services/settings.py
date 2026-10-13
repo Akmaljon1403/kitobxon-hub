@@ -179,10 +179,25 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     SettingDefinition(
         "certificates.monthly_top", True, bool, "Oy yakunida reytingdagi 1-3-o'rinlarga sertifikat beriladi"
     ),
-    SettingDefinition("certificates.signer_title", "Klub rahbari", ShortText, "Sertifikatdagi imzo egasi lavozimi"),
-    SettingDefinition("certificates.signer_name", "", ShortText, "Sertifikatdagi imzo egasining ismi (ixtiyoriy)"),
     SettingDefinition(
-        "certificates.seal", True, bool, "Sertifikatda imzo ustida klub pechati (app/brand/seal.png bo'lsa)"
+        "certificates.signer_title",
+        "Klub rahbari",
+        ShortText,
+        "Imzo egasining lavozimi — sertifikat, ma'lumotnoma, hisobot va ro'yxatlarda imzo oldida yoziladi",
+    ),
+    SettingDefinition(
+        "certificates.signer_name",
+        "",
+        ShortText,
+        "Imzo egasining ismi familiyasi (masalan: Akmaljon Bahodirov). Bo'sh bo'lsa — bosh admin (klub rahbari) "
+        "ismi o'zi yoziladi",
+    ),
+    SettingDefinition(
+        "certificates.seal",
+        True,
+        bool,
+        "Klub pechati imzo ustiga avtomatik bosilsin: sertifikat, ma'lumotnoma, portfolio, tasdiqlangan hisobot va "
+        "ro'yxatlarda (app/brand/seal.png)",
     ),
     SettingDefinition(
         "certificates.logo", True, bool, "Sertifikat tepasida klub belgisi (app/brand/logo-mark.png bo'lsa)"
@@ -295,7 +310,40 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=50)],
         "«3 savol» uchun bir oyda nechta kitobga ball beriladi (0 — cheklovsiz)",
     ),
+    # ---- «🎯 Missiyalar»: the ones members set for themselves ----
+    SettingDefinition(
+        "missions.personal_enabled",
+        True,
+        bool,
+        "A'zolar o'zlari uchun shaxsiy missiya yarata oladimi («🎯 O'z missiyam»)",
+    ),
+    SettingDefinition(
+        "missions.personal_points",
+        2,
+        Annotated[int, Field(ge=0, le=50)],
+        "O'zi yaratgan missiyani bajargan a'zoga ball (juda oson maqsadlarga berilmaydi; 0 — ballsiz)",
+    ),
+    SettingDefinition(
+        "missions.personal_monthly_limit",
+        4,
+        Annotated[int, Field(ge=0, le=31)],
+        "Bir oyda nechta shaxsiy missiya uchun ball beriladi (0 — cheklovsiz)",
+    ),
     # ---- «💬 A'zolar fikrlari» ----
+    SettingDefinition(
+        "community.quote_box_default",
+        "PERSONAL",
+        str,
+        "Iqtiboslar sandig'iga yangi iqtibos saqlanayotganda oldindan tanlangan variant: PERSONAL — «🔒 Faqat "
+        "o'zim uchun», COMMON — «🌍 Umumiy» (hammaga ko'rinadi; a'zo saqlashdan oldin o'zgartira oladi)",
+        choices=("PERSONAL", "COMMON"),
+    ),
+    SettingDefinition(
+        "community.quote_box_common",
+        True,
+        bool,
+        "A'zolar sandiqdagi iqtibosini «🌍 Umumiy» qila oladimi (o'chiq — sandiq faqat shaxsiy bo'ladi)",
+    ),
     SettingDefinition(
         "community.auto_publish",
         False,
@@ -475,6 +523,23 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)],
         "Chat pastidagi ilovani ochadigan tugma matni",
     ),
+    # ---- Protection from being reported as spam ----
+    SettingDefinition(
+        "notifications.daily_limit",
+        6,
+        Annotated[int, Field(ge=0, le=50)],
+        "Bitta a'zoga bir kunda ko'pi bilan nechta ommaviy xabar (yangiliklar, eslatmalar, kun iqtibosi, reyting...) "
+        "boradi. Shaxsiy va muhim xabarlar (javoblar, to'lovlar, davomat, test natijasi) bunga kirmaydi. Ko'p xabar "
+        "a'zolarni bezdiradi va Telegram botni spam deb bloklashi mumkin (0 — cheklovsiz)",
+    ),
+    # ---- «📝 Matnlar»: the bot's words ----
+    SettingDefinition(
+        "texts.rotate",
+        True,
+        bool,
+        "Bir xil xabar qayta-qayta takrorlanmasin: bir nechta varianti bor xabarlar (salomlashish, eslatmalar, "
+        "tabriklar, kanal postlari) navbatma-navbat yuboriladi. O'chirilsa — doim birinchi varianti",
+    ),
     # ---- Privacy ----
     SettingDefinition(
         "ranking.public_name_format",
@@ -486,6 +551,22 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
 )
 
 SETTINGS_BY_KEY: dict[str, SettingDefinition] = {definition.key: definition for definition in SETTING_DEFINITIONS}
+
+# Settings that move money or speak in the club's name: only the super admins change them, and every change is
+# reported to all of them at once (a card number swapped by someone else would send members' money elsewhere).
+OWNER_ONLY = (
+    "payments.",
+    "subscription.",
+    "channel.chat_id",
+    "certificates.signer",
+    "certificates.seal",
+    "org.",
+    "bot.",
+)
+
+
+def owner_only(key: str) -> bool:
+    return key.startswith(OWNER_ONLY)
 
 
 def get_definition(key: str) -> SettingDefinition:
@@ -572,6 +653,10 @@ async def update_setting(session: AsyncSession, *, key: str, value: Any, actor_i
         before={"value": before},
         after={"value": validated},
     )
+    if owner_only(key) and before != validated:
+        from app.services import security_alerts
+
+        await security_alerts.setting_changed(session, key=key, actor_id=actor_id, before=before, after=validated)
     await session.commit()
     forget_cache()
     if key.startswith("subscription.") or key == "channel.chat_id":

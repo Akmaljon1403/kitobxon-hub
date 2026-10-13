@@ -611,6 +611,15 @@ export interface SavedQuote {
   shelf_item_id: string | null
   book_quote_id: string | null
   created_at: string
+  shared: 'PENDING' | 'APPROVED' | 'HIDDEN' | null
+}
+
+export type QuoteVisibility = 'PERSONAL' | 'COMMON'
+
+export interface QuoteBoxOptions {
+  default: QuoteVisibility
+  common_allowed: boolean
+  auto_publish: boolean
 }
 
 export interface ShelfItemDetail extends ShelfItem {
@@ -635,6 +644,14 @@ export interface Mission {
   deadline: string | null
   completed_at: string | null
   attempts: number
+  personal: boolean
+}
+
+export interface MissionOptions {
+  enabled: boolean
+  points: number
+  icons: string[]
+  metrics: { code: string; title: string; unit: string; min: number; max: number; points_from: number }[]
 }
 
 export type ContributionKind = 'QUOTE' | 'THOUGHT' | 'BOOK' | 'EVENT' | 'CLUB'

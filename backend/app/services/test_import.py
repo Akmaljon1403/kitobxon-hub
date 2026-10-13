@@ -35,7 +35,7 @@ from app.models.enums import QuestionType
 logger = logging.getLogger(__name__)
 
 MAX_BYTES = 15 * 1024 * 1024
-MAX_QUESTIONS = 200
+MAX_QUESTIONS = 500
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 MIN_IMAGE_SIDE = 40  # smaller pictures are decorations (bullets, lines)
 

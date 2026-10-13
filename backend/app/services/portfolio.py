@@ -7,7 +7,6 @@ certificates (with their check codes) and achievements, with a QR code to the li
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 from typing import Any
 
 import segno
@@ -16,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AttendanceRecord, Book, BookRead, Certificate, Event, Faculty, Test, TestAttempt, User
 from app.models.enums import AttemptStatus, AttendanceStatus, ReadingStatus
+from app.services import signing
 from app.services.settings import get_setting
 from app.utils.timezone import format_date
 
@@ -100,7 +100,8 @@ async def collect(session: AsyncSession, user: User) -> dict[str, Any]:
         "course": user.course,
         "group": user.group_name,
         "since": format_date(since) if since else "—",
-        "generated": format_date(datetime.now(UTC)),
+        "generated": signing.issued_now(),
+        "signer": await signing.signer(session),
         "points": summary["total"],
         "rank": overall.me.rank if overall.me else None,
         "books": [

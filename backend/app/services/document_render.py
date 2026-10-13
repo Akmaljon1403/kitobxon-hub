@@ -50,7 +50,18 @@ class Document:
     appendix_title: str | None = None
     appendix: list[QrEntry] = field(default_factory=list)
     landscape: bool = False
-    signature: str | None = None  # «Klub rahbari: ________»
+    signature: str | None = None  # a plain «Klub rahbari: ________» (when there is no ``signer``)
+    signer: Any = None  # signing.Signer: «Klub rahbari: ____ Ism Familiya» with the seal over it
+    number: str | None = None  # «№ KX-00123/26» under the title
+    body: list[str] = field(default_factory=list)  # paragraphs of a letter (a ma'lumotnoma)
+    notes: list[str] = field(default_factory=list)  # after the tables («… taqdim etish uchun berildi.»)
+    issued: str | None = None  # «12.10.2026, soat 20:45» — when the paper was made
+    # The QR code next to the signature, on the same page (one person's paper), instead of an appendix page.
+    inline_qr: bool = False
+
+    @property
+    def signature_line(self) -> str | None:
+        return self.signer.line if self.signer is not None else self.signature
 
 
 # ---------------------------------------------------------------------------- Excel
@@ -117,11 +128,21 @@ def to_xlsx(document: Document) -> bytes:
                 f"A{header_row}:{get_column_letter(len(table.columns))}{header_row + len(table.rows)}"
             )
         sheet.freeze_panes = sheet.cell(row=header_row + 1, column=1)
+        if number == 1:  # under the first table: the notes, who signs and when the paper was made
+            row_index += 1
+            for line in [*document.notes, document.signature_line, _issued_line(document)]:
+                if line:
+                    row_index += 1
+                    sheet.cell(row=row_index, column=1, value=safe_cell(line)).font = Font(italic=True)
     if not workbook.sheetnames:
         workbook.create_sheet("Hujjat").cell(row=1, column=1, value=document.title)
     output = io.BytesIO()
     workbook.save(output)
     return output.getvalue()
+
+
+def _issued_line(document: Document) -> str | None:
+    return f"Berilgan sana va vaqt: {document.issued}" if document.issued else None
 
 
 # ---------------------------------------------------------------------------- Word
@@ -155,10 +176,17 @@ def to_docx(document: Document) -> bytes:
     run = heading.add_run(document.title)
     run.bold = True
     run.font.size = Pt(15)
+    if document.number:
+        number = word.add_paragraph(document.number)
+        number.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for line in document.lines:
         paragraph = word.add_paragraph(line)
         paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         paragraph.runs[0].font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+    for text in document.body:
+        paragraph = word.add_paragraph(text)
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        paragraph.paragraph_format.first_line_indent = Cm(1.0)
 
     for table in document.tables:
         if table.title:
@@ -184,7 +212,11 @@ def to_docx(document: Document) -> bytes:
                         cell_run.bold = values is table.totals
         word.add_paragraph()
 
-    if document.appendix:
+    for text in document.notes:
+        note = word.add_paragraph(text)
+        note.paragraph_format.first_line_indent = Cm(1.0)
+    _docx_signature(word, document)
+    if document.appendix and not document.inline_qr:
         word.add_page_break()
         title = word.add_paragraph()
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -210,12 +242,46 @@ def to_docx(document: Document) -> bytes:
             details = cell.add_paragraph(entry.details)
             details.alignment = WD_ALIGN_PARAGRAPH.CENTER
             details.runs[0].font.size = Pt(8)
-    if document.signature:
-        word.add_paragraph()
-        word.add_paragraph(document.signature)
     output = io.BytesIO()
     word.save(output)
     return output.getvalue()
+
+
+def _docx_signature(word: Any, document: Document) -> None:
+    """«Klub rahbari: [seal] ____ Ism Familiya», the issue date, and — for one person's paper — the QR code on
+    the right, all in one borderless row that stays on the same page."""
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Cm, Pt
+
+    if document.signer is None and not document.signature and not document.issued:
+        return
+    word.add_paragraph()
+    qr = document.appendix[0] if document.inline_qr and document.appendix else None
+    grid = word.add_table(rows=1, cols=2 if qr else 1)
+    left = grid.rows[0].cells[0]
+    first = left.paragraphs[0]
+    if document.signer is not None:
+        first.add_run(f"{document.signer.title}: ").bold = True
+        if document.signer.seal:
+            data = base64.b64decode(document.signer.seal.split(",", 1)[1])
+            first.add_run().add_picture(io.BytesIO(data), width=Cm(2.6))
+        first.add_run(" ________________ ")
+        first.add_run(document.signer.name).bold = True
+    elif document.signature:
+        first.add_run(document.signature)
+    issued = _issued_line(document)
+    if issued:
+        when = left.add_paragraph(issued)
+        when.runs[0].font.size = Pt(9.5)
+    if qr:
+        right = grid.rows[0].cells[1]
+        picture = right.paragraphs[0]
+        picture.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        picture.add_run().add_picture(io.BytesIO(_qr_png(qr.url)), width=Cm(2.8))
+        caption = right.add_paragraph("Haqiqiyligini tekshirish uchun QR kodni skanerlang")
+        caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        caption.runs[0].font.size = Pt(7.5)
+        right.width = Cm(4.0)
 
 
 # ---------------------------------------------------------------------------- PDF

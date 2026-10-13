@@ -62,6 +62,7 @@ async def _tests_out(db, tests: list[Test]) -> list[TestAdminOut]:
             status=test.status,
             state=quiz_service.state(test),
             question_count=questions.get(test.id, 0),
+            questions_per_attempt=test.questions_per_attempt,
             participant_count=participants.get(test.id, 0),
             published_at=test.published_at,
             rank_bonus_awarded=test.rank_bonus_awarded_at is not None,

@@ -173,9 +173,31 @@ async def exchange_admin_login_token(session: AsyncSession, raw_token: str) -> A
         entity_id=user.id,
         after={"method": "login_link"},
     )
+    await _tell_about_login(session, user)
     await session.commit()
     token, expires_at = create_access_token(user.id, user.token_version, "admin")
     return AuthResult(token, expires_at, "admin", user, roles)
+
+
+async def _tell_about_login(session: AsyncSession, user: User) -> None:
+    """The admin hears about every computer sign-in at once: if it was not them, one tap ends every session."""
+    from app.models.enums import NotificationType
+    from app.services import copies
+    from app.services.notifications import enqueue_notification
+
+    await enqueue_notification(
+        session,
+        user_id=user.id,
+        type_=NotificationType.SYSTEM,
+        text=(
+            f"💻 <b>Admin panelga kompyuter orqali kirildi</b> — {copies.stamp()}.\n\n"
+            "Bu siz bo'lsangiz, hech narsa qilish shart emas. Siz bo'lmasangiz — pastdagi tugmani bosing: barcha "
+            "seanslar darhol yopiladi va havolani kim ishlatgan bo'lsa, panelni ishlata olmaydi."
+        ),
+        dedup_key=f"admin-login:{user.id}:{int(datetime.now(UTC).timestamp())}",
+        payload={"buttons": [{"text": "🔒 Barcha seanslarni yopish", "callback": "adm:logoutall"}]},
+        priority=1,
+    )
 
 
 async def logout_everywhere(session: AsyncSession, user_id: uuid.UUID) -> None:

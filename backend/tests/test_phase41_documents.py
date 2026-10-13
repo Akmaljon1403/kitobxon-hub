@@ -131,7 +131,7 @@ async def test_statistics_has_a_qr_appendix(client: httpx.AsyncClient, db: Async
     )
     assert response.status_code == 200, response.text
     word = WordDocument(io.BytesIO(response.content))
-    assert len(word.inline_shapes) == 3  # one QR code per active member
+    assert len(word.inline_shapes) == 4  # one QR code per active member, and the club's seal by the signature
     pdf = await client.get(
         "/api/v1/admin/documents/statistics/file",
         params={"faculty_id": str(club["faculty"].id), "format": "pdf"},
@@ -212,7 +212,12 @@ async def test_member_statement_and_portfolio_in_word(
     word = WordDocument(io.BytesIO(statement.document.data))
     rows = {row.cells[0].text: row.cells[1].text for row in word.tables[0].rows}
     assert rows["Tadbirlarda qatnashgan"] == "1" and rows["O'qib tugatgan kitoblari"] == "1"
-    assert len(word.inline_shapes) == 1  # the QR code
+    assert len(word.inline_shapes) == 2  # the club's seal by the signature and the QR code, on one page
+    text = "\n".join(paragraph.text for paragraph in word.paragraphs)
+    assert "kerakli joyga taqdim etish uchun berildi" in text and "haqiqatan ham" in text
+    signature = word.tables[-1].rows[0].cells[0].text
+    assert "Klub rahbari:" in signature and "Berilgan sana va vaqt:" in signature
+    assert "Haqiqiyligini tekshirish" in word.tables[-1].rows[0].cells[1].text
 
     telegram.requests.clear()
     assert (await client.post("/api/v1/me/portfolio/send", headers=headers)).status_code == 204

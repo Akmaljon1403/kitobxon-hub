@@ -291,6 +291,7 @@ export function CommunityPage() {
   const { api } = useSession()
   const [tab, setTab] = useState<Status>('PENDING')
   const [kind, setKind] = useState('')
+  const [origin, setOrigin] = useState('')
   const [q, setQ] = useState('')
   const [query, setQuery] = useState('')
   const [dialog, setDialog] = useState<{ item: Item; action: Action } | null>(null)
@@ -300,10 +301,11 @@ export function CommunityPage() {
     (signal) => {
       const params = new URLSearchParams({ status: tab })
       if (kind) params.set('kind', kind)
+      if (origin) params.set('origin', origin)
       if (query) params.set('q', query)
       return api<Listing>(`/api/v1/admin/community?${params.toString()}`, { signal })
     },
-    [tab, kind, query],
+    [tab, kind, origin, query],
   )
 
   useEffect(() => {
@@ -327,7 +329,7 @@ export function CommunityPage() {
     <div className="flex flex-col gap-4">
       <PageHeader
         title="💬 A'zolar fikrlari"
-        subtitle="A’zolar yuborgan iqtiboslar, fikrlar, kitob va tadbir taassurotlari, klub haqidagi e’tiroflar. Tasdiqlang — lentada chiqadi; xohlagan joyingizga uzating: kanal, a’zolar, kun iqtibosi yoki o‘zingizga (botda)."
+        subtitle="A’zolar yuborgan iqtiboslar, fikrlar, kitob va tadbir taassurotlari, klub haqidagi e’tiroflar, iqtiboslar sandig‘ida «🌍 Umumiy» qilinganlar. Tasdiqlang — lentada chiqadi; «🙈 Yashirish» — a’zoning sandig‘ida qoladi, lekin hammaga ko‘rinmaydi. Xohlagan joyingizga uzating: kanal, a’zolar, kun iqtibosi yoki o‘zingizga (botda). Sandiqning oldindan tanlangan varianti — Sozlamalar → «community»."
       />
       <div className="flex flex-wrap items-center gap-2">
         {TABS.map((item) => (
@@ -350,6 +352,10 @@ export function CommunityPage() {
                   {option.title}
                 </option>
               ))}
+          </Select>
+          <Select value={origin} onChange={(event) => setOrigin(event.target.value)}>
+            <option value="">Hamma joydan</option>
+            <option value="BOX">📦 Iqtiboslar sandig‘idan (umumiy qilinganlar)</option>
           </Select>
           <Input placeholder="🔎 Matn yoki ism" value={q} onChange={(event) => setQ(event.target.value)} />
         </div>

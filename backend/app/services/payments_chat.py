@@ -51,8 +51,9 @@ async def chat_id(session: AsyncSession) -> str | None:
 Link = tuple[str, uuid.UUID, uuid.UUID]  # (kind: "ticket" | "card" | "user", what, the member)
 
 
-async def remember(session: AsyncSession, sent: Any, link: Link | None) -> None:
-    """Keep what a message is about, so an admin's «Reply» to it in the channel reaches the member."""
+async def remember(session: AsyncSession, sent: Any, link: Link | None, base_text: str | None = None) -> None:
+    """Keep what a message is about, so an admin's «Reply» to it in the channel reaches the member.
+    ``base_text``: the message without its state line, so the state can be updated under it later."""
     if link is None or sent is None or getattr(sent, "chat", None) is None:
         return
     from sqlalchemy.dialects.postgresql import insert
@@ -62,13 +63,28 @@ async def remember(session: AsyncSession, sent: Any, link: Link | None) -> None:
     kind, target, user_id = link
     await session.execute(
         insert(PaymentsChatLink)
-        .values(chat_id=sent.chat.id, message_id=sent.message_id, kind=kind, target_id=target, user_id=user_id)
+        .values(
+            chat_id=sent.chat.id,
+            message_id=sent.message_id,
+            kind=kind,
+            target_id=target,
+            user_id=user_id,
+            base_text=base_text,
+        )
         .on_conflict_do_nothing()
     )
     await session.commit()
 
 
-async def post(session: AsyncSession, text: str, reply_markup: Any = None, *, link: Link | None = None) -> bool:
+async def post(
+    session: AsyncSession,
+    text: str,
+    reply_markup: Any = None,
+    *,
+    link: Link | None = None,
+    base_text: str | None = None,
+    reply_to: int | None = None,
+) -> bool:
     """A message in the payments chat. False when no chat is set or it cannot be reached.
     ``link``: what the message is about — the admins can answer the member by replying to it."""
     from app.services.delivery import optional_bot
@@ -78,12 +94,14 @@ async def post(session: AsyncSession, text: str, reply_markup: Any = None, *, li
     if chat is None or bot is None:
         return False
     try:
-        sent = await bot.send_message(chat, text, reply_markup=reply_markup, disable_web_page_preview=True)
+        sent = await bot.send_message(
+            chat, text, reply_markup=reply_markup, disable_web_page_preview=True, reply_to_message_id=reply_to
+        )
     except Exception:
         logger.warning("The payments chat could not be reached")
         return False
     try:
-        await remember(session, sent, link)
+        await remember(session, sent, link, base_text)
     except Exception:  # the message is out; only the «Reply» shortcut is lost
         logger.exception("A payments chat link could not be stored")
         await session.rollback()

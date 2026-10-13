@@ -23,6 +23,18 @@ the backend verifies everything.**
 * Each admin endpoint declares the permissions it needs; a blanket automated test checks that every
   `/api/v1/admin/*` route rejects anonymous (401) and member (403) requests.
 * Phone numbers are a separate permission (`USER_CONTACT_VIEW`).
+* Settings that move money or speak in the club's name (`payments.*`, `subscription.*`, `channel.chat_id`,
+  `certificates.signer_*`, `certificates.seal`, `org.*`, `bot.*`) are changed by SUPER_ADMIN only, even by
+  admins holding `SETTINGS_MANAGE` (`403 OWNER_ONLY_SETTING`); the settings list marks them `owner_only`.
+  Payment wording in «📝 Matnlar» (card instructions, prices) is likewise SUPER_ADMIN only.
+* Every super admin is told at once («🛡 Xavfsizlik», past the quiet hours) when one of those settings
+  changes (the card number masked), when bot or channel wording is edited, and when anyone is appointed,
+  dismissed, or given or refused permissions. Each of these is also in the audit log.
+* A sign-in with a one-time link (a computer) is reported to that admin in the bot with «🔒 Barcha
+  seanslarni yopish», which raises `token_version` and ends every session at once.
+* The text editor is a regular, audited feature: edits live in `text_overrides`, are validated (only the
+  placeholders the message knows, balanced Telegram HTML, at most 5 variants) and fall back to the wording in
+  the code if a stored edit can no longer be rendered. There is no hidden or unaudited way in.
 
 ## Data integrity
 
@@ -46,6 +58,8 @@ the backend verifies everything.**
 | Test activity signals | 30 requests / minute / member |
 | Telegram bot updates | 40 updates / minute / Telegram user |
 | Request body | 4 MB (JSON), 10 MB (file uploads); larger requests get `413` |
+| Club-wide messages to one member | `notifications.daily_limit` a day (6 by default) — news, reminders, quote of the day; answers, payments, attendance and admin broadcasts are not counted. Keeps the bot from being reported as spam. |
+| A member's own missions | 15 created / hour, 10 kept at once |
 
 Per-IP limits are deliberately generous: a whole lecture hall on the campus Wi-Fi, or many phones
 behind a mobile operator's shared address, open the Mini App at the same moment. Guessing does not

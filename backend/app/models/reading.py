@@ -114,6 +114,7 @@ class Mission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         CheckConstraint("period_days > 0 AND period_days <= 366", name="period_range"),
         CheckConstraint("reward_points >= 0", name="reward_not_negative"),
         Index("ix_missions_status", "status"),
+        Index("ix_missions_owner_id", "owner_id"),
     )
 
     title: Mapped[str] = mapped_column(String(160))
@@ -127,6 +128,8 @@ class Mission(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         enum_column(MissionStatus), default=MissionStatus.ACTIVE, server_default=MissionStatus.ACTIVE.value
     )
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # A member's own mission («o'zim uchun»): only its owner sees it. Empty for the club's missions.
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
 
 class UserMission(UUIDPrimaryKeyMixin, TimestampMixin, Base):

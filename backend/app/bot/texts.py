@@ -5,6 +5,9 @@ Style: short sentences, one idea per line, "siz" form, the same names as in the 
 
 from __future__ import annotations
 
+import sys as _sys
+import types as _types
+
 # ---- Main menu (the same names are used in the Mini App) ----
 BTN_BOOKS = "📚 Kitoblar"
 BTN_EVENTS = "📅 Tadbirlar"
@@ -282,6 +285,9 @@ ADMIN_LINK = (
     "Havola bir marta ishlaydi va {minutes} daqiqada eskiradi. Uni hech kimga yubormang."
 )
 ADMIN_ONLY = "Bu bo'lim faqat klub administratorlari uchun."
+ADMIN_LOGGED_OUT = (
+    "🔒 Admin paneldagi barcha seanslaringiz yopildi. Qayta kirish uchun — «🛠 Boshqaruv» → «🔐 Admin panelga kirish»."
+)
 ADMIN_URL_NOT_CONFIGURED = "Admin panel manzili (PUBLIC_BASE_URL) hali sozlanmagan."
 
 # ---- Misc ----
@@ -398,11 +404,24 @@ CARD_CHOOSE = (
     "1️⃣ Pastdan tarifni tanlang.\n"
     "2️⃣ Summani klub kartasiga o'tkazing (Click, Payme yoki bank ilovasi).\n"
     "3️⃣ To'lov chekini (skrinshot) shu yerga yuboring — admin tasdiqlagach Premium o'zi yoqiladi.\n\n"
-    "⭐ Telegram Stars kerakmi? Pastdagi Stars to'plamlarini tanlang — ular Telegram'da sizga sovg'a "
-    "qilib yuboriladi (buning uchun profilingizda username bo'lishi kerak)."
+    "⭐ Telegram Stars kerakmi? «⭐ Stars sotib olish» tugmasini bosing."
 )
+CARD_CHOOSE_STARS_ONLY = (
+    "💳 <b>Bank kartasi orqali</b>\n\n"
+    "Premium tariflari hozir yopiq, lekin Telegram Stars'ni karta orqali sotib olishingiz mumkin — "
+    "«⭐ Stars sotib olish» tugmasini bosing."
+)
+BTN_BUY_STARS = "⭐ Stars sotib olish"
+CARD_STARS_MENU = (
+    "⭐ <b>Telegram Stars sotib olish</b>\n\n"
+    "{packages}\n\n"
+    "Kerakli miqdorni tanlang → summani klub kartasiga o'tkazing → chekni shu yerga yuboring. Admin "
+    "tasdiqlagach Stars Telegram'da sizga <b>sovg'a qilib</b> yuboriladi va bot xabar beradi.\n"
+    "ℹ️ Buning uchun Telegram profilingizda <b>username</b> bo'lishi kerak."
+)
+CARD_STARS_LINE = "• <b>{stars} ⭐</b> — {price}"
 CARD_PLAN = "💎 {title} — {price}"
-CARD_STARS = "⭐ {stars} Stars — {price}"
+CARD_STARS = "⭐ {stars} — {price}"
 BTN_STARS_SENT = "✅ Stars yuborildi"
 CARD_STARS_DELIVERED = "✅ Belgilandi: {name} ga {stars} ⭐ yuborildi. A'zoga xabar ketdi."
 CARD_DONATE = "❤️ Hissa (istalgan summa)"
@@ -444,6 +463,12 @@ CARD_LINE_REJECTED = "❌ Rad etildi — {admin}, {time}. Sabab: {reason}"
 CARD_LINE_UNDONE = "↩️ Qaytarildi — {admin}, {time}: qayta ko'rib chiqing"
 CARD_LINE_SENT = "⭐ Stars yuborildi — {admin}, {time}"
 SUPPORT_PAYMENT_SUPER_ONLY = "To'lov bo'yicha savollarga faqat bosh admin javob beradi."
+SUPPORT_PAYMENT_NO_RIGHT = (
+    "To'lov bo'yicha savollarga bosh admin va «💳 To'lov savollari» huquqi berilgan adminlar javob beradi."
+)
+SUPPORT_TICKET_GONE = "Bu murojaat topilmadi (o'chirilgan bo'lishi mumkin)."
+SUPPORT_THREAD_PHOTO = "📷 A'zo yuborgan rasm"
+SUPPORT_CLOSED = "🔒 Yopildi — barcha nusxalarda ko'rinadi."
 CARD_LINE_STARS_ORDERED = "⭐ Yuborish topshirildi: {senders} (ko'rsatma ularga shaxsiy xabarda)"
 STARS_SENDER_ONLY = "Bu tugma bosh admin va «⭐ Stars yuborish» huquqi berilgan adminlar uchun."
 BTN_UNDO = "↩️ Qaytarish"
@@ -768,10 +793,15 @@ COMMUNITY_DONE = {
 PAYCHAT_SENT = "✅ A'zoga yuborildi: {name}"
 PAYCHAT_TEXT_ONLY = "⚠️ Faqat matn yuboriladi — javobni so'z bilan yozing."
 PAYCHAT_FAILED = "⚠️ Yuborilmadi: {reason}"
-PAYCHAT_SUPER_ONLY = "⚠️ To'lov masalalarida a'zoga faqat bosh admin javob beradi."
+PAYCHAT_SUPER_ONLY = (
+    "⚠️ To'lov masalalarida a'zoga bosh admin va «💳 To'lov savollari» huquqi berilgan adminlar javob beradi."
+)
 PAYCHAT_ABOUT_CARD = "to'lovingiz bo'yicha: {what}, {amount}"
 PAYCHAT_ABOUT_USER = "to'lovingiz bo'yicha"
-SUPPORT_REPLY_CHANNEL_HINT = "✍️ Javobni bot chatida yozing — yoki kanalda shu xabarga «Reply» qilib yozing."
+SUPPORT_REPLY_CHANNEL_HINT = (
+    "✍️ Endi shu yerning o'zida savolga «Reply» qilib javobingizni yozing — u a'zoga «Klub rahbariyati» "
+    "nomidan boradi. Boshqa adminlar savolni siz olganingizni ko'radi."
+)
 
 # ---- «What is this channel's id?» (an admin forwards a channel post) ----
 CHAT_ID_INFO = (
@@ -788,3 +818,23 @@ CHAT_ID_HIDDEN = (
     "🆔 Bu forward'da kanal ma'lumoti yashirilgan. Kanaldan postni boshqa forward qiling yoki botni kanalga "
     "administrator qiling — bot o'zi so'raydi."
 )
+
+
+# ---- Live wording -------------------------------------------------------------------------------------
+# The owner can rewrite any text above in the Admin Panel («📝 Matnlar»), and many have several variants so
+# members do not read the same sentence every time (``text_store``). Button captions stay as they are: the
+# bot recognises the menu by them.
+FIXED_PREFIXES = ("BTN_",)
+
+
+class _LiveTexts(_types.ModuleType):
+    def __getattribute__(self, name: str) -> object:
+        value = _types.ModuleType.__getattribute__(self, name)
+        if type(value) is str and name[:1].isupper() and not name.startswith(FIXED_PREFIXES):
+            from app.bot import text_store
+
+            return text_store.pick(name, value)
+        return value
+
+
+_sys.modules[__name__].__class__ = _LiveTexts

@@ -34,6 +34,9 @@ class DbSessionMiddleware(BaseMiddleware):
     async def __call__(self, handler: Handler, event: TelegramObject, data: dict[str, Any]) -> Any:
         async with get_session_factory()() as session:
             data["db"] = session
+            from app.bot import text_store
+
+            await text_store.refresh(session)  # the owner's wording (looked at again every half minute)
             try:
                 return await handler(event, data)
             finally:
@@ -109,7 +112,7 @@ CHECK = "sub:check"
 
 # Buttons the bot answers in groups and channels (the payments chat): payment decisions and replies to
 # payment questions. Everything else there is ignored, so the bot never chats in a group.
-GROUP_CALLBACKS = ("cp:", "sup:ans:", "sup:pay:")
+GROUP_CALLBACKS = ("cp:", "sup:ans:", "sup:pay:", "sup:full:", "sup:close:")
 
 
 class GroupMiddleware(BaseMiddleware):

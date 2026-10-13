@@ -23,6 +23,14 @@ const GROUP_TITLES: Record<string, string> = {
   referral: "👥 Do'stlarni taklif qilish",
   channel: '📣 Telegram kanal',
   ranking: '📊 Reyting',
+  admin: '🛡 Adminlar',
+  reading: '📚 Mutolaa (javon, kundalik, 3 savol)',
+  missions: '🎯 Missiyalar',
+  community: "💬 A'zolar fikrlari va iqtiboslar sandig'i",
+  academic: "🎓 O'quv yili, kurslar, bitiruvchilar",
+  membership: "🚪 A'zolikdan chiqish",
+  bot: '🤖 Bot',
+  texts: '📝 Matnlar',
 }
 
 function toText(setting: Setting, value: unknown): string {
@@ -48,8 +56,10 @@ function fromText(setting: Setting, text: string): unknown {
   }
 }
 
-function SettingRow({ setting, canEdit }: { setting: Setting; canEdit: boolean }) {
-  const { api } = useSession()
+function SettingRow({ setting, canEdit: allowed }: { setting: Setting; canEdit: boolean }) {
+  const { api, admin } = useSession()
+  // money, channels and the club's name: only the super admins change them (and all of them are told)
+  const canEdit = allowed && (!setting.owner_only || Boolean(admin?.is_super_admin))
   const [current, setCurrent] = useState<unknown>(setting.value)
   const [text, setText] = useState(toText(setting, setting.value))
   const [busy, setBusy] = useState(false)
@@ -126,6 +136,7 @@ function SettingRow({ setting, canEdit }: { setting: Setting; canEdit: boolean }
       <div>
         <p className="text-sm font-medium">{setting.description}</p>
         <p className="text-xs text-app-hint">
+          {setting.owner_only && <span className="mr-1 font-medium text-amber-700 dark:text-amber-400">🔒 faqat bosh admin ·</span>}
           Standart qiymat: {toText(setting, setting.default) || '—'}
           {setting.kind === 'int_list' && ' (vergul bilan ajrating)'}
         </p>

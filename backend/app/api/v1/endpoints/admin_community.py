@@ -63,10 +63,13 @@ async def list_contributions(
     q: Annotated[str | None, Query(max_length=100)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    origin: Literal["BOX"] | None = None,
 ) -> dict[str, Any]:
     return {
         "counts": await community.admin_counts(db),
-        "items": await community.admin_list(db, status=status, kind=kind, q=q, limit=limit, offset=offset),
+        "items": await community.admin_list(
+            db, status=status, kind=kind, q=q, limit=limit, offset=offset, origin=origin
+        ),
         "styles": [{"code": style.code, "title": style.title} for style in share_cards.STYLES.values()],
         "kinds": [{"code": kind, "title": title} for kind, (title, _, _) in community.KINDS.items()],
         "next_quote_day": await community.next_free_quote_day(db),

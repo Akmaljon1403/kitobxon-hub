@@ -28,6 +28,7 @@ from app.api.v1.endpoints import (
     admin_stars,
     admin_support,
     admin_system,
+    admin_texts,
     admin_users,
     auth,
     books,
@@ -87,6 +88,8 @@ for module in (
     admin_missions,
     admin_community,
     admin_rentals,
+    admin_texts,
 ):
     api_router.include_router(module.router)
 api_router.include_router(admin_analytics.trust_router)
+api_router.include_router(admin_texts.control_router)

@@ -126,8 +126,16 @@ async def _answer_in_payments_chat(message: Message, db: AsyncSession, bot: Bot,
     actor_id = actor.id if actor else None
     try:
         if link.kind == "ticket":
+            if actor_id is None:  # a channel reply has no author: whoever pressed «✍️ Javob yozish» on it
+                actor_id = await support.claimer(db, message.chat.id, reply.message_id, link.target_id)
             await support.admin_reply(
-                db, actor_id=actor_id, ticket_id=link.target_id, text=text, payment=True, echo=False
+                db,
+                actor_id=actor_id,
+                ticket_id=link.target_id,
+                text=text,
+                payment=True,
+                echo=False,
+                signature=message.author_signature,
             )
         else:
             about = texts.PAYCHAT_ABOUT_USER
@@ -159,12 +167,14 @@ async def channel_answer(message: Message, db: AsyncSession, bot: Bot) -> None:
 
 @router.message(F.chat.type.in_({"group", "supergroup"}), F.reply_to_message)
 async def group_answer(message: Message, db: AsyncSession, bot: Bot, member: User | None) -> None:
-    """In a payments group anyone may write: only the super administrators' replies reach members."""
+    """In a payments group anyone may write: only the replies of the super administrators and of the admins
+    given «💳 To'lov savollari» reach members."""
+    from app.security.permissions import Perm
     from app.services import payments_chat
 
     if not payments_chat.same_chat(await payments_chat.chat_id(db), message.chat):
         return
-    if not await access.is_super_admin(db, member):
+    if not await access.has_permission(db, member, Perm.PAYMENT_SUPPORT):
         if message.reply_to_message and await payments_chat.find_link(
             db, message.chat.id, message.reply_to_message.message_id
         ):

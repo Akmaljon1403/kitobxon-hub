@@ -27,7 +27,7 @@ os.environ["STORAGE_LOCAL_PATH"] = tempfile.mkdtemp(prefix="kitobxon-test-storag
 os.environ.pop("AI_API_KEY", None)
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import httpx
@@ -127,3 +127,14 @@ def _no_quiet_hours(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPa
         return None
 
     monkeypatch.setattr("app.workers.sender.quiet_until", never)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_texts() -> Iterator[None]:
+    """The owner's text edits are kept in memory for half a minute: every test starts without them."""
+    from app.bot import text_store
+
+    text_store.reset()
+    yield
+    text_store.reset()
+    text_store.force_rotation = None
