@@ -7,7 +7,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import SupportTicketStatus
+from app.models.enums import SupportTicketKind, SupportTicketStatus
 
 
 class SupportMemberOut(BaseModel):
@@ -23,6 +23,7 @@ class SupportMemberOut(BaseModel):
 class SupportTicketOut(BaseModel):
     id: uuid.UUID
     status: SupportTicketStatus
+    kind: SupportTicketKind = SupportTicketKind.GENERAL
     unread: bool
     last_message_at: datetime
     created_at: datetime
@@ -43,6 +44,7 @@ class SupportMessageOut(BaseModel):
 class SupportTicketDetailOut(BaseModel):
     id: uuid.UUID
     status: SupportTicketStatus
+    kind: SupportTicketKind = SupportTicketKind.GENERAL
     created_at: datetime
     member: SupportMemberOut
     messages: list[SupportMessageOut]
