@@ -102,7 +102,7 @@ async def render(session: AsyncSession, type_: NotificationType, **values: Any) 
     body = text_store.pick(f"notify.{type_.value}", template.body)
     try:
         return body.format_map(safe).strip()
-    except (ValueError, IndexError):  # a broken edit must not stop the message: the template as it was
+    except (ValueError, IndexError, KeyError, AttributeError):  # a broken edit must not stop the message
         return template.body.format_map(safe).strip()
 
 

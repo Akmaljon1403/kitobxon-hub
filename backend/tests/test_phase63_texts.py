@@ -199,3 +199,17 @@ async def test_the_control_centre_shows_every_queue(client: httpx.AsyncClient, d
     assert queues["support"]["count"] == 1 and queues["support"]["route"] == "support"
     assert view["waiting_total"] >= 1
     assert view["recent"][0]["what"] == "bot matnini o'zgartirdi" and view["recent"][0]["who"] == "Akmal Bosh"
+
+
+def test_every_action_label_names_a_real_action() -> None:
+    """The control centre's words for the audit log must name actions the code really records."""
+    import pathlib
+    import re
+
+    from app.services.control import ACTIONS
+
+    files = [path for path in pathlib.Path("app").rglob("*.py") if path.name != "control.py"]
+    source = "\n".join(path.read_text() for path in files)
+    recorded = set(re.findall(r'"([A-Z][A-Z_]+)"', source))
+    recorded |= {f"CONTRIBUTION_{word}" for word in ("APPROVE", "FEATURE", "HIDE")}  # f"CONTRIBUTION_{...}"
+    assert not set(ACTIONS) - recorded
