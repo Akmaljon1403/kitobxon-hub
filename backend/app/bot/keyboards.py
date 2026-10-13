@@ -335,10 +335,27 @@ def write_again() -> InlineKeyboardMarkup:
 
 
 def emoji_tools(has_any: bool) -> InlineKeyboardMarkup | None:
-    """/emoji: check that Telegram shows the premium emoji, or remove them all."""
+    """/emoji: check that Telegram shows the premium emoji, see and remove them one by one, or all."""
     return inline(
         [InlineKeyboardButton(text=texts.BTN_EMOJI_TEST, callback_data="emj:test")] if has_any else [],
+        [InlineKeyboardButton(text=texts.BTN_EMOJI_LIST, callback_data="emj:list")] if has_any else [],
         [InlineKeyboardButton(text=texts.BTN_EMOJI_CLEAR, callback_data="emj:clear")] if has_any else [],
+    )
+
+
+def sticker_overview(total: int) -> InlineKeyboardMarkup | None:
+    """/stiker: see the saved stickers (each with a delete button)."""
+    return inline([InlineKeyboardButton(text=texts.BTN_STICKER_LIST, callback_data="stk:list")] if total else [])
+
+
+def sticker_delete(sticker_id: object) -> InlineKeyboardMarkup:
+    return inline([InlineKeyboardButton(text=texts.BTN_STICKER_DELETE, callback_data=f"stk:del:{sticker_id}")])
+
+
+def emoji_delete_list(rows: list[tuple[str, str]]) -> InlineKeyboardMarkup | None:
+    """One button per saved emoji; pressing it removes that emoji (value: the plain emoji)."""
+    return inline(
+        *[[InlineKeyboardButton(text=f"🗑 {emoji}", callback_data=f"emj:del:{emoji}")] for emoji, _ in rows[:60]]
     )
 
 

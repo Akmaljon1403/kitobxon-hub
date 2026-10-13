@@ -502,6 +502,16 @@ CHANNEL_POST_EDIT_KEPT = "Matn o'zgarmadi: post 30 daqiqadan keyin avvalgi holid
 CHANNEL_POST_TEXT_ONLY = "Iltimos, post matnini oddiy xabar qilib yuboring yoki /cancel"
 STICKER_DUPLICATE = "Bu stiker allaqachon saqlangan (jami {total} ta). Boshqasini yuboring yoki /tayyor"
 STICKER_ONLY = "Stiker (yoki premium emojili xabar) yuboring yoki /tayyor deb yozing."
+# View and edit saved stickers / premium emoji right in the bot.
+BTN_STICKER_LIST = "📋 Saqlangan stikerlar"
+STICKER_LIST_EMPTY = "Hali stiker saqlanmagan. Yoqqan stikeringizni yuboring."
+STICKER_LIST_HEADER = "📋 <b>Saqlangan stikerlar: {total} ta.</b> Har birining tagida — «🗑 O'chirish»."
+BTN_STICKER_DELETE = "🗑 Bu stikerni o'chirish"
+STICKER_DELETED = "🗑 Stiker o'chirildi. Qolgani: {total} ta."
+BTN_EMOJI_LIST = "📋 Bittalab o'chirish"
+EMOJI_LIST_HEADER = "📋 <b>Saqlangan premium emojilar.</b> Keraksizini bosib o'chiring:"
+EMOJI_LIST_EMPTY = "Hali premium emoji saqlanmagan."
+EMOJI_DELETED = "🗑 O'chirildi: {emoji}"
 EMOJI_ASK = (
     "✨ <b>Premium emojilar</b>\n\n"
     "Bot xabarlaridagi oddiy emojilar o'rniga klubning premium emojilari chiqadi (masalan «Salom ✋» dagi ✋). "
@@ -557,7 +567,10 @@ DECOR_EXPIRED = "Bu taklif eskirgan — stikerni yoki emojini qaytadan yuboring.
 STICKER_FROM_EMOJI = "🎨 Bu stiker — stikerlar ro'yxatiga qo'shildi ({mood}). Jami stikerlar: {total} ta."
 EMOJI_FROM_STICKER_MODE = "✨ Xabardagi premium emojilar ham saqlandi: {emoji}. Jami premium emojilar: {total} ta."
 BTN_EMOJI_CLEAR = "🗑 Hammasini o'chirish"
-STICKER_DONE = "👍 Tayyor! Stikerlar ro'yxatini Admin panel → 📢 Kanal sahifasida ko'rasiz va keraksizini o'chirasiz."
+STICKER_DONE = (
+    "👍 Tayyor! Saqlangan stikerlarni shu yerda — /stiker → «📋 Saqlangan stikerlar» orqali ko'rasiz va "
+    "keraksizini o'chirasiz (Admin panel → 📢 Kanal sahifasida ham bor)."
+)
 
 # ---- Portfolio ----
 BTN_PORTFOLIO = "🗂 Portfolio (PDF)"

@@ -6,7 +6,7 @@ import contextlib
 import html
 import uuid
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.dispatcher.event.bases import SkipHandler
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
@@ -164,7 +164,48 @@ async def stickers_start(message: Message, state: FSMContext, db: AsyncSession, 
         await message.answer(denied)
         return
     await state.set_state(ChannelStickers.waiting)
-    await message.answer(texts.STICKER_ASK)
+    total = len(await channel.stickers(db))
+    await message.answer(texts.STICKER_ASK, reply_markup=keyboards.sticker_overview(total))
+
+
+@router.callback_query(F.data == "stk:list")
+async def stickers_list(callback: CallbackQuery, db: AsyncSession, member: User | None, bot: Bot) -> None:
+    """Show every saved sticker right in the bot, each with its own «🗑 O'chirish» button."""
+    if await _decor_right(db, member):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    await callback.answer()
+    if not isinstance(callback.message, Message):
+        return
+    rows = await channel.stickers(db)
+    if not rows:
+        await callback.message.answer(texts.STICKER_LIST_EMPTY)
+        return
+    await callback.message.answer(texts.STICKER_LIST_HEADER.format(total=len(rows)))
+    for sticker in rows:
+        with contextlib.suppress(TelegramBadRequest):
+            await bot.send_sticker(
+                callback.message.chat.id, sticker.file_id, reply_markup=keyboards.sticker_delete(sticker.id)
+            )
+
+
+@router.callback_query(F.data.startswith("stk:del:"))
+async def stickers_delete(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    if member is None or await _decor_right(db, member):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    try:
+        sticker_id = uuid.UUID((callback.data or "").removeprefix("stk:del:"))
+    except ValueError:
+        await callback.answer()
+        return
+    await channel.delete_sticker(db, actor_id=member.id, sticker_id=sticker_id)
+    total = len(await channel.stickers(db))
+    await callback.answer("🗑")
+    if isinstance(callback.message, Message):
+        with contextlib.suppress(TelegramBadRequest):
+            await callback.message.delete()
+        await callback.message.answer(texts.STICKER_DELETED.format(total=total))
 
 
 @router.message(ChannelStickers.waiting, Command("tayyor"))
@@ -252,6 +293,44 @@ async def emoji_test(callback: CallbackQuery, db: AsyncSession, member: User | N
         return
     if await _probe(callback.message, [(row.fallback, row.custom_emoji_id) for row in rows]):
         await callback.message.answer(texts.EMOJI_STATUS_WORKING)
+
+
+@router.callback_query(F.data == "emj:list")
+async def emoji_list(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    """Show the saved premium emoji, each with its own delete button."""
+    if await _decor_right(db, member):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    await callback.answer()
+    if not isinstance(callback.message, Message):
+        return
+    rows = await custom_emoji.list_all(db)
+    if not rows:
+        await callback.message.answer(texts.EMOJI_LIST_EMPTY)
+        return
+    await callback.message.answer(
+        texts.EMOJI_LIST_HEADER,
+        reply_markup=keyboards.emoji_delete_list([(row.emoji, row.custom_emoji_id) for row in rows]),
+    )
+
+
+@router.callback_query(F.data.startswith("emj:del:"))
+async def emoji_delete_one(callback: CallbackQuery, db: AsyncSession, member: User | None) -> None:
+    if await _decor_right(db, member):
+        await callback.answer(texts.ADMIN_ONLY, show_alert=True)
+        return
+    emoji = (callback.data or "").removeprefix("emj:del:")
+    await custom_emoji.clear(db, emoji=emoji)
+    await callback.answer(texts.EMOJI_DELETED.format(emoji=emoji))
+    if isinstance(callback.message, Message):
+        rows = await custom_emoji.list_all(db)
+        with contextlib.suppress(TelegramBadRequest):
+            if rows:
+                await callback.message.edit_reply_markup(
+                    reply_markup=keyboards.emoji_delete_list([(row.emoji, row.custom_emoji_id) for row in rows])
+                )
+            else:
+                await callback.message.edit_text(texts.EMOJI_LIST_EMPTY)
 
 
 @router.callback_query(F.data == "emj:clear")
