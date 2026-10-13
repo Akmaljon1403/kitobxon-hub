@@ -30,6 +30,7 @@ async def list_settings(_: CurrentAdminDep, db: DbSession) -> list[SettingOut]:
             default=d.default,
             description=d.description,
             choices=list(d.choices),
+            owner_only=settings_service.owner_only(d.key),
         )
         for d in settings_service.SETTING_DEFINITIONS
     ]
@@ -57,6 +58,7 @@ async def update_setting(
         default=definition.default,
         description=definition.description,
         choices=list(definition.choices),
+        owner_only=settings_service.owner_only(definition.key),
     )
 
 

@@ -60,6 +60,10 @@ async def test_money_settings_belong_to_the_owners(client: httpx.AsyncClient, db
     url = "/api/v1/admin/settings/payments.card_number"
     refused = await client.put(url, json={"value": "8600 1111 2222 3333"}, headers=admin_headers(people["helper"]))
     assert refused.status_code == 403 and "bosh admin" in refused.json()["error"]["message"]
+    # the panel shows the lock before anyone tries
+    listed = await client.get("/api/v1/admin/settings", headers=admin_headers(people["helper"]))
+    flags = {row["key"]: row["owner_only"] for row in listed.json()}
+    assert flags["payments.card_number"] is True and flags["reading.daily_page_limit"] is False
     # an ordinary setting is still the helper's to change
     fine = await client.put(
         "/api/v1/admin/settings/reading.daily_page_limit", json={"value": 400}, headers=admin_headers(people["helper"])

@@ -109,6 +109,7 @@ export interface Setting {
   default: unknown
   description: string
   choices: string[]
+  owner_only?: boolean
 }
 
 export interface Permission {
