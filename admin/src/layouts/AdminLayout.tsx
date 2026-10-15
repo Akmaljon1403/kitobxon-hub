@@ -17,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'analytics', icon: '📈', label: 'Tahlillar', visible: (can) => can('ANALYTICS_VIEW') },
   { route: 'members', icon: '👥', label: "A'zolar", visible: (can) => can('USER_VIEW') },
   { route: 'books', icon: '📚', label: 'Kitoblar', visible: (can) => can('BOOK_VIEW') },
+  { route: 'campaigns', icon: '📖', label: 'Kitob tanlovlari', visible: (can) => can('SEASON_MANAGE') },
   { route: 'events', icon: '📅', label: 'Tadbirlar va davomat', visible: (can) => can('EVENT_VIEW') },
   { route: 'tests', icon: '📝', label: 'Testlar', visible: (can) => can('TEST_VIEW') },
   { route: 'scores', icon: '🏆', label: 'Ballar va reyting', visible: (can) => can('SCORE_VIEW') },

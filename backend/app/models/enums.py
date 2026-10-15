@@ -307,6 +307,7 @@ class ChannelPostKind(StrEnum):
     INVITE = "INVITE"  # weekly invitation to join the bot
     MANUAL = "MANUAL"  # written by an admin
     REPORT = "REPORT"  # «... davra suhbati bo'lib o'tdi» with the photos of an approved event report
+    CAMPAIGN = "CAMPAIGN"  # a reading contest («1 hafta — 1 kitob») announcement
 
 
 class ChannelPostStatus(StrEnum):
