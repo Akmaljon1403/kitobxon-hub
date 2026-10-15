@@ -11,24 +11,21 @@ import { CertificatesPage } from './pages/CertificatesPage'
 import { ChannelPage } from './pages/ChannelPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsPage } from './pages/EventsPage'
-import { FacultiesPage } from './pages/FacultiesPage'
 import { FeaturesPage } from './pages/FeaturesPage'
-import { GiveawaysPage } from './pages/GiveawaysPage'
-import { ContestsPage } from './pages/ContestsPage'
+import { GiveawaysHubPage } from './pages/GiveawaysHubPage'
 import { ControlPage } from './pages/ControlPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { MissionsPage } from './pages/MissionsPage'
-import { CommunityPage } from './pages/CommunityPage'
+import { CommunityHubPage } from './pages/CommunityHubPage'
 import { RentalsPage } from './pages/RentalsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { PremiumPage } from './pages/PremiumPage'
-import { QuotesPage } from './pages/QuotesPage'
-import { DocumentsPage } from './pages/DocumentsPage'
-import { ReportEditorPage, ReportsPage } from './pages/ReportsPage'
+import { DocumentsHubPage } from './pages/DocumentsHubPage'
+import { ReportEditorPage } from './pages/ReportsPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ScoresPage } from './pages/ScoresPage'
-import { SettingsPage } from './pages/SettingsPage'
+import { SettingsHubPage } from './pages/SettingsHubPage'
 import { StarsOrdersPage } from './pages/StarsOrdersPage'
 import { SupportPage, SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
@@ -43,7 +40,6 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   '': DashboardPage,
   members: MembersPage,
   books: BooksPage,
-  quotes: QuotesPage,
   events: EventsPage,
   tests: TestsPage,
   scores: ScoresPage,
@@ -51,13 +47,11 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   channel: ChannelPage,
   support: SupportPage,
   achievements: AchievementsPage,
-  reports: ReportsPage,
-  documents: DocumentsPage,
+  documents: DocumentsHubPage,
   rewards: RewardsPage,
-  giveaways: GiveawaysPage,
-  contests: ContestsPage,
+  giveaways: GiveawaysHubPage,
   missions: MissionsPage,
-  community: CommunityPage,
+  community: CommunityHubPage,
   rentals: RentalsPage,
   texts: TextsPage,
   control: ControlPage,
@@ -66,8 +60,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   premium: PremiumPage,
   stars: StarsOrdersPage,
   analytics: AnalyticsPage,
-  faculties: FacultiesPage,
-  settings: SettingsPage,
+  settings: SettingsHubPage,
   admins: AdminsPage,
   audit: AuditPage,
   trust: TrustPage,
@@ -117,7 +110,7 @@ function Router() {
 
   if (section === 'reports' && entityId) {
     return (
-      <AdminLayout section="reports">
+      <AdminLayout section="documents">
         {can('REPORT_VIEW') ? (
           <ReportEditorPage reportId={entityId} />
         ) : (

@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, NotFoundError, RateLimitedError
 from app.models import Faculty, SupportMessage, SupportTicket, User
-from app.models.enums import NotificationType, SupportTicketStatus
+from app.models.enums import NotificationType, SupportTicketKind, SupportTicketStatus
 from app.security.permissions import Perm
 from app.services import copies
 from app.services.audit import record_audit
@@ -42,15 +42,23 @@ def _clean(text: str | None) -> str:
     return value
 
 
-async def _open_ticket(session: AsyncSession, user_id: uuid.UUID) -> SupportTicket:
+async def _open_ticket(
+    session: AsyncSession, user_id: uuid.UUID, kind: SupportTicketKind = SupportTicketKind.GENERAL
+) -> SupportTicket:
+    """The member's open conversation of this kind, or a new one. A general question and a money question
+    are never merged: each kind has its own ticket, so an answer to one never shows under the other."""
     ticket = await session.scalar(
         select(SupportTicket)
-        .where(SupportTicket.user_id == user_id, SupportTicket.status != SupportTicketStatus.CLOSED)
+        .where(
+            SupportTicket.user_id == user_id,
+            SupportTicket.kind == kind,
+            SupportTicket.status != SupportTicketStatus.CLOSED,
+        )
         .order_by(SupportTicket.created_at.desc())
         .limit(1)
     )
     if ticket is None:
-        ticket = SupportTicket(user_id=user_id)
+        ticket = SupportTicket(user_id=user_id, kind=kind)
         session.add(ticket)
         await session.flush()
     return ticket
@@ -84,7 +92,8 @@ async def member_message(
         raise RateLimitedError(
             "SUPPORT_TOO_MANY", "Juda ko'p xabar yubordingiz. Javobni kuting yoki bir soatdan so'ng yozing."
         )
-    ticket = await _open_ticket(session, user.id)
+    kind = SupportTicketKind.PAYMENT if topic == "payment" else SupportTicketKind.GENERAL
+    ticket = await _open_ticket(session, user.id, kind)
     now = datetime.now(UTC)
     message = SupportMessage(ticket_id=ticket.id, text=body or "📷 (rasm)", photo_file_id=photo_file_id)
     session.add(message)
@@ -207,25 +216,9 @@ def payments_markup(ticket_id: uuid.UUID, *, answered: bool = False) -> Any:
 
 
 async def _is_payment(session: AsyncSession, ticket_id: uuid.UUID) -> bool:
-    """Was this conversation about money (its questions went to the payments chat or its people)?"""
-    from app.models import PaymentsChatLink
-
-    linked = await session.scalar(
-        select(PaymentsChatLink.message_id)
-        .where(PaymentsChatLink.kind == "ticket", PaymentsChatLink.target_id == ticket_id)
-        .limit(1)
-    )
-    if linked is not None:
-        return True
-    from app.models import Notification
-
-    first = await session.scalar(
-        select(Notification.payload)
-        .where(Notification.sync_key == f"ticket:{ticket_id}")
-        .order_by(Notification.created_at)
-        .limit(1)
-    )
-    return bool(first and any("sup:pay:" in str(button) for button in first.get("buttons", [])))
+    """A money conversation: read it from the ticket itself (its kind), which never changes."""
+    kind = await session.scalar(select(SupportTicket.kind).where(SupportTicket.id == ticket_id))
+    return kind == SupportTicketKind.PAYMENT
 
 
 async def settle_ticket(
@@ -437,7 +430,8 @@ async def club_message(
     user = await session.get(User, user_id)
     if user is None or user.deleted_at is not None or user.erased_at is not None:
         raise NotFoundError("USER_NOT_FOUND", "A'zo topilmadi.")
-    ticket = await _open_ticket(session, user_id)
+    # The club writes first in the payments channel: this belongs to the member's money conversation.
+    ticket = await _open_ticket(session, user_id, SupportTicketKind.PAYMENT)
     message = SupportMessage(ticket_id=ticket.id, from_admin=True, admin_id=actor_id, text=body)
     session.add(message)
     ticket.status = SupportTicketStatus.ANSWERED
@@ -504,9 +498,18 @@ async def set_status(
 
 
 async def list_tickets(
-    session: AsyncSession, *, status: SupportTicketStatus | None, limit: int, offset: int
+    session: AsyncSession,
+    *,
+    status: SupportTicketStatus | None,
+    limit: int,
+    offset: int,
+    kind: SupportTicketKind | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    conditions = [SupportTicket.status == status] if status else []
+    conditions: list[Any] = []
+    if status:
+        conditions.append(SupportTicket.status == status)
+    if kind is not None:
+        conditions.append(SupportTicket.kind == kind)
     total = await session.scalar(select(func.count()).select_from(SupportTicket).where(*conditions))
     last_text = (
         select(SupportMessage.text)
@@ -535,6 +538,7 @@ async def list_tickets(
         {
             "id": ticket.id,
             "status": ticket.status,
+            "kind": ticket.kind,
             "unread": ticket.unread_for_admin,
             "last_message_at": ticket.last_message_at,
             "created_at": ticket.created_at,
@@ -589,6 +593,7 @@ async def ticket_detail(session: AsyncSession, ticket_id: uuid.UUID, *, mark_rea
     return {
         "id": ticket.id,
         "status": ticket.status,
+        "kind": ticket.kind,
         "created_at": ticket.created_at,
         "member": _member(user, faculty),
         "messages": messages,
@@ -596,9 +601,16 @@ async def ticket_detail(session: AsyncSession, ticket_id: uuid.UUID, *, mark_rea
 
 
 async def unread_count(session: AsyncSession) -> int:
+    """Unanswered general questions (the «Murojaatlar» badge); money questions are counted in the payments
+    channel, not here."""
     return int(
         await session.scalar(
-            select(func.count()).select_from(SupportTicket).where(SupportTicket.unread_for_admin.is_(True))
+            select(func.count())
+            .select_from(SupportTicket)
+            .where(
+                SupportTicket.unread_for_admin.is_(True),
+                SupportTicket.kind == SupportTicketKind.GENERAL,
+            )
         )
         or 0
     )

@@ -307,7 +307,7 @@ export function ReportEditorPage({ reportId }: { reportId: string }) {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={report.status} />
-            <Button variant="secondary" onClick={() => navigate('/reports')}>
+            <Button variant="secondary" onClick={() => navigate('/documents?tab=reports')}>
               ← Hisobotlar
             </Button>
             <Button variant="secondary" loading={busy === 'pdf'} onClick={() => void downloadPdf(`/api/v1/admin/reports/${report.id}/preview.pdf`, 'hisobot_qoralama.pdf')}>

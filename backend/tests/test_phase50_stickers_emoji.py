@@ -116,7 +116,7 @@ async def test_premium_admin_saves_emoji_and_learns_why_telegram_refuses(db: Asy
     await harness.send("/emoji")
     assert "rad etdi" in harness.last_text() and "📚" in harness.last_text()
     markup = harness.session.sent_messages()[-1].reply_markup
-    assert [row[0].callback_data for row in markup.inline_keyboard] == ["emj:test", "emj:clear"]
+    assert [row[0].callback_data for row in markup.inline_keyboard] == ["emj:test", "emj:list", "emj:clear"]
 
     # The owner bought Premium: the check works and the bot uses premium emoji again at once.
     harness.session.__class__ = FakeTelegramSession

@@ -14,7 +14,7 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreatedAtMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
-from app.models.enums import SupportTicketStatus
+from app.models.enums import SupportTicketKind, SupportTicketStatus
 
 
 class SupportTicket(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -27,6 +27,11 @@ class SupportTicket(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     status: Mapped[SupportTicketStatus] = mapped_column(
         enum_column(SupportTicketStatus), default=SupportTicketStatus.OPEN, server_default="OPEN"
+    )
+    # A general question and a money question are kept apart: an answer to one never touches the other,
+    # and each is handled by the administrators who may (SUPPORT_MANAGE vs the owners and PAYMENT_SUPPORT).
+    kind: Mapped[SupportTicketKind] = mapped_column(
+        enum_column(SupportTicketKind), default=SupportTicketKind.GENERAL, server_default="GENERAL"
     )
     last_message_at: Mapped[datetime] = mapped_column(server_default=func.now())
     unread_for_admin: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sql_text("true"))

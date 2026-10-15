@@ -223,6 +223,14 @@ class SupportTicketStatus(StrEnum):
     CLOSED = "CLOSED"
 
 
+class SupportTicketKind(StrEnum):
+    """A general question and a money question are two separate conversations, answered by different
+    administrators in different places — they must never share a ticket."""
+
+    GENERAL = "GENERAL"
+    PAYMENT = "PAYMENT"
+
+
 class CertificateKind(StrEnum):
     TEST_PLACE = "TEST_PLACE"  # 1st-3rd place in a test (of an event: only members who attended)
     MONTHLY_TOP = "MONTHLY_TOP"  # 1st-3rd place in last month's ranking

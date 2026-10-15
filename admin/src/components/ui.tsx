@@ -62,6 +62,27 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   )
 }
 
+/** A row of tabs for a page that gathers two related sections under one menu entry. */
+export function SectionTabs<T extends string>({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { key: T; label: string }[]
+  active: T
+  onChange: (key: T) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 border-b border-app-border pb-3">
+      {tabs.map((tab) => (
+        <Button key={tab.key} variant={active === tab.key ? 'primary' : 'secondary'} onClick={() => onChange(tab.key)}>
+          {tab.label}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
 const fieldClass =
   'w-full rounded-lg border border-app-border bg-app-bg px-3 py-2 text-sm outline-none focus:border-app-button focus:ring-2 focus:ring-app-button/20'
 

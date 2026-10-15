@@ -113,9 +113,26 @@ TEMPLATES: tuple[Template, ...] = (
         ("period",),
     ),
     Template(
+        "finance",
+        "To'lovlar va daromad",
+        "Davr ichida tasdiqlangan karta to'lovlari, Telegram Stars to'lovlari va hissalar; jami daromad "
+        "xulosasi bilan. Faqat haqiqatan kelib tushgan (tasdiqlangan) to'lovlar hisobga olinadi.",
+        ("xlsx", "pdf", "docx"),
+        Perm.ANALYTICS_VIEW,
+        ("period",),
+    ),
+    Template(
+        "rewards_log",
+        "Sovg'alar ro'yxati",
+        "Davr ichida kimga qanday sovg'a (promokod, Premium) berilgani va uning holati.",
+        ("xlsx", "pdf", "docx"),
+        Perm.REWARD_MANAGE,
+        ("period",),
+    ),
+    Template(
         "event_report",
         "Tadbir hisoboti (rasmiy)",
-        "«Hisobotlar» bo'limida tayyorlangan hisobot: tasdiqlangan rasmiy PDF yoki tahrirlash uchun Word.",
+        "«Rasmiy hisobotlar» bo'limida tayyorlangan hisobot: tasdiqlangan rasmiy PDF yoki tahrirlash uchun Word.",
         ("pdf", "docx"),
         Perm.REPORT_VIEW,
         ("report",),
@@ -706,6 +723,131 @@ async def books_list(session: AsyncSession, params: Params) -> Document:
 # ---------------------------------------------------------------------------- the official event report in Word
 
 
+async def finance(session: AsyncSession, params: Params) -> Document:
+    """«To'lovlar va daromad»: confirmed card payments, Telegram Stars payments and donations in a period,
+    with a totals summary. Only money that actually came in is counted (approved / paid)."""
+    from app.models import CardPayment, Payment
+    from app.models.enums import CardPaymentStatus, PaymentKind, PaymentStatus
+    from app.services.card_payments import format_uzs
+
+    start, end, since, until = _period(params)
+    kind_label = {"PREMIUM": "Premium", "DONATION": "Hissa (donat)", "STARS": "Stars (karta orqali)"}
+
+    rows: list[list[Any]] = []
+    uzs_total = 0
+    stars_total = 0
+    # Card payments the super admin approved (real money to the club's card).
+    for payment, user in (
+        await session.execute(
+            select(CardPayment, User)
+            .join(User, User.id == CardPayment.user_id)
+            .where(
+                CardPayment.status == CardPaymentStatus.APPROVED,
+                CardPayment.decided_at >= since,
+                CardPayment.decided_at < until,
+            )
+            .order_by(CardPayment.decided_at)
+        )
+    ).all():
+        uzs_total += payment.amount_uzs
+        rows.append(
+            [
+                len(rows) + 1,
+                format_datetime(payment.decided_at) if payment.decided_at else "—",
+                f"{user.last_name} {user.first_name}",
+                "💳 Karta",
+                kind_label.get(str(payment.kind), str(payment.kind)),
+                format_uzs(payment.amount_uzs),
+            ]
+        )
+    # Telegram Stars paid in the bot (premium or donation): the amount is in Stars.
+    for payment, user in (
+        await session.execute(
+            select(Payment, User)
+            .join(User, User.id == Payment.user_id)
+            .where(Payment.status == PaymentStatus.PAID, Payment.created_at >= since, Payment.created_at < until)
+            .order_by(Payment.created_at)
+        )
+    ).all():
+        stars_total += payment.amount
+        label = "Hissa (donat)" if payment.kind == PaymentKind.DONATION else "Premium"
+        rows.append(
+            [
+                len(rows) + 1,
+                format_datetime(payment.created_at),
+                f"{user.last_name} {user.first_name}",
+                "⭐ Telegram Stars",
+                label,
+                f"{payment.amount} ⭐",
+            ]
+        )
+
+    summary = Table(
+        "Jami daromad",
+        ["Ko'rsatkich", "Qiymat"],
+        [
+            ["Karta orqali (so'm)", format_uzs(uzs_total)],
+            ["Telegram Stars", f"{stars_total} ⭐"],
+            ["Jami yozuvlar", str(len(rows))],
+        ],
+    )
+    return Document(
+        title="To'lovlar va daromad",
+        filename=f"tolovlar-{start:%Y%m%d}-{end:%Y%m%d}",
+        lines=[*await _header(session), f"Davr: {_day(start)} — {_day(end)}", f"Jami yozuvlar: {len(rows)} ta"],
+        tables=[
+            summary,
+            Table("Yozuvlar", ["№", "Sana", "A'zo", "Usul", "Turi", "Summa"], rows),
+        ],
+        landscape=True,
+    )
+
+
+async def rewards_log(session: AsyncSession, params: Params) -> Document:
+    """«Sovg'alar ro'yxati»: which rewards (promo codes, premium gifts) were given to whom in a period."""
+    from app.models import Reward, UserReward
+
+    start, end, since, until = _period(params)
+    status_label = {
+        "ASSIGNED": "berildi",
+        "DELIVERED": "yetkazildi",
+        "REDEEMED": "ishlatildi",
+        "REVOKED": "bekor qilindi",
+    }
+    rows: list[list[Any]] = []
+    for grant, reward, user in (
+        await session.execute(
+            select(UserReward, Reward, User)
+            .join(Reward, Reward.id == UserReward.reward_id)
+            .join(User, User.id == UserReward.user_id)
+            .where(UserReward.assigned_at >= since, UserReward.assigned_at < until)
+            .order_by(UserReward.assigned_at)
+        )
+    ).all():
+        rows.append(
+            [
+                len(rows) + 1,
+                format_datetime(grant.assigned_at),
+                f"{user.last_name} {user.first_name}",
+                user.group_name or "—",
+                reward.title,
+                status_label.get(str(grant.status), str(grant.status)),
+            ]
+        )
+    given = sum(1 for row in rows if row[5] != "bekor qilindi")
+    return Document(
+        title="Sovg'alar ro'yxati",
+        filename=f"sovgalar-{start:%Y%m%d}-{end:%Y%m%d}",
+        lines=[
+            *await _header(session),
+            f"Davr: {_day(start)} — {_day(end)}",
+            f"Berilgan sovg'alar: {given} ta (jami yozuv: {len(rows)})",
+        ],
+        tables=[Table(None, ["№", "Sana", "A'zo", "Guruh", "Sovg'a", "Holat"], rows)],
+        landscape=True,
+    )
+
+
 async def report_docx(session: AsyncSession, report_id: uuid.UUID) -> tuple[str, bytes]:
     """The event report as an editable Word file: the same text, facts and photos as the PDF."""
     import asyncio
@@ -943,6 +1085,8 @@ BUILDERS = {
     "members": members_list,
     "certificates": certificates_list,
     "books": books_list,
+    "finance": finance,
+    "rewards_log": rewards_log,
 }
 
 
