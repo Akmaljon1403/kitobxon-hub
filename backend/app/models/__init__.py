@@ -19,7 +19,7 @@ from app.models.rental import LicenceIssuer, RentalLicence, RentalOrganization, 
 from app.models.report import Report, ReportPhoto
 from app.models.reward import Giveaway, Reward, RewardCode, UserReward
 from app.models.score import ScoreTransaction
-from app.models.season import Campaign, CampaignBook, Season
+from app.models.season import Campaign, CampaignBook, CampaignParticipant, Season
 from app.models.settings import SystemSetting
 from app.models.support import SupportMessage, SupportTicket
 from app.models.test import Test, TestActivityLog, TestAnswer, TestAttempt, TestOption, TestQuestion
@@ -39,6 +39,7 @@ __all__ = [
     "BotFsmState",
     "Campaign",
     "CampaignBook",
+    "CampaignParticipant",
     "CardPayment",
     "Certificate",
     "CertificateTemplate",

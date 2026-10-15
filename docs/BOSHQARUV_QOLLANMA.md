@@ -620,6 +620,30 @@ hech kim tushib qolmaydi va hech kim ikki marta olmaydi.
 Testdan tashqari **istalgan a'zoga** ham bera olasiz (yuqoridagi qidiruvdan a'zoni tanlab, «Berish»). Bir a'zoga shu sovg'a
 avval berilgan bo'lsa, panel ogohlantiradi — tasdiqlasangizgina yana beriladi.
 
+## 10.5. 📖 Kitob tanlovlari (1 hafta/1 oy — 1 kitob)
+
+Bir vaqtning o'zida bir nechta kitob tanlovini o'tkazishingiz mumkin — masalan, oy davomida 4 marta
+«1 hafta — 1 kitob» va 1 marta «1 oy — 1 kitob», har biriga boshqa kitob. **Har bir tanlov butunlay
+alohida**: o'z kitobi, o'z qatnashchilari, o'z kanal posti va o'z hisoboti bilan — hech narsa
+aralashmaydi.
+
+**📖 Kitob tanlovlari** bo'limida:
+
+1. **➕ Yangi tanlov** → nom (masalan «1 hafta — 1 kitob, noyabr 1-hafta»), sana oralig'i, kitob(lar)ni
+   belgilash, kitob uchun ball va yakunlash bonusi. Saqlang — tanlov «Qoralama» bo'ladi.
+2. **▶️ Boshlash + e'lon** — tanlovni faollashtiradi va kanalga **shu tanlovning** alohida postini
+   joylaydi (boshqa tanlovlar postiga aralashmaydi). «Boshlash (e'lonsiz)» ham bor.
+3. A'zolar botda **/tanlov** yoki «📖 Kitob tanlovlari» orqali faol tanlovlarni ko'radi, biriga
+   **«✅ Qatnashaman»**, kitobni o'qib bo'lgach **«📘 O'qib tugatdim»** ni bosadi.
+4. **👥 Qatnashchilar** — kim qatnashyapti, kim «o'qib tugatdim» degan. Har birini **«✅ Tasdiqlash»**
+   bilan tasdiqlaysiz — shunda a'zoga shu tanlovning ballari (kitob uchun ball + bonus) **bir marta**
+   qo'shiladi va unga tabrik boradi.
+5. **🏁 Yakunlash** — tanlovni tugatadi. **📄 Hisobot** — aynan shu tanlov bo'yicha qatnashchilar va
+   yakunlaganlar ro'yxati (Excel/Word/PDF), boshqa tanlovlardan ajralgan holda.
+
+Ikki tanlov bir xil kitobdan foydalansa ham, ularning qatnashchilari va ballari aralashmaydi — har
+bir qatnashuv o'z tanloviga bog'langan.
+
 ## 11. Telegram kanal (@FJSTIMutolaaxona)
 
 Bot kanalga o'zi qiziqarli postlar joylaydi va o'quvchilarni botga taklif qiladi.

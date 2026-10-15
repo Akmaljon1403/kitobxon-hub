@@ -5,10 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
+from app.models.base import Base, CreatedAtMixin, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
 from app.models.enums import CampaignStatus, SeasonStatus
 
 
@@ -63,3 +63,23 @@ class CampaignBook(Base):
     campaign_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"), primary_key=True)
     book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("books.id", ondelete="CASCADE"), primary_key=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+
+
+class CampaignParticipant(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
+    """One member's taking part in one reading contest. Keyed by (campaign, member), so two contests
+    running at the same time — even on the same book — never mix: each has its own participants."""
+
+    __tablename__ = "campaign_participants"
+    __table_args__ = (
+        UniqueConstraint("campaign_id", "user_id", name="uq_campaign_participant"),
+        Index("ix_campaign_participants_campaign_id", "campaign_id"),
+    )
+
+    campaign_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("campaigns.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    # The member said they finished the contest's book(s); an admin then confirms it.
+    completed_at: Mapped[datetime | None] = mapped_column()
+    verified_at: Mapped[datetime | None] = mapped_column()
+    verified_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    # Points (points_per_book + completion_bonus) given once, when an admin confirms.
+    points_awarded: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))

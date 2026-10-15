@@ -51,6 +51,7 @@ MEMBER_COMMANDS = [
     BotCommand(command="javonim", description="📚 Javonim: o'qiyotgan kitoblarim va seriyam"),
     BotCommand(command="kartam", description="🪪 Kitobxonlik kartam (rasm)"),
     BotCommand(command="fikr", description="💬 Iqtibos, fikr yoki e'tirof yuborish"),
+    BotCommand(command="tanlov", description="📖 Kitob tanlovlari (1 hafta/1 oy — 1 kitob)"),
     BotCommand(command="referal", description="🎁 Sizning foydangiz: taklif havolasi va do'stlaringiz"),
     BotCommand(command="premium", description="💎 Premium va klubni qo'llab-quvvatlash"),
     BotCommand(command="help", description="❓ Yordam va adminga yozish"),
