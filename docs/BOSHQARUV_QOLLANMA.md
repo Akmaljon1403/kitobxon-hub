@@ -356,6 +356,12 @@ A'zolar botda **💬 Yordam → ✉️ Adminga yozish** orqali yozadi. Xabar `SU
 adminlarga keladi. Javobni botning o'zida («Javob yozish») yoki panelda **📨 Murojaatlar**dan
 berasiz — a'zo sizning ismingizni ko'rmaydi, javob «Klub rahbariyati» nomidan boradi.
 
+**Umumiy va to'lov murojaati — alohida.** Bir a'zo ham oddiy savol, ham to'lov savolini yozsa, ular aralashmaydi:
+har biri o'z suhbati sifatida yuritiladi. Paneldagi **📨 Murojaatlar** faqat **umumiy** savollarni ko'rsatadi
+(badge ham faqat umumiylarni sanaydi); **to'lov** savollari to'lovlar kanalida hal qilinadi va ularga «💳 To'lov
+savollari» huquqi borlar (hamda bosh admin) javob beradi. Shunday qilib, to'lovga berilgan javob hech qachon
+umumiy murojaatda ko'rinmaydi va «kim javob berdi» ham to'g'ri saqlanadi.
+
 Har bir adminga kelgan nusxada holat yoziladi: **⏳ javob kutmoqda** → kimdir javob bersa, **hamma adminning
 nusxasida** (bosh adminnikida ham) «✅ Javob berildi — Ism, vaqt» va javobning boshi. Uzun xabar to'liq keladi;
 **📄 Batafsil** — butun yozishma (savollar, javoblar, kim javob bergani); **🔒 Yopish** — murojaatni yopadi
@@ -747,7 +753,7 @@ tadbirga kelgan do'stlar soni»).
 
 ### 🏁 Taklif tanlovlari («kim ko'p do'st olib kelsa — sovg'a»)
 
-**Admin panel → 🏁 Taklif tanlovlari → + Yangi tanlov**. Masalan: «Oktabr oxirigacha klubga eng ko'p do'st olib
+**Admin panel → 🎲 Sovg'a o'yinlari → 🏁 Taklif tanlovlari → + Yangi tanlov**. Masalan: «Oktabr oxirigacha klubga eng ko'p do'st olib
 kelgan 3 kishiga sovg'a».
 
 1. **Nomi, tavsifi, boshlanish va tugash vaqti.**
@@ -971,10 +977,15 @@ olganlar chiqarib tashlanadi), keyin bitta tugma bilan tarqatiladi va g'oliblarg
 
 ## 23. 🗂 Hujjatlar markazi
 
-**Admin panel → 🗂 Hujjatlar**: talabalar ro'yxati va faolligi, statistika (QR kodlar ilovasi bilan),
-davomat, test natijalari, a'zolar, sertifikatlar, kitoblar, tadbir hisoboti — **Excel, Word yoki
-PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlanadi.
+**Admin panel → 🗂 Hujjatlar va hisobotlar**: talabalar ro'yxati va faolligi, statistika (QR kodlar ilovasi bilan),
+davomat, test natijalari, a'zolar, sertifikatlar, kitoblar, **to'lovlar va daromad**, **sovg'alar**, tadbir
+hisoboti — **Excel, Word yoki PDF**da. Davr (odatda joriy o'quv yili), fakultet, kurs va guruh bo'yicha tanlanadi.
+Shu sahifaning yuqorisida ikki tab: **🗂 Hujjatlar** (eksportlar) va **📄 Rasmiy hisobotlar** (ilgari alohida
+«Hisobotlar» bo'limi bo'lgan rasmiy tadbir hisobotlari).
 
+- **💳 To'lovlar va daromad** — davr ichida tasdiqlangan karta to'lovlari, Telegram Stars va hissalar, jami
+  daromad xulosasi bilan (faqat haqiqatan kelib tushgan, tasdiqlangan to'lovlar). **🎁 Sovg'alar ro'yxati** —
+  kimga qanday sovg'a (promokod, Premium) berilgani va holati.
 - Kompyuterda — **📥** (yuklab olish); telefonda — **📨 Botga** (fayl bot chatingizga keladi).
 - Har bir hujjat faqat tegishli huquqi bor adminga ko'rinadi.
 - **Tartib hamma joyda bir xil**: fakultet (fakultetlar ro'yxatidagi tartibda) → kurs → guruh **raqami bo'yicha**
@@ -1387,6 +1398,31 @@ Tungi tinchlik vaqtida (`notifications.quiet_hours`, odatda 22:00–08:00) ommav
 > faqat Render'ning «Environment» bo'limida turadi.
 
 ## 35. 🆕 So'nggi o'zgarishlar
+
+### Oktabr, 4-yangilanish
+
+**🔧 Murojaatlar tuzatildi (muhim).** Bitta a'zo ham **umumiy**, ham **to'lov** savolini yuborsa, ilgari ular
+aralashib ketardi — to'lovga berilgan javob umumiyda ham ko'rinardi, kim javob bergani ham almashib qolardi.
+Endi umumiy va to'lov murojaati **butunlay alohida**: har birining o'z holati, o'z nusxalari va «kim javob
+berdi»si bor. Admin paneldagi **📨 Murojaatlar** faqat **umumiy** savollarni ko'rsatadi; to'lov savollari
+to'lovlar kanalida hal qilinadi va faqat «💳 To'lov savollari» huquqi borlarga ko'rinadi.
+
+**🧹 Admin menyu soddalashtirildi** (funksiyalar yo'qolmadi — birlashtirildi):
+- **💬 Iqtiboslar** → **💬 A'zolar fikrlari** ichidagi «📖 Kitob iqtiboslari» bo'limi (tab).
+- **📄 Hisobotlar** → **🗂 Hujjatlar va hisobotlar** ichidagi «📄 Rasmiy hisobotlar» tab.
+- **🏁 Taklif tanlovlari** → **🎲 Sovg'a o'yinlari** ichidagi tab.
+- **🏛 Fakultetlar** → **⚙️ Sozlamalar** ichidagi «🏛 Fakultetlar» tab.
+
+**📝 Test tuzish osonlashdi.** Testni ochganda endi darhol **savollar qismi** chiqadi; sana, vaqt va
+sertifikat dizayni «⚙️ Test sozlamalari» degan yig'iladigan bo'limga olindi (kerak bo'lsa bosib ochasiz).
+
+**🎨 Stikerlar va ✨ emojilarni botda ko'rish va o'chirish.** Endi `/stiker` → «📋 Saqlangan stikerlar»
+bilan har bir stikerni ko'rib, keraksizini «🗑 O'chirish» qilasiz; `/emoji` → «📋 Bittalab o'chirish» bilan
+har bir premium emojini alohida o'chirasiz (ilgari faqat admin panelda edi).
+
+**📊 To'lov va sovg'a hisobotlari.** **🗂 Hujjatlar va hisobotlar**ga ikkita yangi hujjat qo'shildi:
+**«To'lovlar va daromad»** (davr ichida tasdiqlangan karta to'lovlari, Telegram Stars, hissalar — jami
+xulosa bilan) va **«Sovg'alar ro'yxati»** (kimga qanday sovg'a berilgani) — Excel, Word yoki PDF.
 
 ### Oktabr, 3-yangilanish
 
