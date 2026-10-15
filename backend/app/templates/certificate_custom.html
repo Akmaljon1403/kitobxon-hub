@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Sertifikat</title>
+<style>
+  @page { size: {{ width_mm }}mm {{ height_mm }}mm; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  .sheet {
+    position: relative; width: {{ width_mm }}mm; height: {{ height_mm }}mm; overflow: hidden;
+    background-color: #ffffff;
+    {% if background %}background-image: url("{{ background }}"); background-size: 100% 100%; background-repeat: no-repeat;{% endif %}
+  }
+  /* Each element is anchored by its top-left corner; the box width lets text wrap and align. */
+  .el { position: absolute; line-height: 1.25; word-wrap: break-word; }
+  .el.txt { white-space: pre-wrap; }
+  .el img, .el.img { width: 100%; display: block; }
+  .revoked {
+    position: absolute; top: 40%; left: 0; right: 0; text-align: center; font-size: 64pt; font-weight: bold;
+    color: rgba(185, 28, 28, 0.28); transform: rotate(-18deg); letter-spacing: 6pt;
+    font-family: "DejaVu Sans", sans-serif;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  {% for el in elements %}
+    {% if el.image %}
+      <div class="el img" style="left: {{ el.x }}%; top: {{ el.y }}%; width: {{ el.w }}%;"><img src="{{ el.src }}" alt=""></div>
+    {% else %}
+      <div class="el txt" style="left: {{ el.x }}%; top: {{ el.y }}%; width: {{ el.w }}%; font-family: {{ el.font }}; font-size: {{ el.size }}pt; color: {{ el.color }}; text-align: {{ el.align }}; font-weight: {{ el.weight }}; font-style: {{ el.style }};">{{ el.value }}</div>
+    {% endif %}
+  {% endfor %}
+  {% if revoked %}<div class="revoked">BEKOR QILINGAN</div>{% endif %}
+</div>
+</body>
+</html>

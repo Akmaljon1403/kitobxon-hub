@@ -76,6 +76,21 @@ async def system_status_view(
     return await system_status.collect(db)
 
 
+@router.get("/subscription/status", summary="Is the required-channel-subscription gate actually working?")
+async def subscription_status(
+    _: Annotated[CurrentUser, Depends(require_permissions(Perm.SETTINGS_MANAGE))], db: DbSession
+) -> dict[str, Any]:
+    """The owner's check: is «majburiy obuna» on, and can the bot really verify each channel? When the
+    bot is not an administrator of a required channel, the check is skipped and members are let in —
+    this endpoint makes that silent state visible so it can be fixed."""
+    from app.services import subscription
+
+    required = bool(await settings_service.get_setting(db, "subscription.required"))
+    channels = await subscription.check_bot_rights(db)
+    enforceable = required and bool(channels) and all(channel["ok"] for channel in channels)
+    return {"required": required, "channels": channels, "enforceable": enforceable}
+
+
 class SearchItem(BaseModel):
     kind: str
     title: str

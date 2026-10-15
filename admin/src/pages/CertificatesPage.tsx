@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
 import {
@@ -12,18 +12,20 @@ import {
   Modal,
   PageHeader,
   Pagination,
+  SectionTabs,
   Select,
   Table,
   Textarea,
 } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
-import { API_BASE, ApiError } from '../services/api'
+import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
 import type { AdminUser, Page } from '../types/api'
 import { formatDateTime } from '../utils/format'
+import { navigate, useRoute } from '../utils/router'
 import { MemberPicker } from './ScoresPage'
 
-type Kind = 'TEST_PLACE' | 'MONTHLY_TOP' | 'MANUAL'
+type Kind = 'TEST_PLACE' | 'MONTHLY_TOP' | 'MANUAL' | 'COMPLETION'
 
 interface AdminCertificate {
   id: string
@@ -39,62 +41,33 @@ interface AdminCertificate {
   design: string | null
 }
 
-interface Design {
-  code: string
-  title: string
+interface Template {
+  id: string
+  name: string
+  has_background: boolean
+  bg_width: number
+  bg_height: number
+  is_default: boolean
 }
 
 const KINDS: Record<Kind, string> = {
   TEST_PLACE: 'Test g‘olibi',
   MONTHLY_TOP: 'Oy yetakchisi',
   MANUAL: "Qo'lda berilgan",
+  COMPLETION: 'Ishtirok (test)',
 }
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
 const LIMIT = 30
 
-/** The 12 standard designs: each new test (or month) takes the next one, so certificates do not all look alike. */
-function DesignGallery() {
+function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: (gift: boolean) => void }) {
   const { api } = useSession()
-  const [open, setOpen] = useState(false)
-  const designs = useAsync((signal) => (open ? api<Design[]>('/api/v1/meta/certificate-designs', { signal }) : Promise.resolve([])), [open])
-  return (
-    <Card className="p-4">
-      <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpen((value) => !value)}>
-        <span className="font-semibold">🎨 Sertifikat dizaynlari (12 ta)</span>
-        <span className="text-sm text-app-hint">{open ? 'Yopish ▲' : "Ko'rish ▼"}</span>
-      </button>
-      {open && (
-        <>
-          <p className="mt-2 text-sm text-app-hint">
-            Har bir yangi test (yoki oy yakuni) navbatdagi dizaynni oladi — bitta testning barcha g'oliblari bir xil dizaynda. Tadbir yoki
-            test sahifasida o'z rasmingizni yuklasangiz, matn o'sha rasm ustiga yoziladi. A'zolar sertifikatni ilovada ko'radi; Premium a'zo
-            dizaynni almashtira oladi — kod baribir bitta, ya'ni sertifikat yagona.
-          </p>
-          {designs.state.status === 'success' && (
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {designs.state.data.map((design, index) => (
-                <figure key={design.code} className="rounded-lg border border-app-border p-2">
-                  <img src={`${API_BASE}/api/v1/meta/certificate-designs/${design.code}.png`} alt="" loading="lazy" className="w-full rounded" />
-                  <figcaption className="mt-1 text-center text-xs">
-                    {index + 1}. {design.title}
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
-          {designs.state.status === 'loading' && <LoadingState />}
-        </>
-      )}
-    </Card>
-  )
-}
-
-function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const { api } = useSession()
+  const templates = useAsync((signal) => api<Template[]>('/api/v1/admin/certificate-templates', { signal }), [])
   const [member, setMember] = useState<AdminUser | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [place, setPlace] = useState('')
+  const [templateId, setTemplateId] = useState('')
+  const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -109,9 +82,11 @@ function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: () => vo
           title: title.trim(),
           description: description.trim(),
           place: place ? Number(place) : null,
+          template_id: templateId || null,
+          message: message.trim() || null,
         },
       })
-      onDone()
+      onDone(Boolean(message.trim()))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
     } finally {
@@ -119,10 +94,23 @@ function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: () => vo
     }
   }
 
+  const designs = templates.state.status === 'success' ? templates.state.data : []
+
   return (
-    <Modal title="Sertifikat berish" onClose={onClose}>
+    <Modal title="Sertifikat berish / sovg'a qilish" onClose={onClose}>
       <Field label="A'zo">
         <MemberPicker value={member} onChange={setMember} />
+      </Field>
+      <Field label="Dizayn (shablon)" hint="Bo'sh — klubning navbatdagi standart dizayni ishlatiladi">
+        <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
+          <option value="">Standart dizayn</option>
+          {designs.map((design) => (
+            <option key={design.id} value={design.id}>
+              {design.name}
+              {design.is_default ? ' (asosiy)' : ''}
+            </option>
+          ))}
+        </Select>
       </Field>
       <Field label="Sertifikat nomi" hint="Ro'yxatlarda ko'rinadi. Masalan: «Faol kitobxon», «Eng yaxshi taqriz»">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Faol kitobxon" />
@@ -144,8 +132,24 @@ function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: () => vo
           <option value="3">🥉 3-o'rin</option>
         </Select>
       </Field>
+      <Field
+        label="Shaxsiy xabar (sovg'a uchun, ixtiyoriy)"
+        hint="Yozsangiz — sertifikat PDF shu xabar bilan birga sovg'a sifatida botda yuboriladi"
+      >
+        <Textarea
+          rows={2}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          maxLength={1000}
+          placeholder="Tabriklaymiz! Mana sizga maxsus sertifikat 🎁"
+        />
+      </Field>
       <InlineError message={error} />
-      <p className="text-xs text-app-hint">Sertifikat PDF ko'rinishida bot orqali a'zoga darhol yuboriladi.</p>
+      <p className="text-xs text-app-hint">
+        {message.trim()
+          ? 'Sertifikat shaxsiy xabar bilan birga bot orqali darhol yuboriladi.'
+          : "Sertifikat beriladi; a'zo uni ilovada ko'radi va yuklab oladi."}
+      </p>
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
           Bekor qilish
@@ -155,15 +159,119 @@ function IssueModal({ onClose, onDone }: { onClose: () => void; onDone: () => vo
           disabled={!member || title.trim().length < 3 || description.trim().length < 10}
           onClick={() => void submit()}
         >
-          Berish
+          {message.trim() ? 'Sovg‘a qilish' : 'Berish'}
         </Button>
       </div>
     </Modal>
   )
 }
 
-export function CertificatesPage() {
-  const { api, download } = useSession()
+/** The uploaded design picture as a card thumbnail (light; no server render). */
+function TemplateThumb({ template }: { template: Template }) {
+  const { download } = useSession()
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!template.has_background) return
+    let revoke: string | null = null
+    void download(`/api/v1/admin/certificate-templates/${template.id}/background`)
+      .then((blob) => {
+        revoke = URL.createObjectURL(blob)
+        setUrl(revoke)
+      })
+      .catch(() => setUrl(null))
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke)
+    }
+  }, [template.id, template.has_background, download])
+  return (
+    <div className="flex aspect-[1.4] w-full items-center justify-center overflow-hidden rounded bg-app-muted/40">
+      {url ? (
+        <img src={url} alt="" className="h-full w-full object-contain" />
+      ) : (
+        <span className="text-xs text-app-hint">Rasm yuklanmagan</span>
+      )}
+    </div>
+  )
+}
+
+function DesignsTab() {
+  const { api } = useSession()
+  const { state, reload } = useAsync((signal) => api<Template[]>('/api/v1/admin/certificate-templates', { signal }), [])
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function create() {
+    setBusy(true)
+    setError(null)
+    try {
+      const template = await api<Template>('/api/v1/admin/certificate-templates', {
+        method: 'POST',
+        body: { name: 'Yangi dizayn', elements: [], is_default: false },
+      })
+      navigate(`certificates/${template.id}`)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+      setBusy(false)
+    }
+  }
+
+  async function remove(template: Template) {
+    if (!window.confirm(`«${template.name}» dizaynini o'chirasizmi?`)) return
+    try {
+      await api(`/api/v1/admin/certificate-templates/${template.id}`, { method: 'DELETE' })
+      reload()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "O'chirib bo'lmadi.")
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <Card className="p-4 text-sm text-app-hint">
+        O'z dizayningizni (PNG, JPG yoki PDF) yuklab, ism, QR kod, muhr, imzo, sana va boshqa elementlarni xohlagan joyingizga
+        qo'ying — matn to'g'ridan-to'g'ri rasm ustiga yoziladi, hech qanday qo'shimcha parda qo'yilmaydi. «Asosiy» deb
+        belgilangan dizayn test g'oliblari va oy yetakchilariga avtomatik beriladi.
+      </Card>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold">Dizaynlar</h2>
+        <Button onClick={() => void create()} loading={busy}>
+          ➕ Yangi dizayn
+        </Button>
+      </div>
+      <InlineError message={error} />
+      {state.status === 'loading' && <LoadingState />}
+      {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
+      {state.status === 'success' &&
+        (state.data.length === 0 ? (
+          <Card className="p-6 text-center text-sm text-app-hint">Hali dizayn yaratilmagan.</Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {state.data.map((template) => (
+              <Card key={template.id} className="space-y-2 p-3">
+                <TemplateThumb template={template} />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium">{template.name}</span>
+                  {template.is_default && <Badge tone="success">Asosiy</Badge>}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="flex-1" onClick={() => navigate(`certificates/${template.id}`)}>
+                    ✏️ Tahrirlash
+                  </Button>
+                  <Button variant="ghost" className="text-app-danger" onClick={() => void remove(template)}>
+                    O'chirish
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ))}
+    </div>
+  )
+}
+
+function IssuedTab() {
+  const { download } = useSession()
+  const { api } = useSession()
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<'' | Kind>('')
@@ -208,12 +316,13 @@ export function CertificatesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Sertifikatlar"
-        subtitle="Test g'oliblari (1–3-o'rin) va oy yakunidagi reyting yetakchilari sertifikatni avtomatik oladi. Bu yerda qo'lda ham berish mumkin."
-        actions={<Button onClick={() => setIssuing(true)}>➕ Sertifikat berish</Button>}
-      />
-      <DesignGallery />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-app-hint">
+          Test g'oliblari (1–3-o'rin), test topshirganlar va oy yetakchilari sertifikatni avtomatik oladi. Bu yerda qo'lda
+          berish yoki sovg'a qilish ham mumkin.
+        </p>
+        <Button onClick={() => setIssuing(true)}>➕ Sertifikat berish</Button>
+      </div>
       <div className="flex flex-wrap gap-2">
         <form
           className="flex gap-2"
@@ -291,13 +400,36 @@ export function CertificatesPage() {
       {issuing && (
         <IssueModal
           onClose={() => setIssuing(false)}
-          onDone={() => {
+          onDone={(gift) => {
             setIssuing(false)
-            setMessage('✓ Sertifikat berildi va bot orqali a‘zoga yuborilmoqda.')
+            setMessage(gift ? '🎁 Sovg‘a sertifikat yuborilmoqda.' : '✓ Sertifikat berildi va bot orqali a‘zoga yuborilmoqda.')
             reload()
           }}
         />
       )}
+    </>
+  )
+}
+
+export function CertificatesPage() {
+  const route = useRoute()
+  const tab = route.query.get('tab') === 'designs' ? 'designs' : 'issued'
+
+  return (
+    <>
+      <PageHeader
+        title="Sertifikatlar"
+        subtitle="Dizaynlarni yarating, test va tadbirlarga biriktiring; sertifikatlarni avtomatik yoki sovg'a sifatida bering."
+      />
+      <SectionTabs
+        tabs={[
+          { key: 'issued', label: '🎓 Berilgan sertifikatlar' },
+          { key: 'designs', label: '🎨 Dizaynlar (muharrir)' },
+        ]}
+        active={tab}
+        onChange={(key) => navigate(key === 'designs' ? 'certificates?tab=designs' : 'certificates')}
+      />
+      {tab === 'designs' ? <DesignsTab /> : <IssuedTab />}
     </>
   )
 }

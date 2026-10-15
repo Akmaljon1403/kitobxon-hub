@@ -47,6 +47,10 @@ class Event(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     # The club's own certificate design for this event (an image; the text is written on top).
     certificate_background_key: Mapped[str | None] = mapped_column(String(512))
+    # An admin-built certificate template (app.services.certificate_templates) for this event's winners.
+    certificate_template_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("certificate_templates.id", ondelete="SET NULL")
+    )
 
 
 class EventShift(UUIDPrimaryKeyMixin, Base):

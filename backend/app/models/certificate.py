@@ -5,11 +5,43 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, SmallInteger, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, SmallInteger, String, Text, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin, enum_column
+from app.models.base import Base, CreatedAtMixin, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
 from app.models.enums import CertificateKind
+
+
+class CertificateTemplate(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
+    """An admin-built certificate design: an uploaded page (PNG/JPG/PDF) and the elements placed on it.
+
+    Each element (name, QR, seal, signature, date, …) carries its own position, size, font and colour,
+    so the text sits exactly where the admin wants on their own design — no readability overlay is drawn.
+    Certificates can be issued automatically (test winners) or by hand as a gift from a chosen template.
+    """
+
+    __tablename__ = "certificate_templates"
+    __table_args__ = (
+        # At most one template is the default used for automatic certificates.
+        Index(
+            "uq_certificate_templates_default",
+            "is_default",
+            unique=True,
+            postgresql_where=text("is_default AND deleted_at IS NULL"),
+        ),
+    )
+
+    name: Mapped[str] = mapped_column(String(160))
+    # The uploaded design, fitted to object storage; a flat paper is used when none is set.
+    background_key: Mapped[str | None] = mapped_column(String(512))
+    # The prepared background's pixel size, so the editor and the PDF keep the same aspect (no stretch).
+    bg_width: Mapped[int] = mapped_column(Integer, default=1754, server_default="1754")
+    bg_height: Mapped[int] = mapped_column(Integer, default=1240, server_default="1240")
+    # [{type, x, y, w, size, font, color, align, bold, italic, content}, …]; validated by the service.
+    elements: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
 
 class Certificate(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -41,5 +73,7 @@ class Certificate(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     # One of app.services.certificate_designs (taken in turn), or "custom" for an uploaded background.
     design: Mapped[str | None] = mapped_column(String(32))
     background_key: Mapped[str | None] = mapped_column(String(512))  # the uploaded background, if any
+    # An admin-built design (app.services.certificate_templates). When set, it is drawn instead of ``design``.
+    template_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("certificate_templates.id", ondelete="SET NULL"))
     downloads: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
     design_changes: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")

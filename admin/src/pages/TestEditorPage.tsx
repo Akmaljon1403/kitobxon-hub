@@ -42,6 +42,9 @@ function problemsOf(question: AdminQuestion): string[] {
 function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail; readOnlyScores: boolean; onSaved: () => void }) {
   const { api, can } = useSession()
   const books = useAsync((signal) => api<Page<Book>>('/api/v1/admin/books?limit=200', { signal }))
+  const designs = useAsync((signal) =>
+    api<{ id: string; name: string; is_default: boolean }[]>('/api/v1/admin/certificate-templates', { signal }),
+  )
   const initial = {
     title: test.title,
     description: test.description ?? '',
@@ -55,6 +58,8 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
     shuffle_questions: test.shuffle_questions,
     shuffle_options: test.shuffle_options,
     questions_per_attempt: test.questions_per_attempt ? String(test.questions_per_attempt) : '',
+    certificate_template_id: test.certificate_template_id ?? '',
+    certificate_on_pass: test.certificate_on_pass,
   }
   const [form, setForm] = useState(initial)
   const [busy, setBusy] = useState(false)
@@ -85,6 +90,8 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
           shuffle_questions: form.shuffle_questions,
           shuffle_options: form.shuffle_options,
           questions_per_attempt: form.questions_per_attempt ? Number(form.questions_per_attempt) : null,
+          certificate_template_id: form.certificate_template_id || null,
+          certificate_on_pass: form.certificate_on_pass,
         },
       })
       setSaved(true)
@@ -179,6 +186,34 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
             onChange={(e) => setForm({ ...form, shuffle_options: e.target.checked })}
           />
           Javob variantlarini aralashtirish
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Sertifikat dizayni" hint="G'oliblarga shu dizaynda beriladi. Bo'sh — asosiy/standart dizayn">
+          <Select value={form.certificate_template_id} onChange={set('certificate_template_id')} disabled={!editable}>
+            <option value="">— Asosiy / standart —</option>
+            {designs.state.status === 'success' &&
+              designs.state.data.map((design) => (
+                <option key={design.id} value={design.id}>
+                  {design.name}
+                  {design.is_default ? ' (asosiy)' : ''}
+                </option>
+              ))}
+          </Select>
+        </Field>
+        <label className="flex items-start gap-2 pt-7 text-sm">
+          <input
+            type="checkbox"
+            checked={form.certificate_on_pass}
+            disabled={!editable}
+            onChange={(e) => {
+              setSaved(false)
+              setForm({ ...form, certificate_on_pass: e.target.checked })
+            }}
+          />
+          <span>
+            Testdan o'tgan <b>har bir</b> a'zoga ishtirok sertifikati (faqat 1–3 o'rin emas)
+          </span>
         </label>
       </div>
       <InlineError message={error} />

@@ -4,9 +4,65 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import CertificateKind
+
+_HEX = r"^#[0-9a-fA-F]{6}$"
+# The pieces an admin can place on a certificate design. Images: qr, seal, logo (square boxes).
+ElementType = Literal[
+    "name",
+    "cert_title",
+    "description",
+    "place",
+    "date",
+    "member_number",
+    "organization",
+    "club",
+    "signer",
+    "code",
+    "qr",
+    "seal",
+    "logo",
+    "text",
+]
+
+
+class TemplateElement(BaseModel):
+    """One positioned element. x/y/w are percentages of the page (top-left anchored)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: ElementType
+    x: float = Field(ge=0, le=100)
+    y: float = Field(ge=0, le=100)
+    w: float = Field(ge=1, le=100)
+    size: float = Field(default=18, ge=4, le=200, description="Font size in points (ignored for images)")
+    font: Literal["serif", "sans", "mono"] = "serif"
+    color: str = Field(default="#1c2b24", pattern=_HEX)
+    align: Literal["left", "center", "right"] = "center"
+    bold: bool = False
+    italic: bool = False
+    # Image variant (seal/logo): on a dark design choose «light».
+    variant: Literal["auto", "light", "dark"] = "auto"
+    content: str = Field(default="", max_length=240, description="The literal text for a «text» element")
+
+
+class TemplateUpsertIn(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    elements: list[TemplateElement] = Field(default_factory=list, max_length=40)
+    is_default: bool = False
+
+
+class TemplateOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    has_background: bool
+    bg_width: int
+    bg_height: int
+    elements: list[TemplateElement]
+    is_default: bool
+    updated_at: datetime
 
 
 class CertificateOut(BaseModel):
@@ -62,6 +118,10 @@ class CertificateIssueIn(BaseModel):
         min_length=10, max_length=400, description="Printed under the name, e.g. «... uchun taqdim etiladi.»"
     )
     place: int | None = Field(default=None, ge=1, le=3)
+    template_id: uuid.UUID | None = Field(default=None, description="An admin-built design to use")
+    message: str | None = Field(
+        default=None, max_length=1000, description="A personal note sent with the certificate as a gift"
+    )
 
 
 class DownloadLinkIn(BaseModel):

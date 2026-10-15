@@ -6,7 +6,7 @@ from app.models.audit import AuditLog
 from app.models.base import Base
 from app.models.book import Book, BookQuote, BookRead
 from app.models.bot import BotFsmState, TextOverride
-from app.models.certificate import Certificate
+from app.models.certificate import Certificate, CertificateTemplate
 from app.models.channel import ChannelPost, ChannelSticker, CustomEmoji
 from app.models.community import Contribution, ContributionLike, PaymentsChatLink
 from app.models.contest import ReferralContest
@@ -41,6 +41,7 @@ __all__ = [
     "CampaignBook",
     "CardPayment",
     "Certificate",
+    "CertificateTemplate",
     "ChannelPost",
     "ChannelSticker",
     "Contribution",
