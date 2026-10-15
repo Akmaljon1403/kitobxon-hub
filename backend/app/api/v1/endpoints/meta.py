@@ -49,6 +49,28 @@ async def certificate_design_list() -> list[DesignItem]:
     return [DesignItem(**item) for item in certificate_service.design_list()]
 
 
+class CertificateElementsMeta(BaseModel):
+    element_types: list[dict[str, object]]  # {type, label, image}
+    fonts: list[str]
+
+
+@router.get(
+    "/certificate-elements",
+    response_model=CertificateElementsMeta,
+    summary="The pieces and fonts the certificate designer offers",
+)
+async def certificate_elements() -> CertificateElementsMeta:
+    from app.services import certificate_templates
+
+    return CertificateElementsMeta(
+        element_types=[
+            {"type": code, "label": label, "image": is_image}
+            for code, label, is_image in certificate_templates.ELEMENT_TYPES
+        ],
+        fonts=list(certificate_templates.FONT_STACKS.keys()),
+    )
+
+
 @router.get(
     "/certificate-designs/{code}.png",
     summary="A sample picture of a certificate design (cached)",

@@ -301,6 +301,8 @@ export interface AdminTest {
   created_at: string
   event_id: string | null
   certificate_background: boolean
+  certificate_template_id: string | null
+  certificate_on_pass: boolean
 }
 
 export interface AdminQuestion {

@@ -90,6 +90,8 @@ _TEST_FIELDS = (
     "shuffle_questions",
     "shuffle_options",
     "questions_per_attempt",
+    "certificate_template_id",
+    "certificate_on_pass",
 )
 # Changing these after someone has answered would make results incomparable.
 _LOCKED_AFTER_ATTEMPTS = ("max_score", "passing_score", "questions_per_attempt")
@@ -280,6 +282,10 @@ async def update_test(
     before = _snapshot(test)
     if changes.get("book_id"):
         await _ensure_book(session, changes["book_id"])
+    if changes.get("certificate_template_id"):
+        from app.services import certificate_templates
+
+        await certificate_templates.ensure_template_for(session, changes["certificate_template_id"])
     locked = [f for f in _LOCKED_AFTER_ATTEMPTS if f in changes and changes[f] != getattr(test, f)]
     if locked and await _has_attempts(session, test.id):
         raise ConflictError(

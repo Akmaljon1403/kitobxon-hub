@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.errors import AppError, ConflictError, NotFoundError
-from app.models import AttendanceRecord, Certificate, Event, Test, User
+from app.models import AttendanceRecord, Certificate, CertificateTemplate, Event, Test, User
 from app.models.enums import AttendanceStatus, CertificateKind, FeatureMode, NotificationType
 from app.services import certificate_designs as designs
 from app.services.audit import record_audit
@@ -106,10 +106,16 @@ async def issue(
     event_id: uuid.UUID | None = None,
     period: str | None = None,
     issued_by: uuid.UUID | None = None,
+    template_id: uuid.UUID | None = None,
+    gift_message: str | None = None,
 ) -> Certificate | None:
     """Create a certificate and tell the member (it is seen and downloaded in the Mini App).
-    Returns None if it already exists."""
-    design, background = await _design_for(session, test_id=test_id, event_id=event_id, period=period)
+    With ``template_id`` an admin-built design is used; with ``gift_message`` the PDF is sent
+    together with the admin's personal note. Returns None if it already exists."""
+    if template_id is not None:
+        design, background = None, None  # the template owns the whole page
+    else:
+        design, background = await _design_for(session, test_id=test_id, event_id=event_id, period=period)
     new_id = await session.scalar(
         insert(Certificate)
         .values(
@@ -127,6 +133,7 @@ async def issue(
             issued_by=issued_by,
             design=design,
             background_key=background,
+            template_id=template_id,
         )
         .on_conflict_do_nothing(index_elements=[Certificate.dedup_key])
         .returning(Certificate.id)
@@ -135,23 +142,27 @@ async def issue(
         return None
     certificate = await session.get(Certificate, new_id)
     assert certificate is not None
-    details = f"Tekshirish kodi: {display_code(certificate.verify_code)}"
     link = verify_url(certificate.verify_code)
-    details += "\n\n📱 Sertifikatingizni ilovada ko'ring" + (
-        f"; uning haqiqiyligini istalgan kishi shu havola orqali tekshiradi: {link}" if link else "."
-    )
-    text = await render(session, NotificationType.CERTIFICATE, title=title, details=details)
-    if text is not None:
+    button = {"text": "🎓 Sertifikatni ko'rish", "app_route": f"certificates/{certificate.id}"}
+    if gift_message:
+        # A gift: the PDF itself is delivered together with the admin's personal message.
+        text = gift_message.strip()
+        payload = {"buttons": [button], "mood": "CELEBRATE", "certificate_id": str(certificate.id)}
+    else:
+        details = f"Tekshirish kodi: {display_code(certificate.verify_code)}"
+        details += "\n\n📱 Sertifikatingizni ilovada ko'ring" + (
+            f"; uning haqiqiyligini istalgan kishi shu havola orqali tekshiradi: {link}" if link else "."
+        )
+        text = await render(session, NotificationType.CERTIFICATE, title=title, details=details)
+        payload = {"buttons": [button], "mood": "CELEBRATE"}
+    if text:
         await enqueue_notification(
             session,
             user_id=user_id,
             type_=NotificationType.CERTIFICATE,
             text=text,
             dedup_key=f"certificate:{certificate.id}",
-            payload={
-                "buttons": [{"text": "🎓 Sertifikatni ko'rish", "app_route": f"certificates/{certificate.id}"}],
-                "mood": "CELEBRATE",
-            },
+            payload=payload,
             priority=2,
         )
     return certificate
@@ -167,12 +178,24 @@ async def _attended(session: AsyncSession, event_id: uuid.UUID) -> set[uuid.UUID
     )
 
 
+def _test_template_id(test: Test, event: Event | None) -> uuid.UUID | None:
+    """The admin-built design chosen for this test (its own, else the event's)."""
+    return test.certificate_template_id or (event.certificate_template_id if event else None)
+
+
 async def issue_for_test(session: AsyncSession, test: Test, standings: list[dict[str, Any]]) -> int:
-    """Places 1-3 of a closed test. The caller commits."""
+    """Places 1-3 of a closed test, plus a completion certificate for every passer when the test asks
+    for it (``certificate_on_pass``). The caller commits."""
     if not await get_setting(session, "certificates.test_winners"):
         return 0
-    winners = standings
     event = await session.get(Event, test.event_id) if test.event_id else None
+    template_id = _test_template_id(test, event)
+    if template_id is None:
+        from app.services import certificate_templates
+
+        default = await certificate_templates.default_template(session)
+        template_id = default.id if default else None
+    winners = standings
     if event is not None:
         present = await _attended(session, event.id)
         winners = [row for row in standings if row["user_id"] in present]
@@ -195,6 +218,43 @@ async def issue_for_test(session: AsyncSession, test: Test, standings: list[dict
             dedup_key=f"test:{test.id}:place:{place}",
             test_id=test.id,
             event_id=event.id if event else None,
+            template_id=template_id,
+        )
+        issued += 1 if created else 0
+    issued += await issue_for_passers(session, test, standings, event=event, template_id=template_id)
+    return issued
+
+
+async def issue_for_passers(
+    session: AsyncSession,
+    test: Test,
+    standings: list[dict[str, Any]],
+    *,
+    event: Event | None = None,
+    template_id: uuid.UUID | None = None,
+) -> int:
+    """A completion certificate for everybody who passed the test (``certificate_on_pass``). ``standings``
+    already contains only members whose score reached ``passing_score`` (an event's test: attendees only)."""
+    if not test.certificate_on_pass:
+        return 0
+    passers = standings
+    if event is not None:
+        present = await _attended(session, event.id)
+        passers = [row for row in standings if row["user_id"] in present]
+    title = f"«{test.title}» — ishtirok sertifikati"
+    issued = 0
+    for row in passers:
+        created = await issue(
+            session,
+            user_id=row["user_id"],
+            kind=CertificateKind.COMPLETION,
+            place=None,
+            title=title,
+            description=f"«{test.title}» bilim testini muvaffaqiyatli topshirgani uchun taqdim etiladi.",
+            dedup_key=f"testpass:{test.id}:{row['user_id']}",
+            test_id=test.id,
+            event_id=event.id if event else None,
+            template_id=template_id,
         )
         issued += 1 if created else 0
     return issued
@@ -217,6 +277,9 @@ async def issue_monthly(session: AsyncSession, now: datetime | None = None) -> i
         return 0
     board = await ranking(session, period="month", scope="all", viewer=None, limit=3, between=(last_month, this_month))
     month = f"{last_month.year}-yil {MONTHS_UZ[last_month.month - 1]}"
+    from app.services import certificate_templates
+
+    default = await certificate_templates.default_template(session)
     issued = 0
     for row in board.items[:3]:
         created = await issue(
@@ -231,6 +294,7 @@ async def issue_monthly(session: AsyncSession, now: datetime | None = None) -> i
             ),
             dedup_key=f"month:{period}:place:{row.rank}",
             period=period,
+            template_id=default.id if default else None,
         )
         issued += 1 if created else 0
     return issued
@@ -244,10 +308,17 @@ async def issue_manual(
     title: str,
     description: str,
     place: int | None,
+    template_id: uuid.UUID | None = None,
+    gift_message: str | None = None,
 ) -> Certificate:
+    """By hand from the panel: a plain certificate, or a gift with a chosen design and a personal note."""
     user = await session.get(User, user_id)
     if user is None or user.deleted_at is not None:
         raise NotFoundError("USER_NOT_FOUND", "A'zo topilmadi.")
+    if template_id is not None:
+        from app.services import certificate_templates
+
+        template_id = await certificate_templates.ensure_template_for(session, template_id)
     certificate = await issue(
         session,
         user_id=user_id,
@@ -257,6 +328,8 @@ async def issue_manual(
         description=description,
         dedup_key=f"manual:{uuid.uuid4()}",
         issued_by=actor_id,
+        template_id=template_id,
+        gift_message=gift_message,
     )
     assert certificate is not None
     record_audit(
@@ -265,7 +338,7 @@ async def issue_manual(
         action="CERTIFICATE_ISSUE",
         entity_type="certificate",
         entity_id=certificate.id,
-        after={"user_id": str(user_id), "title": title, "place": place},
+        after={"user_id": str(user_id), "title": title, "place": place, "gift": bool(gift_message)},
     )
     await session.commit()
     return certificate
@@ -417,6 +490,14 @@ async def render_pdf(session: AsyncSession, certificate: Certificate, design: st
 
     from app.services.report_pdf import TEMPLATES, _environment
 
+    # An admin-built design takes over the whole page (no fixed layout, no readability overlay).
+    if certificate.template_id is not None:
+        template = await session.get(CertificateTemplate, certificate.template_id)
+        if template is not None and template.deleted_at is None:
+            from app.services import certificate_templates
+
+            return await certificate_templates.render_pdf(session, template, certificate=certificate)
+
     values = await _template_values(session, certificate, design)
     html = _environment().get_template("certificate.html").render(**values)
     return await asyncio.to_thread(lambda: HTML(string=html, base_url=str(TEMPLATES)).write_pdf())
@@ -536,7 +617,8 @@ async def pdf_bytes(session: AsyncSession, certificate: Certificate) -> bytes:
         except AppError:
             pass  # lost file (e.g. a rebuilt free server): draw it again
     data = await render_pdf(session, certificate)
-    key = f"certificates/{certificate.id}-{certificate.design or 'classic'}.pdf"
+    suffix = f"tpl-{certificate.template_id}" if certificate.template_id else (certificate.design or "classic")
+    key = f"certificates/{certificate.id}-{suffix}.pdf"
     await storage.put(key, data, "application/pdf")
     certificate.file_key = key
     return data

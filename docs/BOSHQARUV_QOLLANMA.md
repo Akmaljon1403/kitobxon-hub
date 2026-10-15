@@ -392,6 +392,8 @@ yutuqlar, sertifikatlar) ko'radi.
 
 - har bir test yopilganda **1-, 2-, 3-o'rin** egalariga (tadbir testida — faqat davomatdan
   o'tganlarga);
+- agar testda **«Testdan o'tgan har bir a'zoga sertifikat»** belgilansa — o'tish balidan o'tgan
+  **hamma** ishtirokchiga «ishtirok sertifikati» (nafaqat 1–3 o'rin);
 - har oy boshida (1-sana, soat 10:00 dan) o'tgan oy reytingidagi **eng faol uchlikka**.
 
 Sertifikat haqida xabar darhol boradi. **PDF nusxasini yuklab olish va chop etish — 💎 Premium**
@@ -401,6 +403,26 @@ ko'radi va **onlayn tasdiq havolasini** istalgan kishiga ko'rsata oladi. Buni **
 
 **🎓 Sertifikatlar** sahifasida qo'lda ham berasiz (masalan, «Faol kitobxon»), yuklab olasiz yoki bekor
 qilasiz.
+
+### 🎨 Sertifikat dizayni (vizual muharrir)
+
+**🎓 Sertifikatlar → 🎨 Dizaynlar (muharrir)** bo'limida o'z sertifikat dizayningizni yaratasiz:
+
+1. **➕ Yangi dizayn** → **🖼 Rasm yuklash**: o'z dizayningizni **PNG, JPG yoki PDF** holida yuklaysiz
+   (PDF bo'lsa, birinchi sahifasi olinadi). Rasm qanday bo'lsa, shundayligicha ishlatiladi — ustiga
+   hech qanday qo'shimcha parda yoki xiralashtiruvchi qatlam qo'yilmaydi.
+2. Kerakli elementlarni (**ism-familiya, QR kod, muhr, imzo, sana, tekshirish kodi, tashkilot/klub
+   nomi, erkin matn** va h.k.) qo'shib, ularni sichqoncha bilan **xohlagan joyingizga** sudraysiz,
+   burchagidan **o'lchamini** o'zgartirasiz; har biriga **shrift, o'lcham, rang va tekislashni**
+   belgilaysiz.
+3. **👁 Namuna** tugmasi tayyor sertifikatni (PDF ko'rinishida) namuna ma'lumotlar bilan ko'rsatadi.
+   **💾 Saqlash** bosilganda dizayn saqlanadi va keyin ham tahrirlashingiz mumkin.
+4. **«Asosiy dizayn»** belgilangan dizayn test g'oliblari va oy yetakchilariga **avtomatik** beriladi.
+   Alohida testga esa **⚙️ test sozlamalari → Sertifikat dizayni** orqali o'z dizaynini biriktirasiz.
+
+**Sovg'a sifatida qo'lda berish:** **🎓 Sertifikatlar → ➕ Sertifikat berish** da a'zoni, dizaynni va
+matnni tanlaysiz; **«Shaxsiy xabar»** yozsangiz — sertifikat PDF o'sha tabrik bilan birga bot orqali
+sovg'a sifatida darhol yuboriladi. Bu test natijasiga bog'liq emas — istalgan munosib sabab bilan.
 
 **Sozlash:** **⚙️ Sozlamalar → 🎓 Sertifikatlar** — imzo egasining lavozimi va ismi (masalan,
 «Klub rahbari — A. Bahodirov»), avtomatik berishni o'chirish.
@@ -610,6 +632,24 @@ Bot kanalga o'zi qiziqarli postlar joylaydi va o'quvchilarni botga taklif qiladi
    allaqachon `@FJSTIMutolaaxona` deb yozilgan.
 3. **📣 Telegram kanal** sahifasida **🧪 Sinov posti** ni bosing — bir necha soniyada kanalda chiqadi.
    Chiqmasa, sahifada xato sababi ko'rinadi (ko'pincha — bot admin qilinmagan).
+
+### 📢 Majburiy obuna (kanalga obuna shart)
+
+«Majburiy obuna» yoqilgan bo'lsa, a'zo kanalga obuna bo'lmaguncha botdan ham, ilovadan ham
+foydalana olmaydi; obunadan chiqib ketsa ham, keyingi urinishda «**Davom etish uchun kanalga obuna
+bo'ling**» deb chiqadi.
+
+**Muhim:** bu tekshiruv ishlashi uchun **bot o'sha kanalda administrator bo'lishi shart**. Agar bot
+admin bo'lmasa, tizim a'zoni to'sib qo'ya olmaydi (hammani qulflab qo'ymaslik uchun) — natijada
+obunasiz ham bot ishlayveradi. Shuning uchun **⚙️ Sozlamalar → 📢 Majburiy obuna** bo'limi tepasida
+holat ko'rsatiladi:
+
+- ✅ **«Majburiy obuna ishlayapti»** — hammasi joyida;
+- ⚠️ **«YOQILGAN, lekin ishlamayapti»** — bot qaysi kanalda admin emasligini aytadi. O'sha kanalga
+  botni admin qiling — tekshiruv o'z-o'zidan ishlay boshlaydi.
+
+Sozlash: **⚙️ Sozlamalar → 📢 Majburiy obuna** — yoqish/o'chirish va shart bo'lgan kanallar ro'yxati
+(bo'sh bo'lsa — klub kanali).
 
 **Bot o'zi joylaydigan postlar:**
 

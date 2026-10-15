@@ -114,9 +114,9 @@ REGISTRATION_TEXT_ONLY = "Iltimos, savolga matn bilan javob bering yoki /cancel 
 
 # ---- Required channel subscription ----
 SUBSCRIBE_REQUIRED = (
-    "📢 <b>Bir qadam qoldi!</b>\n\n"
-    "Kitobxon Hub'dan foydalanish uchun klubimiz kanaliga obuna bo'ling: yangi kitoblar, tadbirlar, "
-    "test natijalari va sovg'alar haqidagi xabarlar avval o'sha yerda chiqadi.\n\n"
+    "📢 <b>Davom etish uchun kanalga obuna bo'ling</b>\n\n"
+    "Kitobxon Hub'dan foydalanishda davom etish uchun klubimiz kanaliga obuna bo'lish talab etiladi: "
+    "yangi kitoblar, tadbirlar, test natijalari va sovg'alar haqidagi xabarlar avval o'sha yerda chiqadi.\n\n"
     "1️⃣ Pastdagi kanal tugmasini bosib, «Obuna bo'lish»ni bosing.\n"
     "2️⃣ So'ng shu yerga qaytib, «✅ Obuna bo'ldim» tugmasini bosing."
 )

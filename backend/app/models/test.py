@@ -74,6 +74,12 @@ class Test(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     # The club's own certificate design for this test's winners (an event's design is used otherwise).
     certificate_background_key: Mapped[str | None] = mapped_column(String(512))
+    # An admin-built certificate template (app.services.certificate_templates) for this test's winners.
+    certificate_template_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("certificate_templates.id", ondelete="SET NULL")
+    )
+    # Give a completion certificate to everyone who passed (score >= passing_score), not only the top 3.
+    certificate_on_pass: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("false"))
 
 
 class TestQuestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):

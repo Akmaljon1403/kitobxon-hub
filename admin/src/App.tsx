@@ -8,6 +8,7 @@ import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
 import { BooksPage } from './pages/BooksPage'
 import { CertificatesPage } from './pages/CertificatesPage'
+import { CertificateDesignerPage } from './pages/CertificateDesignerPage'
 import { ChannelPage } from './pages/ChannelPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsPage } from './pages/EventsPage'
@@ -115,6 +116,18 @@ function Router() {
           <ReportEditorPage reportId={entityId} />
         ) : (
           <Card className="p-6 text-sm text-app-hint">Hisobotlarni ko'rish uchun ruxsatingiz yo'q.</Card>
+        )}
+      </AdminLayout>
+    )
+  }
+
+  if (section === 'certificates' && entityId) {
+    return (
+      <AdminLayout section="certificates">
+        {can('REWARD_MANAGE') ? (
+          <CertificateDesignerPage templateId={entityId} />
+        ) : (
+          <Card className="p-6 text-sm text-app-hint">Sertifikat dizaynlari uchun ruxsatingiz yo'q.</Card>
         )}
       </AdminLayout>
     )

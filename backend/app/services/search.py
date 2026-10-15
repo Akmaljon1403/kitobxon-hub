@@ -36,7 +36,12 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
         "o'yin giveaway random taklif tanlov do'st referal havola sovrin musobaqa",
         "REWARD_MANAGE",
     ),
-    ("🎓 Sertifikatlar", "certificates", "sertifikat dizayn fon rasm", "REWARD_MANAGE"),
+    (
+        "🎓 Sertifikatlar",
+        "certificates",
+        "sertifikat dizayn muharrir shablon fon rasm qr muhr imzo sovg'a berish yuklash png pdf",
+        "REWARD_MANAGE",
+    ),
     ("📨 Murojaatlar", "support", "murojaat savol yordam adminga yozish", "SUPPORT_MANAGE"),
     (
         "💬 A'zolar fikrlari",

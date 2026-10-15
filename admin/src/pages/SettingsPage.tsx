@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { BotProfile } from '../components/BotProfile'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { SystemStatusCard } from '../components/SystemStatus'
+import { SubscriptionStatusCard } from '../components/SubscriptionStatus'
 import { Button, Card, InlineError, Input, PageHeader, Select } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
@@ -175,16 +176,19 @@ export function SettingsPage() {
       {canEdit && <SystemStatusCard />}
       {canEdit && <BotProfile />}
       {groups.map((group) => (
-        <Card key={group}>
-          <h2 className="border-b border-app-border px-4 py-3 font-semibold">{GROUP_TITLES[group] ?? group}</h2>
-          <div className="divide-y divide-app-border">
-            {state.data
-              .filter((setting) => setting.group === group)
-              .map((setting) => (
-                <SettingRow key={setting.key} setting={setting} canEdit={canEdit} />
-              ))}
-          </div>
-        </Card>
+        <div key={group} className="flex flex-col gap-3">
+          {group === 'subscription' && <SubscriptionStatusCard />}
+          <Card>
+            <h2 className="border-b border-app-border px-4 py-3 font-semibold">{GROUP_TITLES[group] ?? group}</h2>
+            <div className="divide-y divide-app-border">
+              {state.data
+                .filter((setting) => setting.group === group)
+                .map((setting) => (
+                  <SettingRow key={setting.key} setting={setting} canEdit={canEdit} />
+                ))}
+            </div>
+          </Card>
+        </div>
       ))}
     </>
   )

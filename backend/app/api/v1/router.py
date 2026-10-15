@@ -93,3 +93,4 @@ for module in (
     api_router.include_router(module.router)
 api_router.include_router(admin_analytics.trust_router)
 api_router.include_router(admin_texts.control_router)
+api_router.include_router(admin_certificates.templates_router)

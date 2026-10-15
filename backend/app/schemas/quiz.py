@@ -49,6 +49,10 @@ class TestUpdateIn(BaseModel):
     shuffle_questions: bool | None = None
     shuffle_options: bool | None = None
     questions_per_attempt: int | None = Field(default=None, ge=1, le=500, description="null = all questions")
+    certificate_template_id: uuid.UUID | None = Field(default=None, description="Admin-built design for the winners")
+    certificate_on_pass: bool | None = Field(
+        default=None, description="Give a completion certificate to everyone who passes (not only the top 3)"
+    )
 
 
 class OptionIn(BaseModel):
@@ -144,6 +148,8 @@ class TestAdminOut(BaseModel):
     created_at: datetime
     event_id: uuid.UUID | None = None
     certificate_background: bool = False
+    certificate_template_id: uuid.UUID | None = None
+    certificate_on_pass: bool = False
 
 
 class TestAdminDetailOut(TestAdminOut):

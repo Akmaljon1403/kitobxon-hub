@@ -69,6 +69,8 @@ async def _tests_out(db, tests: list[Test]) -> list[TestAdminOut]:
             created_at=test.created_at,
             event_id=test.event_id,
             certificate_background=test.certificate_background_key is not None,
+            certificate_template_id=test.certificate_template_id,
+            certificate_on_pass=test.certificate_on_pass,
         )
         for test in tests
     ]
