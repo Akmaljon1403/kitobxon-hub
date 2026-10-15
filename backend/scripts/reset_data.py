@@ -132,9 +132,7 @@ async def wipe() -> None:
         # Empty the operational tables first (one statement; CASCADE clears their children), then remove the
         # members — now nothing references them, so the protected ledgers no longer block the delete. The
         # members' own config rows (roles, permissions, personal missions) go with them by cascade.
-        await session.execute(
-            text(f"TRUNCATE TABLE {', '.join(WIPE_TABLES)} RESTART IDENTITY CASCADE")
-        )
+        await session.execute(text(f"TRUNCATE TABLE {', '.join(WIPE_TABLES)} RESTART IDENTITY CASCADE"))
         await session.execute(
             text(
                 "DELETE FROM users WHERE id NOT IN "
