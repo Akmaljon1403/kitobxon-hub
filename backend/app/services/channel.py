@@ -855,11 +855,12 @@ async def _settle_review(session: AsyncSession, post: ChannelPost, actor_id: uui
 async def publish_now(
     session: AsyncSession, *, actor_id: uuid.UUID, post_id: uuid.UUID, by_preview: bool = False
 ) -> ChannelPost:
-    """An admin approved the post: it goes out now (or in the morning, if it is night)."""
+    """An admin pressed «hoziroq jo'natish»: it goes out right now, even at night — the admin chose
+    this consciously, so the club's quiet hours are not applied to a manual publish."""
     post = await _pending(session, post_id, actor_id=actor_id, by_preview=by_preview)
     now = datetime.now(UTC)
     _reviewed(post, actor_id, now)
-    post.scheduled_at = next_daytime(now)
+    post.scheduled_at = now
     record_audit(
         session, actor_id=actor_id, action="CHANNEL_POST_APPROVE", entity_type="channel_post", entity_id=post.id
     )
