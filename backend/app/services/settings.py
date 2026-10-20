@@ -473,6 +473,15 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "ID raqami. ID'ni bilish: kanaldagi istalgan postni botga forward qiling — bot raqamni aytadi. Eng osoni: "
         "botni kanalga admin qiling — bot o'zi «Bu kanal nima uchun?» deb so'raydi",
     ),
+    SettingDefinition(
+        "channel.extra_targets",
+        "",
+        Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)],
+        "Klub kanalidan tashqari qo'shimcha kanallar (vergul bilan): @kanal yoki -100 bilan boshlanadigan ID. "
+        "Nom berish uchun «Nom=@kanal» (masalan «Ustozlar=@kanalB»). «📢 Xabarlar» bo'limida qayerga yuborishni "
+        "tanlashda shu kanallar ham chiqadi. Bot har bir kanalda administrator bo'lishi va «Xabar joylash» "
+        "huquqiga ega bo'lishi kerak",
+    ),
     SettingDefinition("channel.post_events", True, bool, "Yangi tadbirlar va «ertaga ... o'qib kelamiz» eslatmalari"),
     SettingDefinition("channel.post_books", True, bool, "Yangi kitoblar va «asarni tugatay deb qoldingizmi?» postlari"),
     SettingDefinition("channel.post_quotes", True, bool, "Kun iqtibosi kanalga ham joylanadi"),
@@ -558,6 +567,7 @@ OWNER_ONLY = (
     "payments.",
     "subscription.",
     "channel.chat_id",
+    "channel.extra_targets",
     "certificates.signer",
     "certificates.seal",
     "org.",

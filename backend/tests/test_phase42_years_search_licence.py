@@ -193,7 +193,7 @@ async def test_search_finds_pages_settings_commands_and_members(client: httpx.As
 
     found = (await client.get("/api/v1/admin/search", params={"q": "stiker"}, headers=headers)).json()
     kinds = {(item["kind"], item["title"]) for item in found}
-    assert ("page", "📣 Telegram kanal") in kinds
+    assert ("page", "📢 Xabarlar (bot va kanal)") in kinds
     assert ("command", "/stiker") in kinds
     assert any(item["kind"] == "setting" and item["route"] == "settings?key=notifications.stickers" for item in found)
 
@@ -212,7 +212,7 @@ async def test_search_finds_pages_settings_commands_and_members(client: httpx.As
     limited = admin_headers(other)
     assert (await client.get("/api/v1/admin/search", params={"q": "qodirova"}, headers=limited)).json() == []
     pages = (await client.get("/api/v1/admin/search", params={"q": "stiker"}, headers=limited)).json()
-    assert ("page", "📣 Telegram kanal") not in {(item["kind"], item["title"]) for item in pages}
+    assert ("page", "📢 Xabarlar (bot va kanal)") not in {(item["kind"], item["title"]) for item in pages}
     assert (
         await client.get("/api/v1/admin/search", params={"q": "stiker"}, headers=member_headers(reader))
     ).status_code == 403
