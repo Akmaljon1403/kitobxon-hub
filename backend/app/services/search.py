@@ -56,7 +56,7 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
         "COMMUNITY_MANAGE",
     ),
     ("🎯 Missiyalar", "missions", "missiya maqsad vazifa", "SEASON_MANAGE"),
-    ("⭐ Stars buyurtmalari", "stars", "stars yuborish buyurtma sovg'a", "STARS_SEND"),
+    ("⭐ Stars buyurtmalari", "support?tab=stars", "stars yuborish buyurtma sovg'a murojaat", "STARS_SEND"),
     ("🛡 Ishonch markazi", "trust", "ishonch shubhali sertifikat tekshirish kod", "AUDIT_LOG_VIEW"),
     ("📢 Xabarlar", "notifications", "xabar e'lon broadcast tugma yuborish", "NOTIFICATION_SEND"),
     ("📣 Telegram kanal", "channel", "kanal post stiker sticker tekshiruv", "NOTIFICATION_SEND"),

@@ -164,7 +164,7 @@ async def overview(session: AsyncSession) -> dict[str, Any]:
             "title": "⭐ Yuborilmagan Stars",
             "count": stars[0],
             "oldest_minutes": stars[1],
-            "route": "stars",
+            "route": "support?tab=stars",
         },
         {
             "code": "community",

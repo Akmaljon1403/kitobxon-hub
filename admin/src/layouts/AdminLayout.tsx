@@ -32,7 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'giveaways', icon: '🎲', label: "Sovg'a o'yinlari", visible: (can) => can('REWARD_MANAGE') },
   { route: 'missions', icon: '🎯', label: 'Missiyalar', visible: (can) => can('SEASON_MANAGE') },
   { route: 'certificates', icon: '🎓', label: 'Sertifikatlar', visible: (can) => can('REWARD_MANAGE') },
-  { route: 'support', icon: '📨', label: 'Murojaatlar', visible: (can) => can('SUPPORT_MANAGE') },
+  { route: 'support', icon: '📨', label: 'Murojaatlar', visible: (can) => can('SUPPORT_MANAGE') || can('STARS_SEND') },
   {
     route: 'community',
     icon: '💬',
@@ -45,7 +45,6 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'texts', icon: '📝', label: 'Matnlar (bot va kanal)', visible: (can) => can('TEXTS_MANAGE') },
   { route: 'features', icon: '🧩', label: 'Imkoniyatlar', visible: (_, isSuper) => isSuper },
   { route: 'premium', icon: '💎', label: 'Premium', visible: (_, isSuper) => isSuper },
-  { route: 'stars', icon: '⭐', label: 'Stars buyurtmalari', visible: (can) => can('STARS_SEND') },
   { route: 'admins', icon: '🛡', label: 'Adminlar', visible: (_, isSuper) => isSuper },
   { route: 'rentals', icon: '🏢', label: 'Ijara (tashkilotlar)', visible: (_, isSuper) => isSuper },
   { route: 'trust', icon: '🛡', label: 'Ishonch markazi', visible: (can) => can('AUDIT_LOG_VIEW') },
