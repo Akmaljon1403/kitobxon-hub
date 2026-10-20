@@ -150,7 +150,7 @@ async def _tell_admins(session: AsyncSession, error: str) -> None:
         text=(await render(session, NotificationType.SYSTEM, message=text)) or text,
         dedup_prefix=f"channel_error:{datetime.now(UTC):%Y-%m-%d}",
         members=super_admins(),
-        payload={"buttons": [{"text": "📢 Kanal", "admin_route": "channel"}]},
+        payload={"buttons": [{"text": "📢 Xabarlar", "admin_route": "notifications"}]},
         priority=2,
     )
 
@@ -160,8 +160,9 @@ async def send_channel_posts(session_factory: async_sessionmaker[AsyncSession], 
     async with session_factory() as session:
         if not await get_setting(session, "channel.enabled"):
             return 0
-        chat_id = channel.normalize_chat_id(str(await get_setting(session, "channel.chat_id")))
-        if chat_id is None:
+        primary = channel.normalize_chat_id(str(await get_setting(session, "channel.chat_id")))
+        extras = any(not dest["primary"] for dest in await channel.destinations(session))
+        if primary is None and not extras:
             return 0
         await channel.request_reviews(session)  # the admins see automatic posts a few minutes before
         batch = await _claim(session, limit)
@@ -170,6 +171,11 @@ async def send_channel_posts(session_factory: async_sessionmaker[AsyncSession], 
             if post.kind != ChannelPostKind.MANUAL and post.created_at < datetime.now(UTC) - STALE_AFTER:
                 post.status = ChannelPostStatus.CANCELLED
                 post.last_error = "eskirgan (kanal o'chiq turgan paytda navbatga qo'yilgan)"
+                await session.commit()
+                continue
+            # NULL target = the primary club channel; otherwise the extra channel chosen for this post.
+            chat_id = channel.normalize_chat_id(post.target_chat_id) if post.target_chat_id else primary
+            if chat_id is None:  # the target channel is no longer configured — try again later
                 await session.commit()
                 continue
             try:

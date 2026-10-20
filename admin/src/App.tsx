@@ -10,7 +10,6 @@ import { BooksPage } from './pages/BooksPage'
 import { CampaignsPage } from './pages/CampaignsPage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { CertificateDesignerPage } from './pages/CertificateDesignerPage'
-import { ChannelPage } from './pages/ChannelPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsPage } from './pages/EventsPage'
 import { FeaturesPage } from './pages/FeaturesPage'
@@ -18,10 +17,10 @@ import { GiveawaysHubPage } from './pages/GiveawaysHubPage'
 import { ControlPage } from './pages/ControlPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
+import { MessagingPage } from './pages/MessagingPage'
 import { MissionsPage } from './pages/MissionsPage'
 import { CommunityHubPage } from './pages/CommunityHubPage'
 import { RentalsPage } from './pages/RentalsPage'
-import { NotificationsPage } from './pages/NotificationsPage'
 import { PremiumPage } from './pages/PremiumPage'
 import { DocumentsHubPage } from './pages/DocumentsHubPage'
 import { ReportEditorPage } from './pages/ReportsPage'
@@ -46,8 +45,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   events: EventsPage,
   tests: TestsPage,
   scores: ScoresPage,
-  notifications: NotificationsPage,
-  channel: ChannelPage,
+  notifications: MessagingPage,
   support: SupportHubPage,
   achievements: AchievementsPage,
   documents: DocumentsHubPage,

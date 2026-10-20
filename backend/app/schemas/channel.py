@@ -28,6 +28,12 @@ class ChannelPostOut(BaseModel):
     reviewed_at: datetime | None = None
 
 
+class ChannelTargetOut(BaseModel):
+    chat_id: str
+    title: str
+    primary: bool = Field(description="True for the club's main channel; others are extra channels")
+
+
 class ChannelStickerOut(BaseModel):
     id: uuid.UUID
     emoji: str | None
@@ -44,5 +50,6 @@ class ChannelOut(BaseModel):
     pending: int
     last_sent_at: datetime | None
     last_error: str | None
+    targets: list[ChannelTargetOut] = []
     posts: list[ChannelPostOut]
     stickers: list[ChannelStickerOut]

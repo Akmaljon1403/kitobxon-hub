@@ -192,7 +192,7 @@ async def overview(session: AsyncSession) -> dict[str, Any]:
             "title": "📣 Kanalga chiqishi kutilayotgan postlar",
             "count": posts[0],
             "oldest_minutes": None,
-            "route": "channel",
+            "route": "notifications",
         },
     ]
 

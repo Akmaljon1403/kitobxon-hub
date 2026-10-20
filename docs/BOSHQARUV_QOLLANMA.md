@@ -649,9 +649,12 @@ aralashmaydi.
 Ikki tanlov bir xil kitobdan foydalansa ham, ularning qatnashchilari va ballari aralashmaydi — har
 bir qatnashuv o'z tanloviga bog'langan.
 
-## 11. Telegram kanal (@FJSTIMutolaaxona)
+## 11. Telegram kanal (@FJSTIMutolaaxona) — endi «📢 Xabarlar» ichida
 
-Bot kanalga o'zi qiziqarli postlar joylaydi va o'quvchilarni botga taklif qiladi.
+Bot kanalga o'zi qiziqarli postlar joylaydi va o'quvchilarni botga taklif qiladi. **Yangi:** kanal alohida
+bo'lim emas — u endi **📢 Xabarlar** bo'limi ichida. Bitta joyda xabar yozasiz va **«Qayerga yuborish»**da
+tanlaysiz: **📱 bot** (a'zolarga) va/yoki **📣 kanal(lar)**ga. Bir nechtasini birdek belgilash mumkin —
+masalan, matn botga ham, kanalga ham birdek ketadi.
 
 **Ulash (bir marta):**
 
@@ -659,8 +662,14 @@ Bot kanalga o'zi qiziqarli postlar joylaydi va o'quvchilarni botga taklif qiladi
    joylash»** huquqini yoqing.
 2. **⚙️ Sozlamalar → 📣 Telegram kanal** → «Bot klub kanaliga post joylaydi» ni yoqing. Kanal manzili
    allaqachon `@FJSTIMutolaaxona` deb yozilgan.
-3. **📣 Telegram kanal** sahifasida **🧪 Sinov posti** ni bosing — bir necha soniyada kanalda chiqadi.
-   Chiqmasa, sahifada xato sababi ko'rinadi (ko'pincha — bot admin qilinmagan).
+3. **📢 Xabarlar** bo'limidagi **🧪 Sinov posti** ni bosing — bir necha soniyada kanalda chiqadi.
+   Chiqmasa, xato sababi ko'rinadi (ko'pincha — bot admin qilinmagan).
+
+**➕ Bir nechta kanal (A kanal, B kanal...).** Klub kanalidan tashqari kanallarga ham joylamoqchi bo'lsangiz,
+**⚙️ Sozlamalar → 📣 Telegram kanal → «Qo'shimcha kanallar»**ga ularni vergul bilan yozing: `@kanal` yoki
+`-100…` ID. Nom berish uchun `Nom=@kanal` (masalan `Ustozlar=@kanalB`). Shu kanallar **📢 Xabarlar**dagi
+«Qayerga yuborish»da ham chiqadi. **Muhim:** bot har bir kanalda administrator bo'lishi va «Xabar joylash»
+huquqiga ega bo'lishi kerak.
 
 ### 📢 Majburiy obuna (kanalga obuna shart)
 
@@ -703,11 +712,11 @@ adminlarga botda ko'rsatiladi. Uchta tugma bor:
 
 Hech kim javob bermasa — post belgilangan vaqtda **o'zi chiqadi**. Bitta admin hal qilgach, boshqalarning
 tugmasi ishlamaydi (ikki marta joylanmaydi). Daqiqalar soni: **⚙️ Sozlamalar → 📣 Telegram kanal**
-(0 — tekshiruvsiz). Xuddi shu ishni **📣 Telegram kanal** sahifasida ham qilasiz («▶️ Hozir joylash»,
+(0 — tekshiruvsiz). Xuddi shu ishni **📢 Xabarlar** bo'limida ham qilasiz («▶️ Hozir joylash»,
 «✏️ Tahrirlash»).
 
-**O'zingiz yozish:** **📣 Telegram kanal → Kanalga post yozish** — matn, rasm, stiker, istalgan vaqtga
-rejalashtirish.
+**O'zingiz yozish:** **📢 Xabarlar → Yangi xabar** — «Qayerga yuborish»da kanalni (yoki bir nechta kanalni)
+belgilaysiz, matn yozasiz, rasm, stiker va istalgan vaqtga rejalashtirish qo'shasiz.
 
 **Stikerlar:** botga **/stiker** deb yozing va yoqqan stikerlaringizni yuboring (oddiy, animatsion yoki
 Premium stikerlar). Bot har birining kayfiyatini emojisidan aniqlaydi va mos joyda ishlatadi: 🎉 quvnoq
@@ -745,7 +754,7 @@ a'zolarga bildirishnomalar, **📣 Kanal postlari** (kanalga chiqadigan postlar 
 
 **Kanal postlari qayerdan keladi?** Ular dasturdagi tayyor shablonlardan tuziladi (tadbir, yangi kitob, kun
 iqtibosi, kitob yakuni, eslatmalar, taklif postlari); iboralari endi **📝 Matnlar → 📣 Kanal postlari**da.
-Har bir post chiqishdan oldin **📣 Telegram kanal** sahifasida turadi (5 daqiqa admin ko'rigi) — u yerda tahrirlaysiz
+Har bir post chiqishdan oldin **📢 Xabarlar** bo'limida turadi (5 daqiqa admin ko'rigi) — u yerda tahrirlaysiz
 yoki bekor qilasiz.
 
 ### 🛰 Nazorat markazi (faqat bosh admin)
@@ -1236,7 +1245,7 @@ bosasiz.
 - Kanal posti haqida xabar kelsa — ko'zdan kechiring (javob bermasangiz ham o'zi chiqadi).
 - Tiklash so'rovlari kelsa — ✅ yoki ❌.
 - Haftada bir: **📨 Murojaatlar**, **⭐ baholar**, **📈 Tahlillar** («🔁 Faollik va qaytish»), **🛡 Ishonch
-  markazi**, **📣 Telegram kanal** (xato yo'qmi).
+  markazi**, **📢 Xabarlar** (kanalda xato yo'qmi).
 - Oyda bir: **Sozlamalar → 🩺 Tizim holati** (hammasi ✅ mi), bosh sahifadagi ogohlantirishlar.
 - Oy boshida: **🗓 Davr hisoboti** → PDF → institut rahbariyatiga; **🎲 Sovg'a o'yinlari** — kodlar
   yetarlimi.
@@ -1460,7 +1469,7 @@ Tungi tinchlik vaqtida (`notifications.quiet_hours`, odatda 22:00–08:00) ommav
 | `/oqidim` «o'qiyotgan kitob yo'q» deydi | avval ilovada **📖 Javonim** ga kitob qo'shib, «O'qiyapman» qiling (yoki klub kitobida «O'qishni boshladim») |
 | Missiya progressi o'zgarmayapti | missiya **olingandan keyingi** ishlar sanaladi; o'z kitobi kundalikda o'qilgan bo'lishi kerak; natija bir necha daqiqada yangilanadi |
 | Bo'lim a'zolarga ko'rinmayapti | **🧩 Imkoniyatlar** da «O'chiq» emasligini tekshiring («🎁 Sizning foydangiz» doim ochiq) |
-| Kanalga post chiqmadi | **📣 Telegram kanal** sahifasidagi xato sababi; ko'pincha bot kanalda admin emas |
+| Kanalga post chiqmadi | **📢 Xabarlar** bo'limidagi xato sababi; ko'pincha bot kanalda admin emas |
 | Biror narsa umuman ishlamayapti | **Sozlamalar → 🩺 Tizim holati** — qizil qator nimani aytsa, shuni tuzating; bo'lmasa menga yozing |
 
 > Xavfsizlik: hech kimga (menga ham) **bot tokeni**, **SECRET_KEY** yoki **DATABASE_URL** ni yubormang. Ular

@@ -87,6 +87,49 @@ def normalize_chat_id(value: str) -> str | int | None:
     return f"@{match.group(1)}" if match else None
 
 
+def parse_targets(raw: str) -> list[dict[str, str]]:
+    """«Ustozlar=@kanalB, @kanalC» → [{"chat_id": "@kanalB", "title": "Ustozlar"}, ...].
+
+    Each entry is an optional display name and a channel address (@username or a -100… id), separated by «=».
+    Invalid or duplicate addresses are skipped, so a typo never breaks the destinations list."""
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in (raw or "").split(","):
+        title, sep, address = item.strip().partition("=")
+        if not sep:
+            title, address = "", title
+        chat = normalize_chat_id(address)
+        if chat is None:
+            continue
+        chat_str = str(chat)
+        if chat_str in seen:
+            continue
+        seen.add(chat_str)
+        result.append({"chat_id": chat_str, "title": title.strip() or chat_str})
+    return result
+
+
+async def _primary_chat(session: AsyncSession) -> str | int | None:
+    return normalize_chat_id(str(await get_setting(session, "channel.chat_id")))
+
+
+async def destinations(session: AsyncSession) -> list[dict[str, Any]]:
+    """Channels a manual post may go to: the primary club channel first, then any extra ones
+    (``channel.extra_targets``). «📢 Xabarlar» lists these as «qayerga yuborish» choices."""
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    primary = await _primary_chat(session)
+    if primary is not None:
+        seen.add(str(primary))
+        result.append({"chat_id": str(primary), "title": str(primary), "primary": True})
+    for extra in parse_targets(str(await get_setting(session, "channel.extra_targets"))):
+        if extra["chat_id"] in seen:
+            continue
+        seen.add(extra["chat_id"])
+        result.append({"chat_id": extra["chat_id"], "title": extra["title"], "primary": False})
+    return result
+
+
 def next_daytime(when: datetime) -> datetime:
     """``when`` if it is daytime in the club, otherwise the next morning at 09:00."""
     local = when.astimezone(local_tz())
@@ -921,10 +964,23 @@ async def manual_post(
     sticker_id: uuid.UUID | None = None,
     with_button: bool = True,
     scheduled_at: datetime | None = None,
+    target_chat_id: str | None = None,
 ) -> ChannelPost:
     from app.services.storage import get_storage
 
-    if normalize_chat_id(str(await get_setting(session, "channel.chat_id"))) is None:
+    # Which channel this goes to. NULL means the primary club channel; an extra channel is stored as-is.
+    primary = await _primary_chat(session)
+    target: str | None = None
+    if target_chat_id:
+        chosen = normalize_chat_id(target_chat_id)
+        allowed = {dest["chat_id"] for dest in await destinations(session)}
+        if chosen is None or str(chosen) not in allowed:
+            raise BadRequestError(
+                "UNKNOWN_CHANNEL", "Bu kanal ro'yxatda yo'q. Sozlamalar → 📣 Telegram kanal bo'limida qo'shing."
+            )
+        if primary is None or str(chosen) != str(primary):
+            target = str(chosen)
+    elif primary is None:
         raise ConflictError("CHANNEL_NOT_SET", "Sozlamalarda kanal manzilini kiriting (masalan, @FJSTIMutolaaxona).")
     body = text.strip()
     if not body and photo is None:
@@ -946,6 +1002,7 @@ async def manual_post(
         sticker_file_id=sticker.file_id if sticker else None,
         buttons=[JOIN_BUTTON] if with_button else [],
         scheduled_at=scheduled_at or datetime.now(UTC),
+        target_chat_id=target,
         created_by=actor_id,
     )
     session.add(post)
@@ -1061,4 +1118,5 @@ async def status(session: AsyncSession) -> dict[str, Any]:
         "last_error": last_failed.last_error
         if last_failed and (not last_sent or last_failed.created_at > last_sent)
         else None,
+        "targets": await destinations(session),
     }

@@ -74,6 +74,7 @@ async def create_post(
     sticker_id: Annotated[uuid.UUID | None, Form()] = None,
     with_button: Annotated[bool, Form()] = True,
     scheduled_at: Annotated[AwareDatetime | None, Form()] = None,
+    target_chat_id: Annotated[str | None, Form()] = None,
 ) -> ChannelPostOut:
     data = await photo.read(MAX_PHOTO_BYTES + 1) if photo is not None else None
     post = await channel_service.manual_post(
@@ -84,6 +85,7 @@ async def create_post(
         sticker_id=sticker_id,
         with_button=with_button,
         scheduled_at=scheduled_at,
+        target_chat_id=target_chat_id,
     )
     return _post(post)
 

@@ -21,6 +21,9 @@ class ChannelPost(UUIDPrimaryKeyMixin, Base):
 
     kind: Mapped[ChannelPostKind] = mapped_column(enum_column(ChannelPostKind))
     text: Mapped[str] = mapped_column(Text)  # Telegram HTML
+    # Which Telegram chat this post goes to. NULL = the primary club channel (``channel.chat_id``).
+    # A non-NULL value is one of the extra channels (``channel.extra_targets``), e.g. "@kanalB" or "-100123".
+    target_chat_id: Mapped[str | None] = mapped_column(String(64))
     # A picture sent with the text: a file in our storage (book cover, uploaded image) or a URL.
     photo_key: Mapped[str | None] = mapped_column(String(512))
     photo_url: Mapped[str | None] = mapped_column(Text)

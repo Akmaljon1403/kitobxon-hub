@@ -612,6 +612,12 @@ export interface ChannelSticker {
   created_at: string
 }
 
+export interface ChannelTarget {
+  chat_id: string
+  title: string
+  primary: boolean
+}
+
 export interface ChannelOverview {
   enabled: boolean
   chat_id: string | null
@@ -619,6 +625,7 @@ export interface ChannelOverview {
   pending: number
   last_sent_at: string | null
   last_error: string | null
+  targets: ChannelTarget[]
   posts: ChannelPost[]
   stickers: ChannelSticker[]
 }
