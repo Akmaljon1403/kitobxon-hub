@@ -23,7 +23,7 @@ export function TestStateBadge({ state }: { state: TestState }) {
 function NewTestModal({ onClose }: { onClose: () => void }) {
   const { api } = useSession()
   const books = useAsync((signal) => api<Page<Book>>('/api/v1/admin/books?limit=200', { signal }))
-  const [form, setForm] = useState({ title: '', book_id: '', starts_at: '', ends_at: '', duration_minutes: '15' })
+  const [form, setForm] = useState({ title: '', book_id: '', starts_at: '', ends_at: '', duration_minutes: '15', max_score: '10' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = (field: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value })
@@ -40,6 +40,7 @@ function NewTestModal({ onClose }: { onClose: () => void }) {
           starts_at: fromLocalInput(form.starts_at),
           ends_at: fromLocalInput(form.ends_at),
           duration_minutes: Number(form.duration_minutes),
+          max_score: form.max_score ? Number(form.max_score) : null,
         },
       })
       navigate(`/tests/${test.id}`)
@@ -90,9 +91,17 @@ function NewTestModal({ onClose }: { onClose: () => void }) {
           <Input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} />
         </Field>
       </div>
-      <Field label="Yechish uchun vaqt (daqiqa) *" hint="Har bir a'zo boshlagan paytdan hisoblanadi">
-        <Input type="number" min={1} max={600} value={form.duration_minutes} onChange={set('duration_minutes')} />
-      </Field>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Yechish uchun vaqt (daqiqa) *" hint="Har bir a'zo boshlagan paytdan hisoblanadi">
+          <Input type="number" min={1} max={600} value={form.duration_minutes} onChange={set('duration_minutes')} />
+        </Field>
+        <Field
+          label="Maksimal ball *"
+          hint="Testda nechta savol bo'lishidan qat'i nazar, natija shu ballga nisbatlab (proporsiya) beriladi: hammasini to'g'ri yechsa — to'liq shu ball, yarmini — yarmi. Butun songa yaxlitlanadi."
+        >
+          <Input type="number" min={1} max={1000} value={form.max_score} onChange={set('max_score')} />
+        </Field>
+      </div>
       <InlineError message={error} />
     </Modal>
   )
