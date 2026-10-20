@@ -362,6 +362,11 @@ har biri o'z suhbati sifatida yuritiladi. Paneldagi **📨 Murojaatlar** faqat *
 savollari» huquqi borlar (hamda bosh admin) javob beradi. Shunday qilib, to'lovga berilgan javob hech qachon
 umumiy murojaatda ko'rinmaydi va «kim javob berdi» ham to'g'ri saqlanadi.
 
+**⭐ Stars buyurtmalari shu bo'lim ichida.** «📨 Murojaatlar» endi ikki qismli: **✉️ Murojaatlar** (a'zolar savollari)
+va **⭐ Stars buyurtmalari** (karta orqali olingan Telegram Stars). Yuqoridagi tugmalar bilan almashtirasiz. Har bir
+qism o'z huquqiga qarab ko'rinadi: murojaatlar — `SUPPORT_MANAGE`, Stars — `STARS_SEND` (shuning uchun faqat Stars
+huquqi borlar ham «📨 Murojaatlar»ni ochib, to'g'ridan-to'g'ri Stars buyurtmalariga tushadi).
+
 Har bir adminga kelgan nusxada holat yoziladi: **⏳ javob kutmoqda** → kimdir javob bersa, **hamma adminning
 nusxasida** (bosh adminnikida ham) «✅ Javob berildi — Ism, vaqt» va javobning boshi. Uzun xabar to'liq keladi;
 **📄 Batafsil** — butun yozishma (savollar, javoblar, kim javob bergani); **🔒 Yopish** — murojaatni yopadi
@@ -1225,8 +1230,8 @@ bosasiz.
 - Har tadbirdan oldin: tadbir yaratilganini, kitob biriktirilganini va davomat oynasini tekshiring.
 - Tadbirda: Davomat sahifasini ekranga chiqaring.
 - Kelgan cheklarni (karta to'lovlari) bank ilovasi bilan solishtirib tasdiqlang. Stars buyurtmalarini
-  «⭐ Stars yuborish» huquqli admin yuboradi — **⭐ Stars buyurtmalari** sahifasida «Kutilmoqda» bo'sh ekanini
-  ko'rib turing.
+  «⭐ Stars yuborish» huquqli admin yuboradi — **📨 Murojaatlar → ⭐ Stars buyurtmalari** bo'limida «Kutilmoqda»
+  bo'sh ekanini ko'rib turing.
 - To'lovlar kanalidagi a'zo savollariga javob bering (ular faqat sizga keladi).
 - Kanal posti haqida xabar kelsa — ko'zdan kechiring (javob bermasangiz ham o'zi chiqadi).
 - Tiklash so'rovlari kelsa — ✅ yoki ❌.
@@ -1299,7 +1304,7 @@ to'lovlar**).
   ko'rasiz. Endi Premium'ni ham bir bosishda olishingiz mumkin.»
 - Kanalga: «⭐ Stars yuborildi — Yubordi: <admin> · a'zoga xabar berildi».
 - Tugmani faqat bir kishi bosadi: boshqasi bossa «allaqachon yuborilgan» deydi (ikki marta yuborilmaydi).
-- Xuddi shu ishni admin panelda **⭐ Stars buyurtmalari** sahifasida qilish mumkin: «Kutilmoqda» va
+- Xuddi shu ishni admin panelda **📨 Murojaatlar → ⭐ Stars buyurtmalari** bo'limida qilish mumkin: «Kutilmoqda» va
   «Yuborilgan» ro'yxatlari, har buyurtmada a'zo, username, miqdor, summa va **✅ Yuborildi** tugmasi.
 
 **5. Adashib tasdiqlangan bo'lsa** — 48 soat ichida **↩️ Qaytarish**. Stars yuboruvchi adminga darhol
@@ -1585,7 +1590,7 @@ forward qilsangiz, bot ID'ni aytadi (19-bo'lim).
 - Bosh admin tasdiqlaydi → «⭐ Stars yuborish» huquqli adminga buyurtma va ko'rsatma → u yuboradi va belgilaydi
   → a'zoga xabar.
 - Har bir qadam to'lovlar kanaliga yoziladi.
-- Yangi huquq **«⭐ Stars yuborish»** va admin panelda **⭐ Stars buyurtmalari** sahifasi.
+- Yangi huquq **«⭐ Stars yuborish»** va admin panelda **📨 Murojaatlar** ichidagi **⭐ Stars buyurtmalari** bo'limi.
 - To'lov savollariga faqat bosh admin javob beradi, javoblar kanalga ham yoziladi.
 
 **🎨 Stikerlar va ✨ premium emojilar tuzatildi**

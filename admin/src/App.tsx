@@ -28,8 +28,8 @@ import { ReportEditorPage } from './pages/ReportsPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsHubPage } from './pages/SettingsHubPage'
-import { StarsOrdersPage } from './pages/StarsOrdersPage'
-import { SupportPage, SupportTicketPage } from './pages/SupportPage'
+import { SupportHubPage } from './pages/SupportHubPage'
+import { SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
 import { TestsPage } from './pages/TestsPage'
@@ -48,7 +48,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   scores: ScoresPage,
   notifications: NotificationsPage,
   channel: ChannelPage,
-  support: SupportPage,
+  support: SupportHubPage,
   achievements: AchievementsPage,
   documents: DocumentsHubPage,
   rewards: RewardsPage,
@@ -61,7 +61,6 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   certificates: CertificatesPage,
   features: FeaturesPage,
   premium: PremiumPage,
-  stars: StarsOrdersPage,
   analytics: AnalyticsPage,
   settings: SettingsHubPage,
   admins: AdminsPage,
