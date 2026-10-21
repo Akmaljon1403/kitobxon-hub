@@ -51,4 +51,28 @@ body {
   background: var(--app-bg-secondary);
   color: var(--app-text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* A gentle pop for dialogs/modals when they open. */
+@keyframes app-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.app-pop {
+  animation: app-pop 0.16s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-pop {
+    animation: none;
+  }
 }

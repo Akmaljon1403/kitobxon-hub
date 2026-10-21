@@ -11,16 +11,16 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; loading?: boolean }) {
   const styles: Record<Variant, string> = {
-    primary: 'bg-app-button text-app-button-text hover:opacity-90',
-    secondary: 'border border-app-border bg-app-bg text-app-text hover:bg-app-surface',
-    danger: 'bg-app-danger text-white hover:opacity-90',
+    primary: 'bg-app-button text-app-button-text shadow-sm hover:opacity-90',
+    secondary: 'border border-app-border bg-app-bg text-app-text hover:bg-app-surface hover:border-app-hint/40',
+    danger: 'bg-app-danger text-white shadow-sm hover:opacity-90',
     ghost: 'text-app-link hover:bg-app-surface',
   }
   return (
     <button
       type="button"
       disabled={disabled || loading}
-      className={`inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-[background,border,opacity,transform] duration-150 outline-none focus-visible:ring-2 focus-visible:ring-app-button/40 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 ${styles[variant]} ${className}`}
       {...rest}
     >
       {loading && <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />}
@@ -40,22 +40,22 @@ export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: R
     danger: 'bg-red-500/15 text-red-700 dark:text-red-400',
   }
   return (
-    <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-current/10 ${tones[tone]}`}>
       {children}
     </span>
   )
 }
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-xl border border-app-border bg-app-bg ${className}`}>{children}</section>
+  return <section className={`rounded-xl border border-app-border bg-app-bg shadow-sm ${className}`}>{children}</section>
 }
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-xl font-semibold">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-app-hint">{subtitle}</p>}
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-2xl text-sm text-app-hint">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
@@ -84,7 +84,7 @@ export function SectionTabs<T extends string>({
 }
 
 const fieldClass =
-  'w-full rounded-lg border border-app-border bg-app-bg px-3 py-2 text-sm outline-none focus:border-app-button focus:ring-2 focus:ring-app-button/20'
+  'w-full rounded-lg border border-app-border bg-app-bg px-3 py-2 text-sm outline-none transition-colors placeholder:text-app-hint/60 hover:border-app-hint/50 focus:border-app-button focus:ring-2 focus:ring-app-button/20'
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -136,12 +136,12 @@ export function Modal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm sm:items-center">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-xl bg-app-bg shadow-xl`}
+        className={`app-pop w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-2xl bg-app-bg shadow-2xl ring-1 ring-black/5`}
       >
         <div className="flex items-center justify-between border-b border-app-border px-5 py-3">
           <h2 className="font-semibold">{title}</h2>
@@ -200,7 +200,7 @@ export function Table({ head, children }: { head: ReactNode[]; children: ReactNo
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-app-border">{children}</tbody>
+        <tbody className="divide-y divide-app-border [&>tr]:transition-colors [&>tr:hover]:bg-app-surface/50">{children}</tbody>
       </table>
     </div>
   )
