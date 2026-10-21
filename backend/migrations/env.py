@@ -54,6 +54,14 @@ _MIGRATION_LOCK_ID = 7_243_001
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
     with context.begin_transaction():
+        # Never let a migration hang the whole deploy. During a rolling deploy the previous
+        # instance is still serving, so a brief lock on a busy table (events, campaigns, …) can
+        # delay an ALTER. Bound the waits: a blocked DDL aborts in a few seconds (lock_timeout)
+        # and any single statement — including the advisory lock below — in a couple of minutes
+        # (statement_timeout). start.sh then exits with a clear message and the platform retries,
+        # instead of the server never binding its port and the deploy timing out silently.
+        connection.execute(text("SET LOCAL lock_timeout = '15s'"))
+        connection.execute(text("SET LOCAL statement_timeout = '120s'"))
         connection.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": _MIGRATION_LOCK_ID})
         context.run_migrations()
 
