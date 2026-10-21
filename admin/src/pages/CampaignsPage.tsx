@@ -34,6 +34,7 @@ interface Campaign {
   books: { id: string; title: string; author: string }[]
   participants: number
   verified: number
+  event_id: string | null
 }
 
 interface Participant {
@@ -264,7 +265,10 @@ export function CampaignsPage() {
                       {formatDate(campaign.starts_at)} — {formatDate(campaign.ends_at)}
                     </p>
                   </div>
-                  <Badge tone={STATUS[campaign.status].tone}>{STATUS[campaign.status].label}</Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge tone={STATUS[campaign.status].tone}>{STATUS[campaign.status].label}</Badge>
+                    {campaign.event_id && <Badge tone="info">📅 Tadbirga biriktirilgan</Badge>}
+                  </div>
                 </div>
                 <p className="text-sm">
                   📚 {campaign.books.map((b) => b.title).join(', ') || '—'}

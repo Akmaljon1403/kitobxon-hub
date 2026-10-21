@@ -61,6 +61,90 @@ async def get(session: AsyncSession, campaign_id: uuid.UUID) -> Campaign:
     return campaign
 
 
+async def for_event(session: AsyncSession, event_id: uuid.UUID) -> Campaign | None:
+    """The one reading contest tied to an event (if any)."""
+    return await session.scalar(select(Campaign).where(Campaign.event_id == event_id, Campaign.deleted_at.is_(None)))
+
+
+async def by_events(session: AsyncSession, event_ids: list[uuid.UUID]) -> dict[uuid.UUID, Campaign]:
+    """{event_id: its contest} for a batch of events (the admin event list)."""
+    if not event_ids:
+        return {}
+    rows = await session.scalars(
+        select(Campaign).where(Campaign.event_id.in_(event_ids), Campaign.deleted_at.is_(None))
+    )
+    return {campaign.event_id: campaign for campaign in rows if campaign.event_id is not None}
+
+
+async def book_ids_by_campaigns(
+    session: AsyncSession, campaign_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[uuid.UUID]]:
+    """{campaign_id: [book_id, …] in order} for a batch of contests."""
+    result: dict[uuid.UUID, list[uuid.UUID]] = {campaign_id: [] for campaign_id in campaign_ids}
+    if campaign_ids:
+        rows = await session.execute(
+            select(CampaignBook.campaign_id, CampaignBook.book_id)
+            .where(CampaignBook.campaign_id.in_(campaign_ids))
+            .order_by(CampaignBook.sort_order)
+        )
+        for campaign_id, book_id in rows:
+            result[campaign_id].append(book_id)
+    return result
+
+
+async def sync_event_campaign(
+    session: AsyncSession, *, actor_id: uuid.UUID, event: Any, spec: dict[str, Any] | None
+) -> None:
+    """Create, update or unlink the one reading contest attached to an event — inside the caller's
+    transaction (does NOT commit). ``spec`` None unlinks the contest (it is kept, just freed from the
+    event); a dict upserts it. The contest's dates always follow the event's own window."""
+    existing = await for_event(session, event.id)
+    if spec is None:
+        if existing is not None:
+            existing.event_id = None
+        return
+    book_ids = [uuid.UUID(str(value)) for value in spec["book_ids"]]
+    if not book_ids:
+        raise BadRequestError("CAMPAIGN_NO_BOOK", "Tanlov uchun kamida bitta kitob tanlang.")
+    _check_dates(event.starts_at, event.ends_at)
+    if existing is None:
+        campaign = Campaign(
+            name=str(spec["name"]).strip(),
+            description=(spec.get("description") or None),
+            starts_at=event.starts_at,
+            ends_at=event.ends_at,
+            points_per_book=int(spec["points_per_book"]),
+            completion_bonus=int(spec["completion_bonus"]),
+            status=CampaignStatus.DRAFT,
+            created_by=actor_id,
+            event_id=event.id,
+        )
+        session.add(campaign)
+        await session.flush()
+        await _set_books(session, campaign.id, book_ids)
+        record_audit(
+            session,
+            actor_id=actor_id,
+            action="CAMPAIGN_CREATE",
+            entity_type="campaign",
+            entity_id=campaign.id,
+            after={"name": campaign.name, "event_id": str(event.id)},
+        )
+    else:
+        if existing.status not in EDITABLE_STATUSES:
+            return  # a finished contest is immutable; editing the event leaves it untouched
+        existing.name = str(spec["name"]).strip()
+        existing.description = spec.get("description") or None
+        existing.starts_at = event.starts_at
+        existing.ends_at = event.ends_at
+        existing.points_per_book = int(spec["points_per_book"])
+        existing.completion_bonus = int(spec["completion_bonus"])
+        await _set_books(session, existing.id, book_ids)
+        record_audit(
+            session, actor_id=actor_id, action="CAMPAIGN_UPDATE", entity_type="campaign", entity_id=existing.id
+        )
+
+
 async def books_of(session: AsyncSession, campaign_id: uuid.UUID) -> list[Book]:
     return list(
         await session.scalars(
@@ -142,6 +226,7 @@ async def create(
     points_per_book: int,
     completion_bonus: int,
     book_ids: list[uuid.UUID],
+    event_id: uuid.UUID | None = None,
 ) -> Campaign:
     _check_dates(starts_at, ends_at)
     campaign = Campaign(
@@ -153,6 +238,7 @@ async def create(
         completion_bonus=completion_bonus,
         status=CampaignStatus.DRAFT,
         created_by=actor_id,
+        event_id=event_id,
     )
     session.add(campaign)
     await session.flush()

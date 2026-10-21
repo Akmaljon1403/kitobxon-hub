@@ -51,6 +51,8 @@ class Event(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     certificate_template_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("certificate_templates.id", ondelete="SET NULL")
     )
+    # A pinned standard design (app.services.certificate_designs code) chosen for this event; NULL = next in turn.
+    certificate_design: Mapped[str | None] = mapped_column(String(32))
 
 
 class EventShift(UUIDPrimaryKeyMixin, Base):

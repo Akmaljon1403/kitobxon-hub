@@ -20,7 +20,9 @@ from app.schemas.event import (
     AttendanceRecordOut,
     AttendanceSessionIn,
     AttendanceTokenOut,
+    CertificateChoiceIn,
     EventAdminOut,
+    EventCampaignOut,
     EventCreateIn,
     EventUpdateIn,
     ManualCheckInIn,
@@ -33,6 +35,7 @@ from app.schemas.event import (
 from app.schemas.premium import FeedbackSummaryOut
 from app.security.permissions import Perm
 from app.services import attendance as attendance_service
+from app.services import campaigns as campaign_service
 from app.services import certificate_backgrounds
 from app.services import events as event_service
 from app.services import feedback as feedback_service
@@ -57,10 +60,13 @@ async def _events_out(db, events: list[Event]) -> list[EventAdminOut]:
     live = await attendance_service.open_events(db, ids)
     pending = await attendance_service.pending_counts(db, ids)
     default_points = await event_service.default_points(db)
+    campaigns = await campaign_service.by_events(db, ids)
+    campaign_books = await campaign_service.book_ids_by_campaigns(db, [campaign.id for campaign in campaigns.values()])
     result = []
     for event in events:
         registered, attended = counts[event.id]
         rating, rated = ratings.get(event.id, (None, 0))
+        campaign = campaigns.get(event.id)
         result.append(
             EventAdminOut(
                 id=event.id,
@@ -92,6 +98,21 @@ async def _events_out(db, events: list[Event]) -> list[EventAdminOut]:
                 created_at=event.created_at,
                 pending_requests=pending.get(event.id, 0),
                 certificate_background=event.certificate_background_key is not None,
+                certificate_design=event.certificate_design,
+                certificate_template_id=event.certificate_template_id,
+                campaign=(
+                    EventCampaignOut(
+                        id=campaign.id,
+                        name=campaign.name,
+                        description=campaign.description,
+                        points_per_book=campaign.points_per_book,
+                        completion_bonus=campaign.completion_bonus,
+                        status=campaign.status,
+                        book_ids=campaign_books.get(campaign.id, []),
+                    )
+                    if campaign is not None
+                    else None
+                ),
             )
         )
     return result
@@ -347,6 +368,46 @@ async def remove_certificate_background(event_id: uuid.UUID, current: EventEdito
         db, actor_id=current.user.id, super_admin="SUPER_ADMIN" in current.roles, target=event, data=None
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/certificate-next-design",
+    summary="Which standard design the next certificate would use (so the admin sees the rotation point)",
+)
+async def certificate_next_design(_: EventViewer, db: DbSession) -> dict[str, str]:
+    from sqlalchemy import select
+
+    from app.models import Certificate
+    from app.services import certificate_designs as designs
+
+    last = await db.scalar(
+        select(Certificate.design)
+        .where(Certificate.design.is_not(None), Certificate.design != designs.CUSTOM)
+        .order_by(Certificate.created_at.desc())
+        .limit(1)
+    )
+    nxt = designs.next_after(last)
+    return {"code": nxt.code, "title": nxt.title}
+
+
+@router.put(
+    "/events/{event_id}/certificate-choice",
+    response_model=EventAdminOut,
+    summary="Pick a ready design (standard or saved template) for the winners, or back to next-in-turn",
+)
+async def set_certificate_choice(
+    event_id: uuid.UUID, payload: CertificateChoiceIn, current: EventEditor, db: DbSession
+) -> EventAdminOut:
+    event = await event_service.get_event(db, event_id)
+    await certificate_backgrounds.set_choice(
+        db,
+        actor_id=current.user.id,
+        super_admin="SUPER_ADMIN" in current.roles,
+        event=event,
+        design=payload.design,
+        template_id=payload.template_id,
+    )
+    return await _event_out(db, event)
 
 
 @router.get(

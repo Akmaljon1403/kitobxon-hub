@@ -194,6 +194,19 @@ export interface AdminEvent {
   ratings_count: number
   pending_requests: number
   certificate_background: boolean
+  certificate_design: string | null
+  certificate_template_id: string | null
+  campaign: EventCampaign | null
+}
+
+export interface EventCampaign {
+  id: string
+  name: string
+  description: string | null
+  points_per_book: number
+  completion_bonus: number
+  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
+  book_ids: string[]
 }
 
 export interface AttendanceRecord {

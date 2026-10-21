@@ -353,6 +353,15 @@ xabar keladi — o'zi kirmagan bo'lsa **«🔒 Barcha seanslarni yopish»**ni bo
 5. Tadbirdan 30 daqiqa keyin bot qatnashganlardan **⭐ baho** so'raydi. Baholar va fikrlar shu
    tadbirning davomat sahifasi pastida ko'rinadi.
 
+**📖 Tadbirga kitob tanlovi biriktirish.** Tadbir oynasining o'zida **«Shu tadbirga kitob tanlovi
+biriktirish»**ni belgilab, bitta tadbirga **bitta** kitob tanlovini qo'shasiz: nomi, kitobi (yoki
+bir nechta), kitob uchun ball va yakunlash bonusi. Tanlov muddati tadbir sanasiga qarab o'zi qo'yiladi.
+U **«Kitob tanlovlari»** tabida ham ko'rinadi («📅 Tadbirga biriktirilgan» belgisi bilan) — o'sha yerdan
+boshlaysiz (e'lon qilib yoki e'lonsiz), qatnashchilarni tasdiqlaysiz va hisobotini olasiz. Belgini
+olib tashlasangiz, tanlov o'chmaydi — tadbirdan ajraydi, xolos.
+
+**🎓 G'oliblar sertifikati dizaynini shu yerda tanlaysiz** — pastdagi «6. Sertifikatlar» bo'limiga qarang.
+
 ## 4. Murojaatlar
 
 A'zolar botda **💬 Yordam → ✉️ Adminga yozish** orqali yozadi. Xabar `SUPPORT` huquqi bor
@@ -427,6 +436,19 @@ qilasiz.
    **💾 Saqlash** bosilganda dizayn saqlanadi va keyin ham tahrirlashingiz mumkin.
 4. **«Asosiy dizayn»** belgilangan dizayn test g'oliblari va oy yetakchilariga **avtomatik** beriladi.
    Alohida testga esa **⚙️ test sozlamalari → Sertifikat dizayni** orqali o'z dizaynini biriktirasiz.
+
+**🎓 Tadbir g'oliblari sertifikatini tadbir oynasidan tanlash.** Tadbirni yaratish/tahrirlash oynasida
+**«🎓 G'oliblar sertifikati dizayni»** bo'limi bor. U yerda tayyor sertifikatning **namunasi** ko'rinadi
+va to'rtta tanlovdan birini qo'yasiz:
+
+- **🔄 Navbatdagi** — tanlamasangiz, 12 ta tayyor dizayn **navbat bilan** ishlatiladi; qaysi biri
+  navbatda turgani grid'da **➡️** belgisi bilan ko'rsatiladi;
+- **tayyor dizaynlardan birini** — rasmchalardan bosib tanlaysiz (bot aynan shu dizaynda chizadi);
+- **mening shablonlarim** — **🎓 Sertifikatlar** bo'limida yaratgan o'z shablonlaringizdan biri;
+- **🖼 O'z rasmim** — A4 yotiq rasm yuklaysiz, matn uning ustiga yoziladi.
+
+Bir tanlov boshqasini almashtiradi; o'zgartirishni tadbir boshlangunicha adminlar, test yakunlangunicha
+bosh admin kirita oladi.
 
 **Sovg'a sifatida qo'lda berish:** **🎓 Sertifikatlar → ➕ Sertifikat berish** da a'zoni, dizaynni va
 matnni tanlaysiz; **«Shaxsiy xabar»** yozsangiz — sertifikat PDF o'sha tabrik bilan birga bot orqali

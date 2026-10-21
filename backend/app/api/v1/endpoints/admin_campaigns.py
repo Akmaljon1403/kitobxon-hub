@@ -41,6 +41,7 @@ def _out(campaign: Campaign, books: list[Book], counts: tuple[int, int]) -> Camp
         books=[CampaignBookOut(id=book.id, title=book.title, author=book.author) for book in books],
         participants=counts[0],
         verified=counts[1],
+        event_id=campaign.event_id,
     )
 
 
