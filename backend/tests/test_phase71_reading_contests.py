@@ -150,6 +150,29 @@ async def test_admin_flow_and_isolated_channel_posts(client: httpx.AsyncClient, 
     assert report.status_code == 200 and len(report.content) > 0
 
 
+async def test_point_defaults_remember_last_used(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    """The contest form (now inside Tadbirlar) starts from the last-used points."""
+    boss = await _boss(db)
+    book = await create_book(db)
+    await db.commit()
+    headers = admin_headers(boss)
+    now = datetime.now(UTC)
+    body = {
+        "name": "Default sinovi",
+        "description": None,
+        "starts_at": (now - timedelta(days=1)).isoformat(),
+        "ends_at": (now + timedelta(days=7)).isoformat(),
+        "points_per_book": 25,
+        "completion_bonus": 7,
+        "book_ids": [str(book.id)],
+    }
+    created = await client.post("/api/v1/admin/campaigns", json=body, headers=headers)
+    assert created.status_code == 201
+    defaults = await client.get("/api/v1/admin/campaigns/defaults", headers=headers)
+    assert defaults.status_code == 200
+    assert defaults.json() == {"points_per_book": 25, "completion_bonus": 7}
+
+
 async def test_delete_hides_contest(client: httpx.AsyncClient, db: AsyncSession) -> None:
     boss = await _boss(db)
     book = await create_book(db)

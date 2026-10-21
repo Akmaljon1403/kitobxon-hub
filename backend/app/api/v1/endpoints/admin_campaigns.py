@@ -68,7 +68,16 @@ async def create_campaign(payload: CampaignUpsertIn, current: Manager, db: DbSes
         completion_bonus=payload.completion_bonus,
         book_ids=payload.book_ids,
     )
+    await campaign_service.remember_defaults(
+        db, actor_id=current.user.id, points_per_book=payload.points_per_book, completion_bonus=payload.completion_bonus
+    )
     return await _one(db, campaign)
+
+
+@router.get("/defaults", summary="Last-used contest point settings (pre-fills the new-contest form)")
+async def defaults(_: Manager, db: DbSession) -> dict[str, int]:
+    points_per_book, completion_bonus = await campaign_service.point_defaults(db)
+    return {"points_per_book": points_per_book, "completion_bonus": completion_bonus}
 
 
 @router.get("/{campaign_id}", response_model=CampaignOut, summary="One contest")
@@ -92,6 +101,9 @@ async def update_campaign(
         points_per_book=payload.points_per_book,
         completion_bonus=payload.completion_bonus,
         book_ids=payload.book_ids,
+    )
+    await campaign_service.remember_defaults(
+        db, actor_id=current.user.id, points_per_book=payload.points_per_book, completion_bonus=payload.completion_bonus
     )
     return await _one(db, campaign)
 
