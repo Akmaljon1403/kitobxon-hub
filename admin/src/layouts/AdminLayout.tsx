@@ -106,7 +106,7 @@ export function AdminLayout({ section, children }: { section: string; children: 
               navigate(`/${item.route}`)
               setMenuOpen(false)
             }}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-app-button/40 ${
               active ? 'bg-app-button/10 font-semibold text-app-button' : 'text-app-text hover:bg-app-surface'
             }`}
           >
