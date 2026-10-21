@@ -1,7 +1,6 @@
 import { LoadingState } from './components/StateViews'
 import { Card } from './components/ui'
 import { AdminLayout, NAV_ITEMS } from './layouts/AdminLayout'
-import { AchievementsPage } from './pages/AchievementsPage'
 import { AdminsPage } from './pages/AdminsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AttendancePage } from './pages/AttendancePage'
@@ -11,19 +10,16 @@ import { CertificatesPage } from './pages/CertificatesPage'
 import { CertificateDesignerPage } from './pages/CertificateDesignerPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EventsHubPage } from './pages/EventsHubPage'
-import { FeaturesPage } from './pages/FeaturesPage'
-import { GiveawaysHubPage } from './pages/GiveawaysHubPage'
 import { ControlPage } from './pages/ControlPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
 import { MessagingPage } from './pages/MessagingPage'
-import { MissionsPage } from './pages/MissionsPage'
 import { CommunityHubPage } from './pages/CommunityHubPage'
 import { RentalsPage } from './pages/RentalsPage'
-import { PremiumPage } from './pages/PremiumPage'
+import { PremiumHubPage } from './pages/PremiumHubPage'
 import { DocumentsHubPage } from './pages/DocumentsHubPage'
 import { ReportEditorPage } from './pages/ReportsPage'
-import { RewardsPage } from './pages/RewardsPage'
+import { RewardsHubPage } from './pages/RewardsHubPage'
 import { ScoresPage } from './pages/ScoresPage'
 import { SettingsHubPage } from './pages/SettingsHubPage'
 import { SupportHubPage } from './pages/SupportHubPage'
@@ -31,7 +27,6 @@ import { SupportTicketPage } from './pages/SupportPage'
 import { TestEditorPage } from './pages/TestEditorPage'
 import { TestResultsPage } from './pages/TestResultsPage'
 import { TestsPage } from './pages/TestsPage'
-import { TextsPage } from './pages/TextsPage'
 import { TrustPage } from './pages/TrustPage'
 import { SessionProvider, useSession } from './store/session'
 import { useRoute } from './utils/router'
@@ -45,18 +40,13 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   scores: ScoresPage,
   notifications: MessagingPage,
   support: SupportHubPage,
-  achievements: AchievementsPage,
   documents: DocumentsHubPage,
-  rewards: RewardsPage,
-  giveaways: GiveawaysHubPage,
-  missions: MissionsPage,
+  rewards: RewardsHubPage,
   community: CommunityHubPage,
   rentals: RentalsPage,
-  texts: TextsPage,
   control: ControlPage,
   certificates: CertificatesPage,
-  features: FeaturesPage,
-  premium: PremiumPage,
+  premium: PremiumHubPage,
   analytics: AnalyticsPage,
   settings: SettingsHubPage,
   admins: AdminsPage,
