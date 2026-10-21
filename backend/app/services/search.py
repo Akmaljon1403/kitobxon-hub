@@ -39,11 +39,11 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
         "to'lov daromad sovg'a",
         None,
     ),
-    ("🏅 Yutuqlar", "achievements", "yutuq nishon chegara tartib", None),
-    ("🎁 Sovg'alar", "rewards", "sovg'a promokod kod tarqatish", "REWARD_MANAGE"),
+    ("🏅 Yutuqlar", "rewards?tab=achievements", "yutuq nishon chegara tartib", None),
+    ("🎁 Sovg'alar", "rewards?tab=rewards", "sovg'a promokod kod tarqatish", "REWARD_MANAGE"),
     (
         "🎲 Sovg'a o'yinlari",
-        "giveaways",
+        "rewards?tab=giveaways",
         "o'yin giveaway random taklif tanlov do'st referal havola sovrin musobaqa",
         "REWARD_MANAGE",
     ),
@@ -60,7 +60,7 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
         "iqtibos kun iqtibosi fikr e'tirof taassurot kartochka a'zolar lenta kitob iqtiboslari qoralama",
         "COMMUNITY_MANAGE",
     ),
-    ("🎯 Missiyalar", "missions", "missiya maqsad vazifa", "SEASON_MANAGE"),
+    ("🎯 Missiyalar", "rewards?tab=missions", "missiya maqsad vazifa", "SEASON_MANAGE"),
     ("⭐ Stars buyurtmalari", "support?tab=stars", "stars yuborish buyurtma sovg'a murojaat", "STARS_SEND"),
     ("🛡 Ishonch markazi", "trust", "ishonch shubhali sertifikat tekshirish kod", "AUDIT_LOG_VIEW"),
     (
@@ -70,8 +70,9 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
         "NOTIFICATION_SEND",
     ),
     ("⚙️ Sozlamalar", "settings", "sozlama ball vaqt karta obuna fakultet", None),
-    ("🧩 Imkoniyatlar", "features", "imkoniyat funksiya yoqish o'chirish premium", "SUPER_ADMIN"),
+    ("🧩 Imkoniyatlar", "premium?tab=features", "imkoniyat funksiya yoqish o'chirish premium", "SUPER_ADMIN"),
     ("💎 Premium va to'lovlar", "premium", "premium to'lov karta chek stars tarif qaytarish", "SUPER_ADMIN"),
+    ("📝 Matnlar (bot va kanal)", "settings?tab=texts", "matn shablon bot kanal post so'z tahrir", "TEXTS_MANAGE"),
     ("🛡 Adminlar", "admins", "admin rol ruxsat", "SUPER_ADMIN"),
     ("🏢 Ijara (tashkilotlar)", "rentals", "ijara litsenziya kalit tashkilot kollej maktab", "SUPER_ADMIN"),
     ("🧾 Audit jurnali", "audit", "audit jurnal kim nima qildi", "AUDIT_LOG_VIEW"),
@@ -176,7 +177,9 @@ async def search(session: AsyncSession, query: str, *, permissions: set[str], ro
             )
     if "REWARD_MANAGE" in allowed:
         for reward in await session.scalars(select(Reward).where(Reward.title.ilike(pattern)).limit(5)):
-            results.append({"kind": "reward", "title": reward.title, "subtitle": "Sovg'a", "route": "rewards"})
+            results.append(
+                {"kind": "reward", "title": reward.title, "subtitle": "Sovg'a", "route": "rewards?tab=rewards"}
+            )
 
     for title, route, keywords, permission in PLACES:
         if permission is not None and permission not in allowed and "SUPER_ADMIN" not in roles:

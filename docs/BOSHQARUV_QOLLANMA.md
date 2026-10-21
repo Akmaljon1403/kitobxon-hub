@@ -474,6 +474,9 @@ Tizim bazada yo'q raqamni matnda qoldirmaydi — hisobotdagi har bir raqam teksh
 
 ## 8. Imkoniyatlar (bot funksiyalarini yoqish/o'chirish)
 
+> **Qayerda:** «🧩 Imkoniyatlar» endi alohida menyu emas — **💎 Premium va imkoniyatlar** bo'limi ichida,
+> yuqoridagi «🧩 Imkoniyatlar» tugmasi ostida (faqat bosh admin).
+
 **🧩 Imkoniyatlar** sahifasida har bir bo'lim uchun uchta holat bor:
 
 - **O'chiq** — a'zolar uni ko'rmaydi;
@@ -487,6 +490,9 @@ Tizim bazada yo'q raqamni matnda qoldirmaydi — hisobotdagi har bir raqam teksh
 ularning odatiy holati — oxiridagi **I-jadval**.
 
 ## 9. Premium obuna va hissalar (daromad)
+
+> **Qayerda:** **💎 Premium va imkoniyatlar** bo'limi (bosh admin). Bitta bo'limda ikki qism: «💎 Premium va
+> to'lovlar» va «🧩 Imkoniyatlar».
 
 To'lov **Telegram Stars (⭐)** orqali: karta ma'lumotlari, shartnoma yoki to'lov tizimi kerak emas —
 Telegram raqamli xizmatlar uchun aynan shu usulni talab qiladi.
@@ -583,7 +589,11 @@ bank ilovangizda tekshirib, keyin tasdiqlang. Bu ishni faqat **bosh administrato
 
 ## 10. Sovg'a o'yinlari (boshqa ilovalar uchun promokodlar)
 
-Promokodlarni adolatli qoida bo'yicha tarqatish: **Admin panel → 🎲 Sovg'a o'yinlari**.
+> **Qayerda:** Panel ixchamlashtirildi — **🏅 Yutuqlar**, **🎁 Sovg'alar**, **🎲 Sovg'a o'yinlari**, **🏁 Taklif
+> tanlovlari** va **🎯 Missiyalar** endi bitta **🎁 Sovg'a va yutuqlar** bo'limida, yuqoridagi tugmalar bilan
+> almashtiriladi. Har qism o'z huquqiga qarab ko'rinadi.
+
+Promokodlarni adolatli qoida bo'yicha tarqatish: **🎁 Sovg'a va yutuqlar → 🎲 Sovg'a o'yinlari**.
 
 **Tayyorgarlik:** **🎁 Sovg'alar** → yangi sovg'a (masalan, «Kitob ilovasi — 1 oylik obuna») →
 **Berish va kodlar** → hamkor bergan kodlarni kiriting (har qatorda bitta). Kodlar shifrlangan holda
@@ -744,7 +754,10 @@ matnlarini **🔔 Bildirishnomalar → Shablonlar** da o'zingiz o'zgartirasiz.
 
 ### 📝 Matnlar — botning har bir so'zi sizning qo'lingizda
 
-Admin panel → **📝 Matnlar (bot va kanal)** (huquq: «📝 Matnlar», bosh adminda doim bor). Bo'limlar: ro'yxatdan
+> **Qayerda:** «📝 Matnlar» endi alohida menyu emas — **⚙️ Sozlamalar** bo'limi ichida, yuqoridagi
+> «📝 Matnlar (bot va kanal)» tugmasi ostida (fakultetlar singari sozlamalar ichiga olindi).
+
+Admin panel → **⚙️ Sozlamalar → 📝 Matnlar (bot va kanal)** (huquq: «📝 Matnlar», bosh adminda doim bor). Bo'limlar: ro'yxatdan
 o'tish, salomlashish, menyu javoblari, yordam va murojaatlar, Premium, karta orqali to'lov, mutolaa, a'zolar fikrlari,
 a'zolarga bildirishnomalar, **📣 Kanal postlari** (kanalga chiqadigan postlar iboralari) va boshqalar.
 

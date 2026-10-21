@@ -584,7 +584,7 @@ async def _notify_admins(session: AsyncSession, giveaway: Giveaway, text: str, k
         text=(await render(session, NotificationType.SYSTEM, message=text)) or text,
         dedup_prefix=f"giveaway:{giveaway.id}:{key}",
         members=members,
-        payload={"buttons": [{"text": "🎲 Sovg'a o'yinlari", "admin_route": "giveaways"}]},
+        payload={"buttons": [{"text": "🎲 Sovg'a o'yinlari", "admin_route": "rewards?tab=giveaways"}]},
         priority=2,
     )
 

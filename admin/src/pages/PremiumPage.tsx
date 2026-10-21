@@ -282,9 +282,9 @@ export function PremiumPage() {
     <>
       <PageHeader
         title="Premium va to'lovlar"
-        subtitle="Premium obuna va hissalar Telegram Stars (⭐) orqali qabul qilinadi. Premium bo'limini «Imkoniyatlar» sahifasida yoqasiz."
+        subtitle="Premium obuna va hissalar Telegram Stars (⭐) orqali qabul qilinadi. Premium bo'limini «Imkoniyatlar» bo'limida yoqasiz."
         actions={
-          <Button variant="secondary" onClick={() => navigate('/features')}>
+          <Button variant="secondary" onClick={() => navigate('/premium?tab=features')}>
             ⚙️ Imkoniyatlar
           </Button>
         }
