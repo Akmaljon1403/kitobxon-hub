@@ -258,27 +258,37 @@ async def _event_post(session: AsyncSession, event: Event, shifts: list[Any]) ->
     from app.services import event_times
 
     book = await _book(session, event.book_id)
+    title = _e(event.title)
     lines = [
         _pick(
-            ("📅 <b>Yangi tadbir!</b>", "🎉 <b>Kitobxonlar, yangi uchrashuv!</b>", "📣 <b>Diqqat, kitobxonlar!</b>"),
+            (
+                f"📅 <b>Yangi tadbir — «{title}»!</b>",
+                f"🎉 <b>Kitobxonlar, uchrashamiz: «{title}»!</b>",
+                f"📣 <b>Diqqat! «{title}» tadbiri e'lon qilindi</b>",
+            ),
             f"event:{event.id}",
         ),
         "",
-        f"<b>«{_e(event.title)}»</b>",
-        f"🗓 {_e(event_times.when_text(event, shifts))}",
+        f"🗓 <b>Qachon:</b> {_e(event_times.when_text(event, shifts))}",
     ]
     if event.location:
-        lines.append(f"📍 {_e(event.location)}")
+        lines.append(f"📍 <b>Qayerda:</b> {_e(event.location)}")
+    # The start and when attendance opens, stated plainly — the heart of the announcement.
+    if shifts:
+        lines.append("✅ <b>Davomat</b> har smena boshlanishidan ~10 daqiqa oldin ochiladi (QR kod bilan).")
+    else:
+        opens = event.attendance_opens_at.astimezone(local_tz())
+        lines.append(f"✅ <b>Davomat</b> soat {opens:%H:%M} dan ochiladi (QR kod bilan).")
     if book is not None:
-        lines += ["", f"📚 <b>«{_e(book.title)}»</b> — {_e(book.author)} asarini o'qib kelamiz!"]
+        lines += ["", f"📚 <b>Mavzu:</b> «{_e(book.title)}» — {_e(book.author)}. Asarni o'qib keling!"]
     if event.description:
         lines += ["", _e(event.description.strip()[:600])]
     lines += [
         "",
-        "✅ Davomat QR kod orqali, faol qatnashchilarga ball, sertifikat va sovg'alar.",
+        "🏅 Faol qatnashchilarga ball, g'oliblarga sertifikat va sovg'alar.",
         "✋ <b>Kelmoqchimisiz?</b> Pastdagi «✅ Qatnashaman» tugmasini bosing"
         + (" va smenangizni tanlang" if shifts else "")
-        + " — joylarni shunga qarab tayyorlaymiz va sizga eslatma yuboramiz.",
+        + " — eslatma yuboramiz, joyni tayyorlaymiz.",
     ]
     return "\n".join(lines), book
 

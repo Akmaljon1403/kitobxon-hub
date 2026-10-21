@@ -116,11 +116,15 @@ async def event_published(session: AsyncSession, event: Event) -> int:
     if event.status != EventStatus.PUBLISHED or event.starts_at <= datetime.now(UTC):
         return 0
     await channel.event_announced(session, event)
+    from app.services.events import shifts_of
+
+    shifts = await shifts_of(session, event.id)
     text = await render(
         session,
         NotificationType.EVENT_CREATED,
         event_title=event.title,
-        starts_at=format_human(event.starts_at),
+        # Shift-aware: «...: 1-smena 10:00–11:30, 2-smena 14:00–15:30» instead of a single time.
+        starts_at=event_times.when_text(event, shifts),
         location=event.location or "—",
     )
     if text is None:
