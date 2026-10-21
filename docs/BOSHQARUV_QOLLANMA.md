@@ -1056,8 +1056,10 @@ olganlar chiqarib tashlanadi), keyin bitta tugma bilan tarqatiladi va g'oliblarg
 ## 21. Kitoblar
 
 - **Muqova**: kitob tahririda rasm yuklang (yoki havola). Ilova va kanal postlarida ko'rinadi.
-- **Muddat**: kitobni muddatdan keyin o'qib tugatgan a'zo «kech o'qildi» deb belgilanadi va **ball
-  olmaydi** (o'qiganligi tarixda qoladi).
+- **O'qish muddati — ixtiyoriy.** Muddatni **bo'sh qoldirsangiz**, a'zo kitobni xohlagan vaqtida o'qiydi
+  va o'qib tugatgani uchun ball oladi. **Muddat qo'ysangiz**, ball faqat **shu muddatgacha** o'qib
+  tugatgan a'zoga beriladi; muddatdan keyin tugatgan a'zoning kitobi «o'qildi» deb tarixda qoladi, lekin
+  ball berilmaydi.
 - Tadbirga kitob biriktirilgan bo'lsa, tadbirga kelgan a'zo kitobni o'qigan hisoblanadi.
 
 ## 22. Yordam, /stop va tugmali xabarlar

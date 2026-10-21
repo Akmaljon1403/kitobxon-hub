@@ -283,10 +283,13 @@ function BookFormModal({ book, onClose, onSaved }: { book: Book | null; onClose:
             ))}
           </Select>
         </Field>
-        <Field label="Boshlanish sanasi">
+        <Field label="Boshlanish sanasi" hint="Ixtiyoriy">
           <Input type="date" value={form.start_date} onChange={set('start_date')} />
         </Field>
-        <Field label="O'qish muddati">
+        <Field
+          label="O'qish muddati (ixtiyoriy)"
+          hint="Bo'sh — a'zo xohlagan vaqtida o'qiydi. Muddat qo'yilsa, kitob uchun ball faqat shu muddatgacha o'qib tugatganlarga beriladi."
+        >
           <Input type="date" value={form.deadline} onChange={set('deadline')} />
         </Field>
       </div>
