@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
 import {
@@ -60,8 +60,19 @@ function CampaignForm({ campaign, onClose, onDone }: { campaign: Campaign | null
   const [description, setDescription] = useState(campaign?.description ?? '')
   const [startsAt, setStartsAt] = useState(toLocalInput(campaign?.starts_at))
   const [endsAt, setEndsAt] = useState(toLocalInput(campaign?.ends_at))
-  const [pointsPerBook, setPointsPerBook] = useState(String(campaign?.points_per_book ?? 10))
-  const [bonus, setBonus] = useState(String(campaign?.completion_bonus ?? 0))
+  // A new contest starts from the last-used points (kept on the server); editing keeps its own values.
+  const defaults = useAsync((signal) =>
+    api<{ points_per_book: number; completion_bonus: number }>('/api/v1/admin/campaigns/defaults', { signal }),
+  )
+  const [pointsPerBook, setPointsPerBook] = useState(campaign ? String(campaign.points_per_book) : '')
+  const [bonus, setBonus] = useState(campaign ? String(campaign.completion_bonus) : '')
+  useEffect(() => {
+    if (!campaign && defaults.state.status === 'success') {
+      const saved = defaults.state.data
+      setPointsPerBook((value) => (value === '' ? String(saved.points_per_book) : value))
+      setBonus((value) => (value === '' ? String(saved.completion_bonus) : value))
+    }
+  }, [campaign, defaults.state])
   const [bookIds, setBookIds] = useState<string[]>(campaign?.books.map((b) => b.id) ?? [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,7 +119,7 @@ function CampaignForm({ campaign, onClose, onDone }: { campaign: Campaign | null
         <Field label="Tugashi">
           <Input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
         </Field>
-        <Field label="Kitob uchun ball" hint="O'qib tugatgan a'zoga">
+        <Field label="Kitob uchun ball" hint="O'qib tugatgan a'zoga. Oxirgi qiymat eslab qolinadi — keyingi tanlov shundan boshlanadi.">
           <Input type="number" min={0} max={1000} value={pointsPerBook} onChange={(e) => setPointsPerBook(e.target.value)} />
         </Field>
         <Field label="Yakunlash bonusi" hint="Hammasini o'qiganga qo'shimcha">

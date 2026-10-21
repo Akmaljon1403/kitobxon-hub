@@ -627,15 +627,21 @@ avval berilgan bo'lsa, panel ogohlantiradi — tasdiqlasangizgina yana beriladi.
 
 ## 10.5. 📖 Kitob tanlovlari (1 hafta/1 oy — 1 kitob)
 
+**Qayerda?** Kitob tanlovi endi alohida menyu emas — u **📅 Tadbirlar va tanlovlar** bo'limi ichida,
+yuqoridagi **«📖 Kitob tanlovlari»** tugmasi ostida. Ya'ni tadbirlar bilan bir joyda yaratasiz va
+boshqarasiz.
+
 Bir vaqtning o'zida bir nechta kitob tanlovini o'tkazishingiz mumkin — masalan, oy davomida 4 marta
 «1 hafta — 1 kitob» va 1 marta «1 oy — 1 kitob», har biriga boshqa kitob. **Har bir tanlov butunlay
 alohida**: o'z kitobi, o'z qatnashchilari, o'z kanal posti va o'z hisoboti bilan — hech narsa
 aralashmaydi.
 
-**📖 Kitob tanlovlari** bo'limida:
+**📅 Tadbirlar va tanlovlar → 📖 Kitob tanlovlari** bo'limida:
 
 1. **➕ Yangi tanlov** → nom (masalan «1 hafta — 1 kitob, noyabr 1-hafta»), sana oralig'i, kitob(lar)ni
-   belgilash, kitob uchun ball va yakunlash bonusi. Saqlang — tanlov «Qoralama» bo'ladi.
+   belgilash, kitob uchun ball va yakunlash bonusi. **Ballar oxirgi marta ishlatilgan holatda tayyor
+   turadi** — o'zgartirsangiz, keyingi tanlov ham shu qiymatdan boshlanadi; o'zgartirmasangiz, oldingidek
+   qoladi. Saqlang — tanlov «Qoralama» bo'ladi.
 2. **▶️ Boshlash + e'lon** — tanlovni faollashtiradi va kanalga **shu tanlovning** alohida postini
    joylaydi (boshqa tanlovlar postiga aralashmaydi). «Boshlash (e'lonsiz)» ham bor.
 3. A'zolar botda **/tanlov** yoki «📖 Kitob tanlovlari» orqali faol tanlovlarni ko'radi, biriga

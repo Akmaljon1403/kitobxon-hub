@@ -21,10 +21,27 @@ from app.core.errors import BadRequestError, ConflictError, NotFoundError
 from app.models import Book, Campaign, CampaignBook, CampaignParticipant, User
 from app.models.enums import CampaignStatus, NotificationType, ScoreCategory
 from app.services.audit import record_audit
+from app.services.settings import get_setting, update_setting
 from app.utils.timezone import format_date
 
 ACTIVE_STATUSES = (CampaignStatus.ACTIVE,)
 EDITABLE_STATUSES = (CampaignStatus.DRAFT, CampaignStatus.ACTIVE)
+
+
+async def point_defaults(session: AsyncSession) -> tuple[int, int]:
+    """The last-used contest points, pre-filled into the «new contest» form inside Tadbirlar."""
+    return (
+        int(await get_setting(session, "campaign.default_points_per_book")),
+        int(await get_setting(session, "campaign.default_completion_bonus")),
+    )
+
+
+async def remember_defaults(
+    session: AsyncSession, *, actor_id: uuid.UUID, points_per_book: int, completion_bonus: int
+) -> None:
+    """Keep the points the admin just used, so the next contest starts from the same values."""
+    await update_setting(session, key="campaign.default_points_per_book", value=points_per_book, actor_id=actor_id)
+    await update_setting(session, key="campaign.default_completion_bonus", value=completion_bonus, actor_id=actor_id)
 
 
 @dataclass(frozen=True)

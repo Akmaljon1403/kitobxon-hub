@@ -7,11 +7,10 @@ import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
 import { BooksPage } from './pages/BooksPage'
-import { CampaignsPage } from './pages/CampaignsPage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { CertificateDesignerPage } from './pages/CertificateDesignerPage'
 import { DashboardPage } from './pages/DashboardPage'
-import { EventsPage } from './pages/EventsPage'
+import { EventsHubPage } from './pages/EventsHubPage'
 import { FeaturesPage } from './pages/FeaturesPage'
 import { GiveawaysHubPage } from './pages/GiveawaysHubPage'
 import { ControlPage } from './pages/ControlPage'
@@ -41,8 +40,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   '': DashboardPage,
   members: MembersPage,
   books: BooksPage,
-  campaigns: CampaignsPage,
-  events: EventsPage,
+  events: EventsHubPage,
   tests: TestsPage,
   scores: ScoresPage,
   notifications: MessagingPage,

@@ -20,11 +20,16 @@ PLACES: tuple[tuple[str, str, str, str | None], ...] = (
     ("📚 Kitoblar", "books", "kitob muqova muddat o'quvchi", "BOOK_VIEW"),
     (
         "📖 Kitob tanlovlari",
-        "campaigns",
-        "tanlov kampaniya musobaqa 1 hafta 1 kitob 1 oy mutolaa challenge kitobxonlik",
+        "events?tab=campaigns",
+        "tanlov kampaniya musobaqa 1 hafta 1 kitob 1 oy mutolaa challenge kitobxonlik tadbir",
         "SEASON_MANAGE",
     ),
-    ("📅 Tadbirlar va davomat", "events", "tadbir davomat smena qr kod ro'yxatdan o'tish fikr reyting", "EVENT_VIEW"),
+    (
+        "📅 Tadbirlar va davomat",
+        "events",
+        "tadbir davomat smena qr kod ro'yxatdan o'tish fikr reyting tanlov",
+        "EVENT_VIEW",
+    ),
     ("📝 Testlar", "tests", "test savol import fayl word pdf rasm natija", "TEST_VIEW"),
     ("🏆 Ballar va reyting", "scores", "ball reyting mavsum o'quv yili", "SCORE_VIEW"),
     (
