@@ -40,9 +40,18 @@ class Campaign(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint("ends_at > starts_at", name="dates_order"),
         CheckConstraint("points_per_book >= 0 AND completion_bonus >= 0", name="points_non_negative"),
         Index("ix_campaigns_season_id", "season_id"),
+        # At most one (live) contest may be tied to a given event: one tadbir → one tanlov.
+        Index(
+            "uq_campaigns_event_id",
+            "event_id",
+            unique=True,
+            postgresql_where=text("event_id IS NOT NULL AND deleted_at IS NULL"),
+        ),
     )
 
     season_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("seasons.id", ondelete="RESTRICT"))
+    # A reading contest may be attached to one event (created inside the event window); NULL means stand-alone.
+    event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("events.id", ondelete="SET NULL"))
     name: Mapped[str] = mapped_column(String(160))
     description: Mapped[str | None] = mapped_column(Text)
     starts_at: Mapped[datetime] = mapped_column()

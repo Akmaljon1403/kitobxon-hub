@@ -84,6 +84,10 @@ async def _design_for(
         same = await session.scalar(select(Certificate.design).where(batch, Certificate.design.is_not(None)).limit(1))
         if same:
             return same, None
+    # A standard design pinned on the event is used for its first certificate (the batch then keeps it).
+    pinned = event.certificate_design if event else None
+    if pinned in designs.BY_CODE:
+        return pinned, None
     last = await session.scalar(
         select(Certificate.design)
         .where(Certificate.design.is_not(None), Certificate.design != designs.CUSTOM)

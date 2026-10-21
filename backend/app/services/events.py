@@ -257,6 +257,10 @@ async def create_event(session: AsyncSession, *, actor_id: uuid.UUID, data: dict
     await session.flush()
     shifts = await _apply_shifts(session, event, shift_items)
     _validate_times(event)
+    if "campaign" in data:
+        from app.services import campaigns as campaign_service
+
+        await campaign_service.sync_event_campaign(session, actor_id=actor_id, event=event, spec=data["campaign"])
     record_audit(
         session,
         actor_id=actor_id,
@@ -295,6 +299,10 @@ async def update_event(
             event.attendance_closes_at = min(event.starts_at + CLOSES_AFTER, event.ends_at)
     shifts = await _apply_shifts(session, event, changes.get("shifts"))
     _validate_times(event)
+    if "campaign" in changes:
+        from app.services import campaigns as campaign_service
+
+        await campaign_service.sync_event_campaign(session, actor_id=actor_id, event=event, spec=changes["campaign"])
     after = _snapshot(event, shifts)
     if before != after:
         record_audit(

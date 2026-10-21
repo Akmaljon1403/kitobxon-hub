@@ -6,7 +6,27 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
-from app.models.enums import AttendanceMethod, AttendanceStatus, EventStatus
+from app.models.enums import AttendanceMethod, AttendanceStatus, CampaignStatus, EventStatus
+
+
+class EventCampaignIn(BaseModel):
+    """The one reading contest attached to an event, set from the event window. Its dates follow the event."""
+
+    name: str = Field(min_length=2, max_length=160)
+    description: str | None = Field(default=None, max_length=2000)
+    points_per_book: int = Field(default=0, ge=0, le=1000)
+    completion_bonus: int = Field(default=0, ge=0, le=1000)
+    book_ids: list[uuid.UUID] = Field(min_length=1, max_length=20)
+
+
+class EventCampaignOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str | None
+    points_per_book: int
+    completion_bonus: int
+    status: CampaignStatus
+    book_ids: list[uuid.UUID]
 
 
 class ShiftIn(BaseModel):
@@ -44,6 +64,7 @@ class EventCreateIn(BaseModel):
     shifts: list[ShiftIn] | None = Field(
         default=None, max_length=6, description="Two or more shifts on the same day (each opens attendance itself)"
     )
+    campaign: EventCampaignIn | None = Field(default=None, description="A reading contest tied to this event")
 
     @model_validator(mode="after")
     def _times(self) -> EventCreateIn:
@@ -66,6 +87,7 @@ class EventUpdateIn(BaseModel):
     responsible_admin_id: uuid.UUID | None = None
     status: EventStatus | None = None
     shifts: list[ShiftIn] | None = Field(default=None, max_length=6, description="Replaces the shifts ([] = none)")
+    campaign: EventCampaignIn | None = Field(default=None, description="Upsert (dict) or unlink (null) the contest")
 
 
 class EventBaseOut(BaseModel):
@@ -91,11 +113,14 @@ class EventBaseOut(BaseModel):
 
 class EventAdminOut(EventBaseOut):
     certificate_background: bool = False
+    certificate_design: str | None = None
+    certificate_template_id: uuid.UUID | None = None
     attendance_points_override: int | None
     responsible_admin_id: uuid.UUID | None
     attendance_open: bool
     created_at: datetime
     pending_requests: int = 0
+    campaign: EventCampaignOut | None = None
 
 
 class EventOut(EventBaseOut):
@@ -200,3 +225,10 @@ class RejectIn(BaseModel):
 class RecordStatusIn(BaseModel):
     status: AttendanceStatus
     reason: str = Field(min_length=5, max_length=1000)
+
+
+class CertificateChoiceIn(BaseModel):
+    """Pick the winners' certificate look: a standard design, a saved template, or neither (next in turn)."""
+
+    design: str | None = Field(default=None, max_length=32, description="A standard design code; null = next in turn")
+    template_id: uuid.UUID | None = Field(default=None, description="A saved admin-built template (wins over design)")

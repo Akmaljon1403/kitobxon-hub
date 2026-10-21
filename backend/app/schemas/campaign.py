@@ -26,6 +26,8 @@ class CampaignOut(BaseModel):
     books: list[CampaignBookOut]
     participants: int
     verified: int
+    # Set when the contest was attached to an event (its window follows the event); managed there too.
+    event_id: uuid.UUID | None = None
 
 
 class CampaignUpsertIn(BaseModel):
