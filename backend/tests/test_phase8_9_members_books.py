@@ -340,6 +340,38 @@ async def test_reading_points_immediately_when_configured(client: httpx.AsyncCli
     assert await db.scalar(select(func.sum(ScoreTransaction.amount))) == 10
 
 
+async def test_reading_points_respect_the_deadline(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    """A past deadline earns no points; a future (or absent) deadline does."""
+    setting = await db.get(SystemSetting, "score.book_completion_requires_verification")
+    setting.value = False
+    await db.commit()
+    editor = await _admin(db, Perm.BOOK_CREATE, Perm.BOOK_EDIT)
+    member = await create_user(db)
+    await db.commit()
+
+    async def publish(title: str, deadline: str | None, start: str | None) -> str:
+        created = await client.post(
+            "/api/v1/admin/books",
+            json={**BOOK, "title": title, "start_date": start, "deadline": deadline},
+            headers=admin_headers(editor),
+        )
+        assert created.status_code == 201, created.text
+        book_id = created.json()["id"]
+        await client.patch(f"/api/v1/admin/books/{book_id}", json={"status": "ACTIVE"}, headers=admin_headers(editor))
+        return book_id
+
+    # the reading window already closed → finishing now earns no points
+    yesterday = str(date.today() - timedelta(days=1))
+    past = await publish("Muddati o'tgan", yesterday, str(date.today() - timedelta(days=10)))
+    await client.post(f"/api/v1/books/{past}/reading", json={"action": "complete"}, headers=member_headers(member))
+    assert await db.scalar(select(func.count()).select_from(ScoreTransaction)) == 0
+
+    # a future deadline → the 10 points are awarded
+    future = await publish("Muddati bor", str(date.today() + timedelta(days=7)), str(date.today()))
+    await client.post(f"/api/v1/books/{future}/reading", json={"action": "complete"}, headers=member_headers(member))
+    assert await db.scalar(select(func.sum(ScoreTransaction.amount))) == 10
+
+
 async def test_cannot_read_draft_book(client: httpx.AsyncClient, db: AsyncSession) -> None:
     creator = await _admin(db, Perm.BOOK_CREATE)
     member = await create_user(db)

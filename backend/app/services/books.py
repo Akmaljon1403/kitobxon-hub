@@ -28,6 +28,7 @@ from app.services import achievements, announcements
 from app.services.audit import record_audit
 from app.services.scoring import award_points
 from app.services.settings import get_setting
+from app.utils.timezone import local_tz
 
 MEMBER_VISIBLE_STATUSES = (BookStatus.ACTIVE, BookStatus.COMPLETED)
 _BOOK_FIELDS = (
@@ -166,6 +167,13 @@ async def list_readers(session: AsyncSession, book_id: uuid.UUID) -> list[tuple[
 
 
 async def award_book_completion(session: AsyncSession, read: BookRead, created_by: uuid.UUID | None) -> None:
+    # The book still counts as read, but points are given by the deadline rule: when the book has a
+    # reading deadline, only finishing on or before it earns points; with no deadline, any time earns them.
+    book = await session.get(Book, read.book_id)
+    if book is not None and book.deadline is not None:
+        finished = (read.completed_at or datetime.now(UTC)).astimezone(local_tz()).date()
+        if finished > book.deadline:
+            return
     points = await get_setting(session, "score.book_completion_points")
     await award_points(
         session,
