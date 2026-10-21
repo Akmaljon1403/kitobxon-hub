@@ -101,9 +101,8 @@ async def test_new_event_and_book_posts(db: AsyncSession) -> None:
     posts = await _posts(db)
     assert [post.kind for post in posts] == [ChannelPostKind.EVENT, ChannelPostKind.BOOK]
     event_post, book_post = posts
-    assert "«Kitob kechasi»" in event_post.text and "«O'tkan kunlar»</b> — Abdulla Qodiriy asarini o'qib kelamiz" in (
-        event_post.text
-    )
+    assert "«Kitob kechasi»" in event_post.text
+    assert "«O'tkan kunlar» — Abdulla Qodiriy" in event_post.text and "Davomat" in event_post.text
     assert event_post.photo_key == "covers/otkan.jpg" and event_post.buttons == [channel.event_button(event)]
     assert event_post.scheduled_at.astimezone(local_tz()).time() >= channel.DAYTIME[0]
     assert "O'qish muddati" in book_post.text

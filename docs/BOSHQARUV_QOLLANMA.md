@@ -341,9 +341,12 @@ xabar keladi — o'zi kirmagan bo'lsa **«🔒 Barcha seanslarni yopish»**ni bo
 
 ## 3. Tadbir va davomat
 
-1. **📅 Tadbirlar** → yangi tadbir: nomi, vaqti, joyi, **davomat oynasi** (masalan, boshlanishidan
-   10 daqiqa oldin — 30 daqiqa keyin).
-2. Belgilangan vaqtda davomat **o'zi ochiladi**, a'zolarga xabar boradi.
+1. **📅 Tadbirlar va tanlovlar → Tadbirlar** → yangi tadbir: nomi, boshlanish/tugash sanasi, joyi.
+   **Davomat ochilish/yopilish — faqat soatini belgilaysiz** (masalan, 14:50 va 16:10); sana tadbir
+   kuniga o'zi qo'yiladi. Bo'sh qoldirsangiz — boshlanishdan 10 daqiqa oldin ochiladi, 20 daqiqa keyin
+   yopiladi.
+2. Belgilangan vaqtda davomat **o'zi ochiladi**, a'zolarga xabar boradi. Tadbir e'loni (bot va kanal)
+   endi boshlanish, davomat ochilish vaqti va smenalarni aniq ko'rsatadi.
 3. Tadbirda **Davomat** sahifasini proyektor/ekranga chiqaring: QR kod va 6 belgili kod **har 10
    soniyada** yangilanadi (suratga olib boshqaga yuborish foyda bermaydi).
 4. A'zo botda **✅ Davomat** → QR skaner yoki kodni yozadi — 5 soniyalik ish.

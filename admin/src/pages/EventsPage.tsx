@@ -170,8 +170,9 @@ function EventModal({
     location: event?.location ?? '',
     starts_at: toLocalInput(event?.starts_at),
     ends_at: toLocalInput(event?.ends_at),
-    attendance_opens_at: toLocalInput(event?.attendance_opens_at),
-    attendance_closes_at: toLocalInput(event?.attendance_closes_at),
+    // Attendance is set by time only; the date follows the event day automatically.
+    attendance_opens_time: event?.attendance_opens_at ? toLocalInput(event.attendance_opens_at).slice(11, 16) : '',
+    attendance_closes_time: event?.attendance_closes_at ? toLocalInput(event.attendance_closes_at).slice(11, 16) : '',
     attendance_points: event?.attendance_points_override != null ? String(event.attendance_points_override) : '',
     capacity: event?.capacity ? String(event.capacity) : '',
     status: (event?.status ?? 'DRAFT') as EventStatus,
@@ -199,8 +200,10 @@ function EventModal({
       capacity: form.capacity === '' ? null : Number(form.capacity),
       status: form.status,
     }
-    if (form.attendance_opens_at) body.attendance_opens_at = fromLocalInput(form.attendance_opens_at)
-    if (form.attendance_closes_at) body.attendance_closes_at = fromLocalInput(form.attendance_closes_at)
+    // Combine the chosen time with the event's own day, so attendance is always on the event date.
+    const day = form.starts_at.slice(0, 10)
+    if (day && form.attendance_opens_time) body.attendance_opens_at = fromLocalInput(`${day}T${form.attendance_opens_time}`)
+    if (day && form.attendance_closes_time) body.attendance_closes_at = fromLocalInput(`${day}T${form.attendance_closes_time}`)
     if (multi) {
       const items = shifts.map((shift) => ({ starts_at: fromLocalInput(shift.starts_at), ends_at: fromLocalInput(shift.ends_at) }))
       body.shifts = items
@@ -271,11 +274,11 @@ function EventModal({
             <Field label="Tugashi *">
               <Input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} />
             </Field>
-            <Field label="Davomat ochiladi" hint="Bo'sh qoldirilsa: boshlanishdan 10 daqiqa oldin">
-              <Input type="datetime-local" value={form.attendance_opens_at} onChange={set('attendance_opens_at')} />
+            <Field label="Davomat ochiladi (soat)" hint="Faqat soatni belgilang — sana tadbir kuniga o'zi qo'yiladi. Bo'sh — boshlanishdan 10 daqiqa oldin.">
+              <Input type="time" value={form.attendance_opens_time} onChange={set('attendance_opens_time')} />
             </Field>
-            <Field label="Davomat yopiladi" hint="Bo'sh qoldirilsa: boshlanganidan 20 daqiqa keyin">
-              <Input type="datetime-local" value={form.attendance_closes_at} onChange={set('attendance_closes_at')} />
+            <Field label="Davomat yopiladi (soat)" hint="Bo'sh — boshlanganidan 20 daqiqa keyin.">
+              <Input type="time" value={form.attendance_closes_time} onChange={set('attendance_closes_time')} />
             </Field>
           </>
         )}
