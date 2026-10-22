@@ -9,7 +9,7 @@ import { BooksPage } from './pages/BooksPage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { CertificateDesignerPage } from './pages/CertificateDesignerPage'
 import { DashboardPage } from './pages/DashboardPage'
-import { EventsHubPage } from './pages/EventsHubPage'
+import { EventsPage } from './pages/EventsPage'
 import { ControlPage } from './pages/ControlPage'
 import { LoginPage } from './pages/LoginPage'
 import { MembersPage } from './pages/MembersPage'
@@ -35,7 +35,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   '': DashboardPage,
   members: MembersPage,
   books: BooksPage,
-  events: EventsHubPage,
+  events: EventsPage,
   tests: TestsPage,
   scores: ScoresPage,
   notifications: MessagingPage,

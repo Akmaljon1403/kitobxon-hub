@@ -1,5 +1,5 @@
-"""Round P: one reading contest tied to an event (set inside the event window) and the winners'
-certificate choice (a standard design in turn, a pinned standard design, or a saved template)."""
+"""The winners' certificate choice for an event: a standard design in turn, a pinned standard
+design, a saved template, or an uploaded image."""
 
 from __future__ import annotations
 
@@ -10,13 +10,9 @@ from typing import Any
 
 import httpx
 import pytest
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Campaign
-from app.models.enums import CampaignStatus
 from app.security.permissions import Perm
-from app.services import campaigns as campaign_service
 from app.services import certificate_designs as designs
 from app.services import certificate_templates, certificates
 from app.services import events as event_service
@@ -24,7 +20,7 @@ from tests.factories import create_book, create_user
 from tests.helpers import admin_headers, grant_permissions, grant_role
 
 _ids = itertools.count(7_200_000)
-PERMS = (Perm.EVENT_VIEW, Perm.EVENT_CREATE, Perm.EVENT_EDIT, Perm.SEASON_MANAGE, Perm.REWARD_MANAGE)
+PERMS = (Perm.EVENT_VIEW, Perm.EVENT_CREATE, Perm.EVENT_EDIT, Perm.REWARD_MANAGE)
 
 
 @pytest.fixture(autouse=True)
@@ -60,89 +56,6 @@ def _event_body(book_id: str, **extra: Any) -> dict[str, Any]:
     }
     body.update(extra)
     return body
-
-
-# ---------------------------------------------------------------------------- P9: one event → one contest
-
-
-async def test_event_create_with_contest_links_and_follows_dates(client: httpx.AsyncClient, db: AsyncSession) -> None:
-    admin = await _admin(db)
-    book = await create_book(db, title="O'tkan kunlar")
-    await db.commit()
-    headers = admin_headers(admin)
-    body = _event_body(
-        str(book.id),
-        campaign={"name": "Tadbir tanlovi", "points_per_book": 15, "completion_bonus": 5, "book_ids": [str(book.id)]},
-    )
-    created = await client.post("/api/v1/admin/events", json=body, headers=headers)
-    assert created.status_code == 201, created.text
-    event = created.json()
-    assert event["campaign"] is not None
-    assert event["campaign"]["name"] == "Tadbir tanlovi"
-    assert event["campaign"]["points_per_book"] == 15
-    assert event["campaign"]["book_ids"] == [str(book.id)]
-
-    # the contest exists, is tied to the event and its window follows the event
-    campaign = await campaign_service.for_event(db, uuid.UUID(event["id"]))
-    assert campaign is not None
-    assert campaign.event_id == uuid.UUID(event["id"])
-    assert campaign.starts_at == datetime.fromisoformat(event["starts_at"])
-    assert campaign.ends_at == datetime.fromisoformat(event["ends_at"])
-    assert campaign.status == CampaignStatus.DRAFT
-
-    # it also shows up in the contest list, flagged with its event
-    listed = await client.get("/api/v1/admin/campaigns", headers=headers)
-    assert listed.status_code == 200
-    rows = [row for row in listed.json() if row["id"] == str(campaign.id)]
-    assert rows and rows[0]["event_id"] == event["id"]
-
-
-async def test_event_edit_upserts_then_unlinks_the_contest(client: httpx.AsyncClient, db: AsyncSession) -> None:
-    admin = await _admin(db)
-    book1 = await create_book(db, title="Birinchi")
-    book2 = await create_book(db, title="Ikkinchi")
-    await db.commit()
-    headers = admin_headers(admin)
-
-    created = await client.post("/api/v1/admin/events", json=_event_body(str(book1.id)), headers=headers)
-    assert created.status_code == 201, created.text
-    event = created.json()
-    assert event["campaign"] is None  # no contest yet
-
-    # attach a contest while editing, with a different book set
-    edit = dict(
-        _event_body(str(book1.id)),
-        campaign={
-            "name": "Qo'shilgan tanlov",
-            "points_per_book": 20,
-            "completion_bonus": 0,
-            "book_ids": [str(book2.id)],
-        },
-    )
-    patched = await client.patch(f"/api/v1/admin/events/{event['id']}", json=edit, headers=headers)
-    assert patched.status_code == 200, patched.text
-    assert patched.json()["campaign"]["book_ids"] == [str(book2.id)]
-    campaign_id = patched.json()["campaign"]["id"]
-
-    # editing again with the same event keeps the one contest (one event → one contest)
-    again = await client.patch(f"/api/v1/admin/events/{event['id']}", json=edit, headers=headers)
-    assert again.status_code == 200
-    assert again.json()["campaign"]["id"] == campaign_id
-    count = await db.scalar(
-        select(Campaign.id).where(Campaign.event_id == uuid.UUID(event["id"]), Campaign.deleted_at.is_(None))
-    )
-    assert count is not None
-
-    # sending campaign: null unlinks it — the contest is kept, just freed from the event
-    unlink = dict(_event_body(str(book1.id)), campaign=None)
-    off = await client.patch(f"/api/v1/admin/events/{event['id']}", json=unlink, headers=headers)
-    assert off.status_code == 200
-    assert off.json()["campaign"] is None
-    freed = await db.get(Campaign, uuid.UUID(campaign_id))
-    assert freed is not None and freed.event_id is None  # kept, just unlinked
-
-
-# ---------------------------------------------------------------------------- P4: the certificate choice
 
 
 async def test_certificate_choice_pins_design_then_template_then_auto(

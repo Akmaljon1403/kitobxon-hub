@@ -15,7 +15,7 @@ Viewer = Annotated[CurrentUser, Depends(require_permissions(Perm.ANALYTICS_VIEW)
 MemberViewer = Annotated[CurrentUser, Depends(require_permissions(Perm.ANALYTICS_VIEW, Perm.USER_VIEW))]
 
 
-@router.get("", summary="Monthly activity, faculties, groups, tests, reading campaigns")
+@router.get("", summary="Monthly activity, faculties, groups, tests, books")
 async def overview(_: Viewer, db: DbSession, months: Annotated[int, Query(ge=3, le=24)] = 6) -> dict[str, Any]:
     return await analytics.overview(db, months=months)
 

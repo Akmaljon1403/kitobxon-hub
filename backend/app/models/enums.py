@@ -27,13 +27,6 @@ class SeasonStatus(StrEnum):
     CLOSED = "CLOSED"
 
 
-class CampaignStatus(StrEnum):
-    DRAFT = "DRAFT"
-    ACTIVE = "ACTIVE"
-    COMPLETED = "COMPLETED"
-    ARCHIVED = "ARCHIVED"
-
-
 class BookStatus(StrEnum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"

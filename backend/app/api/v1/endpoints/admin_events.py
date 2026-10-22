@@ -22,7 +22,6 @@ from app.schemas.event import (
     AttendanceTokenOut,
     CertificateChoiceIn,
     EventAdminOut,
-    EventCampaignOut,
     EventCreateIn,
     EventUpdateIn,
     ManualCheckInIn,
@@ -35,7 +34,6 @@ from app.schemas.event import (
 from app.schemas.premium import FeedbackSummaryOut
 from app.security.permissions import Perm
 from app.services import attendance as attendance_service
-from app.services import campaigns as campaign_service
 from app.services import certificate_backgrounds
 from app.services import events as event_service
 from app.services import feedback as feedback_service
@@ -60,13 +58,10 @@ async def _events_out(db, events: list[Event]) -> list[EventAdminOut]:
     live = await attendance_service.open_events(db, ids)
     pending = await attendance_service.pending_counts(db, ids)
     default_points = await event_service.default_points(db)
-    campaigns = await campaign_service.by_events(db, ids)
-    campaign_books = await campaign_service.book_ids_by_campaigns(db, [campaign.id for campaign in campaigns.values()])
     result = []
     for event in events:
         registered, attended = counts[event.id]
         rating, rated = ratings.get(event.id, (None, 0))
-        campaign = campaigns.get(event.id)
         result.append(
             EventAdminOut(
                 id=event.id,
@@ -100,19 +95,6 @@ async def _events_out(db, events: list[Event]) -> list[EventAdminOut]:
                 certificate_background=event.certificate_background_key is not None,
                 certificate_design=event.certificate_design,
                 certificate_template_id=event.certificate_template_id,
-                campaign=(
-                    EventCampaignOut(
-                        id=campaign.id,
-                        name=campaign.name,
-                        description=campaign.description,
-                        points_per_book=campaign.points_per_book,
-                        completion_bonus=campaign.completion_bonus,
-                        status=campaign.status,
-                        book_ids=campaign_books.get(campaign.id, []),
-                    )
-                    if campaign is not None
-                    else None
-                ),
             )
         )
     return result
