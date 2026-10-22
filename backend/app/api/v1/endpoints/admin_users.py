@@ -79,6 +79,14 @@ async def get_user(user_id: uuid.UUID, current: Viewer, db: DbSession) -> AdminU
     return await _detail(db, await user_service.get_user(db, user_id), current)
 
 
+@router.get("/{user_id}/overview", summary="A member's whole picture: points, activity, premium, support")
+async def member_overview(user_id: uuid.UUID, _: Viewer, db: DbSession) -> dict:
+    from app.services import member_overview as overview_service
+
+    await user_service.get_user(db, user_id)  # 404 for an unknown member
+    return await overview_service.overview(db, user_id)
+
+
 @router.patch("/{user_id}", response_model=AdminUserDetailOut, summary="Correct a member's data")
 async def update_user(
     user_id: uuid.UUID, payload: AdminUserUpdateIn, current: Manager, db: DbSession
