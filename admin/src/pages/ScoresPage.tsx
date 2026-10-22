@@ -226,6 +226,75 @@ export function TopMembers({ limit = 10 }: { limit?: number }) {
   )
 }
 
+interface AdminRankRow {
+  rank: number
+  user_id: string
+  name: string
+  faculty: string | null
+  group_name: string | null
+  total: number
+  attendance: number
+  tests: number
+  premium: boolean
+}
+
+const RANKING_PERIODS: { key: 'all' | 'season' | 'month' | 'week'; label: string }[] = [
+  { key: 'all', label: 'Umumiy' },
+  { key: 'season', label: 'Mavsum' },
+  { key: 'month', label: 'Oy' },
+  { key: 'week', label: 'Hafta' },
+]
+
+/** «🏆 Reyting — batafsil»: the full standings for a chosen period — ball, davomat va test soni bilan. */
+export function RankingSection() {
+  const { api } = useSession()
+  const [period, setPeriod] = useState<'all' | 'season' | 'month' | 'week'>('all')
+  const { state, reload } = useAsync(
+    (signal) => api<{ items: AdminRankRow[] }>(`/api/v1/admin/scores/rankings?period=${period}&limit=100`, { signal }),
+    [period],
+  )
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">🏆 Reyting — batafsil</h2>
+        <div className="flex flex-wrap gap-1.5">
+          {RANKING_PERIODS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setPeriod(item.key)}
+              className={`rounded-lg border px-3 py-1 text-sm ${period === item.key ? 'border-app-button bg-app-button/10 font-medium' : 'border-app-border'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {state.status === 'loading' && <LoadingState />}
+      {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
+      {state.status === 'success' && (
+        <Table head={['#', "A'zo", 'Fakultet', 'Guruh', 'Ball', 'Davomat', 'Testlar']}>
+          {state.data.items.length === 0 && <EmptyRow colSpan={7} text="Hali ball to'plaganlar yo'q." />}
+          {state.data.items.map((row) => (
+            <tr key={row.user_id}>
+              <td className="px-4 py-2 tabular-nums text-app-hint">{row.rank}</td>
+              <td className="px-4 py-2">
+                {row.premium ? '💎 ' : ''}
+                {row.name}
+              </td>
+              <td className="px-4 py-2 text-sm text-app-hint">{row.faculty ?? '—'}</td>
+              <td className="px-4 py-2 text-sm text-app-hint">{row.group_name ?? '—'}</td>
+              <td className="px-4 py-2 font-semibold tabular-nums">{row.total}</td>
+              <td className="px-4 py-2 tabular-nums">{row.attendance}</td>
+              <td className="px-4 py-2 tabular-nums">{row.tests}</td>
+            </tr>
+          ))}
+        </Table>
+      )}
+    </Card>
+  )
+}
+
 export function ScoresPage() {
   const { api, can } = useSession()
   const [member, setMember] = useState<AdminUser | null>(null)
@@ -314,10 +383,10 @@ export function ScoresPage() {
           </Card>
         </div>
         <div className="flex flex-col gap-4">
-          <TopMembers />
           <Seasons />
         </div>
       </div>
+      <RankingSection />
       {adjusting && member && (
         <AdjustModal
           member={member}

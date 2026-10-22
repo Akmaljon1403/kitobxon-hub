@@ -104,6 +104,7 @@ export function CertificatePicker({ event, onChanged }: { event: AdminEvent; onC
   const [version, setVersion] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
   const input = useRef<HTMLInputElement>(null)
   const [choice, setChoice] = useState({
     background: event.certificate_background,
@@ -171,6 +172,16 @@ export function CertificatePicker({ event, onChanged }: { event: AdminEvent; onC
   const mode = choice.background ? 'custom' : choice.templateId ? 'template' : choice.design ? 'design' : 'auto'
   const nextCode = next.state.status === 'success' ? next.state.data.code : null
   const nextTitle = next.state.status === 'success' ? next.state.data.title : null
+  const designTitle = designs.state.status === 'success' ? designs.state.data.find((d) => d.code === choice.design)?.title : null
+  const templateName = templates.state.status === 'success' ? templates.state.data.find((t) => t.id === choice.templateId)?.name : null
+  const modeLabel =
+    mode === 'custom'
+      ? "O'z rasmingiz"
+      : mode === 'template'
+        ? `Shablon: ${templateName ?? '—'}`
+        : mode === 'design'
+          ? `Dizayn: ${designTitle ?? '—'}`
+          : `Navbatdagi${nextTitle ? ` — «${nextTitle}»` : ''}`
   const chip = (active: boolean) =>
     `rounded-lg border px-3 py-1.5 text-sm transition ${active ? 'border-app-accent bg-app-accent/10 font-medium text-app-accent' : 'border-app-border hover:border-app-accent/50'}`
 
@@ -179,63 +190,80 @@ export function CertificatePicker({ event, onChanged }: { event: AdminEvent; onC
       <div>
         <p className="text-sm font-medium">🎓 G'oliblar sertifikati dizayni</p>
         <p className="text-xs text-app-hint">
-          Bot sertifikatni shu ko'rinishda chizadi. Tanlamasangiz — tayyor dizaynlar navbat bilan ishlatiladi.
-          O'zingiz tanlang yoki «Sertifikatlar» bo'limida yaratgan shablonlaringizdan birini qo'ying.
+          Bot sertifikatni shu ko'rinishda chizadi. <b>Namunani bosing</b> — tayyor dizaynlardan birini tanlang.
+          Tanlamasangiz, tayyor dizaynlar navbat bilan ishlatiladi.
         </p>
       </div>
 
-      {src ? (
-        <img src={src} alt="Sertifikat namunasi" className="w-full max-w-xl rounded border border-app-border" />
-      ) : (
-        <p className="text-xs text-app-hint">Namuna chizilmoqda…</p>
-      )}
+      {/* The sample itself is the entry point: tapping it opens the ready-made designs (not an upload dialog);
+          the picked design is then drawn large in this same sample. */}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="group relative block w-full max-w-xl overflow-hidden rounded border border-app-border"
+        aria-expanded={open}
+        aria-label="Sertifikat dizaynini tanlash"
+      >
+        {src ? (
+          <img src={src} alt="Sertifikat namunasi" className="w-full" />
+        ) : (
+          <p className="p-6 text-center text-xs text-app-hint">Namuna chizilmoqda…</p>
+        )}
+        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-center text-xs text-white">
+          {open ? '▲ Yopish' : `✎ ${modeLabel} — boshqasini tanlash uchun bosing`}
+        </span>
+      </button>
 
-      <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy} className={chip(mode === 'auto')} onClick={() => chooseDesign(null)}>
-          🔄 Navbatdagi{nextTitle ? ` — «${nextTitle}»` : ''}
-        </button>
-        <button type="button" disabled={busy} className={chip(mode === 'custom')} onClick={() => input.current?.click()}>
-          🖼 O'z rasmim
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium text-app-hint">Tayyor dizaynlar (navbatdagisi belgilangan):</p>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {designs.state.status === 'success' &&
-            designs.state.data.map((design) => {
-              const active = mode === 'design' && choice.design === design.code
-              return (
-                <button
-                  key={design.code}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => chooseDesign(design.code)}
-                  className={`relative overflow-hidden rounded-lg border-2 text-left transition ${active ? 'border-app-accent' : 'border-transparent hover:border-app-accent/40'}`}
-                >
-                  <img src={`/api/v1/meta/certificate-designs/${design.code}.png`} alt={design.title} className="aspect-[297/210] w-full object-cover" loading="lazy" />
-                  <span className="block truncate px-1 py-0.5 text-[11px]">
-                    {design.code === nextCode ? '➡️ ' : ''}
-                    {design.title}
-                  </span>
-                  {active && <span className="absolute right-1 top-1 rounded bg-app-accent px-1 text-[10px] text-white">✓</span>}
-                </button>
-              )
-            })}
-        </div>
-      </div>
-
-      {templates.state.status === 'success' && templates.state.data.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium text-app-hint">Mening shablonlarim:</p>
+      {open && (
+        <>
           <div className="flex flex-wrap gap-2">
-            {templates.state.data.map((template) => (
-              <button key={template.id} type="button" disabled={busy} className={chip(mode === 'template' && choice.templateId === template.id)} onClick={() => chooseTemplate(template.id)}>
-                📄 {template.name}
-              </button>
-            ))}
+            <button type="button" disabled={busy} className={chip(mode === 'auto')} onClick={() => chooseDesign(null)}>
+              🔄 Navbatdagi{nextTitle ? ` — «${nextTitle}»` : ''}
+            </button>
+            <button type="button" disabled={busy} className={chip(mode === 'custom')} onClick={() => input.current?.click()}>
+              🖼 O'z rasmim
+            </button>
           </div>
-        </div>
+
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs font-medium text-app-hint">Tayyor dizaynlar (navbatdagisi belgilangan). Bittasini tanlang — yuqoridagi namunada kattalashib ko'rinadi:</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {designs.state.status === 'success' &&
+                designs.state.data.map((design) => {
+                  const active = mode === 'design' && choice.design === design.code
+                  return (
+                    <button
+                      key={design.code}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => chooseDesign(design.code)}
+                      className={`relative overflow-hidden rounded-lg border-2 text-left transition ${active ? 'border-app-accent' : 'border-transparent hover:border-app-accent/40'}`}
+                    >
+                      <img src={`/api/v1/meta/certificate-designs/${design.code}.png`} alt={design.title} className="aspect-[297/210] w-full object-cover" loading="lazy" />
+                      <span className="block truncate px-1 py-0.5 text-[11px]">
+                        {design.code === nextCode ? '➡️ ' : ''}
+                        {design.title}
+                      </span>
+                      {active && <span className="absolute right-1 top-1 rounded bg-app-accent px-1 text-[10px] text-white">✓</span>}
+                    </button>
+                  )
+                })}
+            </div>
+          </div>
+
+          {templates.state.status === 'success' && templates.state.data.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-app-hint">Mening shablonlarim:</p>
+              <div className="flex flex-wrap gap-2">
+                {templates.state.data.map((template) => (
+                  <button key={template.id} type="button" disabled={busy} className={chip(mode === 'template' && choice.templateId === template.id)} onClick={() => chooseTemplate(template.id)}>
+                    📄 {template.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
