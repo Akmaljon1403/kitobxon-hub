@@ -266,6 +266,7 @@ export function MessagingPage() {
   }
 
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
+  const [showAllPosts, setShowAllPosts] = useState(false)
   const hasText = form.message.trim().length >= 1
   const canSendBot = hasText && !!recipients && !!preview
   const canSendAdmins = hasText && !!preview
@@ -511,12 +512,43 @@ export function MessagingPage() {
         </Card>
       )}
 
+      {/* Premium sticker & emoji packages — kept as prominent sub-sections at the top of this section. */}
+      {overview && (
+        <Card className="flex flex-col gap-2 p-4">
+          <h2 className="font-semibold">🎨 Stiker to'plami ({overview.stickers.length})</h2>
+          <p className="text-sm text-app-hint">
+            Botga <b>/stiker</b> deb yozing va yoqqan stikerlarni yuboring. Bot ularni mos joyda ishlatadi: 🎉 — g'alaba va tabriklardan keyin, 📚 — kitob
+            postlaridan keyin, 👋 — yangi a'zolarga.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {overview.stickers.length === 0 && <span className="text-sm text-app-hint">Hali stiker qo'shilmagan.</span>}
+            {overview.stickers.map((sticker, index) => (
+              <span key={sticker.id} className="flex items-center gap-1 rounded-full border border-app-border px-3 py-1 text-sm">
+                {sticker.emoji ?? '🙂'} {sticker.set_name ?? `Stiker ${index + 1}`}
+                {sticker.is_animated && <span className="text-xs text-app-hint">(animatsion)</span>}
+                <button
+                  type="button"
+                  aria-label="O'chirish"
+                  className="ml-1 text-app-danger"
+                  disabled={busy}
+                  onClick={() => void act(() => api(`/api/v1/admin/channel/stickers/${sticker.id}`, { method: 'DELETE' }))}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {can('SETTINGS_MANAGE') && <PremiumEmoji />}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="border-b border-app-border px-4 py-3 font-semibold">So'nggi kanal postlari</h2>
           <Table head={['Turi', 'Matn', 'Holat', '']}>
             {(!overview || overview.posts.length === 0) && <EmptyRow colSpan={4} text="Hali post yo'q" />}
-            {overview?.posts.map((post: ChannelPost) => (
+            {(showAllPosts ? (overview?.posts ?? []) : (overview?.posts ?? []).slice(0, 4)).map((post: ChannelPost) => (
               <tr key={post.id} className={post.status === 'CANCELLED' ? 'text-app-hint' : ''}>
                 <td className="whitespace-nowrap px-4 py-2 text-sm">{KINDS[post.kind]}</td>
                 <td className="max-w-xs px-4 py-2 text-sm">
@@ -576,6 +608,15 @@ export function MessagingPage() {
               </tr>
             ))}
           </Table>
+          {overview && overview.posts.length > 4 && (
+            <button
+              type="button"
+              className="w-full border-t border-app-border px-4 py-2 text-sm text-app-link hover:bg-app-surface"
+              onClick={() => setShowAllPosts((value) => !value)}
+            >
+              {showAllPosts ? '▲ Yig\'ish' : `▼ Batafsil — yana ${overview.posts.length - 4} ta post`}
+            </button>
+          )}
         </Card>
 
         <Card className="flex flex-col gap-2 p-4">
@@ -597,38 +638,6 @@ export function MessagingPage() {
         </Card>
       </div>
 
-      {overview && (
-        <Card className="flex flex-col gap-2 p-4">
-          <h2 className="font-semibold">🎨 Stikerlar ({overview.stickers.length})</h2>
-          <p className="text-sm text-app-hint">
-            Botga <b>/stiker</b> deb yozing va yoqqan stikerlarni yuboring. Bot ularni mos joyda ishlatadi: 🎉 — g'alaba va tabriklardan keyin, 📚 — kitob
-            postlaridan keyin, 👋 — yangi a'zolarga.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {overview.stickers.map((sticker, index) => (
-              <span key={sticker.id} className="flex items-center gap-1 rounded-full border border-app-border px-3 py-1 text-sm">
-                {sticker.emoji ?? '🙂'} {sticker.set_name ?? `Stiker ${index + 1}`}
-                {sticker.is_animated && <span className="text-xs text-app-hint">(animatsion)</span>}
-                <button
-                  type="button"
-                  aria-label="O'chirish"
-                  className="ml-1 text-app-danger"
-                  disabled={busy}
-                  onClick={() => void act(() => api(`/api/v1/admin/channel/stickers/${sticker.id}`, { method: 'DELETE' }))}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {can('SETTINGS_MANAGE') && (
-        <div className="mt-2">
-          <PremiumEmoji />
-        </div>
-      )}
     </>
   )
 }
