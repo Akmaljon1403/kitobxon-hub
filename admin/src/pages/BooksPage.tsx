@@ -22,8 +22,6 @@ type BookForm = {
   cover_url: string
   source_url: string
   pages: string
-  start_date: string
-  deadline: string
   status: BookStatus
 }
 
@@ -34,8 +32,6 @@ const EMPTY: BookForm = {
   cover_url: '',
   source_url: '',
   pages: '',
-  start_date: '',
-  deadline: '',
   status: 'DRAFT',
 }
 
@@ -47,8 +43,6 @@ function toForm(book: Book): BookForm {
     cover_url: book.cover_url ?? '',
     source_url: book.source_url ?? '',
     pages: book.pages ? String(book.pages) : '',
-    start_date: book.start_date ?? '',
-    deadline: book.deadline ?? '',
     status: book.status,
   }
 }
@@ -61,8 +55,6 @@ function toPayload(form: BookForm) {
     cover_url: form.cover_url.trim() || null,
     source_url: form.source_url.trim() || null,
     pages: form.pages ? Number(form.pages) : null,
-    start_date: form.start_date || null,
-    deadline: form.deadline || null,
     status: form.status,
   }
 }
@@ -108,8 +100,8 @@ export function BooksPage() {
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
         {state.status === 'success' && (
-          <Table head={['Kitob', 'Holat', 'Muddat', "O'quvchilar", '']}>
-            {state.data.items.length === 0 && <EmptyRow colSpan={5} text="Kitoblar hali qo'shilmagan" />}
+          <Table head={['Kitob', 'Holat', "O'quvchilar", '']}>
+            {state.data.items.length === 0 && <EmptyRow colSpan={4} text="Kitoblar hali qo'shilmagan" />}
             {state.data.items.map((book) => (
               <tr key={book.id}>
                 <td className="px-4 py-2.5">
@@ -119,7 +111,6 @@ export function BooksPage() {
                 <td className="px-4 py-2.5">
                   <Badge tone={STATUS_TONE[book.status]}>{BOOK_STATUS_LABELS[book.status]}</Badge>
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5">{formatDate(book.deadline)}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">
                   {book.readers_count} / ✓ {book.completed_count}
                 </td>
@@ -282,15 +273,6 @@ function BookFormModal({ book, onClose, onSaved }: { book: Book | null; onClose:
               </option>
             ))}
           </Select>
-        </Field>
-        <Field label="Boshlanish sanasi" hint="Ixtiyoriy">
-          <Input type="date" value={form.start_date} onChange={set('start_date')} />
-        </Field>
-        <Field
-          label="O'qish muddati (ixtiyoriy)"
-          hint="Bo'sh — a'zo xohlagan vaqtida o'qiydi. Muddat qo'yilsa, kitob uchun ball faqat shu muddatgacha o'qib tugatganlarga beriladi."
-        >
-          <Input type="date" value={form.deadline} onChange={set('deadline')} />
         </Field>
       </div>
       <Field label="Tavsif">
