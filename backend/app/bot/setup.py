@@ -16,7 +16,6 @@ from aiogram.utils.token import TokenValidationError, validate_token
 from app.bot.errors import on_error
 from app.bot.handlers import (
     admin,
-    campaigns,
     chats,
     common,
     community,
@@ -91,7 +90,6 @@ def create_dispatcher() -> Dispatcher:
         sections.router,
         reading.router,
         community.router,
-        campaigns.router,
         feedback.router,
         support.router,
         fallback.router,

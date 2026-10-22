@@ -185,21 +185,6 @@ function EventModal({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = (field: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value })
-  // P9: one reading contest tied to this event (only for admins who manage contests).
-  const [contestOn, setContestOn] = useState(!!event?.campaign)
-  const [contest, setContest] = useState({
-    name: event?.campaign?.name ?? '',
-    points_per_book: event?.campaign ? String(event.campaign.points_per_book) : '10',
-    completion_bonus: event?.campaign ? String(event.campaign.completion_bonus) : '0',
-    book_ids: event?.campaign?.book_ids ?? ([] as string[]),
-  })
-  function toggleContest(on: boolean) {
-    setContestOn(on)
-    if (on && contest.book_ids.length === 0 && form.book_id) setContest((c) => ({ ...c, book_ids: [form.book_id] }))
-  }
-  function toggleContestBook(id: string) {
-    setContest((c) => ({ ...c, book_ids: c.book_ids.includes(id) ? c.book_ids.filter((x) => x !== id) : [...c.book_ids, id] }))
-  }
 
   async function save() {
     setBusy(true)
@@ -228,18 +213,6 @@ function EventModal({
       delete body.attendance_closes_at
     } else if (event && event.shifts.length > 0) {
       body.shifts = []
-    }
-    // P9: attach / update / unlink the event's reading contest (only touched by contest managers).
-    if (can('SEASON_MANAGE')) {
-      body.campaign =
-        contestOn && contest.name.trim().length >= 2 && contest.book_ids.length > 0
-          ? {
-              name: contest.name.trim(),
-              points_per_book: Number(contest.points_per_book || 0),
-              completion_bonus: Number(contest.completion_bonus || 0),
-              book_ids: contest.book_ids,
-            }
-          : null
     }
     try {
       await api(event ? `/api/v1/admin/events/${event.id}` : '/api/v1/admin/events', {
@@ -393,45 +366,6 @@ function EventModal({
       <Field label="Tavsif">
         <Textarea value={form.description} onChange={set('description')} maxLength={5000} />
       </Field>
-      {can('SEASON_MANAGE') && (
-        <div className="flex flex-col gap-2 rounded-lg border border-app-border p-3">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" checked={contestOn} onChange={(e) => toggleContest(e.target.checked)} />
-            📖 Shu tadbirga kitob tanlovi biriktirish
-          </label>
-          <p className="text-xs text-app-hint">
-            Bir tadbirga bitta tanlov. Tanlov muddati tadbir sanasiga qarab o'zi qo'yiladi. Keyin «Kitob tanlovlari»
-            bo'limidan boshlaysiz, e'lon qilasiz va qatnashchilarni tasdiqlaysiz.
-            {event?.campaign && event.campaign.status !== 'DRAFT' && ' Tanlov allaqachon boshlangan.'}
-          </p>
-          {contestOn && (
-            <div className="flex flex-col gap-2">
-              <Field label="Tanlov nomi *" hint="Masalan: «O'tkan kunlar» — birga o'qiymiz">
-                <Input value={contest.name} onChange={(e) => setContest({ ...contest, name: e.target.value })} maxLength={160} />
-              </Field>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Field label="Kitob uchun ball">
-                  <Input type="number" min={0} max={1000} value={contest.points_per_book} onChange={(e) => setContest({ ...contest, points_per_book: e.target.value })} />
-                </Field>
-                <Field label="Yakunlash bonusi" hint="Hammasini o'qiganga">
-                  <Input type="number" min={0} max={1000} value={contest.completion_bonus} onChange={(e) => setContest({ ...contest, completion_bonus: e.target.value })} />
-                </Field>
-              </div>
-              <Field label="Tanlov kitob(lari) *">
-                <div className="max-h-40 overflow-auto rounded border border-app-border p-2">
-                  {books.state.status === 'success' &&
-                    books.state.data.items.map((book) => (
-                      <label key={book.id} className="flex items-center gap-2 py-0.5 text-sm">
-                        <input type="checkbox" checked={contest.book_ids.includes(book.id)} onChange={() => toggleContestBook(book.id)} />
-                        {book.title} <span className="text-app-hint">— {book.author}</span>
-                      </label>
-                    ))}
-                </div>
-              </Field>
-            </div>
-          )}
-        </div>
-      )}
       {event ? (
         <CertificatePicker event={event} onChanged={onChanged} />
       ) : (

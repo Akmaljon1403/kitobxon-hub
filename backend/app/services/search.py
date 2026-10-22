@@ -17,17 +17,11 @@ _APOSTROPHES = re.compile(r"[ʻʼ’‘`´]")
 # (title, admin route, keywords, permission or None)
 PLACES: tuple[tuple[str, str, str, str | None], ...] = (
     ("👥 A'zolar", "members", "azo a'zolar talaba foydalanuvchi ro'yxat bloklash", "USER_VIEW"),
-    ("📚 Kitoblar", "books", "kitob muqova muddat o'quvchi", "BOOK_VIEW"),
-    (
-        "📖 Kitob tanlovlari",
-        "events?tab=campaigns",
-        "tanlov kampaniya musobaqa 1 hafta 1 kitob 1 oy mutolaa challenge kitobxonlik tadbir",
-        "SEASON_MANAGE",
-    ),
+    ("📚 Kitoblar", "books", "kitob muqova o'quvchi", "BOOK_VIEW"),
     (
         "📅 Tadbirlar va davomat",
         "events",
-        "tadbir davomat smena qr kod ro'yxatdan o'tish fikr reyting tanlov",
+        "tadbir davomat smena qr kod ro'yxatdan o'tish fikr reyting",
         "EVENT_VIEW",
     ),
     ("📝 Testlar", "tests", "test savol import fayl word pdf rasm natija", "TEST_VIEW"),

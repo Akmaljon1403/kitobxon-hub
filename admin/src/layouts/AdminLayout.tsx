@@ -20,8 +20,8 @@ export const NAV_ITEMS: NavItem[] = [
   {
     route: 'events',
     icon: '📅',
-    label: 'Tadbirlar va tanlovlar',
-    visible: (can) => can('EVENT_VIEW') || can('SEASON_MANAGE'),
+    label: 'Tadbirlar',
+    visible: (can) => can('EVENT_VIEW'),
   },
   { route: 'tests', icon: '📝', label: 'Testlar', visible: (can) => can('TEST_VIEW') },
   { route: 'scores', icon: '🏆', label: 'Ballar va reyting', visible: (can) => can('SCORE_VIEW') },

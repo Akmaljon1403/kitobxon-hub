@@ -101,14 +101,6 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         bool,
         "Kitob uchun ball faqat test yoki admin tasdig'idan keyin beriladi",
     ),
-    # ---- Reading contests («Kitob tanlovlari», managed inside Tadbirlar) ----
-    # The last-used point values; the contest form inside the Events section is pre-filled with them.
-    SettingDefinition(
-        "campaign.default_points_per_book", 10, Points, "Kitob tanlovida kitob uchun ball (oxirgi holat eslab qolinadi)"
-    ),
-    SettingDefinition(
-        "campaign.default_completion_bonus", 0, Points, "Kitob tanlovida yakunlash bonusi (oxirgi holat eslab qolinadi)"
-    ),
     # ---- Registration ----
     SettingDefinition(
         "registration.require_approval", False, bool, "Yangi a'zolar admin tasdig'idan so'ng faollashadi"

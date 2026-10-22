@@ -270,7 +270,7 @@ async def overview(session: AsyncSession, *, months: int = 6, now: datetime | No
         for title, max_score, participants, average, passed, ends_at in test_rows
     ]
 
-    # ---- reading campaigns (active and recently completed books)
+    # ---- books (active and recently completed)
     book_rows = await session.execute(
         select(
             Book.title,
