@@ -324,3 +324,27 @@ async def test_seasons_and_season_ranking(client: httpx.AsyncClient, db: AsyncSe
     listing = (await client.get("/api/v1/admin/seasons", headers=admin_headers(manager))).json()
     current = [item["name"] for item in listing if item["is_current"]]
     assert current == ["2027 Bahor"] and spring.status_code == 201
+
+
+async def test_admin_detailed_rankings_endpoint(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    """The admin panel's detailed standings (Q7): full order with each member's points, attendance and
+    test counts — reachable with SCORE_VIEW and without the member-side premium gate."""
+    admin = await _admin(db, Perm.SCORE_VIEW)
+    top = await create_user(db, first_name="Aziz", last_name="Katta")
+    low = await create_user(db, first_name="Vali", last_name="Kam")
+    await db.commit()
+    await _give(db, top, 50, ScoreCategory.ATTENDANCE)
+    await _give(db, top, 20, ScoreCategory.TEST)
+    await _give(db, low, 10, ScoreCategory.ATTENDANCE)
+
+    board = await client.get("/api/v1/admin/scores/rankings?period=all&limit=100", headers=admin_headers(admin))
+    assert board.status_code == 200, board.text
+    items = board.json()["items"]
+    assert [row["total"] for row in items] == [70, 10]
+    assert [row["rank"] for row in items] == [1, 2]
+    for key in ("name", "faculty", "group_name", "attendance", "tests", "premium"):
+        assert key in items[0]
+
+    # SCORE_VIEW is required: an ordinary member cannot read the admin standings.
+    denied = await client.get("/api/v1/admin/scores/rankings", headers=member_headers(low))
+    assert denied.status_code == 403

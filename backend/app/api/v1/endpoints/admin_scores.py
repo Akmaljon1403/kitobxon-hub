@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -39,6 +39,36 @@ async def list_scores(
 @router.get("/scores/summary", summary="A member's total and breakdown")
 async def score_summary(user_id: uuid.UUID, _: ScoreViewer, db: DbSession) -> dict:
     return await ranking_service.score_summary(db, user_id)
+
+
+@router.get("/scores/rankings", summary="Detailed standings for a period (admin view, no premium gate)")
+async def rankings(
+    _: ScoreViewer,
+    db: DbSession,
+    period: Literal["week", "month", "season", "all"] = "all",
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> dict[str, Any]:
+    # The admin always sees the full standings (members never do without premium); reuses the member
+    # leaderboard query, so the two never drift.
+    result = await ranking_service.ranking(db, period=period, scope="all", viewer=None, limit=limit)
+    return {
+        "period": result.period,
+        "starts_at": result.starts_at,
+        "items": [
+            {
+                "rank": row.rank,
+                "user_id": row.user_id,
+                "name": row.name,
+                "faculty": row.faculty,
+                "group_name": row.group_name,
+                "total": row.total,
+                "attendance": row.attendance,
+                "tests": row.tests,
+                "premium": row.premium,
+            }
+            for row in result.items
+        ],
+    }
 
 
 @router.post("/scores/adjust", status_code=status.HTTP_201_CREATED, summary="Add or remove points (reason required)")
