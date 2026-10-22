@@ -30,6 +30,7 @@ const STATUS = {
 } as const
 
 const BOT = 'bot'
+const ADMINS = 'admins'
 
 /** Telegram HTML (already escaped by the server) shown safely: only simple formatting tags stay. */
 function telegramHtml(text: string): string {
@@ -68,6 +69,7 @@ export function MessagingPage() {
     return next
   })
   const toBot = dest.has(BOT)
+  const toAdmins = dest.has(ADMINS)
   const toChannels = targets.filter((t) => dest.has(t.chat_id))
 
   const [form, setForm] = useState({
@@ -85,6 +87,7 @@ export function MessagingPage() {
   const [stickerId, setStickerId] = useState('')
   const [preview, setPreview] = useState<Preview | null>(null)
   const [recipients, setRecipients] = useState<number | null>(null)
+  const [adminCount, setAdminCount] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -119,6 +122,28 @@ export function MessagingPage() {
     }
   }, [audienceKey, api, toBot])
 
+  // Live count of administrators (only while «Adminlarga» is a destination).
+  useEffect(() => {
+    if (!toAdmins) {
+      setAdminCount(null)
+      return
+    }
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      api<{ recipients: number }>('/api/v1/admin/notifications/broadcast', {
+        method: 'POST',
+        body: { message: 'preview', to_admins: true, dry_run: true },
+        signal: controller.signal,
+      })
+        .then((result) => setAdminCount(result.recipients))
+        .catch(() => setAdminCount(null))
+    }, 300)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [api, toAdmins])
+
   function resetMessage() {
     setForm({ ...form, message: '', buttons: '', scheduled_at: '' })
     setPhoto(null)
@@ -132,6 +157,15 @@ export function MessagingPage() {
     with_app_button: form.with_app_button,
     buttons: form.buttons.trim() || null,
     scheduled_at: fromLocalInput(form.scheduled_at),
+  })
+
+  // «Adminlarga»: the same message to every administrator; the audience filters do not apply.
+  const adminBody = () => ({
+    message: form.message.trim(),
+    with_app_button: form.with_app_button,
+    buttons: form.buttons.trim() || null,
+    scheduled_at: fromLocalInput(form.scheduled_at),
+    to_admins: true,
   })
 
   async function showPreview() {
@@ -173,11 +207,15 @@ export function MessagingPage() {
   }
 
   async function send() {
-    if (!toBot && toChannels.length === 0) {
-      setError('Kamida bitta manzil tanlang: bot yoki kanal.')
+    if (!toBot && !toAdmins && toChannels.length === 0) {
+      setError('Kamida bitta manzil tanlang: bot, adminlar yoki kanal.')
       return
     }
-    const where = [toBot ? `📱 bot (${recipients ?? '?'} a'zo)` : null, ...toChannels.map((t) => `📣 ${t.title}`)]
+    const where = [
+      toBot ? `📱 bot (${recipients ?? '?'} a'zo)` : null,
+      toAdmins ? `👮 adminlar (${adminCount ?? '?'})` : null,
+      ...toChannels.map((t) => `📣 ${t.title}`),
+    ]
       .filter(Boolean)
       .join(', ')
     const when = form.scheduled_at ? ` ${formatDateTime(fromLocalInput(form.scheduled_at))} da` : ''
@@ -191,6 +229,10 @@ export function MessagingPage() {
         const result = await api<{ recipients: number }>('/api/v1/admin/notifications/broadcast', { method: 'POST', body: botBody() })
         sent.push(`📱 bot — ${result.recipients} a'zo`)
       }
+      if (toAdmins) {
+        const result = await api<{ recipients: number }>('/api/v1/admin/notifications/broadcast', { method: 'POST', body: adminBody() })
+        sent.push(`👮 adminlar — ${result.recipients}`)
+      }
       for (const target of toChannels) {
         await api('/api/v1/admin/channel/posts', { method: 'POST', body: channelForm(target.chat_id) })
         sent.push(`📣 ${target.title}`)
@@ -198,7 +240,7 @@ export function MessagingPage() {
       setDone(
         (form.scheduled_at ? '✓ Rejalashtirildi: ' : '✓ Yuborildi: ') +
           sent.join(' · ') +
-          (toBot && !form.scheduled_at ? '. Bir necha daqiqada yetkaziladi (tungi tinchlik vaqtida — ertalab).' : '.'),
+          ((toBot || toAdmins) && !form.scheduled_at ? '. Bir necha daqiqada yetkaziladi (tungi tinchlik vaqtida — ertalab).' : '.'),
       )
       resetMessage()
       summary.reload()
@@ -226,9 +268,14 @@ export function MessagingPage() {
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null)
   const hasText = form.message.trim().length >= 1
   const canSendBot = hasText && !!recipients && !!preview
+  const canSendAdmins = hasText && !!preview
   const canSendChannel = hasText || !!photo
   const canSend =
-    !busy && ((toBot && canSendBot && (toChannels.length === 0 || canSendChannel)) || (!toBot && toChannels.length > 0 && canSendChannel))
+    !busy &&
+    (toBot || toAdmins || toChannels.length > 0) &&
+    (!toBot || canSendBot) &&
+    (!toAdmins || canSendAdmins) &&
+    (toChannels.length === 0 || canSendChannel)
 
   if (channel.state.status === 'loading' || summary.state.status === 'loading') return <LoadingState />
   if (channel.state.status === 'error') return <ErrorState message={channel.state.error.message} onRetry={channel.reload} />
@@ -237,7 +284,7 @@ export function MessagingPage() {
     <>
       <PageHeader
         title="📢 Xabarlar"
-        subtitle="A'zolarga (bot) va Telegram kanal(lar)ga xabar — hammasi bitta joydan. «Qayerga yuborish»ni belgilang, matnni bir marta yozing. Eslatmalar (tadbir, test, kitob, kun iqtibosi) avtomatik yuboriladi."
+        subtitle="A'zolarga (bot), adminlarga va Telegram kanal(lar)ga xabar — hammasi bitta joydan. «Qayerga yuborish»ni belgilang, matnni bir marta yozing. Eslatmalar (tadbir, test, kitob, kun iqtibosi) avtomatik yuboriladi."
       />
 
       {summary.state.status === 'success' && (!summary.state.data.bot_configured || !summary.state.data.worker_enabled) && (
@@ -255,6 +302,11 @@ export function MessagingPage() {
             <label className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${toBot ? 'border-app-button bg-app-button/10' : 'border-app-border'}`}>
               <input type="checkbox" className="size-4" checked={toBot} onChange={() => toggle(BOT)} />
               📱 Bot — a'zolarga
+            </label>
+            <label className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${toAdmins ? 'border-app-button bg-app-button/10' : 'border-app-border'}`}>
+              <input type="checkbox" className="size-4" checked={toAdmins} onChange={() => toggle(ADMINS)} />
+              👮 Adminlarga
+              {toAdmins && <span className="text-xs text-app-hint">({adminCount ?? '…'})</span>}
             </label>
             {targets.map((target) => {
               const on = dest.has(target.chat_id)

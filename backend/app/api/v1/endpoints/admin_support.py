@@ -26,17 +26,24 @@ router = APIRouter(prefix="/admin/support", tags=["admin: support"])
 Manager = Annotated[CurrentUser, Depends(require_permissions(Perm.SUPPORT_MANAGE))]
 
 
-@router.get("", response_model=Page[SupportTicketOut], summary="General conversations, unread first")
+@router.get("", response_model=Page[SupportTicketOut], summary="Conversations, unread first")
 async def list_tickets(
-    _: Manager,
+    current: Manager,
     db: DbSession,
     status: SupportTicketStatus | None = None,
+    kind: SupportTicketKind | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> Page[SupportTicketOut]:
-    # The panel «Murojaatlar» is for general questions; money conversations live in the payments channel.
+    # General-support admins see only general questions; «💳 To'lov savollari» holders also see money
+    # conversations here (they still live in the payments channel too). With no ``kind`` a permitted admin
+    # gets both so the panel «Murojaatlar» reflects every request.
+    can_payment = Perm.PAYMENT_SUPPORT.value in current.permissions
+    if kind == SupportTicketKind.PAYMENT and not can_payment:
+        raise ForbiddenError("PAYMENT_SUPPORT_REQUIRED", "To'lov bo'yicha murojaatlarni ko'rish ruxsatingiz yo'q.")
+    effective_kind = kind if can_payment else SupportTicketKind.GENERAL
     items, total = await support_service.list_tickets(
-        db, status=status, limit=limit, offset=offset, kind=SupportTicketKind.GENERAL
+        db, status=status, limit=limit, offset=offset, kind=effective_kind
     )
     return Page(items=[SupportTicketOut(**item) for item in items], total=total, limit=limit, offset=offset)
 

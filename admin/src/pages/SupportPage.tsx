@@ -10,6 +10,7 @@ import { formatDateTime } from '../utils/format'
 import { navigate } from '../utils/router'
 
 type TicketStatus = 'OPEN' | 'ANSWERED' | 'CLOSED'
+type TicketKind = 'GENERAL' | 'PAYMENT'
 
 interface SupportMember {
   user_id: string
@@ -24,6 +25,7 @@ interface SupportMember {
 interface Ticket {
   id: string
   status: TicketStatus
+  kind: TicketKind
   unread: boolean
   last_message_at: string
   created_at: string
@@ -55,31 +57,54 @@ const STATUS: Record<TicketStatus, { label: string; tone: 'warning' | 'success' 
   CLOSED: { label: 'Yopilgan', tone: 'neutral' },
 }
 
+const KIND: Record<TicketKind, { label: string; tone: 'info' | 'neutral' }> = {
+  GENERAL: { label: '✉️ Umumiy', tone: 'neutral' },
+  PAYMENT: { label: '💳 To\'lov', tone: 'info' },
+}
+
 function memberLine(member: SupportMember): string {
   return [member.faculty, member.course ? `${member.course}-kurs` : null, member.group_name].filter(Boolean).join(' · ')
 }
 
 export function SupportPage() {
-  const { api } = useSession()
+  const { api, can } = useSession()
+  const seesPayment = can('PAYMENT_SUPPORT')
   const [status, setStatus] = useState<'' | TicketStatus>('')
+  const [kind, setKind] = useState<'' | TicketKind>('')
+  const query = [status ? `&status=${status}` : '', kind ? `&kind=${kind}` : ''].join('')
   const { state, reload } = useAsync(
-    (signal) => api<Page<Ticket>>(`/api/v1/admin/support?limit=50${status ? `&status=${status}` : ''}`, { signal }),
-    [status],
+    (signal) => api<Page<Ticket>>(`/api/v1/admin/support?limit=50${query}`, { signal }),
+    [status, kind],
   )
 
   return (
     <>
       <PageHeader
         title="Murojaatlar"
-        subtitle="A'zolar botdagi «✉️ Adminga yozish» orqali yozgan xabarlar. Javobingiz a'zoga «Klub rahbariyati» nomidan boradi."
+        subtitle={
+          seesPayment
+            ? "A'zolarning botdagi murojaatlari — umumiy savollar va to'lov bo'yicha murojaatlar. To'lov murojaatlari to'lovlar kanaliga ham boradi. Javobingiz a'zoga «Klub rahbariyati» nomidan yetadi."
+            : "A'zolar botdagi «✉️ Adminga yozish» orqali yozgan xabarlar. Javobingiz a'zoga «Klub rahbariyati» nomidan boradi."
+        }
       />
-      <div className="w-56">
-        <Select value={status} onChange={(e) => setStatus(e.target.value as '' | TicketStatus)} aria-label="Holat">
-          <option value="">Hammasi</option>
-          <option value="OPEN">Javob kutayotganlar</option>
-          <option value="ANSWERED">Javob berilganlar</option>
-          <option value="CLOSED">Yopilganlar</option>
-        </Select>
+      <div className="flex flex-wrap gap-2">
+        <div className="w-56">
+          <Select value={status} onChange={(e) => setStatus(e.target.value as '' | TicketStatus)} aria-label="Holat">
+            <option value="">Barcha holatlar</option>
+            <option value="OPEN">Javob kutayotganlar</option>
+            <option value="ANSWERED">Javob berilganlar</option>
+            <option value="CLOSED">Yopilganlar</option>
+          </Select>
+        </div>
+        {seesPayment && (
+          <div className="w-56">
+            <Select value={kind} onChange={(e) => setKind(e.target.value as '' | TicketKind)} aria-label="Turi">
+              <option value="">Barcha turlar</option>
+              <option value="GENERAL">✉️ Umumiy</option>
+              <option value="PAYMENT">💳 To'lov</option>
+            </Select>
+          </div>
+        )}
       </div>
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
@@ -101,6 +126,7 @@ export function SupportPage() {
                 </span>
                 <span className="flex items-center gap-2 text-xs text-app-hint">
                   {formatDateTime(ticket.last_message_at)}
+                  {ticket.kind === 'PAYMENT' && <Badge tone={KIND.PAYMENT.tone}>{KIND.PAYMENT.label}</Badge>}
                   <Badge tone={STATUS[ticket.status].tone}>{STATUS[ticket.status].label}</Badge>
                 </span>
               </div>
