@@ -424,3 +424,31 @@ async def test_quotes(client: httpx.AsyncClient, db: AsyncSession) -> None:
     deleted = await client.delete(f"/api/v1/admin/quotes/{draft.json()['id']}", headers=admin_headers(editor))
     assert deleted.status_code == 204
     assert (await client.get("/api/v1/admin/quotes", headers=admin_headers(editor))).json()["total"] == 0
+
+
+async def test_member_overview_aggregates_everything(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    """Q12: one member's whole picture in a single admin endpoint — points (with breakdown), activity
+    counts, support, referrals and premium — reachable with USER_VIEW, and 404 for an unknown member."""
+    import uuid
+
+    from app.services.scoring import award_points
+
+    viewer = await _admin(db, Perm.USER_VIEW)
+    member = await create_user(db, first_name="Laylo", last_name="Nazarova")
+    await db.commit()
+    await award_points(db, user_id=member.id, amount=40, category=ScoreCategory.ATTENDANCE, idempotency_key="ov:1")
+    await award_points(db, user_id=member.id, amount=10, category=ScoreCategory.TEST, idempotency_key="ov:2")
+    await db.commit()
+
+    res = await client.get(f"/api/v1/admin/users/{member.id}/overview", headers=admin_headers(viewer))
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["points"]["total"] == 50
+    assert body["points"]["breakdown"].get("ATTENDANCE") == 40
+    for key in ("attendance", "tests_taken", "books_completed", "support", "referrals", "achievements", "reading"):
+        assert key in body
+    assert body["support"] == {"total": 0, "open": 0}
+    assert body["premium_until"] is None
+
+    missing = await client.get(f"/api/v1/admin/users/{uuid.uuid4()}/overview", headers=admin_headers(viewer))
+    assert missing.status_code == 404

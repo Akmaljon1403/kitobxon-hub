@@ -146,6 +146,68 @@ export function MembersPage() {
   )
 }
 
+interface MemberOverviewData {
+  points: { total: number; breakdown: Record<string, number>; season: { name: string; total: number } | null }
+  attendance: number
+  tests_taken: number
+  books_completed: number
+  support: { total: number; open: number }
+  referrals: number
+  achievements: number
+  reading: { diary_entries: number; saved_quotes: number }
+  premium_until: string | null
+}
+
+const POINT_SOURCE_LABELS: Record<string, string> = {
+  ATTENDANCE: 'Davomat',
+  TEST: 'Test',
+  TEST_RANK_BONUS: "Testda o'rin",
+  BOOK_COMPLETION: 'Kitob',
+  CAMPAIGN: 'Faollik',
+  ACHIEVEMENT: 'Yutuq',
+  MANUAL: "Qo'lda",
+  REVERSAL: 'Bekor',
+}
+
+function Stat({ label, value, note }: { label: string; value: number | string; note?: string }) {
+  return (
+    <div className="rounded-lg border border-app-border bg-app-surface px-3 py-2">
+      <p className="text-lg font-semibold tabular-nums">{value}</p>
+      <p className="text-xs text-app-hint">{label}</p>
+      {note && <p className="text-[11px] text-app-hint">{note}</p>}
+    </div>
+  )
+}
+
+/** «📊 Umumiy ma'lumot» (Q12): one member's whole picture — ball, faollik, premium va murojaatlar bir joyda. */
+function MemberOverview({ userId }: { userId: string }) {
+  const { api } = useSession()
+  const { state } = useAsync((signal) => api<MemberOverviewData>(`/api/v1/admin/users/${userId}/overview`, { signal }), [userId])
+  if (state.status !== 'success') return null
+  const data = state.data
+  const premium = data.premium_until ? `${formatDate(data.premium_until)} gacha` : '—'
+  const sources = Object.entries(data.points.breakdown).filter(([, amount]) => amount)
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-app-border p-3">
+      <p className="text-sm font-medium">📊 Umumiy ma'lumot</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <Stat label="Jami ball" value={data.points.total} note={data.points.season ? `${data.points.season.name}: ${data.points.season.total}` : undefined} />
+        <Stat label="Davomat" value={data.attendance} />
+        <Stat label="Testlar" value={data.tests_taken} />
+        <Stat label="O'qigan kitoblar" value={data.books_completed} />
+        <Stat label="Yutuqlar" value={data.achievements} />
+        <Stat label="Taklif qilgan" value={data.referrals} />
+        <Stat label="Murojaatlar" value={data.support.total} note={data.support.open ? `${data.support.open} ta ochiq` : undefined} />
+        <Stat label="Premium" value={premium} />
+      </div>
+      <p className="text-xs text-app-hint">
+        📔 Kundalik: {data.reading.diary_entries} yozuv · 📖 Saqlangan iqtiboslar: {data.reading.saved_quotes}
+        {sources.length > 0 && ` · Ball manbalari: ${sources.map(([key, amount]) => `${POINT_SOURCE_LABELS[key] ?? key} ${amount}`).join(', ')}`}
+      </p>
+    </div>
+  )
+}
+
 function MemberModal({
   userId,
   faculties,
@@ -242,6 +304,7 @@ function MemberModal({
             ))}
             <span className="text-xs text-app-hint">Oxirgi faollik: {formatDateTime(state.data.last_seen_at)}</span>
           </div>
+          <MemberOverview userId={userId} />
           {state.data.status === 'LEFT' && (
             <p className="rounded-lg bg-app-surface px-3 py-2 text-sm">
               🚪 {daysSince(state.data.left_at)} kun oldin klubdan chiqqan ({LEFT_REASONS[state.data.left_reason ?? ''] ?? '—'}). Ma'lumotlari{' '}
