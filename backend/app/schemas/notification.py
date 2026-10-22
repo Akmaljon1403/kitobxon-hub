@@ -17,6 +17,7 @@ class BroadcastIn(BaseModel):
     dry_run: bool = Field(default=False, description="Only count the recipients")
     test: bool = Field(default=False, description="Send only to me, to see it in the bot first")
     scheduled_at: datetime | None = Field(default=None, description="Send later (up to 90 days ahead)")
+    to_admins: bool = Field(default=False, description="Send only to administrators (the «Adminlarga» destination)")
 
 
 class BroadcastPreviewOut(BaseModel):

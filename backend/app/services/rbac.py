@@ -106,3 +106,13 @@ def super_admins() -> Select[tuple[uuid.UUID]]:
         select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.code == SystemRole.SUPER_ADMIN)
     )
     return select(User.id).where(User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), User.id.in_(holders))
+
+
+def all_admins() -> Select[tuple[uuid.UUID]]:
+    """Active administrators of any kind (super admins and ordinary admins) — the «Adminlarga» broadcast."""
+    holders = (
+        select(UserRole.user_id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(Role.code.in_((SystemRole.SUPER_ADMIN, SystemRole.ADMIN)))
+    )
+    return select(User.id).where(User.status == UserStatus.ACTIVE, User.deleted_at.is_(None), User.id.in_(holders))

@@ -631,18 +631,26 @@ async def broadcast(
     dry_run: bool = False,
     only_to: Any | None = None,
     scheduled_at: datetime | None = None,
+    to_admins: bool = False,
 ) -> int:
     """An admin's message to all active members or a part of them. Returns the recipient count.
     ``only_to``: a test send to the admin themself (to see it in the bot before everybody);
-    ``scheduled_at``: a planned announcement (it can be cancelled until then)."""
-    conditions = []
-    if faculty_id is not None:
-        conditions.append(User.faculty_id == faculty_id)
-    if course is not None:
-        conditions.append(User.course == course)
-    if group_name:
-        conditions.append(User.group_name == normalize_group(group_name))
-    members = _members(*conditions)
+    ``scheduled_at``: a planned announcement (it can be cancelled until then);
+    ``to_admins``: send only to the administrators (the «Adminlarga» destination) — the faculty,
+    course and group filters are ignored, since administrators are addressed as a whole."""
+    if to_admins:
+        from app.services.rbac import all_admins
+
+        members = all_admins()
+    else:
+        conditions = []
+        if faculty_id is not None:
+            conditions.append(User.faculty_id == faculty_id)
+        if course is not None:
+            conditions.append(User.course == course)
+        if group_name:
+            conditions.append(User.group_name == normalize_group(group_name))
+        members = _members(*conditions)
     text, payload = await broadcast_message(
         session, message=message, buttons=buttons, with_app_button=with_app_button
     )  # checks the buttons even for a count
@@ -682,9 +690,10 @@ async def broadcast(
             "recipients": count,
             "broadcast_id": str(broadcast_id),
             "scheduled_at": scheduled_at.isoformat() if scheduled_at else None,
-            "faculty_id": str(faculty_id) if faculty_id else None,
-            "course": course,
-            "group_name": group_name,
+            "faculty_id": str(faculty_id) if faculty_id and not to_admins else None,
+            "course": course if not to_admins else None,
+            "group_name": group_name if not to_admins else None,
+            "to_admins": to_admins or None,
         },
     )
     await session.commit()

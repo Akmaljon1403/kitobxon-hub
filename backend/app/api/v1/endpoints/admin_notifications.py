@@ -80,6 +80,7 @@ async def broadcast(payload: BroadcastIn, current: Sender, db: DbSession) -> Bro
         dry_run=payload.dry_run,
         only_to=current.user.id if payload.test else None,
         scheduled_at=_when(payload.scheduled_at) if not payload.test else None,
+        to_admins=payload.to_admins,
     )
     return BroadcastOut(recipients=recipients, queued=not payload.dry_run)
 

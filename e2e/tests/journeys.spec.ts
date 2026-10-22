@@ -178,7 +178,7 @@ test('the admin signs in with a one-time link and sees the results', async ({ pa
   await expect(page.getByText(`${state.member.last_name} ${state.member.first_name}`)).toBeVisible()
 
   await page.goto('/admin/#/analytics')
-  await expect(page.getByText("Faol a'zolar soni")).toBeVisible()
+  await expect(page.getByText("Jami a'zolar")).toBeVisible()
   expect(errors).toEqual([])
 
   // A used link cannot be used again.

@@ -194,19 +194,41 @@ export function AnalyticsPage() {
   return (
     <>
       <PageHeader title="Tahlillar" subtitle="Faqat umumlashgan raqamlar. Ismlar faqat «Faol bo'lmagan a'zolar» ro'yxatida (a'zolarni ko'rish ruxsati bilan)." />
-      <div className="w-48">
-        <Select value={months} onChange={(e) => setMonths(Number(e.target.value))} aria-label="Davr">
-          <option value={3}>So'nggi 3 oy</option>
-          <option value={6}>So'nggi 6 oy</option>
-          <option value={12}>So'nggi 12 oy</option>
-        </Select>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-app-hint">Davr:</span>
+        {[3, 6, 12, 24].map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setMonths(option)}
+            className={`rounded-lg border px-3 py-1.5 text-sm ${months === option ? 'border-app-button bg-app-button/10 font-medium' : 'border-app-border'}`}
+          >
+            {option} oy
+          </button>
+        ))}
+        <label className="flex items-center gap-1.5 text-sm text-app-hint">
+          Boshqa:
+          <input
+            type="number"
+            min={3}
+            max={24}
+            value={months}
+            onChange={(e) => {
+              const value = Number(e.target.value)
+              if (value >= 3 && value <= 24) setMonths(value)
+            }}
+            aria-label="Oylar soni (3–24)"
+            className="w-16 rounded-lg border border-app-border bg-transparent px-2 py-1 tabular-nums"
+          />
+          oy
+        </label>
       </div>
       {!data && state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {data && (
         <div className={`flex flex-col gap-4 transition-opacity ${state.status === 'loading' ? 'opacity-60' : ''}`}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatTile label="Faol a'zolar soni" value={formatNumber(data.headline.members)} />
+            <StatTile label="Jami a'zolar" value={formatNumber(data.headline.members)} note="Botda faol ro'yxatda turganlar" />
             <StatTile
               label="So'nggi 30 kunda faol"
               value={formatNumber(data.headline.active_30_days)}
@@ -291,17 +313,14 @@ export function AnalyticsPage() {
           </Card>
 
           <Card className="flex flex-col gap-2 p-4">
-            <h2 className="font-semibold">O'qish kampaniyalari</h2>
+            <h2 className="font-semibold">Kitoblar</h2>
             <Table head={['Kitob', "O'quvchilar", 'Tugatgan', 'Tasdiqlangan', 'Tugatish ulushi']}>
               {data.books.length === 0 && <EmptyRow colSpan={5} text="Faol kitoblar yo'q" />}
               {data.books.map((book) => (
                 <tr key={book.title}>
                   <td className="px-4 py-2">
                     <p>{book.title}</p>
-                    <p className="text-xs text-app-hint">
-                      {book.author}
-                      {book.deadline ? ` · muddat ${formatDate(book.deadline)}` : ''}
-                    </p>
+                    <p className="text-xs text-app-hint">{book.author}</p>
                   </td>
                   <td className="px-4 py-2 tabular-nums">{book.readers}</td>
                   <td className="px-4 py-2 tabular-nums">{book.completed}</td>
