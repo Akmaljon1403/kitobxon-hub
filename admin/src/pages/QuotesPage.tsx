@@ -13,7 +13,7 @@ const LIMIT = 50
 export function QuotesPage() {
   const { api, can } = useSession()
   const [offset, setOffset] = useState(0)
-  const [editing, setEditing] = useState<Quote | 'new' | null>(null)
+  const [editing, setEditing] = useState<Quote | null>(null)
   const { state, reload } = useAsync(
     (signal) => api<Page<Quote>>(`/api/v1/admin/quotes?limit=${LIMIT}&offset=${offset}`, { signal }),
     [offset],
@@ -33,8 +33,7 @@ export function QuotesPage() {
     <>
       <PageHeader
         title="Iqtiboslar"
-        subtitle="«Rejalashtirilgan» iqtibos belgilangan kuni «Kun iqtibosi» sifatida yuboriladi. Iqtiboslarni o'ylab topmang — faqat kitobdan aynan oling."
-        actions={can('BOOK_CREATE') && <Button onClick={() => setEditing('new')}>+ Yangi iqtibos</Button>}
+        subtitle="Iqtiboslar a'zolarning «💬 A'zolar fikrlari»dagi o'z iqtiboslaridan keladi — admin iqtibos o'ylab topmaydi. Bu yerda ularni «Kun iqtibosi» qilib rejalashtirasiz: «Rejalashtirilgan» iqtibos belgilangan kuni yuboriladi."
       />
       <details className="rounded-xl border border-app-border bg-app-bg p-3 text-sm">
         <summary className="cursor-pointer font-medium">ℹ️ Holatlar nimani bildiradi?</summary>
@@ -60,7 +59,9 @@ export function QuotesPage() {
         {state.status === 'success' && (
           <>
             <Table head={['Iqtibos', 'Kitob', 'Sana', 'Holat', '']}>
-              {state.data.items.length === 0 && <EmptyRow colSpan={5} text="Iqtiboslar hali qo'shilmagan" />}
+              {state.data.items.length === 0 && (
+                <EmptyRow colSpan={5} text="Hali iqtibos yo'q — a'zolar «A'zolar fikrlari»da iqtibos ulashsa, shu yerda ko'rinadi" />
+              )}
               {state.data.items.map((quote) => (
                 <tr key={quote.id}>
                   <td className="max-w-md px-4 py-2.5">
@@ -97,7 +98,7 @@ export function QuotesPage() {
       </Card>
       {editing && (
         <QuoteModal
-          quote={editing === 'new' ? null : editing}
+          quote={editing}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
@@ -109,16 +110,16 @@ export function QuotesPage() {
   )
 }
 
-function QuoteModal({ quote, onClose, onSaved }: { quote: Quote | null; onClose: () => void; onSaved: () => void }) {
+function QuoteModal({ quote, onClose, onSaved }: { quote: Quote; onClose: () => void; onSaved: () => void }) {
   const { api } = useSession()
   const books = useAsync((signal) => api<Page<Book>>('/api/v1/admin/books?limit=200', { signal }))
   const [form, setForm] = useState({
-    book_id: quote?.book_id ?? '',
-    text: quote?.text ?? '',
-    author: quote?.author ?? '',
-    source: quote?.source ?? '',
-    scheduled_date: quote?.scheduled_date ?? '',
-    status: (quote?.status ?? 'DRAFT') as QuoteStatus,
+    book_id: quote.book_id ?? '',
+    text: quote.text ?? '',
+    author: quote.author ?? '',
+    source: quote.source ?? '',
+    scheduled_date: quote.scheduled_date ?? '',
+    status: quote.status as QuoteStatus,
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -127,8 +128,8 @@ function QuoteModal({ quote, onClose, onSaved }: { quote: Quote | null; onClose:
     setBusy(true)
     setError(null)
     try {
-      await api(quote ? `/api/v1/admin/quotes/${quote.id}` : '/api/v1/admin/quotes', {
-        method: quote ? 'PATCH' : 'POST',
+      await api(`/api/v1/admin/quotes/${quote.id}`, {
+        method: 'PATCH',
         body: {
           book_id: form.book_id || null,
           text: form.text.trim(),
@@ -148,7 +149,7 @@ function QuoteModal({ quote, onClose, onSaved }: { quote: Quote | null; onClose:
 
   return (
     <Modal
-      title={quote ? 'Iqtibosni tahrirlash' : 'Yangi iqtibos'}
+      title="Iqtibosni tahrirlash"
       onClose={onClose}
       footer={
         <>

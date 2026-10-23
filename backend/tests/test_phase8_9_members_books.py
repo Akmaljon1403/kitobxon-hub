@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, timedelta
 
 import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AuditLog, Faculty, Notification, ScoreTransaction, SystemSetting, User
-from app.models.enums import ScoreCategory, UserStatus
+from app.models import AuditLog, BookQuote, Faculty, Notification, ScoreTransaction, SystemSetting, User
+from app.models.enums import QuoteStatus, ScoreCategory, UserStatus
 from app.security.permissions import Perm
 from tests.factories import create_user
 from tests.helpers import admin_headers, grant_permissions, grant_role, member_headers
@@ -393,19 +394,36 @@ async def test_quotes(client: httpx.AsyncClient, db: AsyncSession) -> None:
     book_id = await _published_book(client, editor)
     today = str(date.today())
 
-    draft = await client.post(
+    # Q2: administrators no longer author quotes — there is no create endpoint. The quote-of-day queue
+    # is fed from members' own quotes; admins only schedule, edit and remove what members contributed.
+    # Two such quotes are placed in the queue directly here to exercise those remaining endpoints.
+    draft = BookQuote(
+        book_id=uuid.UUID(book_id),
+        text="Ilm — saodat kalitidir.",
+        author="Abdulla Qodiriy",
+        source="12-bet",
+        status=QuoteStatus.DRAFT,
+        created_by=editor.id,
+    )
+    other = BookQuote(text="Boshqa iqtibos matni", status=QuoteStatus.DRAFT, created_by=editor.id)
+    db.add_all([draft, other])
+    await db.commit()
+    await db.refresh(draft)
+    await db.refresh(other)
+
+    # The create endpoint is gone.
+    gone = await client.post(
         "/api/v1/admin/quotes",
-        json={"book_id": book_id, "text": "Ilm — saodat kalitidir.", "author": "Abdulla Qodiriy", "source": "12-bet"},
+        json={"book_id": book_id, "text": "Admin yozgan iqtibos"},
         headers=admin_headers(editor),
     )
-    assert draft.status_code == 201
-    assert draft.json()["book_title"] == "O'tkan kunlar"
+    assert gone.status_code in (404, 405)
 
     detail = await client.get(f"/api/v1/books/{book_id}", headers=member_headers(member))
     assert detail.json()["quotes"] == []  # drafts are not shown to members
 
     scheduled = await client.patch(
-        f"/api/v1/admin/quotes/{draft.json()['id']}",
+        f"/api/v1/admin/quotes/{draft.id}",
         json={"status": "SCHEDULED", "scheduled_date": today},
         headers=admin_headers(editor),
     )
@@ -413,17 +431,19 @@ async def test_quotes(client: httpx.AsyncClient, db: AsyncSession) -> None:
     detail = await client.get(f"/api/v1/books/{book_id}", headers=member_headers(member))
     assert detail.json()["quotes"][0]["source"] == "12-bet"
 
-    clash = await client.post(
-        "/api/v1/admin/quotes",
-        json={"text": "Boshqa iqtibos matni", "scheduled_date": today, "status": "SCHEDULED"},
+    # The same day cannot hold two scheduled quotes.
+    clash = await client.patch(
+        f"/api/v1/admin/quotes/{other.id}",
+        json={"status": "SCHEDULED", "scheduled_date": today},
         headers=admin_headers(editor),
     )
     assert clash.status_code == 400
     assert clash.json()["error"]["code"] == "QUOTE_DATE_TAKEN"
 
-    deleted = await client.delete(f"/api/v1/admin/quotes/{draft.json()['id']}", headers=admin_headers(editor))
+    deleted = await client.delete(f"/api/v1/admin/quotes/{draft.id}", headers=admin_headers(editor))
     assert deleted.status_code == 204
-    assert (await client.get("/api/v1/admin/quotes", headers=admin_headers(editor))).json()["total"] == 0
+    # The scheduled draft is gone; the other draft remains in the queue.
+    assert (await client.get("/api/v1/admin/quotes", headers=admin_headers(editor))).json()["total"] == 1
 
 
 async def test_member_overview_aggregates_everything(client: httpx.AsyncClient, db: AsyncSession) -> None:
