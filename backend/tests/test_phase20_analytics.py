@@ -8,7 +8,16 @@ import httpx
 from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AttendanceRecord, BookRead, Faculty, ScoreTransaction, TestAttempt, User
+from app.models import (
+    AttendanceRecord,
+    BookRead,
+    BookReflection,
+    Faculty,
+    ScoreTransaction,
+    ShelfItem,
+    TestAttempt,
+    User,
+)
 from app.models.enums import (
     AttemptStatus,
     AttendanceMethod,
@@ -16,6 +25,7 @@ from app.models.enums import (
     BookStatus,
     ReadingStatus,
     ScoreCategory,
+    ShelfStatus,
 )
 from app.security.permissions import Perm
 from app.services.analytics import _month_starts
@@ -123,6 +133,58 @@ async def test_overview_aggregates(client: httpx.AsyncClient, db: AsyncSession) 
     campaign = next(row for row in body["books"] if row["title"] == "Kecha va kunduz")
     assert (campaign["readers"], campaign["completed"], campaign["completion_rate"]) == (2, 1, 50.0)
     assert loner.first_name not in response.text  # no names in aggregates
+
+
+async def test_overview_top_rated_books(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    admin = await _admin(db, Perm.ANALYTICS_VIEW)
+    loved = await create_book(db, status=BookStatus.ACTIVE, title="Sevimli")
+    plain = await create_book(db, status=BookStatus.ACTIVE, title="Oddiy")
+    readers = [await create_user(db) for _ in range(3)]
+    for user, rating in zip(readers, (5, 4, 3), strict=True):
+        db.add(ShelfItem(user_id=user.id, book_id=loved.id, status=ShelfStatus.FINISHED, rating=rating))
+    db.add(ShelfItem(user_id=readers[0].id, book_id=plain.id, status=ShelfStatus.FINISHED, rating=2))
+    # A rating with no stars set must be ignored, not counted as zero.
+    db.add(ShelfItem(user_id=readers[1].id, book_id=plain.id, status=ShelfStatus.READING, rating=None))
+    await db.commit()
+
+    body = (await client.get("/api/v1/admin/analytics?months=3", headers=admin_headers(admin))).json()
+    top = {row["title"]: row for row in body["top_rated"]}
+    assert top["Sevimli"] == {"title": "Sevimli", "author": top["Sevimli"]["author"], "average": 4.0, "ratings": 3}
+    assert top["Oddiy"]["average"] == 2.0 and top["Oddiy"]["ratings"] == 1
+    # Most-loved first.
+    assert [row["title"] for row in body["top_rated"]] == ["Sevimli", "Oddiy"]
+
+
+async def test_reflections_need_user_view(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    analyst = await _admin(db, Perm.ANALYTICS_VIEW)
+    manager = await _admin(db, Perm.ANALYTICS_VIEW, Perm.USER_VIEW)
+    reader = await create_user(db, first_name="Dilnoza")
+    book = await create_book(db, status=BookStatus.ACTIVE, title="Mehrobdan chayon")
+    shelf = ShelfItem(user_id=reader.id, book_id=book.id, status=ShelfStatus.FINISHED, rating=5)
+    db.add(shelf)
+    await db.flush()
+    db.add(
+        BookReflection(
+            user_id=reader.id,
+            shelf_item_id=shelf.id,
+            main_idea="Vatanparvarlik",
+            favorite_moment="Oxirgi bob",
+            apply_in_life="Kundalik o'qishni davom ettiraman",
+        )
+    )
+    await db.commit()
+
+    assert (await client.get("/api/v1/admin/analytics/reflections", headers=admin_headers(analyst))).status_code == 403
+    response = await client.get("/api/v1/admin/analytics/reflections", headers=admin_headers(manager))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 1
+    item = body["items"][0]
+    assert item["first_name"] == "Dilnoza"
+    assert item["book_title"] == "Mehrobdan chayon"
+    assert item["rating"] == 5
+    assert item["main_idea"] == "Vatanparvarlik"
+    assert item["apply_in_life"] == "Kundalik o'qishni davom ettiraman"
 
 
 async def test_inactive_members_list_needs_user_view(client: httpx.AsyncClient, db: AsyncSession) -> None:

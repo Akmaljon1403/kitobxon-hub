@@ -32,6 +32,16 @@ async def engagement(_: Viewer, db: DbSession, months: Annotated[int, Query(ge=3
     return await analytics.engagement(db, months=months)
 
 
+@router.get("/reflections", summary="Members' reading-diary answers — the three questions (names: USER_VIEW)")
+async def reflections(
+    _: MemberViewer,
+    db: DbSession,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict[str, Any]:
+    return await analytics.book_reflections(db, limit=limit, offset=offset)
+
+
 # ---------------------------------------------------------------------------- «🛡 Ishonch markazi»
 
 Auditor = Annotated[CurrentUser, Depends(require_permissions(Perm.AUDIT_LOG_VIEW))]

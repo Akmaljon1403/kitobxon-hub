@@ -23,6 +23,21 @@ interface Analytics {
   groups_all: { group: string; faculty: string | null; course: number | null; members: number; active_30_days: number; attendance: number; total_points: number; average_points: number }[]
   tests: { title: string; participants: number; average_percent: number; pass_rate: number; ends_at: string }[]
   books: { title: string; author: string; status: string; deadline: string | null; readers: number; completed: number; verified: number; completion_rate: number }[]
+  top_rated: { title: string; author: string; average: number; ratings: number }[]
+}
+
+interface Reflection {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  book_title: string
+  book_author: string | null
+  rating: number | null
+  main_idea: string
+  favorite_moment: string
+  apply_in_life: string
+  created_at: string
 }
 
 interface InactiveMember {
@@ -141,6 +156,85 @@ function Inactive() {
   )
 }
 
+/** «Kitob mulohazalari»: the three answers members write in their reading diary after a book. */
+function Reflections() {
+  const { api } = useSession()
+  const [page, setPage] = useState(0)
+  const limit = 10
+  const { state } = useAsync(
+    (signal) => api<{ total: number; items: Reflection[] }>(`/api/v1/admin/analytics/reflections?limit=${limit}&offset=${page * limit}`, { signal }),
+    [page],
+  )
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div>
+        <h2 className="font-semibold">📖 Kitob mulohazalari (3 savol)</h2>
+        <p className="text-xs text-app-hint">A'zolar kitobni o'qib tugatgach kundaligida yozgan javoblari — eng yangisi birinchi</p>
+      </div>
+      {state.status === 'loading' && <LoadingState />}
+      {state.status === 'error' && <ErrorState message={state.error.message} />}
+      {state.status === 'success' && state.data.items.length === 0 && (
+        <p className="py-6 text-center text-sm text-app-hint">Hali mulohaza yozilmagan.</p>
+      )}
+      {state.status === 'success' &&
+        state.data.items.map((item) => (
+          <article key={item.id} className="rounded-xl border border-app-border p-3.5">
+            <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <p className="font-medium">
+                {item.last_name} {item.first_name}
+                <span className="ml-2 text-sm font-normal text-app-hint">
+                  📚 {item.book_title}
+                  {item.book_author ? ` — ${item.book_author}` : ''}
+                </span>
+              </p>
+              <span className="text-xs text-app-hint">
+                {item.rating ? `${'⭐'.repeat(item.rating)} · ` : ''}
+                {formatDate(item.created_at)}
+              </span>
+            </header>
+            <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-xs font-semibold text-app-hint">Asosiy g'oya</dt>
+                <dd className="mt-0.5 whitespace-pre-line">{item.main_idea}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold text-app-hint">Yoqqan lahza</dt>
+                <dd className="mt-0.5 whitespace-pre-line">{item.favorite_moment}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold text-app-hint">Hayotda qo'llash</dt>
+                <dd className="mt-0.5 whitespace-pre-line">{item.apply_in_life}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      {state.status === 'success' && state.data.total > limit && (
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <button
+            type="button"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            className="rounded-lg border border-app-border px-3 py-1.5 disabled:opacity-40"
+          >
+            ← Oldingi
+          </button>
+          <span className="text-app-hint tabular-nums">
+            {page * limit + 1}–{Math.min((page + 1) * limit, state.data.total)} / {state.data.total}
+          </span>
+          <button
+            type="button"
+            disabled={(page + 1) * limit >= state.data.total}
+            onClick={() => setPage((p) => p + 1)}
+            className="rounded-lg border border-app-border px-3 py-1.5 disabled:opacity-40"
+          >
+            Keyingi →
+          </button>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 /** «Guruhlar kesimida»: every group in the usual order — faculty, then the group number (5424, 5524, …). */
 function GroupsTable({ rows }: { rows: Analytics['groups_all'] }) {
   let faculty: string | null | undefined
@@ -193,7 +287,7 @@ export function AnalyticsPage() {
 
   return (
     <>
-      <PageHeader title="Tahlillar" subtitle="Faqat umumlashgan raqamlar. Ismlar faqat «Faol bo'lmagan a'zolar» ro'yxatida (a'zolarni ko'rish ruxsati bilan)." />
+      <PageHeader title="Tahlillar" subtitle="Asosan umumlashgan raqamlar. Ismlar faqat «Kitob mulohazalari» va «Faol bo'lmagan a'zolar» bo'limlarida (a'zolarni ko'rish ruxsati bilan)." />
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-app-hint">Davr:</span>
         {[3, 6, 12, 24].map((option) => (
@@ -333,7 +427,28 @@ export function AnalyticsPage() {
             </Table>
           </Card>
 
+          {data.top_rated.length > 0 && (
+            <ChartCard
+              title="⭐ Eng sevilgan kitoblar"
+              subtitle="A'zolar kundaligida bergan baho bo'yicha (1–5 yulduz), o'rtacha baho tartibida"
+              table={{
+                head: ['Kitob', 'Baho (5 dan)', 'Baholaganlar'],
+                rows: data.top_rated.map((book) => [`${book.title}${book.author ? ` — ${book.author}` : ''}`, book.average, book.ratings]),
+              }}
+            >
+              <BarList
+                rows={data.top_rated.map((book) => ({
+                  label: book.title,
+                  sublabel: `${'⭐'.repeat(Math.round(book.average))} · ${book.ratings} baho`,
+                  value: book.average,
+                }))}
+              />
+            </ChartCard>
+          )}
+
           <EngagementSection />
+
+          {can('USER_VIEW') && <Reflections />}
 
           {can('USER_VIEW') && <Inactive />}
         </div>
