@@ -427,25 +427,6 @@ async def _check_quote_date_free(session: AsyncSession, scheduled: date | None, 
         raise BadRequestError("QUOTE_DATE_TAKEN", "Bu sanaga boshqa iqtibos rejalashtirilgan.")
 
 
-async def create_quote(session: AsyncSession, *, actor_id: uuid.UUID, data: dict[str, Any]) -> BookQuote:
-    if data.get("book_id"):
-        await get_book(session, data["book_id"])
-    await _check_quote_date_free(session, data.get("scheduled_date"), None)
-    quote = BookQuote(**data, created_by=actor_id)
-    session.add(quote)
-    await session.flush()
-    record_audit(
-        session,
-        actor_id=actor_id,
-        action="QUOTE_CREATE",
-        entity_type="quote",
-        entity_id=quote.id,
-        after=_quote_snapshot(quote),
-    )
-    await session.commit()
-    return quote
-
-
 async def update_quote(
     session: AsyncSession, *, actor_id: uuid.UUID, quote_id: uuid.UUID, changes: dict[str, Any]
 ) -> BookQuote:

@@ -15,7 +15,6 @@ from app.schemas.book import (
     BookCreateIn,
     BookUpdateIn,
     QuoteAdminOut,
-    QuoteIn,
     QuoteUpdateIn,
     ReaderOut,
     plain,
@@ -181,10 +180,9 @@ async def list_quotes(
     )
 
 
-@router.post("/quotes", response_model=QuoteAdminOut, status_code=status.HTTP_201_CREATED, summary="Add a quote")
-async def create_quote(payload: QuoteIn, current: BookCreator, db: DbSession) -> QuoteAdminOut:
-    quote = await book_service.create_quote(db, actor_id=current.user.id, data=payload.model_dump())
-    return await _quote_with_title(db, quote)
+# Administrators do not author quotes (owner's Q2): the «Kun iqtibosi» queue is fed from members'
+# own quotes in «💬 A'zolar fikrlari» (community → quote-of-day). Admins only schedule, edit and
+# remove what members contributed, so there is no «create quote» endpoint.
 
 
 @router.patch("/quotes/{quote_id}", response_model=QuoteAdminOut, summary="Edit or schedule a quote")
