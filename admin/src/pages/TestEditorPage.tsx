@@ -66,6 +66,7 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const editable = can('TEST_EDIT')
+  const permanent = test.kind === 'PERMANENT'  // «Doimiy»: no window / admin score — the server manages those
   const set = (field: keyof typeof form) => (e: { target: { value: string } }) => {
     setSaved(false)
     setForm({ ...form, [field]: e.target.value })
@@ -81,17 +82,22 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
           title: form.title.trim(),
           description: form.description.trim() || null,
           book_id: form.book_id || null,
-          starts_at: fromLocalInput(form.starts_at),
-          ends_at: fromLocalInput(form.ends_at),
           duration_minutes: Number(form.duration_minutes),
-          max_score: Number(form.max_score),
-          passing_score: Number(form.passing_score),
-          attempts_allowed: Number(form.attempts_allowed),
           shuffle_questions: form.shuffle_questions,
           shuffle_options: form.shuffle_options,
           questions_per_attempt: form.questions_per_attempt ? Number(form.questions_per_attempt) : null,
           certificate_template_id: form.certificate_template_id || null,
           certificate_on_pass: form.certificate_on_pass,
+          // A permanent («Doimiy») test's window, score and attempt limit are managed by the server.
+          ...(permanent
+            ? {}
+            : {
+                starts_at: fromLocalInput(form.starts_at),
+                ends_at: fromLocalInput(form.ends_at),
+                max_score: Number(form.max_score),
+                passing_score: Number(form.passing_score),
+                attempts_allowed: Number(form.attempts_allowed),
+              }),
         },
       })
       setSaved(true)
@@ -106,6 +112,12 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
   return (
     <Card className="flex flex-col gap-3 p-4">
       <h2 className="font-semibold">Sozlamalar</h2>
+      {permanent && (
+        <p className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
+          📌 Bu <b>Doimiy test</b>: doim ochiq turadi, a'zo cheksiz marta yechadi va faqat birinchi marta 100% yechsa
+          ball oladi. Shuning uchun vaqt oynasi, maksimal ball va urinishlar soni bu yerda sozlanmaydi.
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Test nomi *">
           <Input value={form.title} onChange={set('title')} disabled={!editable} maxLength={255} />
@@ -121,24 +133,34 @@ function SettingsForm({ test, readOnlyScores, onSaved }: { test: AdminTestDetail
               ))}
           </Select>
         </Field>
-        <Field label="Ochiladi (Toshkent vaqti)">
-          <Input type="datetime-local" value={form.starts_at} onChange={set('starts_at')} disabled={!editable} />
-        </Field>
-        <Field label="Yopiladi" hint="Yopilgach to'g'ri javoblar ochiladi va o'rinlar uchun bonus beriladi">
-          <Input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} disabled={!editable} />
-        </Field>
+        {!permanent && (
+          <Field label="Ochiladi (Toshkent vaqti)">
+            <Input type="datetime-local" value={form.starts_at} onChange={set('starts_at')} disabled={!editable} />
+          </Field>
+        )}
+        {!permanent && (
+          <Field label="Yopiladi" hint="Yopilgach to'g'ri javoblar ochiladi va o'rinlar uchun bonus beriladi">
+            <Input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} disabled={!editable} />
+          </Field>
+        )}
         <Field label="Yechish vaqti (daqiqa)">
           <Input type="number" min={1} max={600} value={form.duration_minutes} onChange={set('duration_minutes')} disabled={!editable} />
         </Field>
-        <Field label="Urinishlar soni" hint="Bir nechta bo'lsa, eng yaxshi natija hisoblanadi">
-          <Input type="number" min={1} max={10} value={form.attempts_allowed} onChange={set('attempts_allowed')} disabled={!editable} />
-        </Field>
-        <Field label="Maksimal ball" hint={readOnlyScores ? 'Test boshlangan — o\'zgartirib bo\'lmaydi' : 'Reytingga qo\'shiladigan eng yuqori ball'}>
-          <Input type="number" min={1} max={1000} value={form.max_score} onChange={set('max_score')} disabled={!editable || readOnlyScores} />
-        </Field>
-        <Field label="O'tish bali" hint="Bundan kam natija ball bermaydi (0 — chegarasiz)">
-          <Input type="number" min={0} max={1000} value={form.passing_score} onChange={set('passing_score')} disabled={!editable || readOnlyScores} />
-        </Field>
+        {!permanent && (
+          <Field label="Urinishlar soni" hint="Bir nechta bo'lsa, eng yaxshi natija hisoblanadi">
+            <Input type="number" min={1} max={10} value={form.attempts_allowed} onChange={set('attempts_allowed')} disabled={!editable} />
+          </Field>
+        )}
+        {!permanent && (
+          <Field label="Maksimal ball" hint={readOnlyScores ? 'Test boshlangan — o\'zgartirib bo\'lmaydi' : 'Reytingga qo\'shiladigan eng yuqori ball'}>
+            <Input type="number" min={1} max={1000} value={form.max_score} onChange={set('max_score')} disabled={!editable || readOnlyScores} />
+          </Field>
+        )}
+        {!permanent && (
+          <Field label="O'tish bali" hint="Bundan kam natija ball bermaydi (0 — chegarasiz)">
+            <Input type="number" min={0} max={1000} value={form.passing_score} onChange={set('passing_score')} disabled={!editable || readOnlyScores} />
+          </Field>
+        )}
         <Field
           label="Har bir a'zoga nechta savol"
           hint={
@@ -525,7 +547,7 @@ export function TestEditorPage({ testId }: { testId: string }) {
     <>
       <PageHeader
         title={test.title}
-        subtitle={`${formatDateTime(test.starts_at)} — ${formatDateTime(test.ends_at)} · ${test.question_count} ta savol${test.questions_per_attempt && test.questions_per_attempt < test.question_count ? ` (har a'zoga ${test.questions_per_attempt} ta tasodifiy)` : ''} · ${test.participant_count} qatnashchi`}
+        subtitle={`${test.kind === 'PERMANENT' ? 'Doimiy test — doim ochiq' : `${formatDateTime(test.starts_at)} — ${formatDateTime(test.ends_at)}`} · ${test.question_count} ta savol${test.questions_per_attempt && test.questions_per_attempt < test.question_count ? ` (har a'zoga ${test.questions_per_attempt} ta tasodifiy)` : ''} · ${test.participant_count} qatnashchi`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <TestStateBadge state={test.state} />

@@ -279,9 +279,12 @@ export type TestState = 'DRAFT' | 'UPCOMING' | 'OPEN' | 'CLOSED'
 export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE'
 export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'EXPIRED'
 
+export type TestKind = 'EVENT' | 'PERMANENT'
+
 export interface AdminTest {
   id: string
   title: string
+  kind: TestKind
   description: string | null
   book_id: string | null
   book_title: string | null
