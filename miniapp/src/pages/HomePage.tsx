@@ -69,9 +69,13 @@ export function HomePage() {
           <h1 className="truncate text-lg font-semibold">{me.first_name}! 📖</h1>
         </div>
         {ranking.state.status === 'success' && (
-          <button type="button" onClick={() => navigate('/results')} className="ml-auto text-right">
-            <p className="text-xl font-semibold tabular-nums">{ranking.state.data.all?.total ?? 0}</p>
-            <p className="text-xs text-app-hint">
+          <button
+            type="button"
+            onClick={() => navigate('/results')}
+            className="ml-auto flex flex-col items-end rounded-xl bg-app-surface px-3 py-1.5 active:opacity-70"
+          >
+            <p className="text-xl font-semibold leading-none tabular-nums">{ranking.state.data.all?.total ?? 0}</p>
+            <p className="mt-0.5 text-xs text-app-hint">
               {ranking.state.data.all ? `ball · ${ranking.state.data.all.rank}-o'rin` : 'ball'}
             </p>
           </button>
@@ -167,7 +171,7 @@ export function HomePage() {
               key={item.route}
               type="button"
               onClick={() => navigate(`/${item.route}`)}
-              className="relative flex flex-col items-center gap-1 rounded-2xl bg-app-bg px-2 py-4 text-sm shadow-sm active:opacity-70"
+              className="relative flex min-h-[86px] flex-col items-center justify-center gap-1 rounded-2xl bg-app-bg px-2 py-3 text-center text-xs font-medium leading-tight shadow-sm active:opacity-70"
             >
               {(locked || trial) && (
                 <span aria-label="Premium" title={trial ? 'Premium — sinov davrida ochiq' : 'Premium'} className="absolute right-2 top-1.5 text-xs">
