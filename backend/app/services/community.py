@@ -922,31 +922,42 @@ async def to_quote_of_day(
 # ---------------------------------------------------------------------------- asking at the right moment
 
 
-async def ask_after_book(session: AsyncSession, user: User, *, title: str, book_id: uuid.UUID | None, key: str) -> None:
-    """A book is finished: «write a line you liked, or what you think»."""
+async def ask_after_book(
+    session: AsyncSession,
+    user: User,
+    *,
+    title: str,
+    book_id: uuid.UUID | None,
+    key: str,
+    shelf_item_id: uuid.UUID | None = None,
+) -> None:
+    """A book is finished: rate it and answer the three questions (the reading diary), and — if the member
+    wishes — share an impression with the club. The member is no longer asked for a standalone book quote."""
     from app.services import features
 
     if not await get_setting(session, "community.ask_after_book"):
         return
-    if await features.allowed(session, user, "community") != "on":
+    buttons: list[dict[str, Any]] = []
+    if shelf_item_id is not None:
+        buttons.append({"text": "⭐ Baholash va 3 savol", "app_route": f"shelf/{shelf_item_id}"})
+    community_on = await features.allowed(session, user, "community") == "on"
+    if community_on:
+        route = "community/new?kind=BOOK" + (f"&book={book_id}" if book_id else "")
+        buttons.append({"text": "✍️ Klubga taassurot", "app_route": route})
+    if not buttons:
         return
-    route = "community/new?kind=BOOK" + (f"&book={book_id}" if book_id else "")
+    share_line = " Istasangiz, bir-ikki jumla taassurotingizni klub bilan ham ulashing." if community_on else ""
     await enqueue_notification(
         session,
         user_id=user.id,
         type_=NotificationType.SYSTEM,
         text=(
             f"📖 «{html.escape(title)}» — o'qib tugatdingiz, barakalla!\n\n"
-            "Kitobdan eng yoqqan iqtibosingizni yoki bir-ikki jumla taassurotingizni yozing — eng yaxshilari "
-            "chiroyli kartochka bo'lib klub kanalida chiqadi."
+            "Kitobni baholang va uchta qisqa savolga javob bering — bu sizning mutolaa kundaligingizda qoladi."
+            + share_line
         ),
         dedup_key=f"ask-book:{user.id}:{key}",
-        payload={
-            "buttons": [
-                {"text": "✍️ Taassurot yozish", "app_route": route},
-                {"text": "📖 Iqtibos yozish", "app_route": route.replace("kind=BOOK", "kind=QUOTE")},
-            ]
-        },
+        payload={"buttons": buttons},
     )
 
 

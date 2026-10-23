@@ -122,7 +122,8 @@ def _set_status(item: ShelfItem, status: ShelfStatus) -> None:
 
 
 async def _ask_after_finish(session: AsyncSession, user_id: uuid.UUID, item: ShelfItem) -> None:
-    """A book was just finished: invite a quote or an impression for «💬 A'zolar fikrlari»."""
+    """A book was just finished: invite the member to rate it and answer the three questions (the reading
+    diary), and — if «A'zolar fikrlari» is on — to share an impression."""
     from app.services import community
 
     user = await session.get(User, user_id)
@@ -130,7 +131,9 @@ async def _ask_after_finish(session: AsyncSession, user_id: uuid.UUID, item: She
     title = book.title if book else item.title
     if user is None or not title:
         return
-    await community.ask_after_book(session, user, title=title, book_id=item.book_id, key=str(item.book_id or item.id))
+    await community.ask_after_book(
+        session, user, title=title, book_id=item.book_id, key=str(item.book_id or item.id), shelf_item_id=item.id
+    )
 
 
 async def add(
