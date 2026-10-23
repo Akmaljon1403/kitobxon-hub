@@ -274,7 +274,12 @@ async def test_the_bot_the_shelf_and_events_invite_texts(db: AsyncSession) -> No
     shelf = await reading_journal.add(db, author, book_id=book.id, status=ShelfStatus.READING)
     await reading_journal.update(db, author, shelf.id, status=ShelfStatus.FINISHED)
     ask = await db.scalar(select(Notification).where(Notification.dedup_key == f"ask-book:{author.id}:{book.id}"))
-    assert "Shum bola" in ask.text and f"community/new?kind=BOOK&book={book.id}" in str(ask.payload)
+    assert "Shum bola" in ask.text
+    # Q11: the member is led to rate the book + answer the 3 questions (reading diary).
+    assert f"shelf/{shelf.id}" in str(ask.payload)
+    # The optional club-impression invite stays, but the standalone book-quote nudge is gone (Q2).
+    assert f"community/new?kind=BOOK&book={book.id}" in str(ask.payload)
+    assert "kind=QUOTE" not in str(ask.payload)
 
     # an event comment with 5 ⭐: «share it with everybody?»
     event = await create_event(

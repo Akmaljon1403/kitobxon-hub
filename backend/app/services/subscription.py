@@ -12,6 +12,7 @@ lock everybody out of the club.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -118,17 +119,24 @@ async def missing(session: AsyncSession, telegram_id: int, *, bot: Any = None, f
     cached = _checked.get(telegram_id)
     if cached and cached[0] > now and not fresh:
         return list(cached[1])
-    result: list[Channel] = []
-    for chat_id, url in channels:
+
+    async def _check(chat_id: str, url: str) -> Channel | None:
         try:
             member = await bot.get_chat_member(chat_id, telegram_id)
         except Exception:
             # Not an administrator of that channel, or Telegram is unreachable: let the member in.
             logger.warning("Subscription could not be checked in a required channel")
-            continue
-        if not _subscribed(member):
-            fallback = chat_id if chat_id.startswith("@") else "Kanal"
-            result.append(Channel(chat_id=chat_id, url=url, title=await _title(bot, chat_id, fallback)))
+            return None
+        if _subscribed(member):
+            return None
+        fallback = chat_id if chat_id.startswith("@") else "Kanal"
+        return Channel(chat_id=chat_id, url=url, title=await _title(bot, chat_id, fallback))
+
+    # Ask Telegram about every required channel at once rather than one after another: this gate runs
+    # on each bot message and each Mini App request, so a member with several channels no longer waits
+    # for N sequential round-trips. gather keeps the configured order.
+    checked = await asyncio.gather(*(_check(chat_id, url) for chat_id, url in channels))
+    result: list[Channel] = [channel for channel in checked if channel is not None]
     if len(_checked) > MAX_CACHE:
         for key in [key for key, (expires, _) in _checked.items() if expires <= now]:
             _checked.pop(key, None)

@@ -379,7 +379,7 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         "community.ask_after_book",
         True,
         bool,
-        "Kitobni o'qib tugatgan a'zodan iqtibos yoki taassurot yozishni so'rash",
+        "Kitobni o'qib tugatgan a'zoni baholash va 3 savolga (mutolaa kundaligi) taklif qilish",
     ),
     SettingDefinition(
         "community.ask_after_event",
