@@ -74,6 +74,18 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/** A date N months on — counted from the current licence's end when it is still in the future, else from today. */
+function plusMonths(months: number, from?: string | null): string {
+  const base = from && from >= today() ? new Date(`${from}T00:00:00Z`) : new Date()
+  base.setUTCMonth(base.getUTCMonth() + months)
+  return base.toISOString().slice(0, 10)
+}
+
+function planOptionLabel(plan: Plan): string {
+  if (plan.yearly) return `${plan.title} — ${formatNumber(plan.yearly)} so‘m/yil`
+  return plan.title
+}
+
 function CopyBlock({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   return (
@@ -237,7 +249,7 @@ function OrgForm({ org, plans, onClose, onSaved }: { org: Org | null; plans: Pla
           <Select value={form.plan} onChange={(e) => choosePlan(e.target.value)}>
             {plans.map((plan) => (
               <option key={plan.code} value={plan.code}>
-                {plan.title}
+                {planOptionLabel(plan)}
               </option>
             ))}
           </Select>
@@ -356,6 +368,27 @@ function OrgDetails({ id, plans, onClose, onChanged }: { id: string; plans: Plan
               🔐 Kalit berish
             </Button>
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-app-hint">Tez tanlash:</span>
+          {[
+            ['+1 oy', 1],
+            ['+6 oy', 6],
+            ['+1 yil', 12],
+            ['+2 yil', 24],
+          ].map(([label, months]) => (
+            <button
+              key={label}
+              type="button"
+              className="rounded-lg border border-app-border px-2.5 py-1 hover:bg-app-surface"
+              onClick={() => setUntil(plusMonths(months as number, org.expires_on))}
+            >
+              {label}
+            </button>
+          ))}
+          {org.expires_on && org.days_left !== null && org.days_left >= 0 && (
+            <span className="text-app-hint">(hozirgi muddat: {formatDate(org.expires_on)} — {org.days_left} kun qoldi, uzaytirish shundan hisoblanadi)</span>
+          )}
         </div>
         {issued && (
           <div className="flex flex-col gap-1 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
