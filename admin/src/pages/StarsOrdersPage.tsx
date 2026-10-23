@@ -69,6 +69,11 @@ export function StarsOrdersPage() {
         subtitle="A'zolar karta orqali sotib olgan Telegram Stars. Bosh admin chekni tasdiqlagach, buyurtma shu yerga va mas'ul adminga botda keladi."
       />
       <Card className="flex flex-col gap-2 p-4 text-sm">
+        <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          ⚠️ Muhim: bot Telegram Stars'ni o'zi avtomatik sotib ololmaydi va a'zoga yubora olmaydi — Telegram bunga API (imkoniyat)
+          bermaydi. Shuning uchun bu har doim qo'lda bajariladi (atigi bir necha daqiqa). Tizim esa hammasini kuzatib boradi: kim
+          to'ladi, kim tasdiqladi, kim yubordi.
+        </p>
         <p className="font-semibold">Qanday yuboriladi</p>
         <ol className="list-decimal space-y-1 pl-5 text-app-hint">
           <li>
@@ -111,13 +116,20 @@ export function StarsOrdersPage() {
               </p>
               <p className="text-sm text-app-hint">
                 {order.member_username ? (
-                  <button type="button" className="text-app-link underline" onClick={() => void copy(`@${order.member_username}`)}>
-                    @{order.member_username}
-                  </button>
+                  <>
+                    <button type="button" className="text-app-link underline" onClick={() => void copy(`@${order.member_username}`)}>
+                      @{order.member_username}
+                    </button>
+                    {copied === `@${order.member_username}` && ' ✓ nusxalandi'}
+                    {' · '}
+                    <a className="text-app-link underline" href={`https://t.me/${order.member_username}`} target="_blank" rel="noreferrer">
+                      💬 Yozish
+                    </a>
+                  </>
                 ) : (
-                  'username yo‘q'
+                  <span className="text-app-danger">⚠️ @username yo‘q — Fragment faqat @username’ga yuboradi; a'zodan Telegram’da username qo‘yishni so‘rang</span>
                 )}
-                {copied === `@${order.member_username}` && ' ✓ nusxalandi'} · to'langan {uzs(order.amount_uzs)}
+                {' · '}to'langan {uzs(order.amount_uzs)}
               </p>
               <p className="text-xs text-app-hint">
                 Tasdiqladi: {order.approved_by ?? '—'}, {formatDateTime(order.approved_at)}
