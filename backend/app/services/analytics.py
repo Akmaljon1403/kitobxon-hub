@@ -14,9 +14,11 @@ from app.models import (
     AttendanceRecord,
     Book,
     BookRead,
+    BookReflection,
     Event,
     Faculty,
     ScoreTransaction,
+    ShelfItem,
     Test,
     TestAttempt,
     User,
@@ -301,6 +303,20 @@ async def overview(session: AsyncSession, *, months: int = 6, now: datetime | No
         for title, author, status, deadline, readers, completed, verified in book_rows
     ]
 
+    # ---- most-loved club books (members' 1–5 star ratings from the reading diary)
+    rating_rows = await session.execute(
+        select(Book.title, Book.author, func.avg(ShelfItem.rating), func.count(ShelfItem.rating))
+        .join(ShelfItem, ShelfItem.book_id == Book.id)
+        .where(Book.deleted_at.is_(None), ShelfItem.rating.is_not(None))
+        .group_by(Book.id)
+        .order_by(func.avg(ShelfItem.rating).desc(), func.count(ShelfItem.rating).desc())
+        .limit(10)
+    )
+    top_rated = [
+        {"title": title, "author": author, "average": round(float(average), 2), "ratings": int(count)}
+        for title, author, average, count in rating_rows
+    ]
+
     return {
         "months": keys,
         "headline": {
@@ -325,6 +341,7 @@ async def overview(session: AsyncSession, *, months: int = 6, now: datetime | No
         "groups": groups,
         "tests": tests,
         "books": books,
+        "top_rated": top_rated,
     }
 
 
@@ -366,6 +383,38 @@ async def inactive_members(session: AsyncSession, *, days: int, limit: int = 200
         }
         for user, faculty, last_at in rows
     ]
+
+
+async def book_reflections(session: AsyncSession, *, limit: int = 30, offset: int = 0) -> dict[str, Any]:
+    """The reading-diary answers members wrote (the three questions), newest first, for the Admin Panel.
+    Shows the author's name, so the endpoint needs USER_VIEW."""
+    total = int(await session.scalar(select(func.count()).select_from(BookReflection)) or 0)
+    rows = await session.execute(
+        select(BookReflection, ShelfItem, Book, User)
+        .join(ShelfItem, ShelfItem.id == BookReflection.shelf_item_id)
+        .outerjoin(Book, Book.id == ShelfItem.book_id)
+        .join(User, User.id == BookReflection.user_id)
+        .order_by(BookReflection.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    items = [
+        {
+            "id": reflection.id,
+            "user_id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "book_title": (book.title if book else shelf.title) or "—",
+            "book_author": book.author if book else shelf.author,
+            "rating": shelf.rating,
+            "main_idea": reflection.main_idea,
+            "favorite_moment": reflection.favorite_moment,
+            "apply_in_life": reflection.apply_in_life,
+            "created_at": reflection.created_at,
+        }
+        for reflection, shelf, book, user in rows
+    ]
+    return {"total": total, "items": items}
 
 
 # ---------------------------------------------------------------------------- «Faollik va qaytish»
