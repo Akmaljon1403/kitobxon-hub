@@ -178,6 +178,17 @@ cd /srv/kitobxon-hub && sudo git pull
 cd infra/institute && sudo ./backup.sh && sudo docker compose up -d --build
 ```
 
+> ✅ `main` shoxchasi doim tekshirilgan: har bir o'zgarish qo'shilishidan oldin to'liq avtomatik
+> testlar (backend ~590 test, 90%+ qamrov), ikkala ilova build'i va brauzer sinovlaridan o'tadi.
+> Yuqoridagi buyruq avval **o'zi zaxira nusxa oladi**, so'ng yangilaydi; baza versiyasi ilova
+> ishga tushganda **avtomatik** moslanadi. Xohlasangiz, yangilashdan oldin GitHub → **Actions** da
+> oxirgi `main` yashil (✅) ekanini bir ko'rib qo'ying.
+>
+> 💾 Ko'chiruvchanlik: tizim hech bir xizmatga bog'lanib qolmagan — baza manzili faqat
+> `DATABASE_URL` orqali beriladi (har qanday PostgreSQL: Neon, Render yoki institut serveri),
+> fayllar esa `STORAGE_*` orqali. Shuning uchun boshqa serverga yoki boshqa bazaga ko'chirish
+> faqat `.env` ni o'zgartirish va zaxirani tiklashdan iborat (3-bo'limga qarang).
+
 ## 8. Muammo bo'lsa
 
 | Belgi | Sabab va yechim |
