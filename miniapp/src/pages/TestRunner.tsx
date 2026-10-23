@@ -235,7 +235,7 @@ export function TestRunner({
                 aria-checked={active}
                 onClick={() => void choose(option.id)}
                 className={`flex items-start gap-3 rounded-2xl border-2 bg-app-bg p-3.5 text-left text-[15px] transition-colors ${
-                  active ? 'border-app-button' : 'border-transparent'
+                  active ? 'border-app-button' : 'border-app-hint/15'
                 }`}
               >
                 <span
