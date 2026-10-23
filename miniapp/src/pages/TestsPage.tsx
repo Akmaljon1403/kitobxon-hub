@@ -15,27 +15,51 @@ export function TestStateBadge({ test }: { test: ClubTest }) {
 
 function TestCard({ test }: { test: ClubTest }) {
   const finished = test.attempts.filter((attempt) => attempt.status !== 'IN_PROGRESS')
+  const permanent = test.kind === 'PERMANENT'
+  const perfect = permanent && (test.best_score ?? 0) >= test.max_score
   return (
     <button type="button" className="text-left" onClick={() => navigate(`/tests/${test.id}`)}>
       <Card className="flex flex-col gap-1.5">
         <p className="text-xs font-medium text-app-link">
-          {test.state === 'UPCOMING' ? `Boshlanadi: ${formatEventDate(test.starts_at)}` : `Yopiladi: ${formatEventDate(test.ends_at)}`}
+          {permanent
+            ? '♾ Doim ochiq — cheksiz urinish'
+            : test.state === 'UPCOMING'
+              ? `Boshlanadi: ${formatEventDate(test.starts_at)}`
+              : `Yopiladi: ${formatEventDate(test.ends_at)}`}
         </p>
         <h2 className="font-semibold">{test.title}</h2>
         {test.book_title && <p className="text-sm text-app-hint">📚 {test.book_title}</p>}
         <p className="text-sm text-app-hint">
-          ❓ {test.question_count} savol · ⏱ {test.duration_minutes} daqiqa · 🏆 {test.max_score} ballgacha
+          ❓ {test.question_count} savol · ⏱ {test.duration_minutes} daqiqa
+          {permanent ? ' · 🏆 100% uchun bonus' : ` · 🏆 ${test.max_score} ballgacha`}
         </p>
         <div className="flex items-center justify-between gap-2 pt-1">
           <TestStateBadge test={test} />
-          {finished.length > 0 && (
-            <span className="text-sm font-semibold tabular-nums">
-              Natija: {test.best_score ?? 0}/{test.max_score}
-            </span>
-          )}
+          {permanent
+            ? perfect && <span className="text-sm font-semibold text-emerald-600">✅ 100% — bonus olingan</span>
+            : finished.length > 0 && (
+                <span className="text-sm font-semibold tabular-nums">
+                  Natija: {test.best_score ?? 0}/{test.max_score}
+                </span>
+              )}
         </div>
       </Card>
     </button>
+  )
+}
+
+function Section({ title, hint, tests }: { title: string; hint: string; tests: ClubTest[] }) {
+  if (tests.length === 0) return null
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="px-1">
+        <h2 className="text-base font-semibold">{title}</h2>
+        <p className="text-xs text-app-hint">{hint}</p>
+      </div>
+      {tests.map((test) => (
+        <TestCard key={test.id} test={test} />
+      ))}
+    </section>
   )
 }
 
@@ -50,10 +74,23 @@ export function TestsPage() {
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (
         <EmptyState icon="📝" title="Hozircha testlar yo'q">
-          Kitob bo'yicha test e'lon qilinganda shu yerda ko'rinadi va bot orqali xabar olasiz.
+          Test e'lon qilinganda shu yerda ko'rinadi va bot orqali xabar olasiz.
         </EmptyState>
       )}
-      {state.status === 'success' && state.data.map((test) => <TestCard key={test.id} test={test} />)}
+      {state.status === 'success' && state.data.length > 0 && (
+        <div className="flex flex-col gap-5">
+          <Section
+            title="📅 Tadbir testlari"
+            hint="Muddatli testlar — ball to'plang, yopilgach eng yaxshilar bonus oladi."
+            tests={state.data.filter((test) => test.kind !== 'PERMANENT')}
+          />
+          <Section
+            title="♾ Doimiy testlar"
+            hint="Istalgan vaqtda, cheksiz yechish mumkin. Birinchi marta 100% yechsangiz bonus ball."
+            tests={state.data.filter((test) => test.kind === 'PERMANENT')}
+          />
+        </div>
+      )}
     </>
   )
 }

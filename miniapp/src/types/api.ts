@@ -225,9 +225,12 @@ export interface MyAttempt {
   submitted_at: string | null
 }
 
+export type TestKind = 'EVENT' | 'PERMANENT'
+
 export interface ClubTest {
   id: string
   title: string
+  kind: TestKind
   description: string | null
   book_id: string | null
   book_title: string | null

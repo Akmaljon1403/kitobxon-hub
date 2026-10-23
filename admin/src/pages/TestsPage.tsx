@@ -5,7 +5,9 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { AdminTest, AdminTestDetail, Book, Page, TestState } from '../types/api'
+import type { AdminTest, AdminTestDetail, Book, Page, TestKind, TestState } from '../types/api'
+
+const KIND_LABEL: Record<TestKind, string> = { EVENT: 'Tadbir', PERMANENT: 'Doimiy' }
 import { formatDateTime, fromLocalInput } from '../utils/format'
 import { navigate } from '../utils/router'
 
@@ -23,24 +25,39 @@ export function TestStateBadge({ state }: { state: TestState }) {
 function NewTestModal({ onClose }: { onClose: () => void }) {
   const { api } = useSession()
   const books = useAsync((signal) => api<Page<Book>>('/api/v1/admin/books?limit=200', { signal }))
-  const [form, setForm] = useState({ title: '', book_id: '', starts_at: '', ends_at: '', duration_minutes: '15', max_score: '10' })
+  const [form, setForm] = useState({
+    title: '',
+    kind: 'EVENT' as TestKind,
+    book_id: '',
+    starts_at: '',
+    ends_at: '',
+    duration_minutes: '15',
+    max_score: '10',
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = (field: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [field]: e.target.value })
+  const permanent = form.kind === 'PERMANENT'
 
   async function create() {
     setBusy(true)
     setError(null)
     try {
+      // A permanent («Doimiy») test has no window and no admin-set score — the server fills those in.
       const test = await api<AdminTestDetail>('/api/v1/admin/tests', {
         method: 'POST',
         body: {
           title: form.title.trim(),
+          kind: form.kind,
           book_id: form.book_id || null,
-          starts_at: fromLocalInput(form.starts_at),
-          ends_at: fromLocalInput(form.ends_at),
           duration_minutes: Number(form.duration_minutes),
-          max_score: form.max_score ? Number(form.max_score) : null,
+          ...(permanent
+            ? {}
+            : {
+                starts_at: fromLocalInput(form.starts_at),
+                ends_at: fromLocalInput(form.ends_at),
+                max_score: form.max_score ? Number(form.max_score) : null,
+              }),
         },
       })
       navigate(`/tests/${test.id}`)
@@ -61,7 +78,11 @@ function NewTestModal({ onClose }: { onClose: () => void }) {
           </Button>
           <Button
             loading={busy}
-            disabled={form.title.trim().length < 2 || !form.starts_at || !form.ends_at || !form.duration_minutes}
+            disabled={
+              form.title.trim().length < 2 ||
+              !form.duration_minutes ||
+              (!permanent && (!form.starts_at || !form.ends_at))
+            }
             onClick={() => void create()}
           >
             Yaratish va savollarga o'tish
@@ -69,6 +90,12 @@ function NewTestModal({ onClose }: { onClose: () => void }) {
         </>
       }
     >
+      <Field label="Test turi *">
+        <Select value={form.kind} onChange={set('kind')}>
+          <option value="EVENT">Tadbir testi — tadbirga bog'liq, ball admin belgilaydi, vaqt oynasi bor</option>
+          <option value="PERMANENT">Doimiy test — doim ochiq, cheksiz urinish, faqat birinchi 100% uchun ball</option>
+        </Select>
+      </Field>
       <Field label="Test nomi *">
         <Input value={form.title} onChange={set('title')} maxLength={255} placeholder="«O'tkan kunlar» — 1-test" />
       </Field>
@@ -83,25 +110,39 @@ function NewTestModal({ onClose }: { onClose: () => void }) {
             ))}
         </Select>
       </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Ochiladi * (Toshkent vaqti)">
-          <Input type="datetime-local" value={form.starts_at} onChange={set('starts_at')} />
-        </Field>
-        <Field label="Yopiladi *">
-          <Input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} />
-        </Field>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Yechish uchun vaqt (daqiqa) *" hint="Har bir a'zo boshlagan paytdan hisoblanadi">
-          <Input type="number" min={1} max={600} value={form.duration_minutes} onChange={set('duration_minutes')} />
-        </Field>
-        <Field
-          label="Maksimal ball *"
-          hint="Testda nechta savol bo'lishidan qat'i nazar, natija shu ballga nisbatlab (proporsiya) beriladi: hammasini to'g'ri yechsa — to'liq shu ball, yarmini — yarmi. Butun songa yaxlitlanadi."
-        >
-          <Input type="number" min={1} max={1000} value={form.max_score} onChange={set('max_score')} />
-        </Field>
-      </div>
+      {permanent ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Yechish uchun vaqt (daqiqa) *" hint="Har bir a'zo boshlagan paytdan hisoblanadi">
+            <Input type="number" min={1} max={600} value={form.duration_minutes} onChange={set('duration_minutes')} />
+          </Field>
+          <p className="self-end rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
+            📌 Doimiy test doim ochiq turadi, a'zo cheksiz marta yechadi va faqat birinchi marta 100% yechsa ball
+            oladi. Vaqt oynasi va balli avtomatik.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Ochiladi * (Toshkent vaqti)">
+              <Input type="datetime-local" value={form.starts_at} onChange={set('starts_at')} />
+            </Field>
+            <Field label="Yopiladi *">
+              <Input type="datetime-local" value={form.ends_at} onChange={set('ends_at')} />
+            </Field>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Yechish uchun vaqt (daqiqa) *" hint="Har bir a'zo boshlagan paytdan hisoblanadi">
+              <Input type="number" min={1} max={600} value={form.duration_minutes} onChange={set('duration_minutes')} />
+            </Field>
+            <Field
+              label="Maksimal ball *"
+              hint="Testda nechta savol bo'lishidan qat'i nazar, natija shu ballga nisbatlab (proporsiya) beriladi: hammasini to'g'ri yechsa — to'liq shu ball, yarmini — yarmi. Butun songa yaxlitlanadi."
+            >
+              <Input type="number" min={1} max={1000} value={form.max_score} onChange={set('max_score')} />
+            </Field>
+          </div>
+        </>
+      )}
       <InlineError message={error} />
     </Modal>
   )
@@ -128,15 +169,25 @@ export function TestsPage() {
             {state.data.items.map((test) => (
               <tr key={test.id}>
                 <td className="px-4 py-2.5">
-                  <p className="font-medium">{test.title}</p>
+                  <p className="flex items-center gap-2 font-medium">
+                    <Badge tone={test.kind === 'PERMANENT' ? 'info' : 'neutral'}>{KIND_LABEL[test.kind]}</Badge>
+                    {test.title}
+                  </p>
                   <p className="text-xs text-app-hint">
-                    {test.book_title ? `📚 ${test.book_title} · ` : ''}⏱ {test.duration_minutes} daq · 🏆 {test.max_score} ball
+                    {test.book_title ? `📚 ${test.book_title} · ` : ''}⏱ {test.duration_minutes} daq
+                    {test.kind === 'PERMANENT' ? ' · 🏆 100% uchun bonus' : ` · 🏆 ${test.max_score} ball`}
                   </p>
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-xs">
-                  {formatDateTime(test.starts_at)}
-                  <br />
-                  {formatDateTime(test.ends_at)}
+                  {test.kind === 'PERMANENT' ? (
+                    <span className="text-app-hint">Doim ochiq · cheksiz urinish</span>
+                  ) : (
+                    <>
+                      {formatDateTime(test.starts_at)}
+                      <br />
+                      {formatDateTime(test.ends_at)}
+                    </>
+                  )}
                 </td>
                 <td className="px-4 py-2.5">
                   <TestStateBadge state={test.state} />
