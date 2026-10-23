@@ -120,6 +120,42 @@ async def test_admins_and_unreachable_channels_pass(db: AsyncSession) -> None:
     await harness.send("/start")
     assert texts.SUBSCRIBE_REQUIRED not in harness.all_text()
 
+
+@pytest.mark.subscription
+async def test_missing_checks_every_channel_concurrently_and_in_order(db: AsyncSession) -> None:
+    """Q10: the gate queries all required channels at once (not one-by-one) and keeps their order;
+    an unreachable channel never blocks the member (fail-open)."""
+    admin = await _super_admin(db, telegram_id=next(_ids))
+    await update_setting(db, key="subscription.required", value=True, actor_id=admin.id)
+    await update_setting(db, key="subscription.channels", value="@alfa @beta @gamma", actor_id=admin.id)
+    await db.commit()
+
+    bot = Bot(
+        token=BOT_TOKEN,
+        session=ChannelTelegram(subscribed=set()),
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    first = next(_ids)
+    subscription.forget()
+    missing = await subscription.missing(db, first, bot=bot, fresh=True)
+    assert [channel.chat_id for channel in missing] == ["@alfa", "@beta", "@gamma"]  # all three, in order
+    assert sum(1 for r in bot.session.requests if isinstance(r, GetChatMember)) == 3  # each was asked
+
+    # A member in every channel passes with no missing list.
+    joined = next(_ids)
+    bot.session.subscribed.add(joined)
+    subscription.forget(joined)
+    assert await subscription.missing(db, joined, bot=bot, fresh=True) == []
+
+    # An unreachable channel (bot not admin / Telegram down) lets the member through.
+    broken_bot = Bot(
+        token=BOT_TOKEN,
+        session=ChannelTelegram(subscribed=set(), broken=True),
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    subscription.forget()
+    assert await subscription.missing(db, next(_ids), bot=broken_bot, fresh=True) == []
+
     member = await create_user(db, telegram_id=next(_ids))
     await db.commit()
     broken = _gate_harness(member.telegram_id, ChannelTelegram(subscribed=set(), broken=True))
