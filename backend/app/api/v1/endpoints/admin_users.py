@@ -87,6 +87,20 @@ async def member_overview(user_id: uuid.UUID, _: Viewer, db: DbSession) -> dict:
     return await overview_service.overview(db, user_id)
 
 
+@router.get("/{user_id}/score-history", summary="Why each point was given to this member")
+async def member_score_history(
+    user_id: uuid.UUID,
+    _: Viewer,
+    db: DbSession,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict:
+    from app.services import member_overview as overview_service
+
+    await user_service.get_user(db, user_id)  # 404 for an unknown member
+    return await overview_service.score_history(db, user_id, limit=limit, offset=offset)
+
+
 @router.patch("/{user_id}", response_model=AdminUserDetailOut, summary="Correct a member's data")
 async def update_user(
     user_id: uuid.UUID, payload: AdminUserUpdateIn, current: Manager, db: DbSession
