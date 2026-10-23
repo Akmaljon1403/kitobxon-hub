@@ -472,3 +472,46 @@ async def test_member_overview_aggregates_everything(client: httpx.AsyncClient, 
 
     missing = await client.get(f"/api/v1/admin/users/{uuid.uuid4()}/overview", headers=admin_headers(viewer))
     assert missing.status_code == 404
+
+
+async def test_member_score_history_shows_the_reason_for_each_point(
+    client: httpx.AsyncClient, db: AsyncSession
+) -> None:
+    """The admin can see why each point was given to a member (amount, category, reason, who)."""
+    from app.services.scoring import award_points
+
+    viewer = await _admin(db, Perm.USER_VIEW)
+    member = await create_user(db)
+    await db.commit()
+    await award_points(
+        db,
+        user_id=member.id,
+        amount=10,
+        category=ScoreCategory.CAMPAIGN,
+        idempotency_key=f"sh:1:{member.id}",
+        reason="A'zolar fikrlari: fikr",
+    )
+    await award_points(
+        db,
+        user_id=member.id,
+        amount=-3,
+        category=ScoreCategory.MANUAL,
+        idempotency_key=f"sh:2:{member.id}",
+        reason="Admin qo'lda tuzatdi",
+        created_by=viewer.id,
+    )
+    await db.commit()
+
+    res = await client.get(f"/api/v1/admin/users/{member.id}/score-history", headers=admin_headers(viewer))
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["total"] == 2
+    reasons = {item["reason"] for item in body["items"]}
+    assert {"A'zolar fikrlari: fikr", "Admin qo'lda tuzatdi"} <= reasons
+    manual = next(item for item in body["items"] if item["category"] == "MANUAL")
+    assert manual["amount"] == -3
+    assert manual["category_label"] == "Qo'lda tuzatish"
+    assert manual["by"]  # the admin who made the correction is named
+
+    missing = await client.get(f"/api/v1/admin/users/{uuid.uuid4()}/score-history", headers=admin_headers(viewer))
+    assert missing.status_code == 404

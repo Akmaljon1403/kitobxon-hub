@@ -208,6 +208,59 @@ function MemberOverview({ userId }: { userId: string }) {
   )
 }
 
+interface ScoreHistoryItem {
+  id: string
+  amount: number
+  category: string
+  category_label: string
+  reason: string | null
+  created_at: string
+  by: string | null
+}
+
+/** «🧾 Ball tarixi»: har bir ball a'zoga nima uchun berilgani — sana, sabab, miqdor, kim bergani. */
+function MemberScoreHistory({ userId }: { userId: string }) {
+  const { api } = useSession()
+  const { state } = useAsync(
+    (signal) =>
+      api<{ total: number; items: ScoreHistoryItem[] }>(`/api/v1/admin/users/${userId}/score-history?limit=100`, {
+        signal,
+      }),
+    [userId],
+  )
+  if (state.status !== 'success') return null
+  const { total, items } = state.data
+  return (
+    <details className="rounded-lg border border-app-border p-3">
+      <summary className="cursor-pointer text-sm font-medium">🧾 Ball tarixi — har bir ball nega berilgani ({total})</summary>
+      {items.length === 0 ? (
+        <p className="mt-2 text-xs text-app-hint">Hali ball berilmagan.</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-start justify-between gap-3 border-b border-app-border/60 pb-1.5 text-sm last:border-0"
+            >
+              <div className="min-w-0">
+                <span className="text-app-hint">{formatDate(item.created_at)}</span>{' '}
+                <Badge tone="neutral">{item.category_label}</Badge>
+                {item.reason && <span className="ml-1 break-words text-app-text">— {item.reason}</span>}
+                {item.by && <span className="ml-1 text-xs text-app-hint">({item.by})</span>}
+              </div>
+              <span
+                className={`shrink-0 font-semibold tabular-nums ${item.amount > 0 ? 'text-emerald-600' : 'text-app-danger'}`}
+              >
+                {item.amount > 0 ? `+${item.amount}` : item.amount}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  )
+}
+
 function MemberModal({
   userId,
   faculties,
@@ -305,6 +358,7 @@ function MemberModal({
             <span className="text-xs text-app-hint">Oxirgi faollik: {formatDateTime(state.data.last_seen_at)}</span>
           </div>
           <MemberOverview userId={userId} />
+          <MemberScoreHistory userId={userId} />
           {state.data.status === 'LEFT' && (
             <p className="rounded-lg bg-app-surface px-3 py-2 text-sm">
               🚪 {daysSince(state.data.left_at)} kun oldin klubdan chiqqan ({LEFT_REASONS[state.data.left_reason ?? ''] ?? '—'}). Ma'lumotlari{' '}

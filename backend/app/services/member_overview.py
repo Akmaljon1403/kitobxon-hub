@@ -19,16 +19,29 @@ from app.models import (
     BookRead,
     ReadingLog,
     SavedQuote,
+    ScoreTransaction,
     SupportTicket,
     TestAttempt,
     User,
     UserAchievement,
 )
-from app.models.enums import AttemptStatus, AttendanceStatus, ReadingStatus, SupportTicketStatus
+from app.models.enums import AttemptStatus, AttendanceStatus, ReadingStatus, ScoreCategory, SupportTicketStatus
 from app.services import premium
 from app.services import ranking as ranking_service
 
 FINISHED = (AttemptStatus.SUBMITTED, AttemptStatus.EXPIRED)
+
+# Human labels for the point-history view, so an admin sees why each point was given.
+CATEGORY_LABELS: dict[ScoreCategory, str] = {
+    ScoreCategory.ATTENDANCE: "Davomat",
+    ScoreCategory.TEST: "Test",
+    ScoreCategory.TEST_RANK_BONUS: "Test — o'rin bonusi",
+    ScoreCategory.BOOK_COMPLETION: "Kitob o'qildi",
+    ScoreCategory.CAMPAIGN: "Faollik / fikr",
+    ScoreCategory.ACHIEVEMENT: "Yutuq",
+    ScoreCategory.MANUAL: "Qo'lda tuzatish",
+    ScoreCategory.REVERSAL: "Bekor qilindi",
+}
 
 
 async def _count(session: AsyncSession, condition: Any, model: Any) -> int:
@@ -72,3 +85,46 @@ async def overview(session: AsyncSession, user_id: uuid.UUID) -> dict[str, Any]:
         },
         "premium_until": await premium.premium_until(session, user_id),
     }
+
+
+async def score_history(
+    session: AsyncSession, user_id: uuid.UUID, *, limit: int = 50, offset: int = 0
+) -> dict[str, Any]:
+    """Every point change for one member, newest first, with the reason it was given (Q: «har bir
+    ball nega berilgani»). Manual corrections carry a written reason; the rest show the activity
+    (davomat, test, kitob, fikr …) and, when a person made the change, who made it."""
+    total = int(
+        await session.scalar(
+            select(func.count()).select_from(ScoreTransaction).where(ScoreTransaction.user_id == user_id)
+        )
+        or 0
+    )
+    rows = list(
+        await session.scalars(
+            select(ScoreTransaction)
+            .where(ScoreTransaction.user_id == user_id)
+            .order_by(ScoreTransaction.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
+    actor_ids = {row.created_by for row in rows if row.created_by is not None}
+    names: dict[uuid.UUID, str] = {}
+    if actor_ids:
+        for actor_id, first, last in (
+            await session.execute(select(User.id, User.first_name, User.last_name).where(User.id.in_(actor_ids)))
+        ).all():
+            names[actor_id] = f"{last} {first}".strip()
+    items = [
+        {
+            "id": row.id,
+            "amount": row.amount,
+            "category": row.category.value,
+            "category_label": CATEGORY_LABELS.get(row.category, row.category.value),
+            "reason": row.reason,
+            "created_at": row.created_at,
+            "by": names.get(row.created_by) if row.created_by is not None else None,
+        }
+        for row in rows
+    ]
+    return {"total": total, "items": items}
