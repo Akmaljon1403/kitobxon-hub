@@ -49,6 +49,7 @@ def _test_out(test: Test, attempts: list[TestAttempt], question_count: int, book
     return TestOut(
         id=test.id,
         title=test.title,
+        kind=test.kind,
         description=test.description,
         book_id=test.book_id,
         book_title=book_title,
@@ -73,7 +74,8 @@ def _test_out(test: Test, attempts: list[TestAttempt], question_count: int, book
         ],
         best_score=max((a.score or 0 for a in finished), default=None),
         in_progress=in_progress,
-        can_start=current_state == "OPEN" and (in_progress or len(attempts) < test.attempts_allowed),
+        can_start=current_state == "OPEN"
+        and (in_progress or test.kind == "PERMANENT" or len(attempts) < test.attempts_allowed),
         review_available=current_state == "CLOSED" and bool(finished),
     )
 
@@ -177,7 +179,8 @@ async def submit(
         question_count=len(attempt.question_order),
         points_awarded=result.points_awarded,
         submitted_at=attempt.submitted_at,
-        attempts_left=max(0, test.attempts_allowed - used),
+        # «Doimiy» tests have no attempt limit; 999 stands for "unlimited" so the apps keep offering a retry.
+        attempts_left=999 if test.kind == "PERMANENT" else max(0, test.attempts_allowed - used),
         review_available_at=test.ends_at,
     )
 

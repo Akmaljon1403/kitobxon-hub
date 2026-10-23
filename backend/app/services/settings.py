@@ -87,7 +87,15 @@ BOT_DESCRIPTION = (
 SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     # ---- Score rules (spec §28) ----
     SettingDefinition("score.attendance_points", 30, Points, "Tadbirda tasdiqlangan qatnashuv uchun ball"),
-    SettingDefinition("score.test_max_points", 20, Annotated[int, Field(ge=1, le=1000)], "Test uchun maksimal ball"),
+    SettingDefinition(
+        "score.test_max_points", 20, Annotated[int, Field(ge=1, le=1000)], "Tadbir testi uchun maksimal ball"
+    ),
+    SettingDefinition(
+        "tests.permanent_perfect_points",
+        3,
+        Annotated[int, Field(ge=1, le=100)],
+        "Doimiy testni birinchi marta 100% yechgani uchun ball (faqat bir marta)",
+    ),
     SettingDefinition(
         "score.test_rank_bonus",
         [10, 5, 3],

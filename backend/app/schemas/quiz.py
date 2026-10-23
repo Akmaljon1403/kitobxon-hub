@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, Field, model_validator
 
-from app.models.enums import AttemptStatus, QuestionType, TestActivityType, TestStatus
+from app.models.enums import AttemptStatus, QuestionType, TestActivityType, TestKind, TestStatus
 
 TestState = Literal["DRAFT", "UPCOMING", "OPEN", "CLOSED"]
 
@@ -15,10 +15,14 @@ TestState = Literal["DRAFT", "UPCOMING", "OPEN", "CLOSED"]
 
 class TestCreateIn(BaseModel):
     title: str = Field(min_length=2, max_length=255)
+    # «Tadbir» (event test) or «Doimiy» (permanent). A permanent test is always open, has unlimited
+    # attempts and gives points only for the first perfect result, so its window and score are set
+    # by the server — starts_at / ends_at / max_score are ignored for it.
+    kind: Literal["EVENT", "PERMANENT"] = "EVENT"
     description: str | None = Field(default=None, max_length=5000)
     book_id: uuid.UUID | None = None
-    starts_at: AwareDatetime
-    ends_at: AwareDatetime
+    starts_at: AwareDatetime | None = None
+    ends_at: AwareDatetime | None = None
     duration_minutes: int = Field(default=15, ge=1, le=600)
     max_score: int | None = Field(default=None, ge=1, le=1000, description="Empty = value from settings")
     passing_score: int = Field(default=0, ge=0, le=1000)
@@ -31,8 +35,11 @@ class TestCreateIn(BaseModel):
 
     @model_validator(mode="after")
     def _times(self) -> TestCreateIn:
-        if self.ends_at <= self.starts_at:
-            raise ValueError("ends_at must be after starts_at")
+        if self.kind == "EVENT":
+            if self.starts_at is None or self.ends_at is None:
+                raise ValueError("starts_at and ends_at are required for an event test")
+            if self.ends_at <= self.starts_at:
+                raise ValueError("ends_at must be after starts_at")
         return self
 
 
@@ -127,6 +134,7 @@ class ImageKeyOut(BaseModel):
 class TestAdminOut(BaseModel):
     id: uuid.UUID
     title: str
+    kind: TestKind = TestKind.EVENT
     description: str | None
     book_id: uuid.UUID | None
     book_title: str | None
@@ -228,6 +236,7 @@ class MyAttemptOut(BaseModel):
 class TestOut(BaseModel):
     id: uuid.UUID
     title: str
+    kind: TestKind = TestKind.EVENT
     description: str | None
     book_id: uuid.UUID | None
     book_title: str | None

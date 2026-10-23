@@ -27,7 +27,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreatedAtMixin, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
-from app.models.enums import AttemptStatus, QuestionType, TestActivityType, TestStatus
+from app.models.enums import AttemptStatus, QuestionType, TestActivityType, TestKind, TestStatus
 
 
 class Test(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
@@ -48,6 +48,11 @@ class Test(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
     )
 
     title: Mapped[str] = mapped_column(String(255))
+    # «Tadbir» (event test, points set by the admin) or «Doimiy» (always open, unlimited attempts,
+    # points only the first time a member scores 100%).
+    kind: Mapped[TestKind] = mapped_column(
+        enum_column(TestKind), default=TestKind.EVENT, server_default=TestKind.EVENT.value
+    )
     description: Mapped[str | None] = mapped_column(Text)
     book_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("books.id", ondelete="SET NULL"))
     event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("events.id", ondelete="SET NULL"))

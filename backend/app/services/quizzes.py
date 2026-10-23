@@ -51,6 +51,7 @@ from app.models.enums import (
     ReadingVerification,
     ScoreCategory,
     TestActivityType,
+    TestKind,
     TestStatus,
 )
 from app.services import achievements, announcements
@@ -79,6 +80,7 @@ NEUTRAL_SIGNALS = (
 )
 _TEST_FIELDS = (
     "title",
+    "kind",
     "description",
     "book_id",
     "starts_at",
@@ -167,7 +169,14 @@ def _pick(test: Test, bank: list[uuid.UUID], seen: set[uuid.UUID]) -> list[uuid.
 
 
 def ledger_value(test: Test, score: int | None) -> int:
-    """Points an attempt is worth in the ledger: nothing below the passing score."""
+    """Points an attempt is worth in the ledger.
+
+    Event tests («Tadbir»): the scaled score once it reaches the passing score, nothing below.
+    Permanent tests («Doimiy»): 0 here — their only points are a one-time bonus for the first
+    perfect result, awarded in ``_grade`` from the raw answers (see ``_award_permanent_perfect``).
+    """
+    if test.kind == TestKind.PERMANENT:
+        return 0  # permanent tests pay only a one-time perfect bonus, awarded in _grade
     if not score or score < test.passing_score:
         return 0
     return score
@@ -260,7 +269,18 @@ async def _ensure_book(session: AsyncSession, book_id: uuid.UUID) -> None:
 
 async def create_test(session: AsyncSession, *, actor_id: uuid.UUID, data: dict[str, Any]) -> Test:
     values = {key: value for key, value in data.items() if key in _TEST_FIELDS and value is not None}
-    values.setdefault("max_score", await get_setting(session, "score.test_max_points"))
+    kind = TestKind(values.get("kind", TestKind.EVENT))
+    values["kind"] = kind
+    if kind == TestKind.PERMANENT:
+        # «Doimiy»: always open (a perpetual window), no scored window and no deadline race; its
+        # only points are a one-time bonus for the first perfect result (max_score from settings).
+        now = _now()
+        values["starts_at"] = values.get("starts_at") or now
+        values["ends_at"] = now + timedelta(days=365 * 100)
+        values["max_score"] = int(await get_setting(session, "tests.permanent_perfect_points"))
+        values["passing_score"] = 0
+    else:
+        values.setdefault("max_score", await get_setting(session, "score.test_max_points"))
     if values.get("book_id"):
         await _ensure_book(session, values["book_id"])
     test = Test(**values, season_id=await current_season_id(session), created_by=actor_id, status=TestStatus.DRAFT)
@@ -574,7 +594,10 @@ async def _grade(session: AsyncSession, test: Test, attempt: TestAttempt, status
     attempt.correct_count = correct_count
     attempt.score = scale(raw, raw_max, test.max_score)
     await session.flush()
-    awarded = await _award_best_attempt_delta(session, test, attempt)
+    if test.kind == TestKind.PERMANENT:
+        awarded = await _award_permanent_perfect(session, test, attempt)
+    else:
+        awarded = await _award_best_attempt_delta(session, test, attempt)
     if test.book_id and passed(test, attempt.score):
         await _verify_book(session, test, attempt.user_id)
         await session.flush()
@@ -605,6 +628,24 @@ async def _award_best_attempt_delta(session: AsyncSession, test: Test, attempt: 
         source_id=test.id,
     )
     return delta if created else 0
+
+
+async def _award_permanent_perfect(session: AsyncSession, test: Test, attempt: TestAttempt) -> int:
+    """«Doimiy test»: a flat bonus (``test.max_score``) the first time a member answers everything
+    correctly. The idempotency key is per member + test, so repeating a perfect result never pays twice."""
+    if not attempt.raw_max or attempt.raw_score != attempt.raw_max or test.max_score <= 0:
+        return 0
+    created = await award_points(
+        session,
+        user_id=attempt.user_id,
+        amount=test.max_score,
+        category=ScoreCategory.TEST,
+        idempotency_key=f"test-perfect:{test.id}:{attempt.user_id}",
+        source_type="TEST",
+        source_id=test.id,
+        reason="Doimiy test — 100% (birinchi marta)",
+    )
+    return test.max_score if created else 0
 
 
 async def _verify_book(session: AsyncSession, test: Test, user_id: uuid.UUID) -> None:
@@ -872,7 +913,8 @@ async def start_attempt(session: AsyncSession, *, user: User, test_id: uuid.UUID
         .select_from(TestAttempt)
         .where(TestAttempt.test_id == test.id, TestAttempt.user_id == user.id)
     )
-    if used >= test.attempts_allowed:
+    if test.kind != TestKind.PERMANENT and used >= test.attempts_allowed:
+        # «Doimiy» tests have no attempt limit; event tests keep theirs.
         raise ConflictError("NO_ATTEMPTS_LEFT", "Bu test uchun urinishlaringiz tugagan.")
     questions = await load_questions(session, test.id)
     if not questions:

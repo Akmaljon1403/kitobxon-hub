@@ -48,6 +48,7 @@ async def _tests_out(db, tests: list[Test]) -> list[TestAdminOut]:
         TestAdminOut(
             id=test.id,
             title=test.title,
+            kind=test.kind,
             description=test.description,
             book_id=test.book_id,
             book_title=titles.get(test.book_id) if test.book_id else None,
