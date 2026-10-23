@@ -89,6 +89,13 @@ class AttendanceStatus(StrEnum):
     PENDING = "PENDING"  # added by an administrator, waits for the super administrator's approval
 
 
+class TestKind(StrEnum):
+    __test__ = False  # not a pytest test class
+
+    EVENT = "EVENT"  # «Tadbir testi»: tied to an event, points set by the admin, a scored window
+    PERMANENT = "PERMANENT"  # «Doimiy test»: always open, unlimited attempts, points only for the first 100%
+
+
 class TestStatus(StrEnum):
     __test__ = False  # not a pytest test class
 

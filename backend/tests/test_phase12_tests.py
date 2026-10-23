@@ -643,3 +643,38 @@ def test_scale_rounds_half_up() -> None:
     assert quiz_service.scale(1, 8, 20) == 3  # 2.5 → 3
     assert quiz_service.scale(0, 5, 20) == 0
     assert quiz_service.scale(5, 5, 20) == 20
+
+
+async def test_permanent_test_is_unlimited_and_pays_only_the_first_perfect(
+    client: httpx.AsyncClient, db: AsyncSession
+) -> None:
+    """Q13 «Doimiy test»: attempts are unlimited (attempts_allowed is ignored) and the only points are
+    a one-time bonus for the first perfect result — nothing for a non-perfect attempt, nothing again."""
+    admin = await _admin(db, *TEST_PERMS)
+    member = await create_user(db)
+    await db.commit()
+    detail = await _make_test(client, admin, kind="PERMANENT")  # attempts_allowed defaults to 1
+    test_id = detail["id"]
+    assert detail["kind"] == "PERMANENT"
+    assert detail["max_score"] == 3  # tests.permanent_perfect_points
+    correct, wrong = _correct(detail), _wrong(detail)
+
+    # Attempt 1 — not perfect → no points, but the attempt is allowed.
+    await _start(client, member, test_id)
+    r1 = await _submit(client, member, test_id, wrong)
+    assert r1.status_code == 200, r1.text
+    assert r1.json()["points_awarded"] == 0
+
+    # Attempt 2 — a permanent test ignores the 1-attempt limit, so this starts and grades fine.
+    await _start(client, member, test_id)
+    r2 = await _submit(client, member, test_id, correct)
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["points_awarded"] == 3  # first perfect → flat bonus
+    assert await _test_points(db, member) == 3
+
+    # Attempt 3 — perfect again → the bonus is not paid twice.
+    await _start(client, member, test_id)
+    r3 = await _submit(client, member, test_id, correct)
+    assert r3.status_code == 200, r3.text
+    assert r3.json()["points_awarded"] == 0
+    assert await _test_points(db, member) == 3
