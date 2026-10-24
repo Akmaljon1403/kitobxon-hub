@@ -18,6 +18,9 @@ Jinja2==3.1.6
 pillow==12.3.0
 boto3==1.43.106
 anthropic==1.11.0
+# HTTP client used directly by the optional Stars provider (automatic Telegram Stars delivery).
+# anthropic ships its own fork (httpx2), so plain httpx must be requested here for runtime.
+httpx==0.28.1
 # Encrypts promo codes at rest (AES-GCM).
 cryptography==50.0.2
 segno==1.6.6
