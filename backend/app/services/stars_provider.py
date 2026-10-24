@@ -60,6 +60,47 @@ def _handle(username: str) -> str:
     return username if username.startswith("@") else f"@{username}"
 
 
+# Statuses a provider uses to say an order did NOT go through. The provider is asynchronous (a buy
+# returns a request id and a status), and many answer HTTP 200 while still reporting a rejection in the
+# body — so a 200 alone must not be read as "delivered".
+_FAILURE_STATUSES = {
+    "failed",
+    "failure",
+    "rejected",
+    "declined",
+    "denied",
+    "refused",
+    "error",
+    "cancelled",
+    "canceled",
+    "insufficient",
+    "insufficient_balance",
+}
+
+
+def _rejection_reason(payload: Any) -> str | None:
+    """A reason when a 2xx body still says the order was refused, else None (accepted/queued/done)."""
+    if not isinstance(payload, dict):
+        return None
+
+    def _reason(default: str) -> str:
+        for key in ("error", "message", "detail", "reason"):
+            value = payload.get(key)
+            if value:
+                return str(value)
+        return default
+
+    for flag in ("success", "ok", "paid", "sent"):
+        if flag in payload and payload[flag] is False:
+            return _reason("provayder rad etdi")
+    status = str(payload.get("status") or payload.get("state") or "").strip().lower()
+    if status in _FAILURE_STATUSES:
+        return _reason(status)
+    if payload.get("error") or payload.get("errors"):
+        return _reason("provayder rad etdi")
+    return None
+
+
 async def send_stars(username: str, amount: int, *, idempotency_key: str) -> dict[str, Any]:
     """Ask the provider to send ``amount`` Stars to ``@username``. Raises StarsProviderError on failure.
 
@@ -79,7 +120,13 @@ async def send_stars(username: str, amount: int, *, idempotency_key: str) -> dic
             raise StarsProviderError(
                 f"provayder rad etdi (HTTP {response.status_code})", status=response.status_code, payload=payload
             )
-        return _safe_json(response) or {}
+        payload = _safe_json(response) or {}
+        # A 2xx is not proof of delivery: the provider may answer 200 while the body reports a rejection.
+        # Treating that as success would tell the member their Stars were sent when they were not.
+        reason = _rejection_reason(payload)
+        if reason is not None:
+            raise StarsProviderError(reason, status=response.status_code, payload=payload)
+        return payload
 
 
 async def balance() -> dict[str, Any]:
