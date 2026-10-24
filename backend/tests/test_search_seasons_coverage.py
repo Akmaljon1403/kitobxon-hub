@@ -20,7 +20,7 @@ from tests.helpers import admin_headers, grant_permissions, grant_role
 
 
 async def test_search_finds_books_events_tests_rewards_and_numbers(client: httpx.AsyncClient, db: AsyncSession) -> None:
-    member = await create_user(db, first_name="Dilshod", last_name="Rahimov", phone="998901234567")
+    await create_user(db, first_name="Dilshod", last_name="Rahimov", phone="998901234567")
     await create_book(db, title="Alkimyogar", author="Paulo Koelo")
     await create_event(db, title="Bahorgi kitob uchrashuvi")
     await create_test(db, title="Biologiya yakuniy testi")
