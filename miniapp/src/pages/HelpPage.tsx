@@ -1,13 +1,12 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
-import { useBackButton } from '../hooks/useBackButton'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { ApiError, apiRequest } from '../services/api'
 import { useAuth } from '../store/auth'
 import { formatDate } from '../utils/format'
-import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
 
 interface FaqTopic {
@@ -26,8 +25,7 @@ interface SupportMessage {
 /** «Yordam»: answers to the usual questions, and a conversation with the club (the answer also comes in the bot). */
 export function HelpPage() {
   const { api } = useAuth()
-  const goBack = useCallback(() => navigate('/profile'), [])
-  useBackButton(goBack)
+  useHomeBackButton()
   const faq = useAsync((signal) => apiRequest<FaqTopic[]>('/api/v1/meta/faq', { signal }))
   const thread = useAsync((signal) => api<SupportMessage[]>('/api/v1/me/support', { signal }))
   const [query, setQuery] = useState('')

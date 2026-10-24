@@ -6,6 +6,7 @@ import { Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { FacultyRanking, Ranking, RankingRow } from '../types/api'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 
 type Period = 'week' | 'month' | 'all'
@@ -162,6 +163,7 @@ function FacultyBoard({ period }: { period: Period }) {
 }
 
 export function RankingPage() {
+  useHomeBackButton()
   const [period, setPeriod] = useState<Period>('week')
   const [scope, setScope] = useState<Scope>('all')
   // This week's club-wide ranking is free; the other tabs are the «ranking_full» feature.

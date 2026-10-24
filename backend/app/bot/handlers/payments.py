@@ -458,7 +458,12 @@ async def card_receipt(message: Message, state: FSMContext, db: AsyncSession, me
         await message.answer(exc.message)
         return
     await state.clear()
-    await message.answer(texts.CARD_RECEIPT_OK)
+    if data.get("stars"):
+        await message.answer(texts.CARD_RECEIPT_OK_STARS)
+    elif data.get("amount_uzs"):
+        await message.answer(texts.CARD_RECEIPT_OK_DONATION)
+    else:
+        await message.answer(texts.CARD_RECEIPT_OK)
 
 
 @router.message(StateFilter(CardReceipt.waiting), F.text, ~F.text.startswith("/"), ~F.text.in_(keyboards.MENU_BUTTONS))

@@ -12,6 +12,9 @@ from pydantic import BaseModel, Field
 from app.api.deps import CurrentUserDep, DbSession
 from app.models import Faculty, UserNotificationSettings
 from app.models.enums import FeatureMode
+from app.schemas.book import BookOut
+from app.schemas.event import EventOut, LiveAttendanceOut
+from app.schemas.quiz import TestOut
 from app.schemas.user import (
     FacultyOut,
     MemberContestOut,
@@ -73,6 +76,34 @@ async def _me(current, db) -> MeOut:
 @router.get("", response_model=MeOut, summary="My profile")
 async def get_me(current: CurrentUserDep, db: DbSession) -> MeOut:
     return await _me(current, db)
+
+
+class HomeOut(BaseModel):
+    """What the Mini App home screen shows, gathered in a single request so it opens with one round
+    trip instead of four. The points badge stays its own call (`/me/ranking`) because it is feature-gated."""
+
+    book: BookOut | None = None  # the club's active book
+    event: EventOut | None = None  # the next upcoming event
+    test: TestOut | None = None  # an open test the member can still take
+    attendance: LiveAttendanceOut | None = None  # an event whose check-in is open right now
+
+
+@router.get("/home", response_model=HomeOut, summary="The home screen's data in one request")
+async def home(current: CurrentUserDep, db: DbSession) -> HomeOut:
+    # Reuse the very same member endpoints the home used to call separately — one HTTP round trip now.
+    from app.api.v1.endpoints.books import list_books
+    from app.api.v1.endpoints.events import list_events, open_attendance
+    from app.api.v1.endpoints.quizzes import list_tests
+
+    books = await list_books(current, db, limit=3, offset=0)
+    book = next((item for item in books.items if item.status == "ACTIVE"), None)
+    events = await list_events(current, db, scope="upcoming", limit=1, offset=0)
+    event = events.items[0] if events.items else None
+    tests = await list_tests(current, db)
+    test = next((item for item in tests if item.state == "OPEN" and (item.in_progress or not item.attempts)), None)
+    attendance = await open_attendance(current, db)
+    live = next((item for item in attendance if not item.checked_in), None)
+    return HomeOut(book=book, event=event, test=test, attendance=live)
 
 
 @router.get("/subscription", response_model=SubscriptionOut, summary="Am I subscribed to the required channels?")

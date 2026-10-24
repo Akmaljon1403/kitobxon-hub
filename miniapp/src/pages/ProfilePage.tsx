@@ -12,6 +12,7 @@ import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
 import type { Faculty, Me, NotificationSettings } from '../types/api'
 import { formatDate } from '../utils/format'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 import { BenefitCard } from '../components/BenefitCard'
 import { haptic } from '../utils/telegram'
@@ -148,6 +149,7 @@ function NotificationsCard() {
 }
 
 export function ProfilePage() {
+  useHomeBackButton()
   const { me } = useAuth()
   const [editing, setEditing] = useState(false)
   if (!me) return null

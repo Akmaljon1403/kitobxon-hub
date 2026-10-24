@@ -5,7 +5,7 @@ import { ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
-import type { Book, ClubEvent, ClubTest, MyRanking, Page } from '../types/api'
+import type { Book, ClubEvent, ClubTest, MyRanking } from '../types/api'
 import { EventCard } from './EventsPage'
 import { daysUntil, formatDate, formatEventDate } from '../utils/format'
 import { navigate } from '../utils/router'
@@ -41,24 +41,26 @@ function deadlineText(deadline: string | null): string | null {
   return `${days} kun qoldi`
 }
 
+interface HomeData {
+  book: Book | null
+  event: ClubEvent | null
+  test: ClubTest | null
+  attendance: { event_id: string; title: string; checked_in: boolean } | null
+}
+
 export function HomePage() {
   const { me, api } = useAuth()
-  const { state, reload } = useAsync((signal) => api<Page<Book>>('/api/v1/books?limit=3', { signal }))
-  const events = useAsync((signal) => api<Page<ClubEvent>>('/api/v1/events?scope=upcoming&limit=1', { signal }))
+  // One request for the whole home (active book, next event, open test, live check-in). The points badge
+  // stays its own call because it is feature-gated.
+  const { state, reload } = useAsync((signal) => api<HomeData>('/api/v1/me/home', { signal }))
   const ranking = useAsync((signal) => api<MyRanking>('/api/v1/me/ranking', { signal }))
-  const tests = useAsync((signal) => api<ClubTest[]>('/api/v1/tests', { signal }))
-  const attendance = useAsync((signal) =>
-    api<{ event_id: string; title: string; checked_in: boolean }[]>('/api/v1/attendance/open', { signal }),
-  )
-  const liveAttendance =
-    attendance.state.status === 'success' ? attendance.state.data.find((item) => !item.checked_in) : undefined
-  const openTest =
-    tests.state.status === 'success'
-      ? tests.state.data.find((test) => test.state === 'OPEN' && (test.in_progress || test.attempts.length === 0))
-      : undefined
   if (!me) return null
 
-  const current = state.status === 'success' ? state.data.items.find((book) => book.status === 'ACTIVE') : undefined
+  const home = state.status === 'success' ? state.data : null
+  const current = home?.book ?? undefined
+  const nextEvent = home?.event ?? undefined
+  const openTest = home?.test ?? undefined
+  const liveAttendance = home?.attendance && !home.attendance.checked_in ? home.attendance : undefined
 
   return (
     <>
@@ -131,10 +133,10 @@ export function HomePage() {
         </button>
       )}
 
-      {events.state.status === 'success' && events.state.data.items[0] && (
+      {nextEvent && (
         <>
           <SectionTitle>Yaqin tadbir</SectionTitle>
-          <EventCard event={events.state.data.items[0]} />
+          <EventCard event={nextEvent} />
         </>
       )}
 

@@ -442,6 +442,16 @@ CARD_RECEIPT_OK = (
     "Odatda bir kun ichida ko'rib chiqiladi — natijasini shu yerda xabar qilamiz, Premium esa o'zi "
     "yoqiladi. Savol bo'lsa: /paysupport. Rahmat!"
 )
+CARD_RECEIPT_OK_STARS = (
+    "⏳ <b>Chekingiz administratorga tekshirish uchun yuborildi.</b>\n\n"
+    "Odatda bir kun ichida ko'rib chiqiladi. Tasdiqlangach ⭐ Stars Telegram hisobingizga yuboriladi "
+    "va shu yerda xabar beramiz. Savol bo'lsa: /paysupport. Rahmat!"
+)
+CARD_RECEIPT_OK_DONATION = (
+    "⏳ <b>Chekingiz administratorga tekshirish uchun yuborildi.</b>\n\n"
+    "Odatda bir kun ichida ko'rib chiqiladi — natijasini shu yerda xabar qilamiz. Hissangiz uchun "
+    "katta rahmat! Savol bo'lsa: /paysupport."
+)
 CARD_OFF = "💳 Karta orqali to'lov hozircha yoqilmagan."
 
 # ---- Card payments: the super admin's side ----
