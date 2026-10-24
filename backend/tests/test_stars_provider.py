@@ -66,6 +66,48 @@ async def test_send_stars_raises_on_http_error(monkeypatch: pytest.MonkeyPatch) 
     assert excinfo.value.status == 402
 
 
+async def test_send_stars_raises_on_a_200_rejection_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The provider answers HTTP 200 but the body says the order was refused — not a delivery.
+    client = httpx.AsyncClient(
+        base_url="https://p.test",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"status": "rejected", "error": "to'lov rad etildi"})
+        ),
+    )
+    monkeypatch.setattr(stars_provider, "_client", lambda: client)
+    with pytest.raises(stars_provider.StarsProviderError) as excinfo:
+        await stars_provider.send_stars("durov", 50, idempotency_key="stars:3")
+    assert "rad etildi" in str(excinfo.value)
+
+
+async def test_send_stars_raises_when_body_is_not_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = httpx.AsyncClient(
+        base_url="https://p.test",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"ok": False, "message": "balans yetarli emas"})
+        ),
+    )
+    monkeypatch.setattr(stars_provider, "_client", lambda: client)
+    with pytest.raises(stars_provider.StarsProviderError) as excinfo:
+        await stars_provider.send_stars("durov", 50, idempotency_key="stars:4")
+    assert "balans yetarli emas" in str(excinfo.value)
+
+
+async def test_send_stars_accepts_a_queued_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    # "queued"/"pending" is acceptance, not a rejection — it must not raise.
+    client = httpx.AsyncClient(
+        base_url="https://p.test",
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"request_id": "r9", "status": "queued"})
+        ),
+    )
+    monkeypatch.setattr(stars_provider, "_client", lambda: client)
+    assert await stars_provider.send_stars("durov", 50, idempotency_key="stars:5") == {
+        "request_id": "r9",
+        "status": "queued",
+    }
+
+
 async def test_balance_parses(monkeypatch: pytest.MonkeyPatch) -> None:
     client = httpx.AsyncClient(
         base_url="https://p.test",
