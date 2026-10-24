@@ -6,6 +6,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { ClubEvent, Page } from '../types/api'
 import { formatEventDate, formatTime } from '../utils/format'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 
 export function EventBadges({ event }: { event: ClubEvent }) {
@@ -47,6 +48,7 @@ export function EventCard({ event }: { event: ClubEvent }) {
 }
 
 export function EventsPage() {
+  useHomeBackButton()
   const { api } = useAuth()
   const [scope, setScope] = useState<'upcoming' | 'past'>('upcoming')
   const { state, reload } = useAsync(

@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { ClubTest } from '../types/api'
 import { formatEventDate } from '../utils/format'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 
 export function TestStateBadge({ test }: { test: ClubTest }) {
@@ -64,6 +65,7 @@ function Section({ title, hint, tests }: { title: string; hint: string; tests: C
 }
 
 export function TestsPage() {
+  useHomeBackButton()
   const { api } = useAuth()
   const { state, reload } = useAsync((signal) => api<ClubTest[]>('/api/v1/tests', { signal }))
 

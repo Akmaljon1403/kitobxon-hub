@@ -44,6 +44,26 @@ async def test_public_faculty_list(client: httpx.AsyncClient, db: AsyncSession) 
     assert [item["name"] for item in response.json()] == ["Pediatriya"]
 
 
+async def test_home_endpoint_returns_the_active_book_in_one_request(
+    client: httpx.AsyncClient, db: AsyncSession
+) -> None:
+    from app.models.enums import BookStatus
+    from tests.factories import create_book
+
+    await create_book(db, title="Boburnoma", status=BookStatus.DRAFT)
+    active = await create_book(db, title="O'tkan kunlar", status=BookStatus.ACTIVE)
+    member = await create_user(db)
+    await db.commit()
+
+    response = await client.get("/api/v1/me/home", headers=member_headers(member))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["book"] is not None and body["book"]["id"] == str(active.id)
+    assert body["book"]["title"] == "O'tkan kunlar"
+    # No upcoming event, open test or live check-in in this fresh club.
+    assert body["event"] is None and body["test"] is None and body["attendance"] is None
+
+
 async def test_member_updates_own_study_details(client: httpx.AsyncClient, db: AsyncSession) -> None:
     faculty = await _faculty(db, "Davolash ishi")
     member = await create_user(db, course=1, group_name="101")

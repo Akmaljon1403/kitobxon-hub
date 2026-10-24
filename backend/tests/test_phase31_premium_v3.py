@@ -412,7 +412,7 @@ async def test_stars_bought_by_card_are_gifted_by_the_admin(client: httpx.AsyncC
     await student.press("card:stars:100")
     assert "100 Telegram Stars" in student.last_text() and "23 000 so'm" in student.last_text()
     await student.send_photo("receipt")
-    assert student.last_text() == texts.CARD_RECEIPT_OK
+    assert student.last_text() == texts.CARD_RECEIPT_OK_STARS
     payment = await db.scalar(select(CardPayment).where(CardPayment.user_id == member_id))
     assert payment.kind == PaymentKind.STARS and payment.stars == 100 and payment.amount_uzs == 23000
     payment_id = payment.id

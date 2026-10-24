@@ -238,7 +238,7 @@ async def test_stars_are_sent_automatically_when_a_provider_is_connected(
             Notification.user_id == club["member"].id, Notification.dedup_key.like("%:delivered")
         )
     )
-    assert told is not None and "avtomatik yuborildi" in told
+    assert told is not None and "hisobingizga yuborildi" in told
     assert await _orders_for(db, club["sender"]) == []  # no manual order was raised
     listing = (await client.get("/api/v1/admin/stars-orders?state=sent", headers=admin_headers(club["sender"]))).json()
     assert listing["auto"] is True and listing["items"][0]["delivered_by"] is None

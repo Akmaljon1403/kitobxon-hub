@@ -4,6 +4,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { MemberAchievement } from '../types/api'
 import { formatDate } from '../utils/format'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 
 function Badge({ item }: { item: MemberAchievement }) {
@@ -36,6 +37,7 @@ function Badge({ item }: { item: MemberAchievement }) {
 }
 
 export function AchievementsPage() {
+  useHomeBackButton()
   const { api } = useAuth()
   const { state, reload } = useAsync((signal) => api<MemberAchievement[]>('/api/v1/me/achievements', { signal }))
   if (state.status === 'loading') return <LoadingState />

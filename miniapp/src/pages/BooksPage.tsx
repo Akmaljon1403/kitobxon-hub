@@ -5,6 +5,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { Book, Page } from '../types/api'
 import { formatDate } from '../utils/format'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 import { LibrarySwitch } from './ShelfPage'
 
@@ -16,6 +17,7 @@ export function ReadingBadge({ book }: { book: Book }) {
 }
 
 export function BooksPage() {
+  useHomeBackButton()
   const { api, me } = useAuth()
   const { state, reload } = useAsync((signal) => api<Page<Book>>('/api/v1/books?limit=100', { signal }))
 

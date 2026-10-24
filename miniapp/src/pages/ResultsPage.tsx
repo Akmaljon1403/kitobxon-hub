@@ -3,6 +3,7 @@ import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useFeature } from '../components/FeatureGate'
 import { useAuth } from '../store/auth'
+import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 import type { MyRanking, MyScores, ScoreEntry } from '../types/api'
 import { formatDate } from '../utils/format'
@@ -47,6 +48,7 @@ function HistoryItem({ entry }: { entry: ScoreEntry }) {
 }
 
 export function ResultsPage() {
+  useHomeBackButton()
   const statsAccess = useFeature('personal_stats')
   const { api } = useAuth()
   const scores = useAsync((signal) => api<MyScores>('/api/v1/me/scores?limit=100', { signal }))
