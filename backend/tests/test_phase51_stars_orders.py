@@ -209,6 +209,65 @@ async def test_without_a_sender_the_super_admins_get_the_order(
     assert await card_payments.stars_sender_ids(db) == [boss.id]
 
 
+async def test_stars_are_sent_automatically_when_a_provider_is_connected(
+    client: httpx.AsyncClient, db: AsyncSession, telegram: FakeTelegramSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    club = await _club(db)
+    calls: list[tuple[str, int, str]] = []
+
+    async def fake_send(username: str, amount: int, *, idempotency_key: str) -> dict:
+        calls.append((username, amount, idempotency_key))
+        return {"request_id": "req-123"}
+
+    monkeypatch.setattr("app.services.stars_provider.configured", lambda: True)
+    monkeypatch.setattr("app.services.stars_provider.send_stars", fake_send)
+
+    payment_id = await _buy_stars(client, club["member"])  # member @username is "nodir_reads"
+    approved = await client.post(
+        f"/api/v1/admin/premium/card-payments/{payment_id}/approve", headers=admin_headers(club["boss"])
+    )
+    assert approved.status_code == 200
+    # The provider was asked once, for this member, with a stable idempotency key.
+    # (The «@» is added inside the real send_stars; the caller passes the stored username.)
+    assert calls == [("nodir_reads", 100, f"stars:{payment_id}")]
+    payment = await db.get(CardPayment, uuid.UUID(payment_id))
+    await db.refresh(payment)
+    assert payment.delivered_at is not None and payment.delivered_by is None  # delivered by the provider, not an admin
+    told = await db.scalar(
+        select(Notification.text).where(
+            Notification.user_id == club["member"].id, Notification.dedup_key.like("%:delivered")
+        )
+    )
+    assert told is not None and "avtomatik yuborildi" in told
+    assert await _orders_for(db, club["sender"]) == []  # no manual order was raised
+    listing = (await client.get("/api/v1/admin/stars-orders?state=sent", headers=admin_headers(club["sender"]))).json()
+    assert listing["auto"] is True and listing["items"][0]["delivered_by"] is None
+
+
+async def test_stars_fall_back_to_manual_when_the_provider_fails(
+    client: httpx.AsyncClient, db: AsyncSession, telegram: FakeTelegramSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.stars_provider import StarsProviderError
+
+    club = await _club(db)
+
+    async def boom(username: str, amount: int, *, idempotency_key: str) -> dict:
+        raise StarsProviderError("provayder rad etdi")
+
+    monkeypatch.setattr("app.services.stars_provider.configured", lambda: True)
+    monkeypatch.setattr("app.services.stars_provider.send_stars", boom)
+
+    payment_id = await _buy_stars(client, club["member"])
+    approved = await client.post(
+        f"/api/v1/admin/premium/card-payments/{payment_id}/approve", headers=admin_headers(club["boss"])
+    )
+    assert approved.status_code == 200
+    payment = await db.get(CardPayment, uuid.UUID(payment_id))
+    await db.refresh(payment)
+    assert payment.delivered_at is None  # not delivered — it waits for a manual gift
+    assert len(await _orders_for(db, club["sender"])) == 1  # the manual order was raised instead
+
+
 async def test_money_questions_are_answered_by_the_super_admin(db: AsyncSession, telegram: FakeTelegramSession) -> None:
     club = await _club(db)
     ticket = await support.member_message(db, user=club["member"], text="Stars qachon keladi?", topic="payment")

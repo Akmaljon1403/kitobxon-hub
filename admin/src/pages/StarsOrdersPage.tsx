@@ -24,6 +24,7 @@ interface StarsOrders {
   items: StarsOrder[]
   waiting: number
   senders: string
+  auto: boolean
 }
 
 const uzs = (value: number) => `${value.toLocaleString('ru-RU').replace(/,/g, ' ')} so'm`
@@ -69,12 +70,20 @@ export function StarsOrdersPage() {
         subtitle="A'zolar karta orqali sotib olgan Telegram Stars. Bosh admin chekni tasdiqlagach, buyurtma shu yerga va mas'ul adminga botda keladi."
       />
       <Card className="flex flex-col gap-2 p-4 text-sm">
-        <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          ⚠️ Muhim: bot Telegram Stars'ni o'zi avtomatik sotib ololmaydi va a'zoga yubora olmaydi — Telegram bunga API (imkoniyat)
-          bermaydi. Shuning uchun bu har doim qo'lda bajariladi (atigi bir necha daqiqa). Tizim esa hammasini kuzatib boradi: kim
-          to'ladi, kim tasdiqladi, kim yubordi.
-        </p>
-        <p className="font-semibold">Qanday yuboriladi</p>
+        {state.status === 'success' && state.data.auto ? (
+          <p className="rounded-lg bg-emerald-50 p-2.5 text-xs text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+            ⚡ <b>Avtomatik rejim yoqilgan.</b> Bosh admin chekni tasdiqlagach, Stars provayder orqali a'zoga <b>o'zi
+            yuboriladi</b> — bu ro'yxat odatda bo'sh turadi. Quyidagi qo'lda yuborish faqat avtomatik ishlamay qolganda kerak
+            bo'ladi (masalan a'zoda @username yo'q yoki provayder javob bermadi). Avtomatik rejimni Sozlamalar’da o'chirish mumkin.
+          </p>
+        ) : (
+          <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            ⚠️ Muhim: Stars provayder ulanmagan. Shuning uchun Stars qo'lda yuboriladi (atigi bir necha daqiqa). Tizim esa
+            hammasini kuzatib boradi: kim to'ladi, kim tasdiqladi, kim yubordi. (Provayderni ulash uchun serverda
+            STARS_API_BASE_URL va STARS_API_KEY ni kiriting.)
+          </p>
+        )}
+        <p className="font-semibold">Qo'lda qanday yuboriladi</p>
         <ol className="list-decimal space-y-1 pl-5 text-app-hint">
           <li>
             <a className="text-app-link underline" href="https://fragment.com/stars/buy" target="_blank" rel="noreferrer">
