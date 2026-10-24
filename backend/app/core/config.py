@@ -134,6 +134,12 @@ class Settings(BaseSettings):
     ai_api_key: SecretStr | None = None
     ai_model: str = "claude-opus-5-5"
 
+    # ---- Stars provider (optional): automatic Telegram Stars delivery via a third-party API.
+    # When both are set, a confirmed Stars order is sent automatically to the member's @username;
+    # without them, or on any failure, the order falls back to the manual (admin-gifts-on-Fragment) flow.
+    stars_api_base_url: str | None = None
+    stars_api_key: SecretStr | None = None
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: Any) -> Any:

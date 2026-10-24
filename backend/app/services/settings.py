@@ -250,6 +250,12 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
         Annotated[int, Field(ge=0, le=10_000)],
         "1 ta Stars narxi so'mda (Telegram'da sotib olish narxiga qarab; 0 — sotilmaydi)",
     ),
+    SettingDefinition(
+        "payments.stars_auto_deliver",
+        True,
+        bool,
+        "Stars provayderi ulangan bo'lsa, tasdiqlangan buyurtmani avtomatik yuborish (o'chirilsa — qo'lda yuboriladi)",
+    ),
     # ---- Premium ----
     SettingDefinition(
         "premium.trial_days",

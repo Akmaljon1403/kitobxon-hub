@@ -404,6 +404,47 @@ async def _cancel_stars_order(session: AsyncSession, payment: CardPayment) -> No
     )
 
 
+async def _auto_deliver_stars(session: AsyncSession, payment: CardPayment) -> bool:
+    """Try to deliver a confirmed Stars order through the provider (if one is connected and enabled).
+
+    Returns True when the provider accepted it — the order is then marked delivered and the member is
+    told. On anything missing or wrong (no provider, switched off, no username, or a provider error)
+    returns False, so the caller falls back to the manual admin flow and the member still gets Stars."""
+    from app.services import stars_provider
+
+    if not stars_provider.configured() or not await get_setting(session, "payments.stars_auto_deliver"):
+        return False
+    user = await session.get(User, payment.user_id)
+    if user is None or not user.telegram_username or not payment.stars:
+        return False
+    try:
+        result = await stars_provider.send_stars(
+            user.telegram_username, payment.stars, idempotency_key=f"stars:{payment.id}"
+        )
+    except stars_provider.StarsProviderError as exc:
+        logger.warning("Automatic Stars delivery failed for %s; falling back to manual: %s", payment.id, exc)
+        return False
+    payment.delivered_at = datetime.now(UTC)
+    payment.delivered_by = None  # the provider delivered it, not an admin
+    request_ref = str(result.get("request_id") or result.get("id") or "")[:64]
+    record_audit(
+        session,
+        actor_id=payment.decided_by,
+        action="CARD_STARS_AUTO_DELIVERED",
+        entity_type="card_payment",
+        entity_id=payment.id,
+        after={"stars": payment.stars, "request_id": request_ref or None},
+    )
+    await _member_message(
+        session,
+        payment.user_id,
+        f"⭐ {payment.stars} Stars sizga avtomatik yuborildi! Ularni Telegram → Sozlamalar → Telegram Stars "
+        "bo'limida ko'rasiz. Endi Premium'ni ham bir bosishda olishingiz mumkin. Rahmat!",
+        f"card-payment:{payment.id}:delivered",
+    )
+    return True
+
+
 async def get(session: AsyncSession, payment_id: uuid.UUID) -> CardPayment:
     payment = await session.get(CardPayment, payment_id)
     if payment is None:
@@ -508,19 +549,27 @@ async def approve(
         session, actor_id=actor_id, action="CARD_PAYMENT_APPROVE", entity_type="card_payment", entity_id=payment.id
     )
     await _member_message(session, payment.user_id, message, f"card-payment:{payment.id}:approved:{_stamp(payment)}")
+    auto_sent = False
     if payment.kind == PaymentKind.STARS:
-        await _order_stars(session, payment, actor_id)
+        # When a Stars provider is connected, send automatically; otherwise hand it to an admin to gift.
+        auto_sent = await _auto_deliver_stars(session, payment)
+        if not auto_sent:
+            await _order_stars(session, payment, actor_id)
     from app.services import copies
 
+    def _stars_note() -> str:
+        return "⭐ Avtomatik yuborildi" if auto_sent else f"⭐ Yuborish topshirildi: {await_senders}"
+
+    await_senders = await stars_senders_text(session) if payment.kind == PaymentKind.STARS and not auto_sent else ""
     status = f"✅ <b>Tasdiqlandi</b> — {await _name(session, actor_id)}, {copies.stamp()}"
     if payment.kind == PaymentKind.STARS:
-        status += f"\n⭐ Yuborish topshirildi: {await stars_senders_text(session)}"
+        status += f"\n{_stars_note()}"
     await _settle_card(session, payment, status)
     await session.commit()
     if announce:
         details = [f"Qaror: {await _name(session, actor_id)}"]
         if payment.kind == PaymentKind.STARS:
-            details.append(f"⭐ Yuborish topshirildi: {await stars_senders_text(session)}")
+            details.append(_stars_note())
         await chat_line(session, payment, "✅ <b>Tasdiqlandi</b>", *details)
     return payment
 

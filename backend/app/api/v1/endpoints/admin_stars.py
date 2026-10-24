@@ -42,6 +42,7 @@ class StarsOrdersOut(BaseModel):
     items: list[StarsOrderOut]
     waiting: int
     senders: str  # who receives new orders in the bot
+    auto: bool  # a Stars provider is connected and automatic delivery is on
 
 
 def _full(user: User | None) -> str | None:
@@ -68,6 +69,10 @@ async def list_orders(
     )
     rows = (await db.execute(query)).all()
     waiting = len((await db.execute(waiting_query)).all()) if state != "waiting" else len(rows)
+    from app.services import settings as settings_service
+    from app.services import stars_provider
+
+    auto = stars_provider.configured() and bool(await settings_service.get_setting(db, "payments.stars_auto_deliver"))
     return StarsOrdersOut(
         items=[
             StarsOrderOut(
@@ -86,6 +91,7 @@ async def list_orders(
         ],
         waiting=waiting,
         senders=await card_payments.stars_senders_text(db),
+        auto=auto,
     )
 
 
