@@ -184,7 +184,9 @@ export function TestRunner({
 
   return (
     <div className="fixed inset-0 z-20 flex flex-col overflow-y-auto bg-app-surface">
-      <header className="sticky top-0 z-10 border-b border-app-hint/15 bg-app-bg/95 px-4 py-3 backdrop-blur">
+      {/* A full-screen overlay fixed to the viewport. No ancestor (incl. the page wrapper) may carry a
+          transform, or the browser would reparent this fixed element and break its hit-testing. */}
+      <header className="sticky top-0 z-10 border-b border-[color:var(--hairline)] bg-app-bg/90 px-4 py-3 backdrop-blur-lg">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{attempt.title}</p>
@@ -195,33 +197,37 @@ export function TestRunner({
           <span
             role="timer"
             aria-label="Qolgan vaqt"
-            className={`rounded-xl px-3 py-1.5 font-mono text-lg font-semibold tabular-nums ${
-              lowTime ? 'bg-red-500/15 text-app-danger' : 'bg-app-surface'
+            className={`flex items-center gap-1 rounded-xl px-3 py-1.5 font-mono text-base font-bold tabular-nums transition-colors ${
+              lowTime
+                ? 'animate-pulse bg-app-danger/15 text-app-danger'
+                : 'bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300'
             }`}
           >
             ⏱ {formatClock(remaining)}
           </span>
         </div>
-        <div className="mx-auto mt-2 h-1.5 max-w-lg rounded-full bg-app-surface">
+        <div className="mx-auto mt-2.5 h-1.5 max-w-lg overflow-hidden rounded-full bg-app-surface">
           <div
-            className="h-1.5 rounded-full bg-app-button transition-all"
+            className="h-full rounded-full bg-brand-gradient transition-all duration-300"
             style={{ width: `${((index + 1) / attempt.questions.length) * 100}%` }}
           />
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 p-3">
-        <section className="rounded-2xl bg-app-bg p-4 shadow-sm">
-          <p className="text-xs text-app-hint">
-            {question.type === 'MULTIPLE_CHOICE' ? 'Bir nechta javobni belgilang' : 'Bitta javobni tanlang'} ·{' '}
-            {question.points} ball
-          </p>
-          <h2 className="mt-1 whitespace-pre-line text-[17px] font-semibold leading-snug">{question.text}</h2>
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 p-4">
+        <section className="rounded-2xl border border-[color:var(--hairline)] bg-app-bg p-4 shadow-[var(--shadow-card)]">
+          <div className="flex items-center gap-2 text-xs font-medium text-app-hint">
+            <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+              {question.type === 'MULTIPLE_CHOICE' ? 'Bir nechta javob' : 'Bitta javob'}
+            </span>
+            <span>{question.points} ball</span>
+          </div>
+          <h2 className="mt-2 whitespace-pre-line font-serif text-[19px] font-bold leading-snug">{question.text}</h2>
           {question.has_image && <QuestionImage testId={attempt.test_id} questionId={question.id} />}
         </section>
 
         <div
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-2.5"
           role={question.type === 'SINGLE_CHOICE' ? 'radiogroup' : 'group'}
           aria-label="Javob variantlari"
         >
@@ -234,19 +240,19 @@ export function TestRunner({
                 role={question.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
                 aria-checked={active}
                 onClick={() => void choose(option.id)}
-                className={`flex items-start gap-3 rounded-2xl border-2 bg-app-bg p-3.5 text-left text-[15px] transition-colors ${
-                  active ? 'border-app-button' : 'border-app-hint/15'
+                className={`flex items-center gap-3 rounded-2xl border bg-app-bg p-3.5 text-left text-[15px] shadow-[var(--shadow-card)] transition-[transform,border-color,background-color] active:scale-[0.99] ${
+                  active ? 'border-brand-500 bg-brand-500/5 dark:border-brand-400' : 'border-[color:var(--hairline)]'
                 }`}
               >
                 <span
                   aria-hidden
-                  className={`flex size-7 shrink-0 items-center justify-center text-sm font-semibold ${
+                  className={`grid size-7 shrink-0 place-items-center text-sm font-bold transition-colors ${
                     question.type === 'SINGLE_CHOICE' ? 'rounded-full' : 'rounded-lg'
-                  } ${active ? 'bg-app-button text-app-button-text' : 'bg-app-surface text-app-hint'}`}
+                  } ${active ? 'bg-brand-gradient text-white' : 'bg-app-surface text-app-hint'}`}
                 >
                   {active ? '✓' : String.fromCharCode(65 + optionIndex)}
                 </span>
-                <span className="pt-0.5">{option.text}</span>
+                <span>{option.text}</span>
               </button>
             )
           })}
@@ -262,12 +268,12 @@ export function TestRunner({
                 aria-label={`${i + 1}-savol${done ? ', javob berilgan' : ''}`}
                 aria-current={i === index ? 'step' : undefined}
                 onClick={() => setIndex(i)}
-                className={`size-8 rounded-lg text-xs font-medium tabular-nums ${
+                className={`size-8 rounded-lg text-xs font-semibold tabular-nums transition-colors ${
                   i === index
-                    ? 'bg-app-button text-app-button-text'
+                    ? 'bg-brand-gradient text-white'
                     : done
-                      ? 'bg-app-button/20 text-app-text'
-                      : 'bg-app-bg text-app-hint'
+                      ? 'bg-brand-500/15 text-brand-600 dark:text-brand-300'
+                      : 'bg-app-surface text-app-hint'
                 }`}
               >
                 {i + 1}
@@ -276,7 +282,7 @@ export function TestRunner({
           })}
         </nav>
         {unsaved && (
-          <p className="text-center text-xs text-amber-600">
+          <p className="text-center text-xs text-amber-600 dark:text-amber-400">
             Internet sekin: javob telefoningizda saqlandi va yakunlashda yuboriladi.
           </p>
         )}
@@ -288,7 +294,7 @@ export function TestRunner({
       </main>
 
       <footer
-        className="sticky bottom-0 border-t border-app-hint/15 bg-app-bg/95 p-3 backdrop-blur"
+        className="sticky bottom-0 border-t border-[color:var(--hairline)] bg-app-bg/90 p-3 backdrop-blur-lg"
         style={{ paddingBottom: 'calc(0.75rem + var(--tg-safe-area-inset-bottom, 0px))' }}
       >
         <div className="mx-auto grid max-w-lg grid-cols-2 gap-2">

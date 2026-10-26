@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 
 import { QuestionImage } from '../components/QuestionImage'
 import { ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, SectionTitle } from '../components/ui'
+import { Badge, Button, Card, ProgressRing, SectionTitle, Stat } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -18,17 +18,19 @@ const STATUS_LABELS = { SUBMITTED: 'Topshirildi', EXPIRED: 'Vaqt tugadi', IN_PRO
 
 function ResultCard({ result, test }: { result: AttemptResult; test: ClubTest }) {
   return (
-    <Card className="flex flex-col items-center gap-1 py-6 text-center">
-      <span aria-hidden className="text-4xl">
-        {result.passed ? '🎉' : '📘'}
-      </span>
-      <p className="text-3xl font-bold tabular-nums">
-        {result.score}
-        <span className="text-lg text-app-hint">/{result.max_score}</span>
-      </p>
-      <p className="text-sm text-app-hint">
-        {result.correct_count} ta to'g'ri javob ({result.question_count} tadan)
-      </p>
+    <Card className="flex flex-col items-center gap-3 py-6 text-center">
+      <ProgressRing value={result.score} max={result.max_score} size={108} stroke={9}>
+        <div className="flex flex-col items-center leading-none">
+          <span className="font-serif text-3xl font-bold tabular-nums">{result.score}</span>
+          <span className="mt-0.5 text-xs text-app-hint">/{result.max_score}</span>
+        </div>
+      </ProgressRing>
+      <div>
+        <p className="font-serif text-lg font-bold">{result.passed ? '🎉 Tabriklaymiz!' : '📘 Yakunlandi'}</p>
+        <p className="text-sm text-app-hint">
+          {result.correct_count} ta to'g'ri javob ({result.question_count} tadan)
+        </p>
+      </div>
       {result.points_awarded > 0 && <Badge tone="success">+{result.points_awarded} ball reytingga qo'shildi</Badge>}
       {!result.passed && test.passing_score > 0 && (
         <p className="text-sm text-app-hint">Ball olish uchun kamida {test.passing_score} ball kerak edi.</p>
@@ -115,7 +117,7 @@ function Review({ testId }: { testId: string }) {
                 key={option.id}
                 className={`rounded-xl px-3 py-2 text-sm ${
                   option.is_correct
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    ? 'bg-green-500/15 text-green-700 dark:text-green-300'
                     : option.selected
                       ? 'bg-red-500/10 text-app-danger'
                       : 'bg-app-surface'
@@ -157,29 +159,31 @@ function Overview({
 
   return (
     <>
-      <Card className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">{test.title}</h1>
-        <div>
+      <Card className="flex flex-col gap-3">
+        <div className="flex flex-col items-start gap-1.5">
           <TestStateBadge test={test} />
-        </div>
-        <div className="mt-1 flex flex-col gap-1 text-sm text-app-hint">
+          <h1 className="font-serif text-2xl font-bold leading-tight">{test.title}</h1>
           {test.book_title && (
-            <button type="button" className="text-left text-app-link" onClick={() => navigate(`/books/${test.book_id}`)}>
+            <button
+              type="button"
+              className="text-left text-sm font-medium text-app-link"
+              onClick={() => navigate(`/books/${test.book_id}`)}
+            >
               📚 {test.book_title}
             </button>
           )}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Stat label="savol" value={test.question_count} />
+          {test.duration_minutes ? <Stat label="daqiqa" value={test.duration_minutes} /> : null}
+          <Stat label="ballgacha" value={test.max_score} />
+          <Stat label="urinish" value={`${used}/${test.attempts_allowed}`} />
+        </div>
+        <div className="flex flex-col gap-1 text-sm text-app-hint">
           <span>
             🗓 {formatEventDate(test.starts_at)} — {formatEventDate(test.ends_at)}
           </span>
-          <span>
-            ❓ {test.question_count} ta savol · ⏱ {test.duration_minutes} daqiqa
-          </span>
-          <span>
-            🏆 {test.max_score} ballgacha{test.passing_score > 0 ? ` · o'tish bali ${test.passing_score}` : ''}
-          </span>
-          <span>
-            🔁 Urinishlar: {used}/{test.attempts_allowed}
-          </span>
+          {test.passing_score > 0 && <span>🎯 O'tish bali: {test.passing_score} ball</span>}
         </div>
         {test.description && <p className="whitespace-pre-line pt-1 text-[15px]">{test.description}</p>}
       </Card>
