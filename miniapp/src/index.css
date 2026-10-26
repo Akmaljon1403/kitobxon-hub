@@ -162,6 +162,16 @@ body {
     transform: translateY(0);
   }
 }
+/* Page-level entrance: opacity only. A transform here would reparent position:fixed overlays/modals
+ * (e.g. the test runner) to the wrapper instead of the viewport, so the wrapper must never transform. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 @keyframes pop {
   0% {
     transform: scale(0.92);
@@ -181,6 +191,9 @@ body {
 
 .animate-fade-up {
   animation: var(--animate-fade-up);
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
 }
 .animate-pop {
   animation: var(--animate-pop);
@@ -204,11 +217,13 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
+  .animate-fade-in,
   .animate-pop,
   .skeleton::after {
     animation: none;
   }
-  .animate-fade-up {
+  .animate-fade-up,
+  .animate-fade-in {
     opacity: 1;
     transform: none;
   }

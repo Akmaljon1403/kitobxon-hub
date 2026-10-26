@@ -37,8 +37,9 @@ export function AppLayout({ section, children }: { section: string; children: Re
   }
   return (
     <div className="mx-auto min-h-screen max-w-lg pb-[calc(5.25rem+var(--tg-safe-area-inset-bottom,0px))]">
-      {/* key=section re-triggers the entrance animation on every navigation. */}
-      <main key={section} className="animate-fade-up flex flex-col gap-3 px-4 pb-4 pt-3">
+      {/* key=section re-triggers the entrance on every navigation. Opacity only — a transform here would
+          reparent position:fixed overlays/modals (test runner, dialogs) to this wrapper, breaking them. */}
+      <main key={section} className="animate-fade-in flex flex-col gap-3 px-4 pb-4 pt-3">
         {children}
       </main>
       <nav
