@@ -54,7 +54,7 @@ export function ReadingCardPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">🪪 Kitobxonlik kartam</h1>
+        <h1 className="font-serif text-2xl font-bold">🪪 Kitobxonlik kartam</h1>
         <p className="text-sm text-app-hint">O‘qigan kitoblar, betlar, seriya, ball va yutuqlaringiz — bitta rasmda</p>
       </div>
       {failed ? (

@@ -40,7 +40,7 @@ export function Giveaways() {
         <>
           <SectionTitle>🎲 Yaqindagi sovg'a o'yinlari</SectionTitle>
           {upcoming.map((giveaway) => (
-            <Card key={giveaway.id} className="flex flex-col gap-1 bg-gradient-to-br from-amber-50 to-transparent dark:from-amber-500/10">
+            <Card key={giveaway.id} className="flex flex-col gap-1 bg-gradient-to-br from-gold-400/10 to-transparent">
               <p className="font-semibold">{giveaway.title}</p>
               <p className="text-sm">
                 <span className="text-app-hint">Sovg'a:</span> {giveaway.reward}

@@ -20,7 +20,29 @@ export function initTelegram(): void {
 }
 
 export function haptic(type: 'success' | 'error' | 'warning'): void {
-  getWebApp()?.HapticFeedback?.notificationOccurred(type)
+  try {
+    getWebApp()?.HapticFeedback?.notificationOccurred(type)
+  } catch {
+    // Older Telegram clients may not support haptics; it is a nicety, never required.
+  }
+}
+
+/** A light tick for selecting an option / switching a tab. */
+export function selectionHaptic(): void {
+  try {
+    getWebApp()?.HapticFeedback?.selectionChanged()
+  } catch {
+    // ignore
+  }
+}
+
+/** A soft bump for a confirmed tap (e.g. submitting). */
+export function impactHaptic(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft' = 'light'): void {
+  try {
+    getWebApp()?.HapticFeedback?.impactOccurred(style)
+  } catch {
+    // ignore
+  }
 }
 
 export function openExternalLink(url: string): void {

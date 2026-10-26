@@ -23,7 +23,7 @@ export function ProgressBar({ percent }: { percent: number | null }) {
   if (percent === null) return null
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-app-surface" aria-label={`${percent}%`}>
-      <div className="h-full rounded-full bg-app-button transition-all" style={{ width: `${Math.max(3, percent)}%` }} />
+      <div className="h-full rounded-full bg-brand-gradient transition-all" style={{ width: `${Math.max(3, percent)}%` }} />
     </div>
   )
 }
@@ -37,7 +37,7 @@ function DaysChart({ stats }: { stats: ReadingStats }) {
         <div key={day.date} className="flex flex-1 flex-col items-center justify-end">
           <div
             title={`${day.date}: ${day.pages} bet`}
-            className={`w-full rounded-t ${index === stats.last_days.length - 1 ? 'bg-app-button' : 'bg-app-button/40'}`}
+            className={`w-full rounded-t ${index === stats.last_days.length - 1 ? 'bg-brand-500 dark:bg-brand-400' : 'bg-brand-500/40'}`}
             style={{ height: `${day.pages ? Math.max(8, (day.pages / max) * 100) : 4}%`, opacity: day.pages ? 1 : 0.35 }}
           />
         </div>
@@ -109,7 +109,7 @@ function QuickLog({ item, onDone }: { item: ShelfItem; onDone: () => void }) {
           placeholder="Bugun necha bet?"
           value={pages}
           onChange={(event) => setPages(event.target.value)}
-          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         <Button className="w-auto shrink-0 px-4" loading={busy} onClick={() => void save()}>
           + Yozish
@@ -214,7 +214,7 @@ function AddBook({ onAdded, existing }: { onAdded: () => void; existing: Set<str
         value={title}
         maxLength={255}
         onChange={(event) => setTitle(event.target.value)}
-        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
       <div className="flex gap-2">
         <input
@@ -222,7 +222,7 @@ function AddBook({ onAdded, existing }: { onAdded: () => void; existing: Set<str
           value={author}
           maxLength={255}
           onChange={(event) => setAuthor(event.target.value)}
-          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         <input
           type="number"
@@ -230,7 +230,7 @@ function AddBook({ onAdded, existing }: { onAdded: () => void; existing: Set<str
           placeholder="Betlar"
           value={pages}
           onChange={(event) => setPages(event.target.value)}
-          className="w-24 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="w-24 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
       </div>
       {error && <p className="text-sm text-app-danger">{error}</p>}
@@ -296,7 +296,7 @@ export function ShelfPage() {
     <div className="flex flex-col gap-3">
       <LibrarySwitch current="shelf" />
       <div className="px-1">
-        <h1 className="text-xl font-semibold">📚 Javonim</h1>
+        <h1 className="font-serif text-2xl font-bold">📚 Javonim</h1>
         <p className="text-sm text-app-hint">Kitoblaringiz, mutolaa kundaligi va seriyangiz</p>
       </div>
       <StatsCard stats={stats} />
@@ -314,7 +314,7 @@ export function ShelfPage() {
             key={status}
             type="button"
             onClick={() => setTab(status)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm ${tab === status ? 'bg-app-button text-app-button-text' : 'bg-app-surface'}`}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${tab === status ? 'bg-brand-500 text-white' : 'bg-app-surface text-app-hint'}`}
           >
             {STATUS_TITLES[status]} {stats.shelf[status] ? `· ${stats.shelf[status]}` : ''}
           </button>

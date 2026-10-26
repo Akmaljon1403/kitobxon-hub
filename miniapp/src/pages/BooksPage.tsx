@@ -25,7 +25,7 @@ export function BooksPage() {
   return (
     <>
       {shelf && <LibrarySwitch current="books" />}
-      <h1 className="px-1 pt-1 text-xl font-semibold">{shelf ? '🏛 Klub kitoblari' : '📚 Kitoblar'}</h1>
+      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">{shelf ? '🏛 Klub kitoblari' : '📚 Kitoblar'}</h1>
       {shelf && (
         <p className="-mt-2 px-1 text-sm text-app-hint">Klub tavsiya qilgan kitoblar — yoqqanini «Javonim»ga qo‘shing.</p>
       )}

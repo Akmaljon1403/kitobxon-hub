@@ -222,7 +222,7 @@ function CertificateList() {
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="text-xl font-semibold">🎓 Sertifikatlarim</h1>
+      <h1 className="font-serif text-2xl font-bold">🎓 Sertifikatlarim</h1>
       {state.data.length === 0 ? (
         <EmptyState icon="🎓" title="Hozircha sertifikat yo'q">
           Testda 1-, 2- yoki 3-o'rinni oling (tadbir testida — davomatdan o'tib) yoki oy yakunida reytingning eng faol

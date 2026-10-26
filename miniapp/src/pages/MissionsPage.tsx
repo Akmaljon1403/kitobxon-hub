@@ -213,7 +213,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
               key={period}
               type="button"
               onClick={() => setDays(period)}
-              className={`flex-1 rounded-full px-3 py-1.5 ${days === period ? 'bg-app-button text-app-button-text' : 'bg-app-surface text-app-hint'}`}
+              className={`flex-1 rounded-full px-3 py-1.5 ${days === period ? 'bg-brand-500 text-white' : 'bg-app-surface text-app-hint'}`}
             >
               {period} kun
             </button>
@@ -258,7 +258,7 @@ export function MissionsPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">🎯 Shaxsiy missiyalar</h1>
+        <h1 className="font-serif text-2xl font-bold">🎯 Shaxsiy missiyalar</h1>
         <p className="text-sm text-app-hint">
           Klub missiyasini boshlang yoki o‘zingizga maqsad qo‘ying — natija kundalik, javon, tadbir va testlardagi haqiqiy
           faolligingizdan o‘zi hisoblanadi.

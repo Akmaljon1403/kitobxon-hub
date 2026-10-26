@@ -158,7 +158,7 @@ export function ProfilePage() {
     <>
       <Card className="flex flex-col items-center gap-2 text-center">
         <Avatar me={me} size="size-20" />
-        <h1 className="text-xl font-semibold">
+        <h1 className="font-serif text-2xl font-bold">
           {me.first_name} {me.last_name}
         </h1>
         {me.telegram_username && <p className="text-sm text-app-hint">@{me.telegram_username}</p>}

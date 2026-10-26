@@ -76,17 +76,16 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
   return (
     <>
       <Card className="flex flex-col items-center gap-3 text-center">
-        <BookCover url={book.cover_url} title={book.title} className="h-48 w-32" />
+        <BookCover url={book.cover_url} title={book.title} className="h-48 w-32 rounded-xl shadow-[var(--shadow-float)]" />
         <div>
-          <h1 className="text-xl font-semibold">{book.title}</h1>
-          <p className="text-app-hint">{book.author}</p>
+          <h1 className="font-serif text-2xl font-bold leading-tight">{book.title}</h1>
+          <p className="mt-0.5 text-app-hint">{book.author}</p>
         </div>
-        <div className="flex flex-wrap justify-center gap-2 text-xs text-app-hint">
-          {book.pages && <span>📄 {book.pages} bet</span>}
-          {book.deadline && <span>🗓 Muddat: {formatDate(book.deadline)}</span>}
-          <span>
-            👥 {book.readers_count} o'quvchi · {book.completed_count} tugatgan
-          </span>
+        <div className="flex flex-wrap justify-center gap-1.5 text-xs text-app-hint">
+          {book.pages && <span className="rounded-full bg-app-surface px-2.5 py-1">📄 {book.pages} bet</span>}
+          {book.deadline && <span className="rounded-full bg-app-surface px-2.5 py-1">🗓 {formatDate(book.deadline)}</span>}
+          <span className="rounded-full bg-app-surface px-2.5 py-1">👥 {book.readers_count} o'quvchi</span>
+          <span className="rounded-full bg-app-surface px-2.5 py-1">✅ {book.completed_count} tugatgan</span>
         </div>
       </Card>
 
@@ -152,8 +151,8 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
         <>
           <SectionTitle>Iqtiboslar</SectionTitle>
           {book.quotes.map((quote) => (
-            <Card key={quote.id}>
-              <blockquote className="text-[15px] italic leading-relaxed">«{quote.text}»</blockquote>
+            <Card key={quote.id} className="border-l-2 border-l-gold-400">
+              <blockquote className="font-serif text-[15px] italic leading-relaxed">«{quote.text}»</blockquote>
               <p className="mt-2 text-right text-sm text-app-hint">
                 — {quote.author ?? book.author}
                 {quote.source ? `, ${quote.source}` : ''}

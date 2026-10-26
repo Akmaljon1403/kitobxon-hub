@@ -58,7 +58,7 @@ export function EventsPage() {
 
   return (
     <>
-      <h1 className="px-1 pt-1 text-xl font-semibold">📅 Tadbirlar</h1>
+      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📅 Tadbirlar</h1>
       <div className="grid grid-cols-2 gap-1 rounded-xl bg-app-bg p-1" role="tablist">
         {(['upcoming', 'past'] as const).map((value) => (
           <button
@@ -67,7 +67,7 @@ export function EventsPage() {
             role="tab"
             aria-selected={scope === value}
             onClick={() => setScope(value)}
-            className={`rounded-lg py-2 text-sm font-medium ${scope === value ? 'bg-app-button text-app-button-text' : 'text-app-hint'}`}
+            className={`rounded-lg py-2 text-sm font-medium ${scope === value ? 'bg-brand-500 text-white' : 'text-app-hint'}`}
           >
             {value === 'upcoming' ? 'Kelgusi' : "O'tgan"}
           </button>
