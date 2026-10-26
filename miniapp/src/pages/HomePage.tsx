@@ -98,24 +98,28 @@ export function HomePage() {
 
   return (
     <>
-      {/* Hero: greeting + points. White-on-brand for a distinctive, premium first impression. */}
-      <section className="overflow-hidden rounded-3xl bg-brand-gradient p-4 text-white shadow-[var(--shadow-brand)]">
-        <div className="flex items-center gap-3">
-          <span className="rounded-full ring-2 ring-white/40">
+      {/* Hero: greeting + points. Navy-on-brand with a gold four-point star (the mark's motif) and a
+          gold points badge — the brand's own navy + gold, for a distinctive premium first impression. */}
+      <section className="relative overflow-hidden rounded-3xl bg-brand-gradient p-4 text-white shadow-[var(--shadow-brand)] ring-1 ring-white/10">
+        <span aria-hidden className="pointer-events-none absolute -right-3 -top-6 select-none text-[6.5rem] leading-none text-gold-400/15">
+          ✦
+        </span>
+        <div className="relative flex items-center gap-3">
+          <span className="rounded-full ring-2 ring-gold-400/40">
             <Avatar me={me} size="size-12" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-white/80">Assalomu alaykum,</p>
+            <p className="text-sm text-white/75">Assalomu alaykum,</p>
             <h1 className="truncate font-serif text-xl font-bold">{me.first_name}! 📖</h1>
           </div>
           {points && (
             <button
               type="button"
               onClick={() => go('/results')}
-              className="flex flex-col items-center rounded-2xl bg-white/15 px-3.5 py-2 backdrop-blur active:scale-95"
+              className="flex flex-col items-center rounded-2xl bg-white/10 px-3.5 py-2 ring-1 ring-white/15 backdrop-blur active:scale-95"
             >
-              <span className="text-xl font-bold leading-none tabular-nums">{points.total}</span>
-              <span className="mt-0.5 text-[11px] text-white/80">ball · {points.rank}-o‘rin</span>
+              <span className="text-xl font-bold leading-none tabular-nums text-gold-300">{points.total}</span>
+              <span className="mt-0.5 text-[11px] text-white/75">ball · {points.rank}-o‘rin</span>
             </button>
           )}
         </div>

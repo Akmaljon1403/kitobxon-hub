@@ -4,76 +4,129 @@
  * Kitobxon Hub — Mini App design system.
  *
  * Neutral surfaces (bg / text / hint / link / surface) follow Telegram's own theme variables so the
- * app feels native and respects the user's light/dark theme. On top of that neutral base we layer a
- * fixed reading-club BRAND palette (forest green + warm gold) used for the primary call-to-action,
- * progress, highlights and hero cards — it stays the same in light and dark so the brand is consistent.
+ * app feels native and respects the user's light/dark theme. On top of that neutral base we layer the
+ * real reading-club BRAND palette, taken straight from the brand kit (brand/tools/mark.mjs,
+ * brand/README.md): deep navy #0B1F3B is the primary colour (hero, primary actions, the mark), warm
+ * gold #D4AF37 is the signature accent (points, stars, premium, progress), green #0E5F46 marks
+ * success, and cream #F8F6F2 is the paper tone. These stay fixed across light and dark so the brand is
+ * consistent. The display serif is the brand's own Libre Baskerville, self-hosted below.
  */
+
+/* ---- Brand display serif (Libre Baskerville — the wordmark face) ---- */
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/libre-baskerville-400.woff") format("woff");
+}
+@font-face {
+  font-family: "Libre Baskerville";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/libre-baskerville-700.woff") format("woff");
+}
+
 :root {
-  /* ---- Telegram-driven neutral theme (light fallbacks) ---- */
+  /* ---- Telegram-driven neutral theme (warm light fallbacks that echo the cream paper) ---- */
   --app-bg: var(--tg-theme-bg-color, #ffffff);
-  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #eef1f4);
-  --app-text: var(--tg-theme-text-color, #0f1b14);
-  --app-hint: var(--tg-theme-hint-color, #6b7a73);
-  --app-link: var(--tg-theme-link-color, #1f7a52);
-  --app-button: var(--tg-theme-button-color, #2f6f4f);
+  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #f1efe9);
+  --app-text: var(--tg-theme-text-color, #0b1f3b);
+  --app-hint: var(--tg-theme-hint-color, #6b7686);
+  --app-link: var(--tg-theme-link-color, #0b1f3b);
+  --app-button: var(--tg-theme-button-color, #0b1f3b);
   --app-button-text: var(--tg-theme-button-text-color, #ffffff);
-  --app-danger: var(--tg-theme-destructive-text-color, #d64545);
+  --app-danger: var(--tg-theme-destructive-text-color, #c0392b);
 
-  /* ---- Fixed reading-club brand (theme-independent) ---- */
-  --brand-50: #e9f5ee;
-  --brand-100: #cfe9da;
-  --brand-300: #7fc49c;
-  --brand-400: #4faa78;
-  --brand-500: #2f6f4f;
-  --brand-600: #255c41;
-  --brand-700: #1c4631;
-  --brand-ink: #ffffff;
-  --gold-300: #f0cf7a;
-  --gold-400: #e0b24a;
-  --gold-500: #c7902a;
+  /* ---- Fixed reading-club brand (theme-independent). Source: brand/tools/mark.mjs ---- */
+  /* Navy — the primary brand colour. */
+  --navy-950: #050e1d;
+  --navy-900: #071628;
+  --navy-700: #132b4f;
+  --navy-600: #1c3a66;
+  --navy-500: #0b1f3b;
+  /* Gold — the signature accent. */
+  --gold-200: #f6e7b0;
+  --gold-300: #efd887;
+  --gold-500: #d4af37;
+  --gold-600: #b8922a;
+  --gold-700: #8c6d1c;
+  /* Cream / paper and the brand green. */
+  --cream: #f8f6f2;
+  --paper: #efe9dc;
+  --green: #0e5f46;
 
-  /* The hero / primary gradient and a soft brand tint for panels. */
-  --brand-gradient: linear-gradient(135deg, #3f9d6e 0%, #2f6f4f 55%, #255c41 100%);
-  --brand-tint: color-mix(in srgb, var(--brand-500) 10%, var(--app-bg));
-  --brand-border: color-mix(in srgb, var(--brand-500) 22%, transparent);
+  /*
+   * brand-* are the tokens the components consume. They are a navy ramp: the light steps (50/100) are
+   * tints for chips, 300 is a light steel-blue used as the accent on dark surfaces, 400 is the focus
+   * ring, and 500/600/700 are the navy itself for solid fills and accent text on light surfaces.
+   */
+  --brand-50: #eef2f9;
+  --brand-100: #d8e1f1;
+  --brand-300: #9fb8de;
+  --brand-400: #41659b;
+  --brand-500: #0b1f3b;
+  --brand-600: #0b1f3b;
+  --brand-700: #071628;
+
+  /* gold-* as the components reference them: 400 is the true gold (fills), 300 lightens it for text on
+   * dark, 500 darkens it so gold text stays legible on light surfaces. */
+  --gold-400: #d4af37;
+  /* --gold-300 defined above; --gold-500 is overridden to a legible-on-light gold: */
+  --gold-text: #8c6d1c;
+
+  /* green ramp for success tones (500 fill, 700 text on light, 300 text on dark). */
+  --green-300: #5cbf93;
+  --green-500: #0e5f46;
+  --green-600: #0c5440;
+  --green-700: #0a4535;
+
+  /* The hero / primary gradient (navy), the gold accent gradient, and soft brand tint + border. */
+  --brand-gradient: linear-gradient(135deg, #1c3a66 0%, #0b1f3b 55%, #050e1d 100%);
+  --gold-gradient: linear-gradient(135deg, #efd887 0%, #d4af37 50%, #b8922a 100%);
+  --brand-tint: color-mix(in srgb, var(--navy-500) 7%, var(--app-bg));
+  --brand-border: color-mix(in srgb, var(--navy-500) 16%, transparent);
 
   /* ---- Elevation ---- */
-  --shadow-sm: 0 1px 2px rgba(16, 27, 20, 0.06), 0 1px 3px rgba(16, 27, 20, 0.05);
-  --shadow-md: 0 4px 16px rgba(16, 27, 20, 0.08), 0 2px 6px rgba(16, 27, 20, 0.05);
-  --shadow-brand: 0 8px 24px color-mix(in srgb, var(--brand-500) 32%, transparent);
+  --shadow-sm: 0 1px 2px rgba(5, 14, 29, 0.06), 0 1px 3px rgba(5, 14, 29, 0.05);
+  --shadow-md: 0 4px 16px rgba(5, 14, 29, 0.08), 0 2px 6px rgba(5, 14, 29, 0.05);
+  --shadow-brand: 0 10px 28px color-mix(in srgb, var(--navy-500) 36%, transparent);
 
   --hairline: color-mix(in srgb, var(--app-text) 10%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --app-bg: var(--tg-theme-bg-color, #1a2430);
-    --app-bg-secondary: var(--tg-theme-secondary-bg-color, #111a24);
-    --app-text: var(--tg-theme-text-color, #f3f6f4);
-    --app-hint: var(--tg-theme-hint-color, #90a1ad);
-    --app-link: var(--tg-theme-link-color, #6fd3a0);
-    --app-button: var(--tg-theme-button-color, #3f9d6e);
+    --app-bg: var(--tg-theme-bg-color, #0e1826);
+    --app-bg-secondary: var(--tg-theme-secondary-bg-color, #0a131f);
+    --app-text: var(--tg-theme-text-color, #f3f5f8);
+    --app-hint: var(--tg-theme-hint-color, #8a97a8);
+    --app-link: var(--tg-theme-link-color, #9fb8de);
+    --app-button: var(--tg-theme-button-color, #1c3a66);
     --app-danger: var(--tg-theme-destructive-text-color, #ff6b6b);
-    --brand-tint: color-mix(in srgb, var(--brand-400) 16%, var(--app-bg));
+    --brand-tint: color-mix(in srgb, var(--brand-400) 18%, var(--app-bg));
     --brand-border: color-mix(in srgb, var(--brand-300) 24%, transparent);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.38);
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
+    --shadow-brand: 0 10px 28px rgba(0, 0, 0, 0.5);
     --hairline: color-mix(in srgb, #ffffff 12%, transparent);
   }
 }
 
 :root[data-theme="dark"] {
-  --app-bg: var(--tg-theme-bg-color, #1a2430);
-  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #111a24);
-  --app-text: var(--tg-theme-text-color, #f3f6f4);
-  --app-hint: var(--tg-theme-hint-color, #90a1ad);
-  --app-link: var(--tg-theme-link-color, #6fd3a0);
-  --app-button: var(--tg-theme-button-color, #3f9d6e);
+  --app-bg: var(--tg-theme-bg-color, #0e1826);
+  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #0a131f);
+  --app-text: var(--tg-theme-text-color, #f3f5f8);
+  --app-hint: var(--tg-theme-hint-color, #8a97a8);
+  --app-link: var(--tg-theme-link-color, #9fb8de);
+  --app-button: var(--tg-theme-button-color, #1c3a66);
   --app-danger: var(--tg-theme-destructive-text-color, #ff6b6b);
-  --brand-tint: color-mix(in srgb, var(--brand-400) 16%, var(--app-bg));
+  --brand-tint: color-mix(in srgb, var(--brand-400) 18%, var(--app-bg));
   --brand-border: color-mix(in srgb, var(--brand-300) 24%, transparent);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.38);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-brand: 0 10px 28px rgba(0, 0, 0, 0.5);
   --hairline: color-mix(in srgb, #ffffff 12%, transparent);
 }
 
@@ -94,15 +147,32 @@
   --color-brand-500: var(--brand-500);
   --color-brand-600: var(--brand-600);
   --color-brand-700: var(--brand-700);
+
+  --color-navy-500: var(--navy-500);
+  --color-navy-600: var(--navy-600);
+  --color-navy-700: var(--navy-700);
+  --color-navy-900: var(--navy-900);
+  --color-navy-950: var(--navy-950);
+
+  --color-gold-200: var(--gold-200);
   --color-gold-300: var(--gold-300);
   --color-gold-400: var(--gold-400);
-  --color-gold-500: var(--gold-500);
+  --color-gold-500: var(--gold-text);
+  --color-gold-600: var(--gold-600);
+
+  --color-green-300: var(--green-300);
+  --color-green-500: var(--green-500);
+  --color-green-600: var(--green-600);
+  --color-green-700: var(--green-700);
+
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
 
   --shadow-card: var(--shadow-sm);
   --shadow-float: var(--shadow-md);
   --shadow-brand: var(--shadow-brand);
 
-  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-serif: "Libre Baskerville", "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
 
   --animate-fade-up: fade-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pop: pop 0.2s ease-out both;
@@ -138,6 +208,9 @@ body {
 }
 .bg-brand-gradient {
   background: var(--brand-gradient);
+}
+.bg-gold-gradient {
+  background: var(--gold-gradient);
 }
 .shadow-brand {
   box-shadow: var(--shadow-brand);

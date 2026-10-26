@@ -38,7 +38,7 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 
 /* ------------------------------------------------------------------ buttons */
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold'
 
 export function Button({
   variant = 'primary',
@@ -54,6 +54,8 @@ export function Button({
     secondary: 'bg-app-surface text-app-text',
     ghost: 'bg-transparent text-app-link',
     danger: 'bg-app-danger/12 text-app-danger',
+    // Celebratory / premium actions: the gold accent with navy ink.
+    gold: 'bg-gold-gradient text-brand-700 shadow-[var(--shadow-card)]',
   }
   const sizing = size === 'sm' ? 'min-h-9 px-3 text-sm' : 'min-h-11 px-4 text-[15px]'
   return (
@@ -75,7 +77,7 @@ type Tone = 'neutral' | 'success' | 'info' | 'warning' | 'brand' | 'gold' | 'dan
 
 const TONES: Record<Tone, string> = {
   neutral: 'bg-app-surface text-app-hint',
-  success: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  success: 'bg-green-500/15 text-green-700 dark:text-green-300',
   info: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
   warning: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
   brand: 'bg-brand-500/15 text-brand-600 dark:text-brand-300',
@@ -141,7 +143,7 @@ export function ProgressRing({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="var(--brand-500)"
+          stroke="var(--gold-400)"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
@@ -191,7 +193,7 @@ export function Toggle({
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-brand-500' : 'bg-app-hint/40'}`}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-brand-500 dark:bg-brand-400' : 'bg-app-hint/40'}`}
       >
         <span
           className={`absolute left-0 top-0.5 size-6 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5.5' : 'translate-x-0.5'}`}
