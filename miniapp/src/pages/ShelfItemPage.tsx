@@ -70,7 +70,7 @@ function LogForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
             key={label}
             type="button"
             onClick={() => setBack(index)}
-            className={`rounded-full px-3 py-1 text-xs ${back === index ? 'bg-app-button text-app-button-text' : 'bg-app-surface'}`}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${back === index ? 'bg-brand-500 text-white' : 'bg-app-surface text-app-hint'}`}
           >
             {label}
           </button>
@@ -83,7 +83,7 @@ function LogForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
           placeholder="Betlar"
           value={pages}
           onChange={(event) => setPages(event.target.value)}
-          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         <input
           type="number"
@@ -91,7 +91,7 @@ function LogForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
           placeholder="Daqiqa (ixtiyoriy)"
           value={minutes}
           onChange={(event) => setMinutes(event.target.value)}
-          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="min-w-0 flex-1 rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
       </div>
       <textarea
@@ -100,7 +100,7 @@ function LogForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
         maxLength={1000}
         rows={2}
         onChange={(event) => setNote(event.target.value)}
-        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
       {error && <p className="text-sm text-app-danger">{error}</p>}
       <Button loading={busy} onClick={() => void save()}>
@@ -139,9 +139,9 @@ function ReflectionForm({ itemId, saved, onDone }: { itemId: string; saved: Refl
   }
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card tone="brand" className="flex flex-col gap-3">
       <div>
-        <p className="font-semibold">💡 Kitobdan keyin 3 savol</p>
+        <p className="font-serif text-base font-bold">💡 Kitobdan keyin 3 savol</p>
         <p className="text-sm text-app-hint">O‘qiganlaringizni mustahkamlang — javob yozganingiz uchun ball beriladi (har kitobga bir marta).</p>
       </div>
       {QUESTIONS.map((question) =>
@@ -154,7 +154,7 @@ function ReflectionForm({ itemId, saved, onDone }: { itemId: string; saved: Refl
               placeholder={question.hint}
               value={answers[question.key]}
               onChange={(event) => setAnswers({ ...answers, [question.key]: event.target.value })}
-              className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+              className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
             />
           </label>
         ) : (
@@ -229,7 +229,7 @@ function AddQuote({ itemId, onDone, box }: { itemId: string; onDone: () => void;
         placeholder="Kitobdagi yoqqan jumlani yozing…"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] italic outline-none"
+        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] italic outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
       <input
         type="number"
@@ -237,7 +237,7 @@ function AddQuote({ itemId, onDone, box }: { itemId: string; onDone: () => void;
         placeholder="Bet (ixtiyoriy)"
         value={page}
         onChange={(event) => setPage(event.target.value)}
-        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
       {box?.common_allowed && <VisibilityChoice value={chosen} onChange={setVisibility} />}
       {error && <p className="text-sm text-app-danger">{error}</p>}
@@ -304,7 +304,7 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
       <Card className="flex gap-3">
         <BookCover url={item.cover_url} title={item.title} className="h-28 w-20 shrink-0" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold leading-snug">{item.title}</h1>
+          <h1 className="font-serif text-xl font-bold leading-snug">{item.title}</h1>
           {item.author && <p className="text-sm text-app-hint">{item.author}</p>}
           <p className="mt-1 text-sm">{STATUS_TITLES[item.status]}</p>
           <p className="text-xs text-app-hint">
@@ -353,7 +353,7 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
                   type="button"
                   aria-label={`${value} yulduz`}
                   onClick={() => void patch(value === item.rating ? { clear_rating: true } : { rating: value }, `r${value}`)}
-                  className={`text-2xl ${item.rating && value <= item.rating ? 'text-amber-400' : 'text-app-hint/40'}`}
+                  className={`text-2xl transition-colors active:scale-110 ${item.rating && value <= item.rating ? 'text-gold-400' : 'text-app-hint/30'}`}
                 >
                   ★
                 </button>
@@ -402,7 +402,7 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
             value={pagesTotal}
             onChange={(event) => setPagesTotal(event.target.value)}
             onBlur={() => Number(pagesTotal) > 0 && Number(pagesTotal) !== item.pages_total && void patch({ pages_total: Number(pagesTotal) }, 'pages')}
-            className="w-24 rounded-xl bg-app-surface px-3 py-1.5 text-right outline-none"
+            className="w-24 rounded-xl bg-app-surface px-3 py-1.5 text-right outline-none transition focus:ring-2 focus:ring-brand-400/50"
           />
         </label>
         <Button variant="ghost" onClick={() => void remove()}>
