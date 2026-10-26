@@ -71,7 +71,7 @@ function CheckInCard({ event, onDone }: { event: ClubEvent; onDone: (result: Che
           autoCapitalize="characters"
           placeholder="Kod: ABC123"
           aria-label="Davomat kodi"
-          className="w-full rounded-xl bg-app-surface px-3 py-3 text-center font-mono text-lg tracking-[0.25em] outline-none"
+          className="w-full rounded-xl bg-app-surface px-3 py-3 text-center font-mono text-lg tracking-[0.25em] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         <Button disabled={code.length !== 6 || busy} onClick={() => void submit({ code })}>
           Yuborish
@@ -140,7 +140,7 @@ function FeedbackCard({ eventId }: { eventId: string }) {
             maxLength={1000}
             rows={3}
             placeholder="Fikringiz (ixtiyoriy): nima yoqdi, nimani yaxshilash kerak?"
-            className="w-full rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+            className="w-full rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
           />
           <Button variant="secondary" loading={saving} onClick={() => void save(current)}>
             Fikrni yuborish
@@ -203,7 +203,9 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
   return (
     <>
       <Card className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-app-link">{formatEventDate(event.starts_at)}</p>
+        <span className="self-start rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:bg-white/10 dark:text-brand-300">
+          {formatEventDate(event.starts_at)}
+        </span>
         <h1 className="font-serif text-2xl font-bold leading-tight">{event.title}</h1>
         <EventBadges event={event} />
         <div className="mt-1 flex flex-col gap-1 text-sm text-app-hint">

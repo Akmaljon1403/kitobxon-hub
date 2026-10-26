@@ -35,7 +35,7 @@ function Place({ rank }: { rank: number }) {
 
 function Row({ row }: { row: RankingRow }) {
   return (
-    <li className={`flex items-center gap-3 px-3 py-2.5 ${row.is_me ? 'rounded-xl bg-app-button/10' : ''}`}>
+    <li className={`flex items-center gap-3 px-3 py-2.5 ${row.is_me ? 'rounded-xl bg-brand-500/10' : ''}`}>
       <Place rank={row.rank} />
       <div className="min-w-0 flex-1">
         <p className={`truncate ${row.is_me ? 'font-semibold' : 'font-medium'}`}>
@@ -69,7 +69,7 @@ function Segmented<T extends string>({
   locked?: T[]
 }) {
   return (
-    <div className="grid gap-1 rounded-xl bg-app-bg p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="tablist">
+    <div className="grid gap-1 rounded-2xl bg-app-surface p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="tablist">
       {options.map((option) => (
         <button
           key={option.value}
