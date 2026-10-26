@@ -1,29 +1,80 @@
 @import "tailwindcss";
 
 /*
- * Colours come from Telegram's theme variables so the Mini App matches the user's
- * light/dark Telegram theme. The fallbacks are used when the page is opened in a normal browser.
+ * Kitobxon Hub — Mini App design system.
+ *
+ * Neutral surfaces (bg / text / hint / link / surface) follow Telegram's own theme variables so the
+ * app feels native and respects the user's light/dark theme. On top of that neutral base we layer a
+ * fixed reading-club BRAND palette (forest green + warm gold) used for the primary call-to-action,
+ * progress, highlights and hero cards — it stays the same in light and dark so the brand is consistent.
  */
 :root {
+  /* ---- Telegram-driven neutral theme (light fallbacks) ---- */
   --app-bg: var(--tg-theme-bg-color, #ffffff);
-  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #f2f3f5);
-  --app-text: var(--tg-theme-text-color, #111827);
-  --app-hint: var(--tg-theme-hint-color, #6b7280);
-  --app-link: var(--tg-theme-link-color, #2563eb);
+  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #eef1f4);
+  --app-text: var(--tg-theme-text-color, #0f1b14);
+  --app-hint: var(--tg-theme-hint-color, #6b7a73);
+  --app-link: var(--tg-theme-link-color, #1f7a52);
   --app-button: var(--tg-theme-button-color, #2f6f4f);
   --app-button-text: var(--tg-theme-button-text-color, #ffffff);
-  --app-danger: var(--tg-theme-destructive-text-color, #dc2626);
+  --app-danger: var(--tg-theme-destructive-text-color, #d64545);
+
+  /* ---- Fixed reading-club brand (theme-independent) ---- */
+  --brand-50: #e9f5ee;
+  --brand-100: #cfe9da;
+  --brand-300: #7fc49c;
+  --brand-400: #4faa78;
+  --brand-500: #2f6f4f;
+  --brand-600: #255c41;
+  --brand-700: #1c4631;
+  --brand-ink: #ffffff;
+  --gold-300: #f0cf7a;
+  --gold-400: #e0b24a;
+  --gold-500: #c7902a;
+
+  /* The hero / primary gradient and a soft brand tint for panels. */
+  --brand-gradient: linear-gradient(135deg, #3f9d6e 0%, #2f6f4f 55%, #255c41 100%);
+  --brand-tint: color-mix(in srgb, var(--brand-500) 10%, var(--app-bg));
+  --brand-border: color-mix(in srgb, var(--brand-500) 22%, transparent);
+
+  /* ---- Elevation ---- */
+  --shadow-sm: 0 1px 2px rgba(16, 27, 20, 0.06), 0 1px 3px rgba(16, 27, 20, 0.05);
+  --shadow-md: 0 4px 16px rgba(16, 27, 20, 0.08), 0 2px 6px rgba(16, 27, 20, 0.05);
+  --shadow-brand: 0 8px 24px color-mix(in srgb, var(--brand-500) 32%, transparent);
+
+  --hairline: color-mix(in srgb, var(--app-text) 10%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --app-bg: var(--tg-theme-bg-color, #17212b);
-    --app-bg-secondary: var(--tg-theme-secondary-bg-color, #0e1621);
-    --app-text: var(--tg-theme-text-color, #f5f5f5);
-    --app-hint: var(--tg-theme-hint-color, #8b9aa7);
-    --app-link: var(--tg-theme-link-color, #6ab3f3);
+    --app-bg: var(--tg-theme-bg-color, #1a2430);
+    --app-bg-secondary: var(--tg-theme-secondary-bg-color, #111a24);
+    --app-text: var(--tg-theme-text-color, #f3f6f4);
+    --app-hint: var(--tg-theme-hint-color, #90a1ad);
+    --app-link: var(--tg-theme-link-color, #6fd3a0);
     --app-button: var(--tg-theme-button-color, #3f9d6e);
+    --app-danger: var(--tg-theme-destructive-text-color, #ff6b6b);
+    --brand-tint: color-mix(in srgb, var(--brand-400) 16%, var(--app-bg));
+    --brand-border: color-mix(in srgb, var(--brand-300) 24%, transparent);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.38);
+    --hairline: color-mix(in srgb, #ffffff 12%, transparent);
   }
+}
+
+:root[data-theme="dark"] {
+  --app-bg: var(--tg-theme-bg-color, #1a2430);
+  --app-bg-secondary: var(--tg-theme-secondary-bg-color, #111a24);
+  --app-text: var(--tg-theme-text-color, #f3f6f4);
+  --app-hint: var(--tg-theme-hint-color, #90a1ad);
+  --app-link: var(--tg-theme-link-color, #6fd3a0);
+  --app-button: var(--tg-theme-button-color, #3f9d6e);
+  --app-danger: var(--tg-theme-destructive-text-color, #ff6b6b);
+  --brand-tint: color-mix(in srgb, var(--brand-400) 16%, var(--app-bg));
+  --brand-border: color-mix(in srgb, var(--brand-300) 24%, transparent);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.38);
+  --hairline: color-mix(in srgb, #ffffff 12%, transparent);
 }
 
 @theme inline {
@@ -35,6 +86,26 @@
   --color-app-button: var(--app-button);
   --color-app-button-text: var(--app-button-text);
   --color-app-danger: var(--app-danger);
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-gold-300: var(--gold-300);
+  --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500);
+
+  --shadow-card: var(--shadow-sm);
+  --shadow-float: var(--shadow-md);
+  --shadow-brand: var(--shadow-brand);
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+
+  --animate-fade-up: fade-up 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.2s ease-out both;
 }
 
 html,
@@ -43,6 +114,7 @@ body {
   color: var(--app-text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -56,3 +128,88 @@ body {
 
 /* Dark styles follow Telegram's theme (data-theme), not only the operating system. */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+/* ---- Brand utilities ---- */
+.font-serif {
+  font-family: var(--font-serif);
+}
+.text-balance {
+  text-wrap: balance;
+}
+.bg-brand-gradient {
+  background: var(--brand-gradient);
+}
+.shadow-brand {
+  box-shadow: var(--shadow-brand);
+}
+.hairline-t {
+  border-top: 1px solid var(--hairline);
+}
+/* A crisp focus ring for keyboard users without a halo on tap. */
+:where(button, a, [role="button"], input, textarea, select):focus-visible {
+  outline: 2px solid var(--brand-400);
+  outline-offset: 2px;
+}
+
+/* ---- Motion ---- */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-fade-up {
+  animation: var(--animate-fade-up);
+}
+.animate-pop {
+  animation: var(--animate-pop);
+}
+
+/* Skeleton shimmer for loading states. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--app-hint) 18%, transparent);
+  border-radius: 0.75rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--app-bg) 60%, transparent), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-pop,
+  .skeleton::after {
+    animation: none;
+  }
+  .animate-fade-up {
+    opacity: 1;
+    transform: none;
+  }
+}
