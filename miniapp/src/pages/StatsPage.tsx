@@ -89,7 +89,7 @@ export function StatsPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="px-1 text-xl font-semibold">📈 Statistikam</h1>
+      <h1 className="px-1 font-serif text-2xl font-bold">📈 Statistikam</h1>
       <div className="grid grid-cols-2 gap-2">
         <Tile value={String(stats.total)} label="jami ball" />
         <Tile

@@ -17,7 +17,7 @@ function Badge({ item }: { item: MemberAchievement }) {
       </span>
       <p className="text-sm font-semibold leading-tight">{item.title}</p>
       <p className="text-xs leading-snug text-app-hint">{item.description}</p>
-      {unlocked && <p className="mt-1 text-[11px] text-emerald-600">✓ {formatDate(item.unlocked_at)}</p>}
+      {unlocked && <p className="mt-1 text-[11px] text-green-600 dark:text-green-300">✓ {formatDate(item.unlocked_at)}</p>}
       {showProgress && (
         <div className="mt-1 w-full px-2" aria-label={`${item.progress} / ${item.threshold}`}>
           <div className="h-1.5 rounded-full bg-app-surface">
@@ -48,7 +48,7 @@ export function AchievementsPage() {
     <>
       <div className="flex items-start justify-between gap-2 px-1 pt-1">
         <div>
-          <h1 className="text-xl font-semibold">🏅 Yutuqlar</h1>
+          <h1 className="font-serif text-2xl font-bold">🏅 Yutuqlar</h1>
           <p className="text-sm text-app-hint">
             {unlocked.length} / {state.data.length} ta yutuq qo'lga kiritildi
           </p>

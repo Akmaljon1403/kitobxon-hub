@@ -77,7 +77,7 @@ function Segmented<T extends string>({
           role="tab"
           aria-selected={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`truncate rounded-lg px-1 py-2 text-[13px] font-medium ${value === option.value ? 'bg-app-button text-app-button-text' : 'text-app-hint'}`}
+          className={`truncate rounded-lg px-1 py-2 text-[13px] font-medium ${value === option.value ? 'bg-brand-500 text-white' : 'text-app-hint'}`}
         >
           {option.label}
           {locked.includes(option.value) && ' 💎'}
@@ -174,7 +174,7 @@ export function RankingPage() {
   const isFree = period === 'week' && scope === 'all'
   return (
     <>
-      <h1 className="flex items-center gap-2 px-1 pt-1 text-xl font-semibold">
+      <h1 className="flex items-center gap-2 px-1 pt-1 font-serif text-2xl font-bold">
         🏆 Reyting <TrialBadge code="ranking_full" />
       </h1>
       {periods.length > 1 && (

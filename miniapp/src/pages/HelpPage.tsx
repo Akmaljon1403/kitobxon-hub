@@ -65,7 +65,7 @@ export function HelpPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="px-1 pt-1 text-xl font-semibold">❓ Yordam</h1>
+      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">❓ Yordam</h1>
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}

@@ -95,17 +95,17 @@ export function PremiumPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Card className="flex flex-col items-center gap-2 bg-gradient-to-br from-emerald-950 via-emerald-800 to-emerald-600 py-8 text-center text-white">
+      <Card className="flex flex-col items-center gap-2 border-0 bg-brand-gradient py-8 text-center text-white shadow-[var(--shadow-brand)] ring-1 ring-white/10">
         <span aria-hidden className="text-5xl">
           💎
         </span>
-        <h1 className="text-xl font-semibold">Kitobxon Premium</h1>
+        <h1 className="font-serif text-2xl font-bold">Kitobxon Premium</h1>
         {status.lifetime ? (
-          <p className="text-sm text-emerald-100">♾ Sizda umrbod Premium — barcha imkoniyatlar doim ochiq</p>
+          <p className="text-sm text-gold-200">♾ Sizda umrbod Premium — barcha imkoniyatlar doim ochiq</p>
         ) : status.is_premium ? (
-          <p className="text-sm text-emerald-100">✅ Siz Premium a'zosiz — {formatDate(status.until)} gacha</p>
+          <p className="text-sm text-gold-200">✅ Siz Premium a'zosiz — {formatDate(status.until)} gacha</p>
         ) : (
-          <p className="max-w-xs text-sm text-emerald-100">
+          <p className="max-w-xs text-sm text-gold-200">
             Qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa
             {status.store_open && Number.isFinite(cheapestUzs) ? (
               <> — {formatUzs(cheapestUzs)} dan</>

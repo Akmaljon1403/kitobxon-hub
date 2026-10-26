@@ -39,7 +39,7 @@ function HistoryItem({ entry }: { entry: ScoreEntry }) {
           {[entry.source_title, entry.reason, formatDate(entry.created_at)].filter(Boolean).join(' · ')}
         </p>
       </div>
-      <span className={`shrink-0 font-semibold tabular-nums ${positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-app-danger'}`}>
+      <span className={`shrink-0 font-semibold tabular-nums ${positive ? 'text-green-600 dark:text-green-300' : 'text-app-danger'}`}>
         {positive ? '+' : ''}
         {entry.amount}
       </span>
@@ -61,7 +61,7 @@ export function ResultsPage() {
 
   return (
     <>
-      <h1 className="px-1 pt-1 text-xl font-semibold">📊 Natijalarim</h1>
+      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📊 Natijalarim</h1>
       <Card className="flex flex-col items-center gap-1 py-5 text-center">
         <p className="text-sm text-app-hint">Jami ball</p>
         <p className="text-4xl font-bold tabular-nums">{data.total}</p>

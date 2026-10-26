@@ -44,7 +44,7 @@ export function LeaguePage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">🏛 Fakultetlar ligasi</h1>
+        <h1 className="font-serif text-2xl font-bold">🏛 Fakultetlar ligasi</h1>
         <p className="text-sm text-app-hint">
           O‘rin — fakultet a’zolarining o‘rtacha bali bo‘yicha (katta-kichik fakultetlar teng). Har bir o‘qigan betingiz fakultetingizni oldinga
           suradi!

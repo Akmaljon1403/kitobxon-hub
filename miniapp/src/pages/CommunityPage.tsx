@@ -148,7 +148,7 @@ export function CommunityPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">💬 A‘zolar fikrlari</h1>
+        <h1 className="font-serif text-2xl font-bold">💬 A‘zolar fikrlari</h1>
         <p className="text-sm text-app-hint">
           Kitobxonlarimizning iqtiboslari, fikrlari va taassurotlari. Eng yaxshilari klub kanalida chiroyli kartochka bo‘lib chiqadi.
         </p>
@@ -179,7 +179,7 @@ export function CommunityPage() {
               key={item.value}
               type="button"
               onClick={() => setKind(item.value)}
-              className={`shrink-0 rounded-full px-3 py-1 text-sm ${kind === item.value ? 'bg-app-button text-app-button-text' : 'bg-app-bg text-app-hint'}`}
+              className={`shrink-0 rounded-full px-3 py-1 text-sm ${kind === item.value ? 'bg-brand-500 text-white' : 'bg-app-bg text-app-hint'}`}
             >
               {item.label}
             </button>
@@ -323,7 +323,7 @@ export function CommunityNewPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">✍️ Fikr yozish</h1>
+        <h1 className="font-serif text-2xl font-bold">✍️ Fikr yozish</h1>
         <p className="text-sm text-app-hint">Iqtibos va fikrlaringiz «Iqtiboslar sandig‘i»ngizda ham saqlanadi.</p>
       </div>
       <Card className="flex flex-col gap-3">
@@ -333,7 +333,7 @@ export function CommunityNewPage() {
               key={item.code}
               type="button"
               onClick={() => setKind(item.code)}
-              className={`rounded-full px-3 py-1 text-sm ${kind === item.code ? 'bg-app-button text-app-button-text' : 'bg-app-surface text-app-hint'}`}
+              className={`rounded-full px-3 py-1 text-sm ${kind === item.code ? 'bg-brand-500 text-white' : 'bg-app-surface text-app-hint'}`}
             >
               {item.title}
             </button>
@@ -397,7 +397,7 @@ export function CommunityNewPage() {
                 key={item.code}
                 type="button"
                 onClick={() => setStyle(item.code)}
-                className={`rounded-xl px-2 py-2 text-left text-sm ${style === item.code ? 'bg-app-button text-app-button-text' : 'bg-app-surface'}`}
+                className={`rounded-xl px-2 py-2 text-left text-sm ${style === item.code ? 'bg-brand-500 text-white' : 'bg-app-surface'}`}
               >
                 {item.title}
               </button>

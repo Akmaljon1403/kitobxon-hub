@@ -110,7 +110,7 @@ export function RewardsPage() {
   useBackButton(goBack)
   return (
     <>
-      <h1 className="px-1 pt-1 text-xl font-semibold">🎁 Sovg'alarim</h1>
+      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">🎁 Sovg'alarim</h1>
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (

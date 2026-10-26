@@ -37,7 +37,7 @@ function TestCard({ test }: { test: ClubTest }) {
         <div className="flex items-center justify-between gap-2 pt-1">
           <TestStateBadge test={test} />
           {permanent
-            ? perfect && <span className="text-sm font-semibold text-emerald-600">✅ 100% — bonus olingan</span>
+            ? perfect && <span className="text-sm font-semibold text-green-600 dark:text-green-300">✅ 100% — bonus olingan</span>
             : finished.length > 0 && (
                 <span className="text-sm font-semibold tabular-nums">
                   Natija: {test.best_score ?? 0}/{test.max_score}
@@ -71,7 +71,7 @@ export function TestsPage() {
 
   return (
     <>
-      <h1 className="px-1 pt-1 text-xl font-semibold">📝 Testlar</h1>
+      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📝 Testlar</h1>
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (

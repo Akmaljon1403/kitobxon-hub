@@ -30,7 +30,7 @@ export function VisibilityChoice({ value, onChange }: { value: QuoteVisibility; 
           key={item.code}
           type="button"
           onClick={() => onChange(item.code)}
-          className={`rounded-xl px-3 py-2 text-left ${value === item.code ? 'bg-app-button text-app-button-text' : 'bg-app-surface'}`}
+          className={`rounded-xl px-3 py-2 text-left ${value === item.code ? 'bg-brand-500 text-white' : 'bg-app-surface'}`}
         >
           <span className="block text-sm font-medium">{item.title}</span>
           <span className={`block text-xs ${value === item.code ? 'opacity-80' : 'text-app-hint'}`}>{item.hint}</span>
@@ -212,7 +212,7 @@ export function QuotesPage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">💬 Iqtiboslar sandig‘i</h1>
+        <h1 className="font-serif text-2xl font-bold">💬 Iqtiboslar sandig‘i</h1>
         <p className="text-sm text-app-hint">Yoqqan jumlalaringiz — izoh bilan, chiroyli kartochka qilib ulashing</p>
       </div>
       <Card className="flex flex-col gap-2">

@@ -204,7 +204,7 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
     <>
       <Card className="flex flex-col gap-2">
         <p className="text-sm font-medium text-app-link">{formatEventDate(event.starts_at)}</p>
-        <h1 className="text-xl font-semibold">{event.title}</h1>
+        <h1 className="font-serif text-2xl font-bold leading-tight">{event.title}</h1>
         <EventBadges event={event} />
         <div className="mt-1 flex flex-col gap-1 text-sm text-app-hint">
           {event.location && <span>📍 {event.location}</span>}

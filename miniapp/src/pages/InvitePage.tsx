@@ -244,7 +244,7 @@ export function InvitePage() {
   return (
     <div className="flex flex-col gap-3">
       <div className="px-1">
-        <h1 className="text-xl font-semibold">🎁 Sizning foydangiz</h1>
+        <h1 className="font-serif text-2xl font-bold">🎁 Sizning foydangiz</h1>
         <p className="text-sm text-app-hint">Do'stlaringizni taklif qiling — ular bilan birga o'qing va mukofot oling</p>
       </div>
       {info.link ? (
