@@ -265,8 +265,10 @@ body {
 .animate-fade-up {
   animation: var(--animate-fade-up);
 }
+/* No `both`/`forwards` fill: a filling animation stays "applied" and keeps the element a stacking
+ * context, which would trap position:fixed overlays/modals rendered inside the page. */
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out both;
+  animation: fade-in 0.3s ease-out;
 }
 .animate-pop {
   animation: var(--animate-pop);

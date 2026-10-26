@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { Button } from '../components/ui'
 import { useBackButton } from '../hooks/useBackButton'
@@ -182,10 +183,12 @@ export function TestRunner({
   const selected = answers[question.id] ?? []
   const isLast = index === attempt.questions.length - 1
 
-  return (
-    <div className="fixed inset-0 z-20 flex flex-col overflow-y-auto bg-app-surface">
-      {/* A full-screen overlay fixed to the viewport. No ancestor (incl. the page wrapper) may carry a
-          transform, or the browser would reparent this fixed element and break its hit-testing. */}
+  // Rendered through a portal to <body> so the overlay is never a descendant of the page wrapper.
+  // That keeps it above the bottom nav regardless of any stacking context an ancestor creates, and is
+  // the pattern every full-screen overlay / modal should follow.
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-app-surface">
+      {/* A full-screen overlay fixed to the viewport, portaled to <body>. */}
       <header className="sticky top-0 z-10 border-b border-[color:var(--hairline)] bg-app-bg/90 px-4 py-3 backdrop-blur-lg">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
           <div className="min-w-0">
@@ -320,6 +323,7 @@ export function TestRunner({
           </button>
         )}
       </footer>
-    </div>
+    </div>,
+    document.body,
   )
 }
