@@ -115,7 +115,7 @@ function ImpactCard({ info }: { info: ReferralOverview }) {
         <Tile icon="📅" value={impact.friends_visits} label="tadbirda qatnashish" />
         <Tile icon="📝" value={impact.friends_tests} label="yechilgan test" />
       </div>
-      <p className="rounded-xl bg-app-button/10 px-3 py-2 text-sm">
+      <p className="rounded-xl bg-brand-500/10 px-3 py-2 text-sm">
         Sizga taklif uchun: <b>+{impact.earned_points} ball</b>
         {impact.earned_premium_days ? (
           <>
@@ -196,7 +196,7 @@ function ContestCard({ contest }: { contest: MemberContest }) {
         <p className="text-sm text-amber-600">Bu tanlov boshqa fakultet yoki kurs uchun — lekin do'st taklif qilishda davom eting!</p>
       )}
       {contest.eligible && contest.state !== 'upcoming' && (
-        <p className="rounded-xl bg-app-button/10 px-3 py-2 text-sm">
+        <p className="rounded-xl bg-brand-500/10 px-3 py-2 text-sm">
           Sizning do'stlaringiz: <b>{contest.my_friends}</b>
           {contest.my_place ? (
             <>
@@ -212,7 +212,7 @@ function ContestCard({ contest }: { contest: MemberContest }) {
       {contest.leaderboard.length > 0 && (
         <ul className="flex flex-col">
           {contest.leaderboard.map((row) => (
-            <li key={row.place} className={`flex items-center gap-3 px-1 py-2 ${row.me ? 'rounded-xl bg-app-button/10' : ''}`}>
+            <li key={row.place} className={`flex items-center gap-3 px-1 py-2 ${row.me ? 'rounded-xl bg-brand-500/10' : ''}`}>
               <Place place={row.place} />
               <span className={`min-w-0 flex-1 truncate ${row.me ? 'font-semibold' : ''}`}>{row.name}</span>
               {row.winner && contest.state === 'finished' && <span aria-label="g'olib">🏆</span>}
@@ -275,7 +275,7 @@ export function InvitePage() {
           <Card className="p-2">
             <ul className="flex flex-col">
               {board.items.map((row) => (
-                <li key={row.place} className={`flex items-center gap-3 px-1 py-2 ${row.me ? 'rounded-xl bg-app-button/10' : ''}`}>
+                <li key={row.place} className={`flex items-center gap-3 px-1 py-2 ${row.me ? 'rounded-xl bg-brand-500/10' : ''}`}>
                   <Place place={row.place} />
                   <span className={`min-w-0 flex-1 truncate ${row.me ? 'font-semibold' : ''}`}>
                     {row.name}

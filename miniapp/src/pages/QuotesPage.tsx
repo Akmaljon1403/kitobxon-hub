@@ -123,7 +123,7 @@ export function QuoteCard({
           {quote.shared ? <Badge tone={SHARED[quote.shared].tone}>{SHARED[quote.shared].label}</Badge> : <Badge>🔒 Shaxsiy</Badge>}
         </div>
       )}
-      <blockquote className="whitespace-pre-line text-[15px] italic leading-relaxed">«{quote.text}»</blockquote>
+      <blockquote className="whitespace-pre-line font-serif text-[15px] italic leading-relaxed">«{quote.text}»</blockquote>
       <p className="text-right text-sm text-app-hint">
         {quote.source ? `— ${quote.source}` : ''}
         {quote.page ? `, ${quote.page}-bet` : ''}
@@ -222,14 +222,14 @@ export function QuotesPage() {
           placeholder="Yangi iqtibos…"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] italic outline-none"
+          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] italic outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         <input
           placeholder="Kimniki yoki qaysi kitobdan (ixtiyoriy)"
           value={source}
           maxLength={200}
           onChange={(event) => setSource(event.target.value)}
-          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         {box?.common_allowed && (
           <>
@@ -251,7 +251,7 @@ export function QuotesPage() {
         placeholder="🔎 Qidirish"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
-        className="rounded-xl bg-app-bg px-3 py-2 text-[15px] outline-none"
+        className="rounded-xl bg-app-bg px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}

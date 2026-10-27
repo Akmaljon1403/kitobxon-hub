@@ -37,11 +37,11 @@ export function BooksPage() {
       {state.status === 'success' &&
         state.data.items.map((book) => (
           <button key={book.id} type="button" className="text-left" onClick={() => navigate(`/books/${book.id}`)}>
-            <Card className="flex gap-3">
-              <BookCover url={book.cover_url} title={book.title} className="h-24 w-16 shrink-0" />
+            <Card interactive className="flex gap-3">
+              <BookCover url={book.cover_url} title={book.title} className="h-24 w-16 shrink-0 rounded-lg shadow-[var(--shadow-card)]" />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="line-clamp-2 font-semibold">{book.title}</h2>
+                  <h2 className="line-clamp-2 font-serif text-lg font-bold leading-snug">{book.title}</h2>
                   {book.status === 'COMPLETED' && <Badge>Yakunlangan</Badge>}
                 </div>
                 <p className="truncate text-sm text-app-hint">{book.author}</p>

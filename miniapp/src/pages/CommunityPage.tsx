@@ -345,7 +345,7 @@ export function CommunityNewPage() {
           placeholder={PLACEHOLDERS[kind]}
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] italic outline-none"
+          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] italic outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
         <p className="-mt-2 text-right text-xs text-app-hint">{text.length}/1000</p>
         {kind === 'QUOTE' && (
@@ -354,14 +354,14 @@ export function CommunityNewPage() {
             value={author}
             maxLength={200}
             onChange={(event) => setAuthor(event.target.value)}
-            className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+            className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
           />
         )}
         {(kind === 'QUOTE' || kind === 'BOOK') && (
           <select
             value={bookId}
             onChange={(event) => setBookId(event.target.value)}
-            className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+            className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
           >
             <option value="">{kind === 'BOOK' ? 'Klub kitobini tanlang (ixtiyoriy)' : 'Klub kitobidan (ixtiyoriy)'}</option>
             {options.books.map((book) => (
@@ -377,7 +377,7 @@ export function CommunityNewPage() {
             <select
               value={eventId}
               onChange={(event) => setEventId(event.target.value)}
-              className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+              className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
             >
               <option value="">Qaysi tadbir?</option>
               {options.events.map((event) => (
