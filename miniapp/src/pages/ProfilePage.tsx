@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { Avatar } from '../components/Avatar'
+import { Icon } from '../components/Icon'
 import { FeatureLocked } from '../components/FeatureGate'
 import { PassportCard } from '../components/PassportCard'
 import { InviteCard } from '../components/InviteCard'
@@ -166,17 +167,19 @@ export function ProfilePage() {
       </Card>
 
       {(me.features.premium !== 'off' || me.is_premium) && (
-        <button type="button" onClick={() => navigate('/premium')}>
-          <Card className="flex items-center justify-between gap-2 py-3 text-left">
-            <span className="text-[15px] font-medium">
-              💎{' '}
+        <button type="button" className="w-full text-left" onClick={() => navigate('/premium')}>
+          <Card interactive className="flex items-center gap-2.5 py-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gold-400/15 text-gold-500 dark:text-gold-300">
+              <Icon name="gem" size={18} />
+            </span>
+            <span className="flex-1 text-[15px] font-medium">
               {me.premium_lifetime
-                ? "♾ Umrbod Premium a'zo"
+                ? "Umrbod Premium a'zo"
                 : me.is_premium
                   ? `Premium a'zo — ${formatDate(me.premium_until)} gacha`
                   : 'Premium obuna'}
             </span>
-            <span className="text-app-link">→</span>
+            <Icon name="chevron-right" size={18} className="shrink-0 text-app-hint" />
           </Card>
         </button>
       )}
@@ -201,50 +204,36 @@ export function ProfilePage() {
           <Row label="Guruh" value={me.group_name ?? '—'} />
           <Row label="A'zo bo'lgan" value={formatDate(me.registered_at)} />
           <Button variant="ghost" onClick={() => setEditing(true)}>
-            ✏️ O'zgartirish
+            <Icon name="pencil" size={16} /> O'zgartirish
           </Button>
         </Card>
       )}
 
       <BenefitCard />
 
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { route: '/certificates', label: '🎓 Sertifikatlar', feature: 'certificates' },
-          { route: '/achievements', label: '🏅 Yutuqlar', feature: 'achievements' },
-          { route: '/rewards', label: "🎁 Sovg'alar", feature: 'rewards' },
-          { route: '/shelf', label: '📖 Javonim', feature: 'shelf' },
-          { route: '/card', label: '🪪 Kartam', feature: 'reading_card' },
-          { route: '/missions', label: '🎯 Missiyalar', feature: 'missions' },
-          { route: '/quotes', label: '💬 Iqtiboslarim', feature: 'quote_box' },
-          { route: '/community', label: "🌍 A'zolar fikrlari", feature: 'community' },
-          { route: '/league', label: '🏛 Liga', feature: 'faculty_league' },
-        ]
-          .filter((item) => me.features[item.feature] !== 'off')
-          .map((item) => (
-          <button key={item.route} type="button" onClick={() => navigate(item.route)}>
-            <Card className="relative flex items-center justify-center py-3 text-sm font-medium">
-              {item.label}
-              {me.premium_trial && me.premium_features?.includes(item.feature) && (
-                <span aria-label="Premium" className="absolute right-1.5 top-1 text-[10px]">
-                  💎
-                </span>
-              )}
-            </Card>
-          </button>
-        ))}
-      </div>
+      <button type="button" className="w-full text-left" onClick={() => navigate('/services')}>
+        <Card interactive className="flex items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+            <Icon name="grid" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">Barcha xizmatlar</p>
+            <p className="truncate text-sm text-app-hint">Javon, missiyalar, yutuqlar, sovg‘alar, sertifikatlar, liga va boshqalar</p>
+          </div>
+          <Icon name="chevron-right" className="shrink-0 text-app-hint" />
+        </Card>
+      </button>
 
       <SectionTitle>Bildirishnomalar</SectionTitle>
       <NotificationsCard />
 
       <Button variant="secondary" onClick={() => navigate('/help')}>
-        ❓ Yordam, savol-javoblar va adminga yozish
+        <Icon name="help-circle" size={18} /> Yordam, savol-javoblar va adminga yozish
       </Button>
 
       {me.is_admin && (
         <Button variant="secondary" onClick={() => window.location.assign('/admin/')}>
-          🛠 Admin panel
+          <Icon name="settings" size={18} /> Admin panel
         </Button>
       )}
     </>
