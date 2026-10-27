@@ -1,5 +1,6 @@
 import { AppLayout } from './layouts/AppLayout'
 import { AchievementsPage } from './pages/AchievementsPage'
+import { AllServicesPage } from './pages/AllServicesPage'
 import { FeatureGate } from './components/FeatureGate'
 import { LoadingState } from './components/StateViews'
 import { BookDetailPage } from './pages/BookDetailPage'
@@ -47,6 +48,7 @@ function Routes() {
   else if (section === 'events' && id) page = <EventDetailPage eventId={id} />
   else if (section === 'events') page = <EventsPage />
   else if (section === 'profile') page = <ProfilePage />
+  else if (section === 'services') page = <AllServicesPage />
   else if (section === 'ranking') page = <FeatureGate code="ranking"><RankingPage /></FeatureGate>
   else if (section === 'results') page = <ResultsPage />
   else if (section === 'achievements') page = <FeatureGate code="achievements"><AchievementsPage /></FeatureGate>
