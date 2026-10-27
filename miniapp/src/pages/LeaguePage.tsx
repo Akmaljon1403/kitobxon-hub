@@ -56,7 +56,7 @@ export function LeaguePage() {
             key={item.value}
             type="button"
             onClick={() => setPeriod(item.value)}
-            className={`rounded-lg py-1.5 text-sm ${period === item.value ? 'bg-app-bg font-semibold shadow-sm' : 'text-app-hint'}`}
+            className={`rounded-lg py-1.5 text-sm font-medium transition-colors ${period === item.value ? 'bg-brand-500 text-white' : 'text-app-hint'}`}
           >
             {item.label}
           </button>
@@ -71,7 +71,7 @@ export function LeaguePage() {
       )}
       {state.status === 'success' &&
         state.data.items.map((row) => (
-          <Card key={row.faculty} className={`flex flex-col gap-2 ${row.mine ? 'ring-2 ring-app-button' : ''}`}>
+          <Card key={row.faculty} className={`flex flex-col gap-2 ${row.mine ? 'ring-2 ring-brand-500' : ''}`}>
             <div className="flex items-center gap-3">
               <span className="w-8 shrink-0 text-center text-xl font-semibold tabular-nums">
                 {row.rank <= 3 ? MEDALS[row.rank - 1] : row.rank}

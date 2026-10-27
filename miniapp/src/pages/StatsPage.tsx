@@ -20,7 +20,7 @@ const CATEGORIES: Record<string, string> = {
 function Tile({ value, label, hint }: { value: string; label: string; hint?: string }) {
   return (
     <Card className="flex flex-col gap-0.5 py-3">
-      <span className="text-2xl font-semibold tabular-nums">{value}</span>
+      <span className="font-serif text-2xl font-bold tabular-nums">{value}</span>
       <span className="text-xs text-app-hint">{label}</span>
       {hint && <span className="text-xs text-app-link">{hint}</span>}
     </Card>
@@ -51,7 +51,7 @@ function MonthlyPoints({ months }: { months: PersonalStats['months'] }) {
             className="flex h-full flex-1 flex-col justify-end px-1.5"
           >
             <span
-              className={`block w-full rounded-t ${index === active ? 'bg-app-button' : 'bg-app-button/45'}`}
+              className={`block w-full rounded-t ${index === active ? 'bg-brand-500 dark:bg-brand-400' : 'bg-brand-500/45'}`}
               style={{ height: `${Math.max((month.points / max) * 100, month.points > 0 ? 3 : 0)}%` }}
             />
           </button>

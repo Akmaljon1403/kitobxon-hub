@@ -123,7 +123,7 @@ export function PremiumPage() {
       )}
 
       {me?.premium_trial && status.is_premium && (
-        <Card className="py-3 text-center text-sm ring-1 ring-app-button/40">
+        <Card className="py-3 text-center text-sm ring-1 ring-brand-500/40">
           🎁 Sizda sovg'a — <b>sinov Premium</b>, {formatDate(status.until)} gacha. 💎 belgili imkoniyatlar shu sinov tufayli ochiq;
           yoqqan bo'lsa, quyida davom ettiring.
         </Card>
@@ -169,12 +169,12 @@ export function PremiumPage() {
                     setPlanId(plan.id)
                     setMethod(status.card && uzs ? 'card' : 'stars')
                   }}
-                  className={`flex items-center justify-between gap-3 rounded-2xl bg-app-section p-4 text-left ${selected ? 'ring-2 ring-app-button' : badge ? 'ring-1 ring-app-button/40' : ''}`}
+                  className={`flex items-center justify-between gap-3 rounded-2xl bg-app-section p-4 text-left ${selected ? 'ring-2 ring-brand-500' : badge ? 'ring-1 ring-brand-500/40' : ''}`}
                 >
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 font-semibold">
                       {selected ? '🔘' : '⚪️'} {plan.title}
-                      {badge && <span className="rounded-full bg-app-button/10 px-2 py-0.5 text-[11px] text-app-button">{badge}</span>}
+                      {badge && <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] text-brand-600 dark:text-brand-300">{badge}</span>}
                     </p>
                     <p className="text-sm text-app-hint">{plan.description ?? `${plan.days} kun`}</p>
                   </div>
@@ -202,11 +202,11 @@ export function PremiumPage() {
                   <button
                     type="button"
                     onClick={() => setMethod('card')}
-                    className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'card' ? 'bg-app-button/10 ring-2 ring-app-button' : 'bg-app-section'}`}
+                    className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'card' ? 'bg-brand-500/10 ring-2 ring-brand-500' : 'bg-app-section'}`}
                   >
                     <span className="flex items-center justify-between gap-2 font-semibold">
                       💳 Bank kartasi (Uzcard, Humo)
-                      <span className="rounded-full bg-app-button px-2 py-0.5 text-[11px] text-app-button-text">Tavsiya etiladi</span>
+                      <span className="rounded-full bg-gold-gradient px-2 py-0.5 text-[11px] font-semibold text-brand-700">Tavsiya etiladi</span>
                     </span>
                     <span className="text-sm text-app-hint">Click, Payme yoki bank ilovasidan o'tkazasiz — eng oson yo'l. {formatUzs(selectedPlanUzs)}</span>
                   </button>
@@ -214,7 +214,7 @@ export function PremiumPage() {
                 <button
                   type="button"
                   onClick={() => setMethod('stars')}
-                  className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'stars' ? 'bg-app-button/10 ring-2 ring-app-button' : 'bg-app-section'}`}
+                  className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'stars' ? 'bg-brand-500/10 ring-2 ring-brand-500' : 'bg-app-section'}`}
                 >
                   <span className="font-semibold">⭐ Telegram Stars</span>
                   <span className="text-sm text-app-hint">
@@ -305,7 +305,7 @@ export function PremiumPage() {
               <>
                 <CardNumber card={status.card} label="Istalgan summani shu kartaga o'tkazing — chek yuborish shart emas" />
                 {donated ? (
-                  <p role="status" className="rounded-xl bg-app-button/10 px-3 py-2 text-sm">
+                  <p role="status" className="rounded-xl bg-brand-500/10 px-3 py-2 text-sm">
                     💛 <b>Chin dildan rahmat!</b> Hissangiz yangi kitoblar, qiziqarli tadbirlar va g'oliblarning quvonchiga aylanadi.
                   </p>
                 ) : (
@@ -415,7 +415,7 @@ function StarsTopUp({
                 key={item.stars}
                 type="button"
                 onClick={() => onPack(item.stars)}
-                className={`relative flex flex-col rounded-xl px-3 py-2 text-left ${pack === item.stars ? 'bg-app-button/10 ring-1 ring-app-button' : 'bg-app-surface'}`}
+                className={`relative flex flex-col rounded-xl px-3 py-2 text-left ${pack === item.stars ? 'bg-brand-500/10 ring-1 ring-brand-500' : 'bg-app-surface'}`}
               >
                 <span className="font-medium">⭐ {item.stars} Stars</span>
                 <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>

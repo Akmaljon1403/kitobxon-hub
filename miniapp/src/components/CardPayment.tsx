@@ -119,7 +119,7 @@ export function CardCheckout({
         }}
       />
       {notice && (
-        <p role={notice.error ? 'alert' : 'status'} className={`rounded-xl px-3 py-2 text-sm ${notice.error ? 'text-app-danger' : 'bg-app-button/10 text-app-text'}`}>
+        <p role={notice.error ? 'alert' : 'status'} className={`rounded-xl px-3 py-2 text-sm ${notice.error ? 'text-app-danger' : 'bg-brand-500/10 text-app-text'}`}>
           {notice.text}
         </p>
       )}

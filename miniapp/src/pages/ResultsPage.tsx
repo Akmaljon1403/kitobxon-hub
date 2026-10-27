@@ -62,11 +62,11 @@ export function ResultsPage() {
   return (
     <>
       <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📊 Natijalarim</h1>
-      <Card className="flex flex-col items-center gap-1 py-5 text-center">
-        <p className="text-sm text-app-hint">Jami ball</p>
-        <p className="text-4xl font-bold tabular-nums">{data.total}</p>
+      <Card className="flex flex-col items-center gap-1 border-0 bg-brand-gradient py-6 text-center text-white shadow-[var(--shadow-brand)] ring-1 ring-white/10">
+        <p className="text-sm text-white/75">Jami ball</p>
+        <p className="font-serif text-4xl font-bold tabular-nums text-gold-300">{data.total}</p>
         {data.season && (
-          <p className="text-xs text-app-hint">
+          <p className="text-xs text-white/70">
             {data.season.name}: {data.season.total} ball
           </p>
         )}
@@ -89,7 +89,7 @@ export function ResultsPage() {
             <span className="text-sm text-app-hint">
               {group.icon} {group.label}
             </span>
-            <span className="text-xl font-semibold tabular-nums">{sum(group.categories)}</span>
+            <span className="font-serif text-2xl font-bold tabular-nums">{sum(group.categories)}</span>
           </Card>
         ))}
       </div>

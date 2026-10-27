@@ -161,7 +161,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
         value={title}
         maxLength={80}
         onChange={(event) => setTitle(event.target.value)}
-        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+        className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
       <div className="flex flex-wrap gap-1.5">
         {data.icons.map((item) => (
@@ -169,7 +169,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
             key={item}
             type="button"
             onClick={() => setIcon(item)}
-            className={`size-10 rounded-xl text-xl ${icon === item ? 'bg-app-button/20 ring-2 ring-app-button' : 'bg-app-surface'}`}
+            className={`size-10 rounded-xl text-xl ${icon === item ? 'bg-brand-500/15 ring-2 ring-brand-500' : 'bg-app-surface'}`}
           >
             {item}
           </button>
@@ -184,7 +184,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
             setMetric(event.target.value)
             if (next) setTarget(String(Math.max(next.min, next.points_from)))
           }}
-          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         >
           {data.metrics.map((item) => (
             <option key={item.code} value={item.code}>
@@ -202,7 +202,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
           max={chosen.max}
           value={target}
           onChange={(event) => setTarget(event.target.value)}
-          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none"
+          className="rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
         />
       </label>
       <div className="flex flex-col gap-1 text-sm">

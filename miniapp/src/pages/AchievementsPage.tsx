@@ -11,7 +11,7 @@ function Badge({ item }: { item: MemberAchievement }) {
   const unlocked = Boolean(item.unlocked_at)
   const showProgress = !unlocked && item.progress !== null && item.threshold > 1
   return (
-    <Card className={`flex flex-col items-center gap-1 px-2 py-4 text-center ${unlocked ? '' : 'opacity-70'}`}>
+    <Card className={`flex flex-col items-center gap-1 px-2 py-4 text-center ${unlocked ? 'ring-1 ring-gold-400/30' : 'opacity-70'}`}>
       <span aria-hidden className={`text-4xl ${unlocked ? '' : 'grayscale'}`}>
         {unlocked ? item.icon : '🔒'}
       </span>
@@ -22,7 +22,7 @@ function Badge({ item }: { item: MemberAchievement }) {
         <div className="mt-1 w-full px-2" aria-label={`${item.progress} / ${item.threshold}`}>
           <div className="h-1.5 rounded-full bg-app-surface">
             <div
-              className="h-1.5 rounded-full bg-app-button"
+              className="h-1.5 rounded-full bg-brand-gradient"
               style={{ width: `${Math.min(100, ((item.progress ?? 0) / item.threshold) * 100)}%` }}
             />
           </div>

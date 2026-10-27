@@ -19,8 +19,8 @@ function TestCard({ test }: { test: ClubTest }) {
   const permanent = test.kind === 'PERMANENT'
   const perfect = permanent && (test.best_score ?? 0) >= test.max_score
   return (
-    <button type="button" className="text-left" onClick={() => navigate(`/tests/${test.id}`)}>
-      <Card className="flex flex-col gap-1.5">
+    <button type="button" className="w-full text-left" onClick={() => navigate(`/tests/${test.id}`)}>
+      <Card interactive className="flex flex-col gap-1.5">
         <p className="text-xs font-medium text-app-link">
           {permanent
             ? '♾ Doim ochiq — cheksiz urinish'
@@ -28,7 +28,7 @@ function TestCard({ test }: { test: ClubTest }) {
               ? `Boshlanadi: ${formatEventDate(test.starts_at)}`
               : `Yopiladi: ${formatEventDate(test.ends_at)}`}
         </p>
-        <h2 className="font-semibold">{test.title}</h2>
+        <h2 className="font-serif text-lg font-bold leading-snug">{test.title}</h2>
         {test.book_title && <p className="text-sm text-app-hint">📚 {test.book_title}</p>}
         <p className="text-sm text-app-hint">
           ❓ {test.question_count} savol · ⏱ {test.duration_minutes} daqiqa
@@ -54,7 +54,7 @@ function Section({ title, hint, tests }: { title: string; hint: string; tests: C
   return (
     <section className="flex flex-col gap-2">
       <div className="px-1">
-        <h2 className="text-base font-semibold">{title}</h2>
+        <h2 className="font-serif text-lg font-bold">{title}</h2>
         <p className="text-xs text-app-hint">{hint}</p>
       </div>
       {tests.map((test) => (

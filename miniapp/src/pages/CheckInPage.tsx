@@ -151,7 +151,7 @@ export function CheckInPage() {
             autoComplete="off"
             placeholder="K7M2QX"
             aria-label="Davomat kodi"
-            className="w-full rounded-xl bg-app-surface px-3 py-3 text-center font-mono text-xl tracking-[0.3em] outline-none"
+            className="w-full rounded-xl bg-app-surface px-3 py-3 text-center font-mono text-xl tracking-[0.3em] outline-none transition focus:ring-2 focus:ring-brand-400/50"
           />
           <Button disabled={code.length !== 6 || busy} onClick={() => void submit({ code })}>
             Yuborish
