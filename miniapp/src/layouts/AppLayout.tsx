@@ -1,35 +1,40 @@
 import type { ReactNode } from 'react'
 
+import { Icon, type IconName } from '../components/Icon'
 import { useAuth } from '../store/auth'
 import { navigate } from '../utils/router'
 import { selectionHaptic } from '../utils/telegram'
 
 interface Tab {
   route: string
-  icon: string
+  icon: IconName
   label: string
   feature?: string
-  // other sections that light this tab up (the library: shelf, club books, quotes, missions)
+  /** Other sections that keep this tab lit (so deep pages still show where you are). */
   also?: string[]
 }
 
-const LIBRARY = ['shelf', 'books', 'quotes', 'missions', 'community']
-
+// The five sections of the app. Everything else lives inside one of them or in «Barcha xizmatlar».
 const TABS: Tab[] = [
-  { route: '', icon: '🏠', label: 'Asosiy' },
-  { route: 'books', icon: '📚', label: 'Kitoblar', also: LIBRARY },
-  { route: 'events', icon: '📅', label: 'Tadbirlar' },
-  { route: 'ranking', icon: '🏆', label: 'Reyting', feature: 'ranking' },
-  { route: 'profile', icon: '👤', label: 'Profil' },
+  { route: '', icon: 'home', label: 'Asosiy' },
+  { route: 'books', icon: 'book-open', label: 'Mutolaa', also: ['shelf', 'books', 'quotes', 'missions', 'community'] },
+  { route: 'events', icon: 'calendar', label: 'Tadbirlar', also: ['checkin'] },
+  { route: 'ranking', icon: 'trophy', label: 'Reyting', feature: 'ranking', also: ['league', 'results', 'stats', 'achievements'] },
+  {
+    route: 'profile',
+    icon: 'user',
+    label: 'Profil',
+    also: ['services', 'certificates', 'rewards', 'premium', 'help', 'invite', 'card'],
+  },
 ]
 
 export function AppLayout({ section, children }: { section: string; children: ReactNode }) {
   const { me } = useAuth()
-  // «📚 Javonim» stands in for «Kitoblar» once the shelf is open: a reader's own books first, the club's
-  // catalogue one tap away inside it.
+  // The reader's own shelf («Javonim») is the face of Mutolaa when it is enabled; the club catalogue is
+  // one tap away inside it.
   const shelf = me?.features?.shelf === 'on'
   const tabs = TABS.filter((tab) => !tab.feature || me?.features?.[tab.feature] !== 'off').map((tab) =>
-    tab.route === 'books' && shelf ? { ...tab, route: 'shelf', label: 'Javonim' } : tab,
+    tab.route === 'books' && shelf ? { ...tab, route: 'shelf' } : tab,
   )
   const go = (route: string) => {
     selectionHaptic()
@@ -51,20 +56,19 @@ export function AppLayout({ section, children }: { section: string; children: Re
           {tabs.map((tab) => {
             const active = section === tab.route || Boolean(tab.also?.includes(section))
             return (
-              <li key={tab.route}>
+              <li key={tab.label}>
                 <button
                   type="button"
                   onClick={() => go(tab.route)}
                   aria-current={active ? 'page' : undefined}
-                  className="group flex w-full flex-col items-center gap-1 py-1.5 text-[11px] font-medium"
+                  className="group flex w-full flex-col items-center gap-1 py-1 text-[11px] font-medium"
                 >
                   <span
-                    aria-hidden
-                    className={`grid h-7 w-14 place-items-center rounded-full text-xl leading-none transition-colors ${
+                    className={`grid h-8 w-14 place-items-center rounded-full transition-colors ${
                       active ? 'bg-brand-500/15 text-brand-600 dark:text-brand-300' : 'text-app-hint'
                     }`}
                   >
-                    {tab.icon}
+                    <Icon name={tab.icon} size={22} strokeWidth={active ? 2.4 : 2} />
                   </span>
                   <span className={active ? 'font-semibold text-brand-600 dark:text-brand-300' : 'text-app-hint'}>
                     {tab.label}
