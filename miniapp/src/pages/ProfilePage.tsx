@@ -54,7 +54,7 @@ function ProfileEditor({ me, onDone }: { me: Me; onDone: () => void }) {
     }
   }
 
-  const fieldClass = 'mt-1 w-full rounded-xl bg-app-surface px-3 py-3 text-[15px] outline-none'
+  const fieldClass = 'mt-1 w-full rounded-xl bg-app-surface px-3 py-3 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50'
   return (
     <Card className="flex flex-col gap-3">
       <label className="text-sm text-app-hint">

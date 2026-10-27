@@ -29,19 +29,21 @@ export function EventBadges({ event }: { event: ClubEvent }) {
 
 export function EventCard({ event }: { event: ClubEvent }) {
   return (
-    <button type="button" className="text-left" onClick={() => navigate(`/events/${event.id}`)}>
-      <Card className="flex flex-col gap-1.5">
-        <p className="text-xs font-medium text-app-link">{formatEventDate(event.starts_at)}</p>
-        <h2 className="font-semibold">{event.title}</h2>
+    <button type="button" className="w-full text-left" onClick={() => navigate(`/events/${event.id}`)}>
+      <Card interactive className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:bg-white/10 dark:text-brand-300">
+            {formatEventDate(event.starts_at)}
+          </span>
+          <span className="shrink-0 text-xs font-medium text-app-hint">🏆 {event.attendance_points} ball</span>
+        </div>
+        <h2 className="font-serif text-lg font-bold leading-snug">{event.title}</h2>
         {event.shifts.length > 0 && (
           <p className="text-sm text-app-hint">🕒 {event.shifts.map((shift) => `${shift.position}-smena ${formatTime(shift.starts_at)}`).join(' · ')}</p>
         )}
         {event.location && <p className="text-sm text-app-hint">📍 {event.location}</p>}
         {event.book_title && <p className="text-sm text-app-hint">📚 {event.book_title}</p>}
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <EventBadges event={event} />
-          <span className="text-xs text-app-hint">🏆 {event.attendance_points} ball</span>
-        </div>
+        <EventBadges event={event} />
       </Card>
     </button>
   )
@@ -59,7 +61,7 @@ export function EventsPage() {
   return (
     <>
       <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📅 Tadbirlar</h1>
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-app-bg p-1" role="tablist">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-app-surface p-1" role="tablist">
         {(['upcoming', 'past'] as const).map((value) => (
           <button
             key={value}
