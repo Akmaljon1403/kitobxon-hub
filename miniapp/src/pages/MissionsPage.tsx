@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -58,7 +59,14 @@ function MissionCard({ mission, onChange }: { mission: Mission; onChange: (items
           {mission.description && <p className="text-sm text-app-hint">{mission.description}</p>}
           <p className="mt-1 text-xs text-app-hint">
             {mission.period_days} kun ichida · {mission.target} {mission.unit}
-            {mission.reward_points ? ` · 🎁 +${mission.reward_points} ball` : ''}
+            {mission.reward_points ? (
+              <>
+                {' · '}
+                <Icon name="gift" size={12} className="inline align-[-1px]" /> +{mission.reward_points} ball
+              </>
+            ) : (
+              ''
+            )}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -78,17 +86,20 @@ function MissionCard({ mission, onChange }: { mission: Mission; onChange: (items
         </>
       )}
       {mission.status === 'COMPLETED' && mission.completed_at && (
-        <p className="text-sm text-app-hint">🎉 {formatDate(mission.completed_at)} kuni bajardingiz</p>
+        <p className="flex items-center gap-1.5 text-sm text-app-hint">
+          <Icon name="sparkles" size={14} className="text-gold-500 dark:text-gold-300" />
+          {formatDate(mission.completed_at)} kuni bajardingiz
+        </p>
       )}
       {error && <p className="text-sm text-app-danger">{error}</p>}
       {mission.status === null && (
         <Button loading={busy} onClick={() => void act('take')}>
-          🎯 Boshlash
+          <Icon name="target" size={18} />Boshlash
         </Button>
       )}
       {mission.status === 'EXPIRED' && (
         <Button variant="secondary" loading={busy} onClick={() => void act('take')}>
-          🔁 Qaytadan boshlash
+          <Icon name="refresh" size={18} />Qaytadan boshlash
         </Button>
       )}
       {mission.status === 'ACTIVE' && !mission.personal && (
@@ -98,7 +109,7 @@ function MissionCard({ mission, onChange }: { mission: Mission; onChange: (items
       )}
       {mission.personal && (
         <Button variant="ghost" loading={busy} onClick={() => void act('delete')}>
-          🗑 O‘chirish
+          <Icon name="trash" size={18} />O‘chirish
         </Button>
       )}
     </Card>
@@ -155,7 +166,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
 
   return (
     <Card className="flex flex-col gap-3 ring-1 ring-app-button/40">
-      <p className="font-semibold">🎯 O‘z missiyamni yaratish</p>
+      <p className="flex items-center gap-1.5 font-semibold"><Icon name="target" size={16} />O‘z missiyamni yaratish</p>
       <input
         placeholder="Nomi: masalan, «Imtihondan oldin 3 ta kitob»"
         value={title}
@@ -230,7 +241,7 @@ function OwnMissionForm({ onCreated, onClose }: { onCreated: (items: Mission[]) 
       </p>
       {error && <p className="text-sm text-app-danger">{error}</p>}
       <Button loading={busy} disabled={title.trim().length < 3 || !number} onClick={() => void create()}>
-        🚀 Yaratish va boshlash
+        <Icon name="sparkles" size={18} />Yaratish va boshlash
       </Button>
       <Button variant="ghost" onClick={onClose}>
         Bekor qilish
@@ -268,7 +279,7 @@ export function MissionsPage() {
         <OwnMissionForm onCreated={setItems} onClose={() => setCreating(false)} />
       ) : (
         <Button variant="secondary" onClick={() => setCreating(true)}>
-          ➕ O‘z missiyamni yaratish
+          <Icon name="plus" size={18} />O‘z missiyamni yaratish
         </Button>
       )}
       {missions.length === 0 && (

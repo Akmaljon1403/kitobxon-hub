@@ -13,12 +13,23 @@ function Badge({ item }: { item: MemberAchievement }) {
   const showProgress = !unlocked && item.progress !== null && item.threshold > 1
   return (
     <Card className={`flex flex-col items-center gap-1 px-2 py-4 text-center ${unlocked ? 'ring-1 ring-gold-400/30' : 'opacity-70'}`}>
-      <span aria-hidden className={`text-4xl ${unlocked ? '' : 'grayscale'}`}>
-        {unlocked ? item.icon : '🔒'}
-      </span>
+      {unlocked ? (
+        <span aria-hidden className="text-4xl">
+          {item.icon}
+        </span>
+      ) : (
+        <span className="grid size-12 place-items-center rounded-full bg-app-surface text-app-hint">
+          <Icon name="lock" size={24} />
+        </span>
+      )}
       <p className="text-sm font-semibold leading-tight">{item.title}</p>
       <p className="text-xs leading-snug text-app-hint">{item.description}</p>
-      {unlocked && <p className="mt-1 text-[11px] text-green-600 dark:text-green-300">✓ {formatDate(item.unlocked_at)}</p>}
+      {unlocked && (
+        <p className="mt-1 flex items-center justify-center gap-1 text-[11px] text-green-600 dark:text-green-300">
+          <Icon name="check" size={12} />
+          {formatDate(item.unlocked_at)}
+        </p>
+      )}
       {showProgress && (
         <div className="mt-1 w-full px-2" aria-label={`${item.progress} / ${item.threshold}`}>
           <div className="h-1.5 rounded-full bg-app-surface">
@@ -60,9 +71,10 @@ export function AchievementsPage() {
         <button
           type="button"
           onClick={() => navigate('/certificates')}
-          className="shrink-0 rounded-xl bg-app-surface px-3 py-2 text-sm font-medium"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-app-surface px-3 py-2 text-sm font-medium"
         >
-          🎓 Sertifikatlarim
+          <Icon name="graduation-cap" size={16} />
+          Sertifikatlarim
         </button>
       </div>
       {state.data.length === 0 && <EmptyState icon="medal" title="Hozircha yutuqlar yo'q" />}

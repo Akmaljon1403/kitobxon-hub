@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { Icon, type IconName } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -11,17 +12,17 @@ import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
 import { confirmAction, haptic } from '../utils/telegram'
 
-const SHARED: Record<string, { label: string; tone: 'success' | 'info' | 'neutral' | 'warning' }> = {
-  APPROVED: { label: '🌍 Umumiy', tone: 'success' },
-  PENDING: { label: '⏳ Umumiyga — ko‘rib chiqilmoqda', tone: 'warning' },
-  HIDDEN: { label: '🙈 Admin yashirgan', tone: 'neutral' },
+const SHARED: Record<string, { icon: IconName; label: string; tone: 'success' | 'info' | 'neutral' | 'warning' }> = {
+  APPROVED: { icon: 'globe', label: 'Umumiy', tone: 'success' },
+  PENDING: { icon: 'hourglass', label: 'Umumiyga — ko‘rib chiqilmoqda', tone: 'warning' },
+  HIDDEN: { icon: 'eye-off', label: 'Admin yashirgan', tone: 'neutral' },
 }
 
-/** «🔒 Faqat o‘zim uchun» / «🌍 Umumiy» — chosen before saving, changeable any time. */
+/** «Faqat o‘zim uchun» / «Umumiy» — chosen before saving, changeable any time. */
 export function VisibilityChoice({ value, onChange }: { value: QuoteVisibility; onChange: (value: QuoteVisibility) => void }) {
-  const items: { code: QuoteVisibility; title: string; hint: string }[] = [
-    { code: 'PERSONAL', title: '🔒 Shaxsiy', hint: 'faqat sizga ko‘rinadi' },
-    { code: 'COMMON', title: '🌍 Umumiy', hint: 'hamma ko‘radi, karta bo‘lib ulashiladi' },
+  const items: { code: QuoteVisibility; icon: IconName; title: string; hint: string }[] = [
+    { code: 'PERSONAL', icon: 'lock', title: 'Shaxsiy', hint: 'faqat sizga ko‘rinadi' },
+    { code: 'COMMON', icon: 'globe', title: 'Umumiy', hint: 'hamma ko‘radi, karta bo‘lib ulashiladi' },
   ]
   return (
     <div className="grid grid-cols-2 gap-1.5">
@@ -32,7 +33,10 @@ export function VisibilityChoice({ value, onChange }: { value: QuoteVisibility; 
           onClick={() => onChange(item.code)}
           className={`rounded-xl px-3 py-2 text-left ${value === item.code ? 'bg-brand-500 text-white' : 'bg-app-surface'}`}
         >
-          <span className="block text-sm font-medium">{item.title}</span>
+          <span className="flex items-center gap-1.5 text-sm font-medium">
+            <Icon name={item.icon} size={15} />
+            {item.title}
+          </span>
           <span className={`block text-xs ${value === item.code ? 'opacity-80' : 'text-app-hint'}`}>{item.hint}</span>
         </button>
       ))}
@@ -120,7 +124,17 @@ export function QuoteCard({
     <Card className="flex flex-col gap-2">
       {!quote.book_quote_id && (
         <div className="flex justify-end">
-          {quote.shared ? <Badge tone={SHARED[quote.shared].tone}>{SHARED[quote.shared].label}</Badge> : <Badge>🔒 Shaxsiy</Badge>}
+          {quote.shared ? (
+            <Badge tone={SHARED[quote.shared].tone}>
+              <Icon name={SHARED[quote.shared].icon} size={13} />
+              {SHARED[quote.shared].label}
+            </Badge>
+          ) : (
+            <Badge>
+              <Icon name="lock" size={13} />
+              Shaxsiy
+            </Badge>
+          )}
         </div>
       )}
       <blockquote className="whitespace-pre-line font-serif text-[15px] italic leading-relaxed">«{quote.text}»</blockquote>
@@ -128,28 +142,33 @@ export function QuoteCard({
         {quote.source ? `— ${quote.source}` : ''}
         {quote.page ? `, ${quote.page}-bet` : ''}
       </p>
-      {quote.note && <p className="rounded-xl bg-app-surface px-3 py-2 text-sm">📝 {quote.note}</p>}
+      {quote.note && (
+        <p className="flex items-start gap-1.5 rounded-xl bg-app-surface px-3 py-2 text-sm">
+          <Icon name="pencil" size={14} className="mt-0.5 shrink-0" />
+          {quote.note}
+        </p>
+      )}
       {preview && <img src={preview} alt="Iqtibos kartochkasi" className="w-full rounded-xl" />}
       {notice && <p className={`text-sm ${notice.error ? 'text-app-danger' : 'text-app-link'}`}>{notice.text}</p>}
       <div className="grid grid-cols-3 gap-2">
         <Button variant="secondary" className="px-2 text-sm" loading={busy === 'card'} onClick={() => void showCard()}>
-          {preview ? 'Yopish' : '🖼 Kartochka'}
+          {preview ? 'Yopish' : <><Icon name="image" size={16} />Kartochka</>}
         </Button>
         <Button variant="secondary" className="px-2 text-sm" loading={busy === 'send'} onClick={() => void send()}>
-          📤 Ulashish
+          <Icon name="send" size={16} />Ulashish
         </Button>
-        <Button variant="ghost" className="px-2 text-sm" onClick={() => void remove()}>
-          🗑
+        <Button variant="ghost" className="px-2 text-sm" aria-label="O‘chirish" onClick={() => void remove()}>
+          <Icon name="trash" size={16} />
         </Button>
       </div>
       {!quote.book_quote_id && quote.shared && (
         <Button variant="ghost" className="text-sm" loading={busy === 'share'} onClick={() => void setVisibility('PERSONAL')}>
-          🔒 Shaxsiyga qaytarish
+          <Icon name="lock" size={16} />Shaxsiyga qaytarish
         </Button>
       )}
       {!quote.book_quote_id && !quote.shared && commonAllowed && (
         <Button variant="ghost" className="text-sm" loading={busy === 'share'} onClick={() => void setVisibility('COMMON')}>
-          🌍 Umumiy qilish (hamma ko‘rsin)
+          <Icon name="globe" size={16} />Umumiy qilish (hamma ko‘rsin)
         </Button>
       )}
       <p className="text-xs text-app-hint">{formatDate(quote.created_at)}</p>
@@ -243,12 +262,12 @@ export function QuotesPage() {
         {error && <p className="text-sm text-app-danger">{error}</p>}
         {notice && <p className="text-sm text-app-link">{notice}</p>}
         <Button loading={busy} disabled={!text.trim()} onClick={() => void add()}>
-          💾 Saqlash
+          <Icon name="save" size={18} />Saqlash
         </Button>
-        <p className="text-xs text-app-hint">Kitob sahifasidagi iqtibosni «💾 Saqlash» bilan, javondagi kitobga esa uning sahifasidan qo‘shasiz.</p>
+        <p className="text-xs text-app-hint">Kitob sahifasidagi iqtibosni «Saqlash» bilan, javondagi kitobga esa uning sahifasidan qo‘shasiz.</p>
       </Card>
       <input
-        placeholder="🔎 Qidirish"
+        placeholder="Qidirish"
         value={search}
         onChange={(event) => setSearch(event.target.value)}
         className="rounded-xl bg-app-bg px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"

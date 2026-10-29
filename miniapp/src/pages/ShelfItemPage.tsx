@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { BookCover } from '../components/BookCover'
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -63,7 +64,7 @@ function LogForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
 
   return (
     <Card className="flex flex-col gap-2">
-      <p className="font-semibold">📖 Mutolaa kundaligiga yozish</p>
+      <p className="flex items-center gap-1.5 font-semibold"><Icon name="book-open" size={16} />Mutolaa kundaligiga yozish</p>
       <div className="flex gap-1">
         {['Bugun', 'Kecha', '2 kun oldin'].map((label, index) => (
           <button
@@ -104,7 +105,7 @@ function LogForm({ itemId, onDone }: { itemId: string; onDone: () => void }) {
       />
       {error && <p className="text-sm text-app-danger">{error}</p>}
       <Button loading={busy} onClick={() => void save()}>
-        ✍️ Kundalikka yozish
+        <Icon name="pencil" size={18} />Kundalikka yozish
       </Button>
     </Card>
   )
@@ -141,7 +142,7 @@ function ReflectionForm({ itemId, saved, onDone }: { itemId: string; saved: Refl
   return (
     <Card tone="brand" className="flex flex-col gap-3">
       <div>
-        <p className="font-serif text-base font-bold">💡 Kitobdan keyin 3 savol</p>
+        <p className="flex items-center gap-1.5 font-serif text-base font-bold"><Icon name="lightbulb" size={17} className="text-gold-500 dark:text-gold-300" />Kitobdan keyin 3 savol</p>
         <p className="text-sm text-app-hint">O‘qiganlaringizni mustahkamlang — javob yozganingiz uchun ball beriladi (har kitobga bir marta).</p>
       </div>
       {QUESTIONS.map((question) =>
@@ -171,7 +172,7 @@ function ReflectionForm({ itemId, saved, onDone }: { itemId: string; saved: Refl
         </Button>
       ) : (
         <Button variant="secondary" onClick={() => setEditing(true)}>
-          ✏️ Tahrirlash
+          <Icon name="pencil" size={18} />Tahrirlash
         </Button>
       )}
     </Card>
@@ -217,7 +218,7 @@ function AddQuote({ itemId, onDone, box }: { itemId: string; onDone: () => void;
   if (!open) {
     return (
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        💬 Iqtibos saqlash
+        <Icon name="quote" size={18} />Iqtibos saqlash
       </Button>
     )
   }
@@ -315,8 +316,9 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
             <ProgressBar percent={item.percent} />
           </div>
           {item.club_book && item.book_id && (
-            <button type="button" className="mt-2 text-sm text-app-link" onClick={() => navigate(`/books/${item.book_id}`)}>
-              Klub kitobi sahifasi ›
+            <button type="button" className="mt-2 inline-flex items-center gap-1 text-sm text-app-link" onClick={() => navigate(`/books/${item.book_id}`)}>
+              Klub kitobi sahifasi
+              <Icon name="chevron-right" size={14} />
             </button>
           )}
         </div>
@@ -384,8 +386,8 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
                   </p>
                   {entry.note && <p className="whitespace-pre-line text-sm text-app-hint">{entry.note}</p>}
                 </div>
-                <button type="button" aria-label="O‘chirish" className="text-app-hint" onClick={() => void removeLog(entry.id)}>
-                  ×
+                <button type="button" aria-label="O‘chirish" className="shrink-0 text-app-hint" onClick={() => void removeLog(entry.id)}>
+                  <Icon name="x" size={16} />
                 </button>
               </li>
             ))}
@@ -406,7 +408,7 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
           />
         </label>
         <Button variant="ghost" onClick={() => void remove()}>
-          🗑 Javondan olib tashlash
+          <Icon name="trash" size={18} />Javondan olib tashlash
         </Button>
       </Card>
     </div>

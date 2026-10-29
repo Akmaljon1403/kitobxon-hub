@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { FeatureLocked, TrialBadge, useFeature } from '../components/FeatureGate'
+import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -41,9 +42,8 @@ function Row({ row }: { row: RankingRow }) {
         <p className={`truncate ${row.is_me ? 'font-semibold' : 'font-medium'}`}>
           {row.name}
           {row.premium && (
-            <span aria-label="Premium a'zo" title="Premium a'zo">
-              {' '}
-              💎
+            <span aria-label="Premium a'zo" title="Premium a'zo" className="ml-0.5 inline-flex align-[-2px]">
+              <Icon name="gem" size={13} className="text-gold-500 dark:text-gold-300" />
             </span>
           )}
           {row.is_me && ' (siz)'}
@@ -80,7 +80,7 @@ function Segmented<T extends string>({
           className={`truncate rounded-lg px-1 py-2 text-[13px] font-medium ${value === option.value ? 'bg-brand-500 text-white' : 'text-app-hint'}`}
         >
           {option.label}
-          {locked.includes(option.value) && ' 💎'}
+          {locked.includes(option.value) && <Icon name="gem" size={12} className="ml-1 inline align-[-1px]" />}
         </button>
       ))}
     </div>
@@ -191,15 +191,13 @@ export function RankingPage() {
       {league === 'on' && (
         <button type="button" onClick={() => navigate('/league')} className="text-left">
           <Card className="flex items-center gap-3 py-3">
-            <span aria-hidden className="text-2xl">
-              🏛
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+              <Icon name="landmark" size={20} />
             </span>
             <span className="min-w-0 flex-1 text-sm">
               <b>Fakultetlar ligasi</b> — fakultetingiz bilan birga bellashing: ball, betlar, kitoblar va tadbirlar
             </span>
-            <span aria-hidden className="text-app-hint">
-              ›
-            </span>
+            <Icon name="chevron-right" size={18} className="shrink-0 text-app-hint" />
           </Card>
         </button>
       )}

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { Icon, type IconName } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -8,13 +9,13 @@ import { useAuth } from '../store/auth'
 import type { PersonalStats } from '../types/api'
 import { navigate } from '../utils/router'
 
-const CATEGORIES: Record<string, string> = {
-  ATTENDANCE: '✅ Davomat',
-  TEST: '📝 Testlar',
-  TEST_RANK_BONUS: "🏅 Test o'rinlari",
-  BOOK_COMPLETION: '📚 Kitoblar',
-  MANUAL: "✍️ Admin qo'shgan",
-  ACHIEVEMENT: '🏆 Yutuqlar',
+const CATEGORIES: Record<string, { icon: IconName; label: string }> = {
+  ATTENDANCE: { icon: 'check-circle', label: 'Davomat' },
+  TEST: { icon: 'file-text', label: 'Testlar' },
+  TEST_RANK_BONUS: { icon: 'medal', label: "Test o'rinlari" },
+  BOOK_COMPLETION: { icon: 'book', label: 'Kitoblar' },
+  MANUAL: { icon: 'pencil', label: "Admin qo'shgan" },
+  ACHIEVEMENT: { icon: 'trophy', label: 'Yutuqlar' },
 }
 
 function Tile({ value, label, hint }: { value: string; label: string; hint?: string }) {
@@ -116,7 +117,16 @@ export function StatsPage() {
           .sort((a, b) => b[1] - a[1])
           .map(([category, points]) => (
             <div key={category} className="flex justify-between gap-3">
-              <span>{CATEGORIES[category] ?? category}</span>
+              <span className="flex items-center gap-1.5">
+                {CATEGORIES[category] ? (
+                  <>
+                    <Icon name={CATEGORIES[category].icon} size={15} className="text-app-hint" />
+                    {CATEGORIES[category].label}
+                  </>
+                ) : (
+                  category
+                )}
+              </span>
               <span className="font-semibold tabular-nums">{points}</span>
             </div>
           ))}
