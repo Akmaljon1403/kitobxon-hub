@@ -34,6 +34,9 @@ class MyScoresOut(BaseModel):
     breakdown: dict[str, int]
     season: SeasonTotal | None
     history: list[ScoreEntryOut]
+    # The grand total number of score transactions (the history list may be capped by ``limit``), so the
+    # app can show "jami N ta" and how many more entries exist beyond the ones loaded.
+    history_count: int
 
 
 class RankingRowOut(BaseModel):

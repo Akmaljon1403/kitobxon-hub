@@ -75,6 +75,7 @@ async def test_my_scores_breakdown_keeps_categories_separate(client: httpx.Async
     assert body["total"] == 53
     assert body["breakdown"] == {"ATTENDANCE": 30, "TEST": 18, "TEST_RANK_BONUS": 5}
     assert len(body["history"]) == 3
+    assert body["history_count"] == 3
 
 
 async def test_reversal_counts_against_original_category(client: httpx.AsyncClient, db: AsyncSession) -> None:

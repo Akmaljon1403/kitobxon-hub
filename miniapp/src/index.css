@@ -261,6 +261,23 @@ body {
     transform: translateX(100%);
   }
 }
+/* Bottom sheet / drawer: the panel slides up, the backdrop fades in. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 .animate-fade-up {
   animation: var(--animate-fade-up);
@@ -272,6 +289,12 @@ body {
 }
 .animate-pop {
   animation: var(--animate-pop);
+}
+.animate-sheet-up {
+  animation: sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.animate-backdrop-in {
+  animation: backdrop-in 0.25s ease-out;
 }
 
 /* Skeleton shimmer for loading states. */
@@ -294,6 +317,8 @@ body {
   .animate-fade-up,
   .animate-fade-in,
   .animate-pop,
+  .animate-sheet-up,
+  .animate-backdrop-in,
   .skeleton::after {
     animation: none;
   }

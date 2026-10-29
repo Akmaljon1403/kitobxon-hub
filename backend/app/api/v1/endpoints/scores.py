@@ -37,12 +37,15 @@ async def my_scores(
     current: CurrentUserDep, db: DbSession, limit: Annotated[int, Query(ge=1, le=200)] = 50
 ) -> MyScoresOut:
     summary = await ranking_service.score_summary(db, current.user.id)
-    history, _ = await ranking_service.transaction_history(db, user_id=current.user.id, limit=limit, offset=0)
+    history, history_count = await ranking_service.transaction_history(
+        db, user_id=current.user.id, limit=limit, offset=0
+    )
     return MyScoresOut(
         total=summary["total"],
         breakdown=summary["breakdown"],
         season=summary["season"],
         history=[ScoreEntryOut(**item) for item in history],
+        history_count=history_count,
     )
 
 
