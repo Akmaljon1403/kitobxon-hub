@@ -7,6 +7,7 @@ import type { PassportTheme } from '../types/api'
 import { saveDocument } from '../utils/files'
 import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
+import { Icon } from './Icon'
 import { Button, Card } from './ui'
 
 type Busy = 'save' | 'send' | 'photo' | 'reset' | 'theme' | null
@@ -77,7 +78,7 @@ export function PassportCard() {
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-semibold">🪪 Kitobxon pasporti</h2>
+        <h2 className="flex items-center gap-1.5 font-semibold"><Icon name="id-card" size={18} className="text-brand-600 dark:text-brand-300" />Kitobxon pasporti</h2>
         {me && <span className="font-mono text-sm text-app-hint">{me.member_number}</span>}
       </div>
       <div className="aspect-[1200/756] w-full overflow-hidden rounded-xl bg-app-surface">
@@ -103,7 +104,7 @@ export function PassportCard() {
             })
           }
         >
-          📥 Botga yuborish
+          <Icon name="send" size={16} />Botga yuborish
         </Button>
         <Button
           variant="secondary"
@@ -112,7 +113,7 @@ export function PassportCard() {
           disabled={busy !== null}
           onClick={() => fileInput.current?.click()}
         >
-          📷 Yangi rasm
+          <Icon name="camera" size={16} />Yangi rasm
         </Button>
         {me?.passport_photo ? (
           <Button
@@ -128,7 +129,7 @@ export function PassportCard() {
               })
             }
           >
-            ↩️ Telegram rasmi
+            <Icon name="refresh" size={16} />Telegram rasmi
           </Button>
         ) : (
           <span />
@@ -149,12 +150,19 @@ export function PassportCard() {
 
       {themeList.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">
-            🎨 Dizayn{' '}
+          <p className="flex flex-wrap items-center gap-1 text-sm font-medium">
+            <Icon name="palette" size={14} />
+            Dizayn
             {!premium ? (
-              <span className="text-app-hint">— 💎 Premium</span>
+              <span className="inline-flex items-center gap-0.5 text-app-hint">
+                — <Icon name="gem" size={12} /> Premium
+              </span>
             ) : (
-              me?.premium_trial && <span className="text-xs text-amber-600 dark:text-amber-300">💎 Premium — sinov davrida ochiq</span>
+              me?.premium_trial && (
+                <span className="inline-flex items-center gap-0.5 text-xs text-amber-600 dark:text-amber-300">
+                  <Icon name="gem" size={12} /> Premium — sinov davrida ochiq
+                </span>
+              )
             )}
           </p>
           <div className="grid grid-cols-4 gap-2">
@@ -181,7 +189,11 @@ export function PassportCard() {
                     className="relative block h-9 w-full rounded-lg"
                     style={{ background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})`, border: `2px solid ${theme.colors[2]}` }}
                   >
-                    {locked && <span className="absolute inset-0 flex items-center justify-center text-sm">💎</span>}
+                    {locked && (
+                      <span className="absolute inset-0 flex items-center justify-center text-white">
+                        <Icon name="gem" size={16} />
+                      </span>
+                    )}
                   </span>
                   {theme.title}
                 </button>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { Icon, type IconName } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, PageTitle, Toggle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -18,19 +19,19 @@ function quoted(text: string): string {
   return /^[«"“„']/.test(text.trim()) ? text : `«${text}»`
 }
 
-const KIND_FILTERS: { value: ContributionKind | ''; label: string }[] = [
+const KIND_FILTERS: { value: ContributionKind | ''; icon?: IconName; label: string }[] = [
   { value: '', label: 'Hammasi' },
-  { value: 'QUOTE', label: '📖 Iqtiboslar' },
-  { value: 'THOUGHT', label: '💡 Fikrlar' },
-  { value: 'BOOK', label: '📚 Kitoblar' },
-  { value: 'EVENT', label: '📅 Tadbirlar' },
-  { value: 'CLUB', label: "🌟 E'tiroflar" },
+  { value: 'QUOTE', icon: 'book-open', label: 'Iqtiboslar' },
+  { value: 'THOUGHT', icon: 'lightbulb', label: 'Fikrlar' },
+  { value: 'BOOK', icon: 'book', label: 'Kitoblar' },
+  { value: 'EVENT', icon: 'calendar', label: 'Tadbirlar' },
+  { value: 'CLUB', icon: 'sparkles', label: "E'tiroflar" },
 ]
 
-const STATUS: Record<Contribution['status'], { text: string; tone: 'warning' | 'success' | 'neutral' }> = {
-  PENDING: { text: '⏳ Ko‘rib chiqilmoqda', tone: 'warning' },
-  APPROVED: { text: '✅ Lentada', tone: 'success' },
-  HIDDEN: { text: '🙈 Yashirilgan', tone: 'neutral' },
+const STATUS: Record<Contribution['status'], { icon: IconName; text: string; tone: 'warning' | 'success' | 'neutral' }> = {
+  PENDING: { icon: 'hourglass', text: 'Ko‘rib chiqilmoqda', tone: 'warning' },
+  APPROVED: { icon: 'check', text: 'Lentada', tone: 'success' },
+  HIDDEN: { icon: 'eye-off', text: 'Yashirilgan', tone: 'neutral' },
 }
 
 /** One text in the feed: the words, its source and author, ❤️, and its card. */
@@ -95,19 +96,25 @@ function ContributionCard({ item, mine = false, onChange }: { item: Contribution
     <Card className={`flex flex-col gap-2 ${item.featured ? 'ring-2 ring-amber-400/70' : ''}`}>
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-app-hint">
         <span>{item.kind_title}</span>
-        {item.featured && <Badge tone="warning">⭐ Tanlangan</Badge>}
-        {item.in_channel && <Badge tone="info">📣 Kanalda</Badge>}
-        {mine && <Badge tone={STATUS[item.status].tone}>{STATUS[item.status].text}</Badge>}
+        {item.featured && <Badge tone="warning"><Icon name="star" size={12} />Tanlangan</Badge>}
+        {item.in_channel && <Badge tone="info"><Icon name="megaphone" size={12} />Kanalda</Badge>}
+        {mine && (
+          <Badge tone={STATUS[item.status].tone}>
+            <Icon name={STATUS[item.status].icon} size={12} />
+            {STATUS[item.status].text}
+          </Badge>
+        )}
       </div>
       <blockquote className="whitespace-pre-line text-[15px] italic leading-relaxed">{quoted(item.text)}</blockquote>
       {item.source && <p className="text-right text-sm text-app-hint">— {item.source}</p>}
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="text-app-hint">
-          ✍️ {item.author} · {formatDate(item.created_at)}
+        <span className="flex items-center gap-1 text-app-hint">
+          <Icon name="pencil" size={13} className="shrink-0" />
+          {item.author} · {formatDate(item.created_at)}
         </span>
         {item.status === 'APPROVED' && (
           <button type="button" onClick={() => void toggleLike()} className="flex items-center gap-1 rounded-full bg-app-surface px-3 py-1">
-            <span>{liked ? '❤️' : '🤍'}</span>
+            <Icon name="heart" size={15} className={liked ? 'text-red-500' : 'text-app-hint'} />
             <span className="tabular-nums">{likes}</span>
           </button>
         )}
@@ -116,14 +123,14 @@ function ContributionCard({ item, mine = false, onChange }: { item: Contribution
       {notice && <p className={`text-sm ${notice.error ? 'text-app-danger' : 'text-app-link'}`}>{notice.text}</p>}
       <div className={`grid gap-2 ${mine ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <Button variant="secondary" className="px-2 text-sm" loading={busy === 'card'} onClick={() => void showCard()}>
-          {preview ? 'Yopish' : '🖼 Kartochka'}
+          {preview ? 'Yopish' : <><Icon name="image" size={16} />Kartochka</>}
         </Button>
         <Button variant="secondary" className="px-2 text-sm" loading={busy === 'send'} onClick={() => void send()}>
-          📤 Ulashish
+          <Icon name="send" size={16} />Ulashish
         </Button>
         {mine && (
-          <Button variant="ghost" className="px-2 text-sm" onClick={() => void remove()}>
-            🗑
+          <Button variant="ghost" className="px-2 text-sm" aria-label="O‘chirish" onClick={() => void remove()}>
+            <Icon name="trash" size={16} />
           </Button>
         )}
       </div>
@@ -153,12 +160,12 @@ export function CommunityPage() {
           Kitobxonlarimizning iqtiboslari, fikrlari va taassurotlari. Eng yaxshilari klub kanalida chiroyli kartochka bo‘lib chiqadi.
         </p>
       </div>
-      <Button onClick={() => navigate('/community/new')}>✍️ Yozish</Button>
+      <Button onClick={() => navigate('/community/new')}><Icon name="pencil" size={18} />Yozish</Button>
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-app-surface p-1">
         {(
           [
             ['feed', 'Yangi'],
-            ['top', '❤️ Eng yoqqan'],
+            ['top', 'Eng yoqqan'],
             ['mine', 'Meniki'],
           ] as [Tab, string][]
         ).map(([value, label]) => (
@@ -179,8 +186,9 @@ export function CommunityPage() {
               key={item.value}
               type="button"
               onClick={() => setKind(item.value)}
-              className={`shrink-0 rounded-full px-3 py-1 text-sm ${kind === item.value ? 'bg-brand-500 text-white' : 'bg-app-bg text-app-hint'}`}
+              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-sm ${kind === item.value ? 'bg-brand-500 text-white' : 'bg-app-bg text-app-hint'}`}
             >
+              {item.icon && <Icon name={item.icon} size={13} />}
               {item.label}
             </button>
           ))}
@@ -275,8 +283,10 @@ export function CommunityNewPage() {
   if (sent) {
     return (
       <div className="flex flex-col gap-3">
-        <Card className="flex flex-col gap-2 text-center">
-          <span className="text-4xl">🌟</span>
+        <Card className="flex flex-col items-center gap-2 text-center">
+          <span className="grid size-14 place-items-center rounded-full bg-gold-400/15 text-gold-500 dark:text-gold-300">
+            <Icon name="sparkles" size={32} />
+          </span>
           <h1 className="text-lg font-semibold">Rahmat!</h1>
           <p className="text-sm text-app-hint">
             {sent.status === 'APPROVED'
@@ -301,7 +311,7 @@ export function CommunityNewPage() {
           variant="secondary"
           onClick={() => void api(`/api/v1/community/${sent.id}/send`, { method: 'POST' }).then(() => haptic('success'))}
         >
-          📤 Kartochkani bot chatiga yuborish
+          <Icon name="send" size={18} />Kartochkani bot chatiga yuborish
         </Button>
         <Button
           onClick={() => {
@@ -310,10 +320,10 @@ export function CommunityNewPage() {
             setAuthor('')
           }}
         >
-          ✍️ Yana yozish
+          <Icon name="pencil" size={18} />Yana yozish
         </Button>
         <Button variant="ghost" onClick={() => navigate('/community')}>
-          💬 Lentaga qaytish
+          <Icon name="message-square" size={18} />Lentaga qaytish
         </Button>
       </div>
     )
@@ -390,7 +400,7 @@ export function CommunityNewPage() {
             <p className="rounded-xl bg-app-surface px-3 py-2 text-sm text-app-hint">Siz qatnashgan tadbirlar hali yo‘q.</p>
           ))}
         <div className="flex flex-col gap-1.5">
-          <p className="text-sm font-medium">🎨 Kartochka dizayni</p>
+          <p className="flex items-center gap-1.5 text-sm font-medium"><Icon name="palette" size={15} />Kartochka dizayni</p>
           <div className="grid grid-cols-2 gap-1.5">
             {options.styles.map((item) => (
               <button
@@ -411,7 +421,7 @@ export function CommunityNewPage() {
           disabled={tooShort || (kind === 'EVENT' && !eventId)}
           onClick={() => void submit()}
         >
-          📨 Yuborish
+          <Icon name="send" size={18} />Yuborish
         </Button>
         <p className="text-xs text-app-hint">
           Yuborish bilan klub matningizni ilovada, kanalda va a‘zolarga xabarda ishlatishiga rozilik bildirasiz. Qabul qilingan har bir fikr uchun

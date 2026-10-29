@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { Icon, type IconName } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -22,11 +23,11 @@ function Place({ place }: { place: number }) {
   return <span className="w-8 shrink-0 text-center text-lg font-semibold tabular-nums">{place <= 3 ? MEDALS[place - 1] : place}</span>
 }
 
-function Tile({ icon, value, label }: { icon: string; value: number; label: string }) {
+function Tile({ icon, value, label }: { icon: IconName; value: number; label: string }) {
   return (
     <div className="rounded-xl bg-app-surface p-3 text-center">
-      <p className="text-xl font-semibold tabular-nums">
-        <span aria-hidden>{icon} </span>
+      <p className="flex items-center justify-center gap-1 text-xl font-semibold tabular-nums">
+        <Icon name={icon} size={18} className="text-app-hint" />
         {value.toLocaleString('uz-UZ')}
       </p>
       <p className="mt-0.5 text-xs text-app-hint">{label}</p>
@@ -81,9 +82,9 @@ function LinkCard({ info }: { info: ReferralOverview }) {
       </p>
       <p className="break-all rounded-xl bg-app-surface px-3 py-2 text-sm">{link}</p>
       <div className="grid grid-cols-2 gap-2">
-        <Button onClick={share}>📤 Yuborish</Button>
+        <Button onClick={share}><Icon name="send" size={18} />Yuborish</Button>
         <Button variant="secondary" onClick={() => void copy()}>
-          {copied ? '✅ Nusxalandi' : '📋 Nusxalash'}
+          {copied ? <><Icon name="check" size={18} />Nusxalandi</> : <><Icon name="copy" size={18} />Nusxalash</>}
         </Button>
       </div>
     </Card>
@@ -104,16 +105,16 @@ function ImpactCard({ info }: { info: ReferralOverview }) {
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <p className="font-semibold">📊 Qisqacha</p>
+        <p className="flex items-center gap-1.5 font-semibold"><Icon name="bar-chart" size={16} />Qisqacha</p>
         <p className="text-sm text-app-hint">Siz olib kelgan kitobxonlar klubda nimalar qildi</p>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        <Tile icon="👥" value={impact.invited} label="taklif qilingan" />
-        <Tile icon="✅" value={impact.came_to_events} label="tadbirga kelgan" />
-        <Tile icon="⭐" value={impact.friends_points} label="ular to'plagan ball" />
-        <Tile icon="📚" value={impact.friends_books} label="o'qilgan kitob" />
-        <Tile icon="📅" value={impact.friends_visits} label="tadbirda qatnashish" />
-        <Tile icon="📝" value={impact.friends_tests} label="yechilgan test" />
+        <Tile icon="users" value={impact.invited} label="taklif qilingan" />
+        <Tile icon="check" value={impact.came_to_events} label="tadbirga kelgan" />
+        <Tile icon="star" value={impact.friends_points} label="ular to'plagan ball" />
+        <Tile icon="book" value={impact.friends_books} label="o'qilgan kitob" />
+        <Tile icon="calendar" value={impact.friends_visits} label="tadbirda qatnashish" />
+        <Tile icon="file-text" value={impact.friends_tests} label="yechilgan test" />
       </div>
       <p className="rounded-xl bg-brand-500/10 px-3 py-2 text-sm">
         Sizga taklif uchun: <b>+{impact.earned_points} ball</b>
@@ -142,12 +143,15 @@ function FriendsCard({ info }: { info: ReferralOverview }) {
                 <p className="truncate font-medium">{friend.name}</p>
                 <p className="text-xs text-app-hint">
                   {formatDate(friend.joined_at)} dan beri a'zo
-                  {friend.books !== null && ` · 📚 ${friend.books} kitob`} ·{' '}
-                  {friend.came_to_event ? '✅ tadbirga keldi' : '⏳ hali kelmadi'}
+                  {friend.books !== null && ` · ${friend.books} kitob`} ·{' '}
+                  {friend.came_to_event ? 'tadbirga keldi' : 'hali kelmadi'}
                 </p>
               </div>
               {friend.points !== null ? (
-                <span className="shrink-0 font-semibold tabular-nums">⭐ {friend.points.toLocaleString('uz-UZ')}</span>
+                <span className="flex shrink-0 items-center gap-1 font-semibold tabular-nums">
+                  <Icon name="star" size={13} />
+                  {friend.points.toLocaleString('uz-UZ')}
+                </span>
               ) : friend.came_to_event ? (
                 <Badge tone="success">tadbirga keldi</Badge>
               ) : (
@@ -166,8 +170,8 @@ function ContestCard({ contest }: { contest: MemberContest }) {
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        <span aria-hidden className="text-3xl">
-          🏁
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+          <Icon name="flag" size={22} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{contest.title}</p>
@@ -177,19 +181,22 @@ function ContestCard({ contest }: { contest: MemberContest }) {
         </div>
       </div>
       {contest.description && <p className="whitespace-pre-line text-sm">{contest.description}</p>}
-      <p className="text-sm text-app-hint">
-        ✅ Hisoblanadi: {contest.rule}
-        {contest.min_friends > 1 ? ` (kamida ${contest.min_friends} ta)` : ''}.
+      <p className="flex items-start gap-1.5 text-sm text-app-hint">
+        <Icon name="check" size={14} className="mt-0.5 shrink-0" />
+        <span>
+          Hisoblanadi: {contest.rule}
+          {contest.min_friends > 1 ? ` (kamida ${contest.min_friends} ta)` : ''}.
+        </span>
       </p>
       {contest.prizes.length > 0 && (
         <div className="rounded-xl bg-app-surface p-3 text-sm">
-          <p className="mb-1 font-medium">🎁 Sovrinlar</p>
+          <p className="mb-1 flex items-center gap-1.5 font-medium"><Icon name="gift" size={15} />Sovrinlar</p>
           {contest.prizes.map((prize) => (
             <p key={prize.place}>
               {prize.place <= 3 ? MEDALS[prize.place - 1] : `${prize.place}.`} {prize.text}
             </p>
           ))}
-          {contest.participation_points > 0 && <p>🙌 Shartni bajargan har kimga: +{contest.participation_points} ball</p>}
+          {contest.participation_points > 0 && <p>Shartni bajargan har kimga: +{contest.participation_points} ball</p>}
         </div>
       )}
       {!contest.eligible && contest.state !== 'finished' && (
@@ -207,7 +214,10 @@ function ContestCard({ contest }: { contest: MemberContest }) {
         </p>
       )}
       {contest.leaderboard_hidden && contest.state === 'running' && (
-        <p className="text-center text-sm text-app-hint">🤫 Jadval hozircha yashirin — natijalar yakunda e'lon qilinadi.</p>
+        <p className="flex items-center justify-center gap-1.5 text-center text-sm text-app-hint">
+          <Icon name="eye-off" size={14} className="shrink-0" />
+          Jadval hozircha yashirin — natijalar yakunda e'lon qilinadi.
+        </p>
       )}
       {contest.leaderboard.length > 0 && (
         <ul className="flex flex-col">
@@ -215,7 +225,11 @@ function ContestCard({ contest }: { contest: MemberContest }) {
             <li key={row.place} className={`flex items-center gap-3 px-1 py-2 ${row.me ? 'rounded-xl bg-brand-500/10' : ''}`}>
               <Place place={row.place} />
               <span className={`min-w-0 flex-1 truncate ${row.me ? 'font-semibold' : ''}`}>{row.name}</span>
-              {row.winner && contest.state === 'finished' && <span aria-label="g'olib">🏆</span>}
+              {row.winner && contest.state === 'finished' && (
+                <span aria-label="g'olib" className="text-gold-500 dark:text-gold-300">
+                  <Icon name="trophy" size={16} />
+                </span>
+              )}
               {row.friends !== null && <span className="font-semibold tabular-nums">{row.friends}</span>}
             </li>
           ))}
@@ -255,7 +269,7 @@ export function InvitePage() {
             Bir daqiqadan so'ng qayta oching yoki botda /referal buyrug'ini yuboring.
           </EmptyState>
           <Button variant="secondary" onClick={overview.reload}>
-            🔄 Qayta urinish
+            <Icon name="refresh" size={18} />Qayta urinish
           </Button>
         </Card>
       )}
