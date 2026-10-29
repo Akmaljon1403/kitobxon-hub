@@ -34,6 +34,36 @@ function Place({ rank }: { rank: number }) {
   )
 }
 
+/** The top three as a gold/silver/bronze podium — the first thing seen on the leaderboard. */
+const PODIUM: Record<1 | 2 | 3, { tile: string; pedestal: string; order: string }> = {
+  1: { tile: 'from-gold-300/50 to-gold-500/20 ring-gold-400/50', pedestal: 'h-16', order: 'order-2' },
+  2: { tile: 'from-slate-200/70 to-slate-400/25 ring-slate-300/60', pedestal: 'h-12', order: 'order-1' },
+  3: { tile: 'from-amber-200/60 to-amber-500/25 ring-amber-400/50', pedestal: 'h-10', order: 'order-3' },
+}
+
+function Podium({ top }: { top: RankingRow[] }) {
+  return (
+    <div className="flex items-end justify-center gap-2 px-2 pt-1">
+      {top.map((row) => {
+        const p = PODIUM[row.rank as 1 | 2 | 3] ?? PODIUM[3]
+        return (
+          <div key={`${row.rank}-${row.name}`} className={`flex min-w-0 flex-1 flex-col items-center ${p.order}`}>
+            <span className={`mb-1 grid size-12 place-items-center rounded-full bg-gradient-to-b text-2xl ring-2 ${p.tile}`}>
+              {MEDALS[row.rank - 1]}
+            </span>
+            <p className={`w-full truncate text-center text-xs ${row.is_me ? 'font-bold text-brand-600 dark:text-brand-300' : 'font-medium'}`}>
+              {row.name}
+              {row.is_me ? ' (siz)' : ''}
+            </p>
+            <p className="text-sm font-bold tabular-nums">{row.total}</p>
+            <div className={`mt-1 w-full rounded-t-xl bg-brand-500/10 ${p.pedestal}`} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function Row({ row }: { row: RankingRow }) {
   return (
     <li className={`flex items-center gap-3 px-3 py-2.5 ${row.is_me ? 'rounded-xl bg-brand-500/10' : ''}`}>
@@ -97,6 +127,8 @@ function Leaderboard({ period, scope }: { period: Period; scope: Exclude<Scope, 
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   const { items, me } = state.data
   const meVisible = items.some((row) => row.is_me)
+  const hasPodium = items.length >= 3
+  const rest = hasPodium ? items.slice(3) : items
   return (
     <>
       <Card className="flex items-center justify-between">
@@ -114,18 +146,27 @@ function Leaderboard({ period, scope }: { period: Period; scope: Exclude<Scope, 
           Tadbirlarda qatnashing va testlarni ishlang — ismingiz shu yerda chiqadi.
         </EmptyState>
       ) : (
-        <Card className="p-1">
-          <ol>
-            {items.map((row) => (
-              <Row key={`${row.rank}-${row.name}`} row={row} />
-            ))}
-          </ol>
-          {me && !meVisible && (
-            <ol className="mt-1 border-t border-app-hint/15 pt-1">
-              <Row row={me} />
-            </ol>
+        <>
+          {hasPodium && (
+            <Card className="pb-1 pt-3">
+              <Podium top={items.slice(0, 3)} />
+            </Card>
           )}
-        </Card>
+          {(rest.length > 0 || (me && !meVisible)) && (
+            <Card className="p-1">
+              <ol>
+                {rest.map((row) => (
+                  <Row key={`${row.rank}-${row.name}`} row={row} />
+                ))}
+              </ol>
+              {me && !meVisible && (
+                <ol className="mt-1 border-t border-app-hint/15 pt-1">
+                  <Row row={me} />
+                </ol>
+              )}
+            </Card>
+          )}
+        </>
       )}
     </>
   )
