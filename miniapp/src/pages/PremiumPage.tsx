@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { CardCheckout, CardNumber, MyCardPayments, formatUzs } from '../components/CardPayment'
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -12,7 +13,7 @@ import { formatDate } from '../utils/format'
 import { navigate } from '../utils/router'
 import { getWebApp, haptic } from '../utils/telegram'
 
-const FREE_FOR_ALL = ['📚 Kitoblar va iqtiboslar', '📅 Tadbirlar va davomat', '📝 Testlar va natijalar', '🏆 Reyting va yutuqlar', '🪪 Kitobxon pasporti', '🎓 Sertifikatlar']
+const FREE_FOR_ALL = ['Kitoblar va iqtiboslar', 'Tadbirlar va davomat', 'Testlar va natijalar', 'Reyting va yutuqlar', 'Kitobxon pasporti', 'Sertifikatlar']
 
 const FAQ: [string, string][] = [
   [
@@ -96,14 +97,14 @@ export function PremiumPage() {
   return (
     <div className="flex flex-col gap-3">
       <Card className="flex flex-col items-center gap-2 border-0 bg-brand-gradient py-8 text-center text-white shadow-[var(--shadow-brand)] ring-1 ring-white/10">
-        <span aria-hidden className="text-5xl">
-          💎
+        <span aria-hidden className="text-gold-300">
+          <Icon name="gem" size={48} />
         </span>
         <h1 className="font-serif text-2xl font-bold">Kitobxon Premium</h1>
         {status.lifetime ? (
-          <p className="text-sm text-gold-200">♾ Sizda umrbod Premium — barcha imkoniyatlar doim ochiq</p>
+          <p className="flex items-center justify-center gap-1.5 text-sm text-gold-200"><Icon name="infinity" size={15} /> Sizda umrbod Premium — barcha imkoniyatlar doim ochiq</p>
         ) : status.is_premium ? (
-          <p className="text-sm text-gold-200">✅ Siz Premium a'zosiz — {formatDate(status.until)} gacha</p>
+          <p className="flex items-center justify-center gap-1.5 text-sm text-gold-200"><Icon name="check" size={15} /> Siz Premium a'zosiz — {formatDate(status.until)} gacha</p>
         ) : (
           <p className="max-w-xs text-sm text-gold-200">
             Qo'shimcha imkoniyatlar, oltin pasport va klub rivojiga hissa
@@ -124,14 +125,16 @@ export function PremiumPage() {
 
       {me?.premium_trial && status.is_premium && (
         <Card className="py-3 text-center text-sm ring-1 ring-brand-500/40">
-          🎁 Sizda sovg'a — <b>sinov Premium</b>, {formatDate(status.until)} gacha. 💎 belgili imkoniyatlar shu sinov tufayli ochiq;
+          <Icon name="gift" size={16} className="mr-1 inline-block align-text-bottom text-brand-600 dark:text-brand-300" />
+          Sizda sovg'a — <b>sinov Premium</b>, {formatDate(status.until)} gacha. 💎 belgili imkoniyatlar shu sinov tufayli ochiq;
           yoqqan bo'lsa, quyida davom ettiring.
         </Card>
       )}
 
       {status.discount && (
         <Card className="py-3 text-center text-sm">
-          🎟 Sizda Premium'ga <b>−{status.discount.percent}%</b> chegirma bor — {formatDate(status.discount.valid_until)} gacha. Narxlar
+          <Icon name="tag" size={16} className="mr-1 inline-block align-text-bottom text-brand-600 dark:text-brand-300" />
+          Sizda Premium'ga <b>−{status.discount.percent}%</b> chegirma bor — {formatDate(status.discount.valid_until)} gacha. Narxlar
           allaqachon kamaytirilgan.
         </Card>
       )}
@@ -158,7 +161,12 @@ export function PremiumPage() {
           <SectionTitle>1. {status.is_premium ? 'Muddatni uzaytirish — tarif' : 'Tarifni tanlang'}</SectionTitle>
           <div className="flex flex-col gap-2">
             {status.plans.map((plan, index) => {
-              const badge = index === status.plans.length - 1 && status.plans.length > 1 ? '🔥 Eng foydali' : index === 1 ? '⭐ Ommabop' : null
+              const badge =
+                index === status.plans.length - 1 && status.plans.length > 1
+                  ? { icon: 'flame' as const, text: 'Eng foydali' }
+                  : index === 1
+                    ? { icon: 'star' as const, text: 'Ommabop' }
+                    : null
               const uzs = plan.price_uzs_now ?? plan.price_uzs
               const selected = plan.id === planId
               return (
@@ -173,8 +181,14 @@ export function PremiumPage() {
                 >
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 font-semibold">
-                      {selected ? '🔘' : '⚪️'} {plan.title}
-                      {badge && <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] text-brand-600 dark:text-brand-300">{badge}</span>}
+                      <Icon name={selected ? 'check-circle' : 'circle'} size={18} className={selected ? 'text-brand-600 dark:text-brand-300' : 'text-app-hint'} />
+                      {plan.title}
+                      {badge && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] text-brand-600 dark:text-brand-300">
+                          <Icon name={badge.icon} size={12} />
+                          {badge.text}
+                        </span>
+                      )}
                     </p>
                     <p className="text-sm text-app-hint">{plan.description ?? `${plan.days} kun`}</p>
                   </div>
@@ -205,7 +219,10 @@ export function PremiumPage() {
                     className={`flex flex-col gap-1 rounded-2xl p-4 text-left ${method === 'card' ? 'bg-brand-500/10 ring-2 ring-brand-500' : 'bg-app-section'}`}
                   >
                     <span className="flex items-center justify-between gap-2 font-semibold">
-                      💳 Bank kartasi (Uzcard, Humo)
+                      <span className="flex items-center gap-1.5">
+                        <Icon name="credit-card" size={17} />
+                        Bank kartasi (Uzcard, Humo)
+                      </span>
                       <span className="rounded-full bg-gold-gradient px-2 py-0.5 text-[11px] font-semibold text-brand-700">Tavsiya etiladi</span>
                     </span>
                     <span className="text-sm text-app-hint">Click, Payme yoki bank ilovasidan o'tkazasiz — eng oson yo'l. {formatUzs(selectedPlanUzs)}</span>
@@ -265,12 +282,14 @@ export function PremiumPage() {
             <div className="grid grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-y-1.5">
               <span className="font-medium text-app-hint">Imkoniyat</span>
               <span className="text-center font-medium text-app-hint">Bepul</span>
-              <span className="text-center font-medium text-app-hint">💎</span>
+              <span className="flex justify-center font-medium text-app-hint">
+                <Icon name="gem" size={15} />
+              </span>
               {FREE_FOR_ALL.map((item) => (
                 <Row key={item} label={item} free />
               ))}
               {perks.map((perk) => (
-                <Row key={perk.title} label={`${perk.icon} ${perk.title}`} free={false} />
+                <Row key={perk.title} label={perk.title} free={false} />
               ))}
             </div>
           </Card>
@@ -295,7 +314,12 @@ export function PremiumPage() {
 
       {(status.donations_open || status.card) && (
         <>
-          <SectionTitle>🤝 Klubni qo'llab-quvvatlash</SectionTitle>
+          <SectionTitle>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="users" size={16} />
+              Klubni qo'llab-quvvatlash
+            </span>
+          </SectionTitle>
           <Card className="flex flex-col gap-3">
             <p className="text-sm text-app-hint">
               Klub talabalar tashabbusi bilan yashaydi: yangi kitoblar, davra suhbatlari, g'oliblarga sovg'alar. Klub sizga yoqsa va imkoningiz
@@ -306,7 +330,8 @@ export function PremiumPage() {
                 <CardNumber card={status.card} label="Istalgan summani shu kartaga o'tkazing — chek yuborish shart emas" />
                 {donated ? (
                   <p role="status" className="rounded-xl bg-brand-500/10 px-3 py-2 text-sm">
-                    💛 <b>Chin dildan rahmat!</b> Hissangiz yangi kitoblar, qiziqarli tadbirlar va g'oliblarning quvonchiga aylanadi.
+                    <Icon name="heart" size={15} className="mr-1 inline-block align-text-bottom text-rose-500" />
+                    <b>Chin dildan rahmat!</b> Hissangiz yangi kitoblar, qiziqarli tadbirlar va g'oliblarning quvonchiga aylanadi.
                   </p>
                 ) : (
                   <Button
@@ -316,7 +341,7 @@ export function PremiumPage() {
                       setDonated(true)
                     }}
                   >
-                    💛 O'tkazdim
+                    <Icon name="heart" size={17} className="text-rose-500" /> O'tkazdim
                   </Button>
                 )}
               </>
@@ -404,7 +429,8 @@ function StarsTopUp({
       </div>
       {!hasUsername ? (
         <p className="rounded-xl bg-app-surface px-3 py-2 text-sm">
-          ⚠️ Stars sovg'a qilinishi uchun Telegram profilingizda <b>username</b> bo'lishi kerak: Telegram → Sozlamalar → «Foydalanuvchi
+          <Icon name="alert-triangle" size={15} className="mr-1 inline-block align-text-bottom text-amber-600 dark:text-amber-300" />
+          Stars sovg'a qilinishi uchun Telegram profilingizda <b>username</b> bo'lishi kerak: Telegram → Sozlamalar → «Foydalanuvchi
           nomi». Qo'ygach, ilovani qayta oching.
         </p>
       ) : (
@@ -420,7 +446,9 @@ function StarsTopUp({
                 <span className="font-medium">⭐ {item.stars} Stars</span>
                 <span className="text-sm tabular-nums text-app-hint">{formatUzs(item.price_uzs)}</span>
                 {suggested?.stars === item.stars && (
-                  <span className="mt-0.5 text-[11px] font-medium text-app-button">✓ tarif uchun yetadi</span>
+                  <span className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium text-app-button">
+                    <Icon name="check" size={12} /> tarif uchun yetadi
+                  </span>
                 )}
               </button>
             ))}
@@ -448,8 +476,12 @@ function Row({ label, free }: { label: string; free: boolean }) {
   return (
     <>
       <span className="truncate">{label}</span>
-      <span className="text-center">{free ? '✅' : '—'}</span>
-      <span className="text-center">✅</span>
+      <span className="flex justify-center">
+        {free ? <Icon name="check" size={16} className="text-green-600 dark:text-green-300" /> : <span className="text-app-hint">—</span>}
+      </span>
+      <span className="flex justify-center">
+        <Icon name="check" size={16} className="text-green-600 dark:text-green-300" />
+      </span>
     </>
   )
 }

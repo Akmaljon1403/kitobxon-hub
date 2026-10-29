@@ -1,3 +1,4 @@
+import { Icon, type IconName } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -8,11 +9,11 @@ import { navigate } from '../utils/router'
 import type { MyRanking, MyScores, ScoreEntry } from '../types/api'
 import { formatDate } from '../utils/format'
 
-const GROUPS: { label: string; icon: string; categories: string[] }[] = [
-  { label: 'Davomat', icon: '📅', categories: ['ATTENDANCE'] },
-  { label: 'Testlar', icon: '📝', categories: ['TEST', 'TEST_RANK_BONUS'] },
-  { label: 'Kitoblar', icon: '📚', categories: ['BOOK_COMPLETION', 'CAMPAIGN'] },
-  { label: 'Bonuslar', icon: '🎁', categories: ['ACHIEVEMENT', 'MANUAL'] },
+const GROUPS: { label: string; icon: IconName; categories: string[] }[] = [
+  { label: 'Davomat', icon: 'calendar', categories: ['ATTENDANCE'] },
+  { label: 'Testlar', icon: 'file-text', categories: ['TEST', 'TEST_RANK_BONUS'] },
+  { label: 'Kitoblar', icon: 'book', categories: ['BOOK_COMPLETION', 'CAMPAIGN'] },
+  { label: 'Bonuslar', icon: 'gift', categories: ['ACHIEVEMENT', 'MANUAL'] },
 ]
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -75,10 +76,16 @@ export function ResultsPage() {
       {statsAccess !== 'off' && (
         <button type="button" onClick={() => navigate('/stats')}>
           <Card className="flex items-center justify-between gap-2 py-3 text-left">
-            <span className="text-[15px] font-medium">
-              📈 Batafsil statistika{statsAccess === 'premium' && <span className="text-app-hint"> · 💎 Premium</span>}
+            <span className="flex items-center gap-1.5 text-[15px] font-medium">
+              <Icon name="trending-up" size={17} className="text-brand-600 dark:text-brand-300" />
+              Batafsil statistika
+              {statsAccess === 'premium' && (
+                <span className="inline-flex items-center gap-0.5 text-app-hint">
+                  · <Icon name="gem" size={13} /> Premium
+                </span>
+              )}
             </span>
-            <span className="text-app-link">→</span>
+            <Icon name="chevron-right" size={18} className="shrink-0 text-app-hint" />
           </Card>
         </button>
       )}
@@ -86,8 +93,9 @@ export function ResultsPage() {
       <div className="grid grid-cols-2 gap-2">
         {GROUPS.map((group) => (
           <Card key={group.label} className="flex flex-col gap-0.5">
-            <span className="text-sm text-app-hint">
-              {group.icon} {group.label}
+            <span className="flex items-center gap-1.5 text-sm text-app-hint">
+              <Icon name={group.icon} size={15} />
+              {group.label}
             </span>
             <span className="font-serif text-2xl font-bold tabular-nums">{sum(group.categories)}</span>
           </Card>
