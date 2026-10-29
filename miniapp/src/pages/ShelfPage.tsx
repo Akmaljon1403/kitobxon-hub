@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { BookCover } from '../components/BookCover'
+import { Icon, type IconName } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -12,10 +13,16 @@ import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
 
 export const STATUS_TITLES: Record<ShelfStatus, string> = {
-  READING: "📖 O'qiyapman",
-  WANT: "🔖 O'qimoqchiman",
-  FINISHED: "✅ O'qib bo'ldim",
-  LATER: '⏳ Keyinroq',
+  READING: "O'qiyapman",
+  WANT: "O'qimoqchiman",
+  FINISHED: "O'qib bo'ldim",
+  LATER: 'Keyinroq',
+}
+export const STATUS_ICONS: Record<ShelfStatus, IconName> = {
+  READING: 'book-open',
+  WANT: 'bookmark',
+  FINISHED: 'check',
+  LATER: 'hourglass',
 }
 const TABS: ShelfStatus[] = ['READING', 'WANT', 'FINISHED', 'LATER']
 
@@ -51,7 +58,10 @@ function StatsCard({ stats }: { stats: ReadingStats }) {
     <Card className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
-          <p className="text-2xl font-semibold tabular-nums">🔥 {stats.streak}</p>
+          <p className="flex items-center justify-center gap-1 text-2xl font-semibold tabular-nums">
+            <Icon name="flame" size={20} className="text-gold-500 dark:text-gold-300" />
+            {stats.streak}
+          </p>
           <p className="text-xs text-app-hint">kun ketma-ket</p>
         </div>
         <div>
@@ -137,9 +147,7 @@ function ItemCard({ item, onChange }: { item: ShelfItem; onChange: () => void })
             <ProgressBar percent={item.percent} />
           </div>
         </div>
-        <span aria-hidden className="text-app-hint">
-          ›
-        </span>
+        <Icon name="chevron-right" size={18} className="shrink-0 self-center text-app-hint" />
       </button>
       {item.status === 'READING' && <QuickLog item={item} onDone={onChange} />}
     </Card>
@@ -179,14 +187,14 @@ function AddBook({ onAdded, existing }: { onAdded: () => void; existing: Set<str
   if (!open) {
     return (
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        ➕ Kitob qo'shish
+        <Icon name="plus" size={18} />Kitob qo'shish
       </Button>
     )
   }
   const books = club.state.status === 'success' && club.state.data ? club.state.data.items.filter((book) => !existing.has(book.id)) : []
   return (
     <Card className="flex flex-col gap-3">
-      <p className="font-semibold">➕ Javonga kitob qo'shish</p>
+      <p className="flex items-center gap-1.5 font-semibold"><Icon name="plus" size={16} />Javonga kitob qo'shish</p>
       {books.length > 0 && (
         <>
           <p className="text-sm text-app-hint">Klub kitoblaridan:</p>
@@ -255,9 +263,9 @@ function AddBook({ onAdded, existing }: { onAdded: () => void; existing: Set<str
 /** «📚 Javonim»: my books by status, the reading diary numbers and a quick «+ bet». */
 /** «📚 Javonim | 🏛 Klub kitoblari» — the two halves of the library tab. */
 export function LibrarySwitch({ current }: { current: 'shelf' | 'books' }) {
-  const items = [
-    { code: 'shelf' as const, title: '📚 Javonim' },
-    { code: 'books' as const, title: '🏛 Klub kitoblari' },
+  const items: { code: 'shelf' | 'books'; icon: IconName; label: string }[] = [
+    { code: 'shelf', icon: 'bookmark', label: 'Javonim' },
+    { code: 'books', icon: 'landmark', label: 'Klub kitoblari' },
   ]
   return (
     <div className="grid grid-cols-2 gap-1 rounded-2xl bg-app-surface p-1">
@@ -267,9 +275,10 @@ export function LibrarySwitch({ current }: { current: 'shelf' | 'books' }) {
           type="button"
           onClick={() => current !== item.code && navigate(`/${item.code}`)}
           aria-current={current === item.code ? 'page' : undefined}
-          className={`rounded-xl py-2 text-sm font-medium ${current === item.code ? 'bg-app-bg shadow-sm' : 'text-app-hint'}`}
+          className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium ${current === item.code ? 'bg-app-bg shadow-sm' : 'text-app-hint'}`}
         >
-          {item.title}
+          <Icon name={item.icon} size={15} />
+          {item.label}
         </button>
       ))}
     </div>
@@ -302,10 +311,10 @@ export function ShelfPage() {
       <StatsCard stats={stats} />
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" onClick={() => navigate('/missions')}>
-          🎯 Missiyalar
+          <Icon name="target" size={18} />Missiyalar
         </Button>
         <Button variant="secondary" onClick={() => navigate('/quotes')}>
-          💬 Iqtiboslarim ({stats.quotes})
+          <Icon name="quote" size={18} />Iqtiboslarim ({stats.quotes})
         </Button>
       </div>
       <div className="flex gap-1 overflow-x-auto pb-1">
@@ -314,9 +323,11 @@ export function ShelfPage() {
             key={status}
             type="button"
             onClick={() => setTab(status)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${tab === status ? 'bg-brand-500 text-white' : 'bg-app-surface text-app-hint'}`}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${tab === status ? 'bg-brand-500 text-white' : 'bg-app-surface text-app-hint'}`}
           >
-            {STATUS_TITLES[status]} {stats.shelf[status] ? `· ${stats.shelf[status]}` : ''}
+            <Icon name={STATUS_ICONS[status]} size={14} />
+            {STATUS_TITLES[status]}
+            {stats.shelf[status] ? ` · ${stats.shelf[status]}` : ''}
           </button>
         ))}
       </div>
