@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { useFeature } from '../components/FeatureGate'
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -54,14 +55,14 @@ function CheckInCard({ event, onDone }: { event: ClubEvent; onDone: (result: Che
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <h2 className="font-semibold">✅ Davomat</h2>
+        <h2 className="flex items-center gap-1.5 font-semibold"><Icon name="check-circle" size={18} className="text-brand-600 dark:text-brand-300" />Davomat</h2>
         <p className="text-sm text-app-hint">
           Davomat {formatTime(event.attendance_opens_at)}–{formatTime(event.attendance_closes_at)} oralig'ida ochiq.
           Ekrandagi QR kodni skanerlang yoki kodni kiriting.
         </p>
       </div>
       <Button loading={busy} onClick={scan}>
-        📷 QR kodni skanerlash
+        <Icon name="camera" size={18} />QR kodni skanerlash
       </Button>
       <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
         <input
@@ -115,7 +116,12 @@ function FeedbackCard({ eventId }: { eventId: string }) {
 
   return (
     <Card className="flex flex-col gap-2">
-      <SectionTitle>⭐ Tadbirga baho bering</SectionTitle>
+      <SectionTitle>
+        <span className="flex items-center gap-1.5">
+          <Icon name="star" size={13} />
+          Tadbirga baho bering
+        </span>
+      </SectionTitle>
       <div className="flex justify-center gap-1" role="radiogroup" aria-label="Baho">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
@@ -147,7 +153,11 @@ function FeedbackCard({ eventId }: { eventId: string }) {
           </Button>
         </>
       )}
-      {saved && <p className="text-center text-sm text-app-hint">✅ Rahmat! Fikringiz klub rahbariyatiga yetkazildi.</p>}
+      {saved && (
+        <p className="flex items-center justify-center gap-1 text-center text-sm text-app-hint">
+          <Icon name="check" size={14} />Rahmat! Fikringiz klub rahbariyatiga yetkazildi.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-center text-sm text-app-danger">
           {error}
@@ -209,27 +219,43 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
         <h1 className="font-serif text-2xl font-bold leading-tight">{event.title}</h1>
         <EventBadges event={event} />
         <div className="mt-1 flex flex-col gap-1 text-sm text-app-hint">
-          {event.location && <span>📍 {event.location}</span>}
+          {event.location && (
+            <span className="flex items-center gap-1.5">
+              <Icon name="map-pin" size={14} className="shrink-0" />
+              {event.location}
+            </span>
+          )}
           {event.book_title && (
-            <button type="button" className="text-left text-app-link" onClick={() => navigate(`/books/${event.book_id}`)}>
-              📚 {event.book_title}
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-left text-app-link"
+              onClick={() => navigate(`/books/${event.book_id}`)}
+            >
+              <Icon name="book" size={14} className="shrink-0" />
+              {event.book_title}
             </button>
           )}
           {event.shifts.length > 0 ? (
             event.shifts.map((shift) => (
-              <span key={shift.id}>
-                🕒 {shift.position}-smena: {formatTime(shift.starts_at)}–{formatTime(shift.ends_at)} · {shift.registered_count} kishi
-                {shift.id === event.my_shift_id && event.is_registered ? ' · ✅ sizniki' : ''}
+              <span key={shift.id} className="flex items-center gap-1.5">
+                <Icon name="clock" size={14} className="shrink-0" />
+                {shift.position}-smena: {formatTime(shift.starts_at)}–{formatTime(shift.ends_at)} · {shift.registered_count} kishi
+                {shift.id === event.my_shift_id && event.is_registered ? ' · sizniki' : ''}
               </span>
             ))
           ) : (
-            <span>
-              🕒 {formatTime(event.starts_at)}–{formatTime(event.ends_at)}
+            <span className="flex items-center gap-1.5">
+              <Icon name="clock" size={14} className="shrink-0" />
+              {formatTime(event.starts_at)}–{formatTime(event.ends_at)}
             </span>
           )}
-          <span>🏆 Qatnashganlik uchun {event.attendance_points} ball</span>
-          <span>
-            👥 {event.registered_count} kishi ro'yxatdan o'tgan
+          <span className="flex items-center gap-1.5">
+            <Icon name="trophy" size={14} className="shrink-0" />
+            Qatnashganlik uchun {event.attendance_points} ball
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Icon name="users" size={14} className="shrink-0" />
+            {event.registered_count} kishi ro'yxatdan o'tgan
             {event.capacity ? ` · ${event.capacity} o'rin` : ''}
           </span>
         </div>
@@ -237,8 +263,8 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
 
       {checkIn ? (
         <Card className="flex flex-col items-center gap-1 py-6 text-center">
-          <span aria-hidden className="text-4xl">
-            ✅
+          <span className="grid size-14 place-items-center rounded-full bg-green-500/15 text-green-600 dark:text-green-300">
+            <Icon name="check-circle" size={36} />
           </span>
           <p className="font-semibold">Davomatingiz qayd etildi!</p>
           <p className="text-sm text-app-hint">+{checkIn.points} ball</p>
@@ -246,7 +272,7 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
       ) : (
         event.my_attendance === 'VERIFIED' && (
           <Card className="text-center">
-            <Badge tone="success">{ended ? '✅ Siz bu tadbirda qatnashdingiz' : '✅ Siz tadbirda qatnashyapsiz'}</Badge>
+            <Badge tone="success"><Icon name="check" size={13} />{ended ? 'Siz bu tadbirda qatnashdingiz' : 'Siz tadbirda qatnashyapsiz'}</Badge>
           </Card>
         )
       )}
@@ -280,7 +306,11 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
                       disabled={mine && started}
                       onClick={() => void toggleRegistration(event, shift.id)}
                     >
-                      {mine ? `✓ ${shift.position}-smena — chiqish` : `${shift.position}-smena · ${formatTime(shift.starts_at)}`}
+                      {mine ? (
+                        <><Icon name="check" size={16} />{shift.position}-smena — chiqish</>
+                      ) : (
+                        `${shift.position}-smena · ${formatTime(shift.starts_at)}`
+                      )}
                     </Button>
                   )
                 })}
@@ -292,7 +322,11 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
               disabled={started && event.is_registered}
               onClick={() => void toggleRegistration(event)}
             >
-              {event.is_registered ? "✓ Ro'yxatdasiz — chiqish" : "Qatnashaman (ro'yxatdan o'tish)"}
+              {event.is_registered ? (
+                <><Icon name="check" size={16} />Ro'yxatdasiz — chiqish</>
+              ) : (
+                "Qatnashaman (ro'yxatdan o'tish)"
+              )}
             </Button>
           )}
           <p className="text-center text-xs text-app-hint">

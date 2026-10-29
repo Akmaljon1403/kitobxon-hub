@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { BookCover } from '../components/BookCover'
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -82,22 +83,39 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
           <p className="mt-0.5 text-app-hint">{book.author}</p>
         </div>
         <div className="flex flex-wrap justify-center gap-1.5 text-xs text-app-hint">
-          {book.pages && <span className="rounded-full bg-app-surface px-2.5 py-1">📄 {book.pages} bet</span>}
-          {book.deadline && <span className="rounded-full bg-app-surface px-2.5 py-1">🗓 {formatDate(book.deadline)}</span>}
-          <span className="rounded-full bg-app-surface px-2.5 py-1">👥 {book.readers_count} o'quvchi</span>
-          <span className="rounded-full bg-app-surface px-2.5 py-1">✅ {book.completed_count} tugatgan</span>
+          {book.pages && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-app-surface px-2.5 py-1">
+              <Icon name="file-text" size={13} />
+              {book.pages} bet
+            </span>
+          )}
+          {book.deadline && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-app-surface px-2.5 py-1">
+              <Icon name="calendar" size={13} />
+              {formatDate(book.deadline)}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-app-surface px-2.5 py-1">
+            <Icon name="users" size={13} />
+            {book.readers_count} o'quvchi
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-app-surface px-2.5 py-1">
+            <Icon name="check" size={13} />
+            {book.completed_count} tugatgan
+          </span>
         </div>
       </Card>
 
       <Card className="flex flex-col gap-3">
         {book.source_url && (
           <Button variant="secondary" onClick={() => openExternalLink(book.source_url!)}>
-            📖 Kitobni ochish
+            <Icon name="book-open" size={18} />Kitobni ochish
           </Button>
         )}
         {pastDeadline && reading?.status !== 'COMPLETED' && open && (
           <p className="text-center text-xs text-app-hint">
-            ⏰ Muddat o'tgan. O'qib tugatsangiz ham bo'ladi — portfoliongizga qo'shiladi, faqat ball berilmaydi.
+            <Icon name="clock" size={13} className="mr-1 inline align-[-2px]" />
+            Muddat o'tgan. O'qib tugatsangiz ham bo'ladi — portfoliongizga qo'shiladi, faqat ball berilmaydi.
           </p>
         )}
         {!reading && open && (
@@ -107,16 +125,16 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
         )}
         {reading?.status === 'READING' && (
           <Button loading={saving} onClick={() => setReading('complete')}>
-            ✓ O'qib tugatdim
+            <Icon name="check" size={18} />O'qib tugatdim
           </Button>
         )}
         {reading?.status === 'COMPLETED' && (
           <div className="flex flex-col items-center gap-1 py-1 text-center">
             {reading.verified ? (
-              <Badge tone="success">✅ O'qiganingiz tasdiqlangan</Badge>
+              <Badge tone="success"><Icon name="check" size={13} />O'qiganingiz tasdiqlangan</Badge>
             ) : (
               <>
-                <Badge tone="success">✓ O'qib tugatdingiz</Badge>
+                <Badge tone="success"><Icon name="check" size={13} />O'qib tugatdingiz</Badge>
                 {reading.late ? (
                   <p className="text-xs text-app-hint">Muddatdan keyin o'qildi: portfolioga qo'shildi, ball berilmaydi.</p>
                 ) : reading.verification_required && (
@@ -130,7 +148,7 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
         )}
         {shelfOn && open && (
           <Button variant="secondary" loading={saving} onClick={() => void openOnShelf()}>
-            📖 Javonimda ochish: kundalik, 3 savol
+            <Icon name="book-open" size={18} />Javonimda ochish: kundalik, 3 savol
           </Button>
         )}
         {actionError && (
@@ -160,12 +178,12 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
               {quotesOn && (
                 <div className="mt-2 flex justify-end">
                   {quote.saved || savedNow.has(quote.id) ? (
-                    <button type="button" className="text-sm text-app-link" onClick={() => navigate('/quotes')}>
-                      ✅ Sandiqda
+                    <button type="button" className="inline-flex items-center gap-1 text-sm text-app-link" onClick={() => navigate('/quotes')}>
+                      <Icon name="check" size={14} />Sandiqda
                     </button>
                   ) : (
-                    <button type="button" className="text-sm text-app-link" onClick={() => void saveQuote(quote.id)}>
-                      💾 Saqlash
+                    <button type="button" className="inline-flex items-center gap-1 text-sm text-app-link" onClick={() => void saveQuote(quote.id)}>
+                      <Icon name="save" size={14} />Saqlash
                     </button>
                   )}
                 </div>

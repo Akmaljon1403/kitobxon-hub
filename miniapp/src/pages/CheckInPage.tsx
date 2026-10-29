@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -79,14 +80,14 @@ export function CheckInPage() {
   if (done) {
     return (
       <Card className="flex flex-col items-center gap-3 py-10 text-center">
-        <span aria-hidden className="text-6xl">
-          ✅
+        <span className="grid size-16 place-items-center rounded-full bg-green-500/15 text-green-600 dark:text-green-300">
+          <Icon name="check-circle" size={40} />
         </span>
         <h1 className="text-xl font-semibold">Davomatingiz qayd etildi!</h1>
         <p className="text-app-hint">«{done.event_title}»</p>
         <p className="text-2xl font-semibold text-app-link">+{done.points} ball</p>
         <Button variant="secondary" onClick={() => navigate('/results')}>
-          📊 Natijalarim
+          <Icon name="bar-chart" size={18} />Natijalarim
         </Button>
       </Card>
     )
@@ -100,8 +101,12 @@ export function CheckInPage() {
     const upcoming = next.state.status === 'success' ? next.state.data.items[0] : undefined
     return (
       <Card className="flex flex-col items-center gap-3 py-10 text-center">
-        <span aria-hidden className="text-5xl">
-          {attended ? '✅' : '🕒'}
+        <span
+          className={`grid size-14 place-items-center rounded-full ${
+            attended ? 'bg-green-500/15 text-green-600 dark:text-green-300' : 'bg-app-surface text-app-hint'
+          }`}
+        >
+          <Icon name={attended ? 'check-circle' : 'clock'} size={36} />
         </span>
         <h1 className="text-lg font-semibold">
           {attended ? `Siz «${attended.title}» tadbirida qayd etilgansiz` : "Hozir ochiq davomat yo'q"}
@@ -111,13 +116,13 @@ export function CheckInPage() {
         )}
         {upcoming && (
           <button type="button" onClick={() => navigate(`/events/${upcoming.id}`)} className="rounded-xl bg-app-surface px-4 py-3 text-sm">
-            📅 Keyingi tadbir: <b>«{upcoming.title}»</b>
+            <Icon name="calendar" size={14} className="mr-1 inline align-[-2px]" />Keyingi tadbir: <b>«{upcoming.title}»</b>
             <br />
             <span className="text-app-hint">{formatEventDate(upcoming.starts_at)}</span>
           </button>
         )}
         <Button variant="secondary" onClick={reload}>
-          🔄 Yangilash
+          <Icon name="refresh" size={18} />Yangilash
         </Button>
       </Card>
     )
@@ -129,11 +134,16 @@ export function CheckInPage() {
       <Card className="flex flex-col gap-1">
         <p className="text-sm text-app-hint">Davomat ochiq · {formatTime(event.closes_at)} gacha</p>
         <h1 className="text-lg font-semibold">«{event.title}»</h1>
-        {event.location && <p className="text-sm text-app-hint">📍 {event.location}</p>}
+        {event.location && (
+          <p className="flex items-center gap-1.5 text-sm text-app-hint">
+            <Icon name="map-pin" size={14} className="shrink-0" />
+            {event.location}
+          </p>
+        )}
       </Card>
 
       <Button loading={busy} onClick={scan} className="py-4 text-lg">
-        📷 QR kodni skanerlash
+        <Icon name="camera" size={20} />QR kodni skanerlash
       </Button>
 
       <Card className="flex flex-col gap-2">

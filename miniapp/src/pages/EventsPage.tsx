@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -15,9 +16,9 @@ export function EventBadges({ event }: { event: ClubEvent }) {
       {event.status === 'CANCELLED' && <Badge tone="warning">Bekor qilingan</Badge>}
       {event.my_attendance === 'VERIFIED' &&
         (new Date(event.ends_at).getTime() > Date.now() ? (
-          <Badge tone="success">✅ Qatnashyapsiz</Badge>
+          <Badge tone="success"><Icon name="check" size={13} />Qatnashyapsiz</Badge>
         ) : (
-          <Badge tone="success">✅ Qatnashdingiz</Badge>
+          <Badge tone="success"><Icon name="check" size={13} />Qatnashdingiz</Badge>
         ))}
       {event.my_attendance === 'SUSPICIOUS' && <Badge tone="warning">Tekshirilmoqda</Badge>}
       {!event.my_attendance && event.is_registered && event.status !== 'CANCELLED' && (
@@ -35,14 +36,30 @@ export function EventCard({ event }: { event: ClubEvent }) {
           <span className="rounded-full bg-brand-500/10 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:bg-white/10 dark:text-brand-300">
             {formatEventDate(event.starts_at)}
           </span>
-          <span className="shrink-0 text-xs font-medium text-app-hint">🏆 {event.attendance_points} ball</span>
+          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-app-hint">
+            <Icon name="trophy" size={13} />
+            {event.attendance_points} ball
+          </span>
         </div>
         <h2 className="font-serif text-lg font-bold leading-snug">{event.title}</h2>
         {event.shifts.length > 0 && (
-          <p className="text-sm text-app-hint">🕒 {event.shifts.map((shift) => `${shift.position}-smena ${formatTime(shift.starts_at)}`).join(' · ')}</p>
+          <p className="flex items-center gap-1.5 text-sm text-app-hint">
+            <Icon name="clock" size={14} className="shrink-0" />
+            {event.shifts.map((shift) => `${shift.position}-smena ${formatTime(shift.starts_at)}`).join(' · ')}
+          </p>
         )}
-        {event.location && <p className="text-sm text-app-hint">📍 {event.location}</p>}
-        {event.book_title && <p className="text-sm text-app-hint">📚 {event.book_title}</p>}
+        {event.location && (
+          <p className="flex items-center gap-1.5 text-sm text-app-hint">
+            <Icon name="map-pin" size={14} className="shrink-0" />
+            {event.location}
+          </p>
+        )}
+        {event.book_title && (
+          <p className="flex items-center gap-1.5 text-sm text-app-hint">
+            <Icon name="book" size={14} className="shrink-0" />
+            {event.book_title}
+          </p>
+        )}
         <EventBadges event={event} />
       </Card>
     </button>
