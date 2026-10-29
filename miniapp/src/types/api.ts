@@ -550,7 +550,7 @@ export interface TestStandings {
 }
 
 // ---- «📚 Mening mutolaam» ----
-export type ShelfStatus = 'WANT' | 'READING' | 'FINISHED' | 'LATER'
+export type ShelfStatus = 'WANT' | 'READING' | 'FINISHED'
 
 export interface ShelfItem {
   id: string

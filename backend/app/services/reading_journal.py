@@ -26,12 +26,11 @@ MAX_NOTE = 1000
 MAX_ANSWER = 1500
 MIN_ANSWER = 10
 MAX_QUOTE = 1000
-STATUS_ORDER = {ShelfStatus.READING: 0, ShelfStatus.WANT: 1, ShelfStatus.LATER: 2, ShelfStatus.FINISHED: 3}
+STATUS_ORDER = {ShelfStatus.READING: 0, ShelfStatus.WANT: 1, ShelfStatus.FINISHED: 2}
 STATUS_TITLES = {
     ShelfStatus.WANT: "O'qimoqchiman",
     ShelfStatus.READING: "O'qiyapman",
     ShelfStatus.FINISHED: "O'qib bo'ldim",
-    ShelfStatus.LATER: "Keyinroq",
 }
 
 
@@ -252,7 +251,7 @@ async def log_pages(
     )
     session.add(entry)
     item.pages_read += pages
-    if item.status in (ShelfStatus.WANT, ShelfStatus.LATER):
+    if item.status == ShelfStatus.WANT:
         _set_status(item, ShelfStatus.READING)
         await session.flush()
         await _club_reading(session, user, item, ShelfStatus.READING)

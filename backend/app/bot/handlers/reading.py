@@ -97,7 +97,6 @@ async def my_shelf(event: Message | CallbackQuery, state: FSMContext, db: AsyncS
         reading="\n".join(lines),
         want=stats["shelf"].get("WANT", 0),
         finished=stats["shelf"].get("FINISHED", 0),
-        later=stats["shelf"].get("LATER", 0),
         week=stats["week_pages"],
         streak=stats["streak"],
         best=stats["best_streak"],
