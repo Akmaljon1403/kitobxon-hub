@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
-import { Button, Card } from '../components/ui'
+import { Button, Card, PageTitle } from '../components/ui'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
@@ -53,9 +53,9 @@ export function ReadingCardPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">🪪 Kitobxonlik kartam</h1>
-        <p className="text-sm text-app-hint">O‘qigan kitoblar, betlar, seriya, ball va yutuqlaringiz — bitta rasmda</p>
+      <div>
+        <PageTitle icon="id-card">Kitobxonlik kartam</PageTitle>
+        <p className="px-1 text-sm text-app-hint">O‘qigan kitoblar, betlar, seriya, ball va yutuqlaringiz — bitta rasmda</p>
       </div>
       {failed ? (
         <ErrorState message="Kartani tayyorlab bo‘lmadi." onRetry={() => setAttempt((value) => value + 1)} />

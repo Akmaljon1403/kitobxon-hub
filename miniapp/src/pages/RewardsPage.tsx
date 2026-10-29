@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 
 import { Giveaways } from '../components/Giveaways'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card } from '../components/ui'
+import { Badge, Button, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -110,11 +110,11 @@ export function RewardsPage() {
   useBackButton(goBack)
   return (
     <>
-      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">🎁 Sovg'alarim</h1>
+      <PageTitle icon="gift">Sovg'alarim</PageTitle>
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (
-        <EmptyState icon="🎁" title="Hozircha sovg'alar yo'q">
+        <EmptyState icon="gift" title="Hozircha sovg'alar yo'q">
           Faol qatnashing — reyting yetakchilari va faol kitobxonlar klub sovg'alari bilan taqdirlanadi.
         </EmptyState>
       )}

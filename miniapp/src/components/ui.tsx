@@ -1,5 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
+import { Icon, type IconName } from './Icon'
+
 /* ------------------------------------------------------------------ surfaces */
 
 export function Card({
@@ -31,6 +33,29 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
   return (
     <div className="flex items-end justify-between gap-2 px-1 pb-1.5 pt-1">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-app-hint">{children}</h2>
+      {action}
+    </div>
+  )
+}
+
+/**
+ * The screen heading: one Lucide icon in the brand colour + a serif title, with an optional action
+ * (a button or badge) on the right. Used at the top of every section so the whole app speaks one
+ * visual language instead of a different emoji per page.
+ */
+export function PageTitle({
+  icon,
+  children,
+  action,
+}: {
+  icon: IconName
+  children: ReactNode
+  action?: ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2.5 px-1 pt-1">
+      <Icon name={icon} size={24} className="shrink-0 text-brand-600 dark:text-brand-300" />
+      <h1 className="min-w-0 flex-1 font-serif text-2xl font-bold leading-tight">{children}</h1>
       {action}
     </div>
   )

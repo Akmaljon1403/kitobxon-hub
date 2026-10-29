@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, SectionTitle } from '../components/ui'
+import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { API_BASE, ApiError } from '../services/api'
@@ -222,9 +222,9 @@ function CertificateList() {
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="font-serif text-2xl font-bold">🎓 Sertifikatlarim</h1>
+      <PageTitle icon="graduation-cap">Sertifikatlarim</PageTitle>
       {state.data.length === 0 ? (
-        <EmptyState icon="🎓" title="Hozircha sertifikat yo'q">
+        <EmptyState icon="graduation-cap" title="Hozircha sertifikat yo'q">
           Testda 1-, 2- yoki 3-o'rinni oling (tadbir testida — davomatdan o'tib) yoki oy yakunida reytingning eng faol
           uchligiga kiring — sertifikat avtomatik beriladi.
         </EmptyState>

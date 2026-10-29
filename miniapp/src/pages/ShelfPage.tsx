@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { BookCover } from '../components/BookCover'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Button, Card, SectionTitle } from '../components/ui'
+import { Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -295,9 +295,9 @@ export function ShelfPage() {
   return (
     <div className="flex flex-col gap-3">
       <LibrarySwitch current="shelf" />
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">📚 Javonim</h1>
-        <p className="text-sm text-app-hint">Kitoblaringiz, mutolaa kundaligi va seriyangiz</p>
+      <div>
+        <PageTitle icon="bookmark">Javonim</PageTitle>
+        <p className="px-1 text-sm text-app-hint">Kitoblaringiz, mutolaa kundaligi va seriyangiz</p>
       </div>
       <StatsCard stats={stats} />
       <div className="grid grid-cols-2 gap-2">
@@ -322,7 +322,7 @@ export function ShelfPage() {
       </div>
       {shown.length === 0 ? (
         <Card>
-          <EmptyState icon="📚" title="Bu javon hozircha bo'sh">
+          <EmptyState icon="bookmark" title="Bu javon hozircha bo'sh">
             {tab === 'READING' ? "Kitob qo'shing va har kuni o'qigan betlaringizni yozib boring — seriyangiz o'sadi." : null}
           </EmptyState>
         </Card>

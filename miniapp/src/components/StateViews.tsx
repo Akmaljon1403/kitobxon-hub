@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { Icon, type IconName } from './Icon'
 import { Skeleton } from './ui'
 
 export function LoadingState({ label = 'Yuklanmoqda…' }: { label?: string }) {
@@ -33,8 +34,8 @@ export function CardListSkeleton({ rows = 3 }: { rows?: number }) {
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div role="alert" className="flex flex-col items-center gap-3 px-4 py-14 text-center">
-      <span aria-hidden className="grid size-14 place-items-center rounded-2xl bg-app-danger/12 text-3xl">
-        ⚠️
+      <span className="grid size-14 place-items-center rounded-2xl bg-app-danger/12 text-app-danger">
+        <Icon name="alert-triangle" size={28} />
       </span>
       <p className="max-w-xs text-sm text-app-text">{message}</p>
       {onRetry && (
@@ -50,11 +51,11 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   )
 }
 
-export function EmptyState({ icon = '📭', title, children }: { icon?: string; title: string; children?: ReactNode }) {
+export function EmptyState({ icon = 'inbox', title, children }: { icon?: IconName; title: string; children?: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-14 text-center">
-      <span aria-hidden className="grid size-16 place-items-center rounded-3xl bg-app-surface text-4xl">
-        {icon}
+      <span className="grid size-16 place-items-center rounded-3xl bg-app-surface text-app-hint">
+        <Icon name={icon} size={30} />
       </span>
       <p className="font-semibold text-balance">{title}</p>
       {children && <div className="max-w-xs text-sm text-app-hint">{children}</div>}

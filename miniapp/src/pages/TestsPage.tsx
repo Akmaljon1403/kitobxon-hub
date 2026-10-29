@@ -1,5 +1,5 @@
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Card } from '../components/ui'
+import { Badge, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { ClubTest } from '../types/api'
@@ -71,11 +71,11 @@ export function TestsPage() {
 
   return (
     <>
-      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📝 Testlar</h1>
+      <PageTitle icon="file-text">Testlar</PageTitle>
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (
-        <EmptyState icon="📝" title="Hozircha testlar yo'q">
+        <EmptyState icon="file-text" title="Hozircha testlar yo'q">
           Test e'lon qilinganda shu yerda ko'rinadi va bot orqali xabar olasiz.
         </EmptyState>
       )}

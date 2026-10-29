@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, SectionTitle } from '../components/ui'
+import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { useAuth } from '../store/auth'
@@ -95,7 +95,7 @@ function ImpactCard({ info }: { info: ReferralOverview }) {
   if (!impact.invited) {
     return (
       <Card>
-        <EmptyState icon="🌱" title="Hali do'st taklif qilmagansiz">
+        <EmptyState icon="sprout" title="Hali do'st taklif qilmagansiz">
           Birinchi do'stingizni klubga olib keling — u o'qigan har bir kitob va to'plagan har bir ball shu yerda ko'rinadi.
         </EmptyState>
       </Card>
@@ -243,15 +243,15 @@ export function InvitePage() {
   const board = info.leaderboard
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">🎁 Sizning foydangiz</h1>
-        <p className="text-sm text-app-hint">Do'stlaringizni taklif qiling — ular bilan birga o'qing va mukofot oling</p>
+      <div>
+        <PageTitle icon="gift">Sizning foydangiz</PageTitle>
+        <p className="px-1 text-sm text-app-hint">Do'stlaringizni taklif qiling — ular bilan birga o'qing va mukofot oling</p>
       </div>
       {info.link ? (
         <LinkCard info={info} />
       ) : (
         <Card>
-          <EmptyState icon="⏳" title="Havola tayyorlanmoqda">
+          <EmptyState icon="hourglass" title="Havola tayyorlanmoqda">
             Bir daqiqadan so'ng qayta oching yoki botda /referal buyrug'ini yuboring.
           </EmptyState>
           <Button variant="secondary" onClick={overview.reload}>

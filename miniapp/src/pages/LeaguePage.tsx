@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Card } from '../components/ui'
+import { Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { useAuth } from '../store/auth'
@@ -43,9 +43,9 @@ export function LeaguePage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">🏛 Fakultetlar ligasi</h1>
-        <p className="text-sm text-app-hint">
+      <div>
+        <PageTitle icon="landmark">Fakultetlar ligasi</PageTitle>
+        <p className="px-1 text-sm text-app-hint">
           O‘rin — fakultet a’zolarining o‘rtacha bali bo‘yicha (katta-kichik fakultetlar teng). Har bir o‘qigan betingiz fakultetingizni oldinga
           suradi!
         </p>
@@ -66,7 +66,7 @@ export function LeaguePage() {
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.items.length === 0 && (
         <Card>
-          <EmptyState icon="🏛" title="Fakultetlar hali qo‘shilmagan" />
+          <EmptyState icon="landmark" title="Fakultetlar hali qo‘shilmagan" />
         </Card>
       )}
       {state.status === 'success' &&

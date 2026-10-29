@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
-import { Card, SectionTitle } from '../components/ui'
+import { Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { useAuth } from '../store/auth'
@@ -89,7 +89,7 @@ export function StatsPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h1 className="px-1 font-serif text-2xl font-bold">📈 Statistikam</h1>
+      <PageTitle icon="trending-up">Statistikam</PageTitle>
       <div className="grid grid-cols-2 gap-2">
         <Tile value={String(stats.total)} label="jami ball" />
         <Tile

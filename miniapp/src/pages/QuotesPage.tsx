@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card } from '../components/ui'
+import { Badge, Button, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -211,9 +211,9 @@ export function QuotesPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">💬 Iqtiboslar sandig‘i</h1>
-        <p className="text-sm text-app-hint">Yoqqan jumlalaringiz — izoh bilan, chiroyli kartochka qilib ulashing</p>
+      <div>
+        <PageTitle icon="quote">Iqtiboslar sandig‘i</PageTitle>
+        <p className="px-1 text-sm text-app-hint">Yoqqan jumlalaringiz — izoh bilan, chiroyli kartochka qilib ulashing</p>
       </div>
       <Card className="flex flex-col gap-2">
         <textarea
@@ -257,7 +257,7 @@ export function QuotesPage() {
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (
         <Card>
-          <EmptyState icon="💬" title={query ? 'Hech narsa topilmadi' : 'Sandiq hozircha bo‘sh'} />
+          <EmptyState icon="quote" title={query ? 'Hech narsa topilmadi' : 'Sandiq hozircha bo‘sh'} />
         </Card>
       )}
       {state.status === 'success' && state.data.map((quote) => (

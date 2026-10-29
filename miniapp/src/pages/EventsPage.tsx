@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Card } from '../components/ui'
+import { Badge, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { ClubEvent, Page } from '../types/api'
@@ -60,7 +60,7 @@ export function EventsPage() {
 
   return (
     <>
-      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📅 Tadbirlar</h1>
+      <PageTitle icon="calendar">Tadbirlar</PageTitle>
       <div className="grid grid-cols-2 gap-1 rounded-2xl bg-app-surface p-1" role="tablist">
         {(['upcoming', 'past'] as const).map((value) => (
           <button
@@ -78,7 +78,7 @@ export function EventsPage() {
       {state.status === 'loading' && <LoadingState />}
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.items.length === 0 && (
-        <EmptyState icon="📅" title={scope === 'upcoming' ? "Yaqin kunlarda tadbir yo'q" : "O'tgan tadbirlar yo'q"}>
+        <EmptyState icon="calendar" title={scope === 'upcoming' ? "Yaqin kunlarda tadbir yo'q" : "O'tgan tadbirlar yo'q"}>
           Yangi tadbir e'lon qilinganda shu yerda ko'rinadi.
         </EmptyState>
       )}
