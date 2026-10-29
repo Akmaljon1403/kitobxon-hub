@@ -16,15 +16,13 @@ export const STATUS_TITLES: Record<ShelfStatus, string> = {
   READING: "O'qiyapman",
   WANT: "O'qimoqchiman",
   FINISHED: "O'qib bo'ldim",
-  LATER: 'Keyinroq',
 }
 export const STATUS_ICONS: Record<ShelfStatus, IconName> = {
   READING: 'book-open',
   WANT: 'bookmark',
   FINISHED: 'check',
-  LATER: 'hourglass',
 }
-const TABS: ShelfStatus[] = ['READING', 'WANT', 'FINISHED', 'LATER']
+const TABS: ShelfStatus[] = ['READING', 'WANT', 'FINISHED']
 
 export function ProgressBar({ percent }: { percent: number | null }) {
   if (percent === null) return null

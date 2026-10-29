@@ -758,7 +758,7 @@ READ_MAYBE_DONE = (
 SHELF_SUMMARY = (
     "📚 <b>Javonim</b>\n\n"
     "<b>O'qiyapman:</b>\n{reading}\n\n"
-    "O'qimoqchiman: {want} · O'qib bo'ldim: {finished} · Keyinroq: {later}\n"
+    "O'qimoqchiman: {want} · O'qib bo'ldim: {finished}\n"
     "📖 Bu hafta: {week} bet · 🔥 seriya: {streak} kun (eng uzuni {best})\n"
     "🏁 Bu yil o'qilgan kitoblar: {year}\n\n"
     "Bugun o'qiganingizni yozing: <code>/oqidim 25</code>"

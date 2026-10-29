@@ -349,7 +349,7 @@ export function ShelfItemPage({ itemId }: { itemId: string }) {
       </Card>
 
       <div className="grid grid-cols-2 gap-2">
-        {(['READING', 'FINISHED', 'WANT', 'LATER'] as ShelfStatus[])
+        {(['READING', 'FINISHED', 'WANT'] as ShelfStatus[])
           .filter((status) => status !== item.status)
           .map((status) => (
             <Button
