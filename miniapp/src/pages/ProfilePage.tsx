@@ -7,7 +7,7 @@ import { PassportCard } from '../components/PassportCard'
 import { InviteCard } from '../components/InviteCard'
 import { PortfolioCard } from '../components/PortfolioCard'
 import { ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, SectionTitle, Toggle } from '../components/ui'
+import { Badge, Button, Card, FeatureTile, SectionTitle, Toggle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
@@ -214,9 +214,7 @@ export function ProfilePage() {
 
       <button type="button" className="w-full text-left" onClick={() => navigate('/services')}>
         <Card interactive className="flex items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-            <Icon name="grid" />
-          </span>
+          <FeatureTile icon="grid" tone="hint" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">Barcha xizmatlar</p>
             <p className="truncate text-sm text-app-hint">Javon, missiyalar, yutuqlar, sovg‘alar, sertifikatlar, liga va boshqalar</p>
