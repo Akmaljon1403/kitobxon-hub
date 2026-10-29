@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -28,16 +29,20 @@ function CertificateRow({ certificate }: { certificate: Certificate }) {
   return (
     <button type="button" className="text-left" onClick={() => navigate(`/certificates/${certificate.id}`)}>
       <Card className="flex items-start gap-3">
-        <span aria-hidden className="text-4xl leading-none">
-          {(certificate.place && MEDALS[certificate.place]) || '🎓'}
-        </span>
+        {certificate.place && MEDALS[certificate.place] ? (
+          <span aria-hidden className="text-4xl leading-none">{MEDALS[certificate.place]}</span>
+        ) : (
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+            <Icon name="graduation-cap" size={24} />
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold leading-snug">{certificate.title}</h2>
           <p className="mt-1 text-xs text-app-hint">
             {formatDate(certificate.issued_at)} · kod: <span className="font-mono">{certificate.code}</span>
           </p>
         </div>
-        <span className="text-app-link">→</span>
+        <Icon name="chevron-right" size={18} className="shrink-0 self-center text-app-hint" />
       </Card>
     </button>
   )
@@ -104,8 +109,13 @@ function CertificateDetail({ certificateId }: { certificateId: string }) {
   return (
     <div className="flex flex-col gap-3">
       <Card className="flex flex-col gap-2">
-        <h1 className="text-lg font-semibold leading-snug">
-          {(certificate.place && MEDALS[certificate.place]) || '🎓'} {certificate.title}
+        <h1 className="flex items-center gap-2 text-lg font-semibold leading-snug">
+          {certificate.place && MEDALS[certificate.place] ? (
+            <span aria-hidden className="text-2xl leading-none">{MEDALS[certificate.place]}</span>
+          ) : (
+            <Icon name="graduation-cap" size={22} className="shrink-0 text-brand-600 dark:text-brand-300" />
+          )}
+          {certificate.title}
         </h1>
         <p className="text-sm text-app-hint">{certificate.description}</p>
         <p className="text-xs text-app-hint">
@@ -130,10 +140,10 @@ function CertificateDetail({ certificateId }: { certificateId: string }) {
               })
             }
           >
-            📥 PDF'ni olish (botga yuboriladi)
+            <Icon name="send" size={18} />PDF'ni olish (botga yuboriladi)
           </Button>
         ) : (
-          <Button onClick={() => navigate('/premium')}>💎 PDF yuklab olish — Premium bilan</Button>
+          <Button onClick={() => navigate('/premium')}><Icon name="gem" size={18} />PDF yuklab olish — Premium bilan</Button>
         )}
         <p className="text-center text-xs text-app-hint">
           {rights?.downloads_left == null
@@ -144,14 +154,19 @@ function CertificateDetail({ certificateId }: { certificateId: string }) {
         </p>
         {certificate.verify_url && (
           <Button variant="ghost" className="px-2 text-sm" onClick={() => share(certificate)}>
-            🔗 Tasdiqlash havolasini ulashish (bepul)
+            <Icon name="link" size={16} />Tasdiqlash havolasini ulashish (bepul)
           </Button>
         )}
       </Card>
 
       {designs.state.status === 'success' && (
         <Card className="flex flex-col gap-2">
-          <SectionTitle>🎨 Dizayn</SectionTitle>
+          <SectionTitle>
+            <span className="flex items-center gap-1.5">
+              <Icon name="palette" size={13} />
+              Dizayn
+            </span>
+          </SectionTitle>
           <p className="text-xs text-app-hint">
             {rights?.premium
               ? `Bosib ko'ring, yoqqanini tanlang. Yana ${rights.design_changes_left} marta almashtirish mumkin.`
@@ -166,9 +181,9 @@ function CertificateDetail({ certificateId }: { certificateId: string }) {
                 className={`flex flex-col items-center gap-1 rounded-lg p-1 text-xs ${shown === design.code ? 'ring-2 ring-app-link' : ''}`}
               >
                 <img src={`${API_BASE}/api/v1/meta/certificate-designs/${design.code}.png`} alt="" className="w-full rounded" loading="lazy" />
-                <span>
+                <span className="inline-flex items-center gap-0.5">
                   {design.title}
-                  {design.code === certificate.design ? ' ✓' : ''}
+                  {design.code === certificate.design && <Icon name="check" size={12} />}
                 </span>
               </button>
             ))}
@@ -187,11 +202,15 @@ function CertificateDetail({ certificateId }: { certificateId: string }) {
                   })
                 }
               >
-                ✅ Shu dizaynni tanlash
+                <Icon name="check" size={18} />Shu dizaynni tanlash
               </Button>
             ) : (
               <Button variant="secondary" onClick={() => navigate('/premium')}>
-                {rights?.premium ? 'Almashtirish imkoniyati tugagan' : '💎 Tanlash — Premium bilan'}
+                {rights?.premium ? (
+                  'Almashtirish imkoniyati tugagan'
+                ) : (
+                  <><Icon name="gem" size={18} />Tanlash — Premium bilan</>
+                )}
               </Button>
             )
           )}
@@ -232,7 +251,7 @@ function CertificateList() {
         state.data.map((certificate) => <CertificateRow key={certificate.id} certificate={certificate} />)
       )}
       <p className="text-center text-xs text-app-hint">
-        <Badge tone="info">Bepul</Badge> ko'rish va tasdiq havolasini ulashish · <Badge tone="warning">💎</Badge> PDF va dizayn tanlash
+        <Badge tone="info">Bepul</Badge> ko'rish va tasdiq havolasini ulashish · <Badge tone="warning"><Icon name="gem" size={12} /></Badge> PDF va dizayn tanlash
       </p>
     </div>
   )

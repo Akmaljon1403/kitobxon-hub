@@ -2,6 +2,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { ReferralBrief } from '../types/api'
 import { navigate } from '../utils/router'
+import { Icon } from './Icon'
 import { Card } from './ui'
 
 /** «🎁 Sizning foydangiz» in short (home and profile pages): friends invited, their points, my reward. */
@@ -13,14 +14,15 @@ export function BenefitCard() {
   return (
     <button type="button" className="text-left" onClick={() => navigate('/invite')}>
       <Card className="flex items-center gap-3 border border-app-button/30">
-        <span aria-hidden className="text-3xl">
-          🎁
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gold-400/15 text-gold-500 dark:text-gold-300">
+          <Icon name="gift" size={22} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">Sizning foydangiz</p>
           {impact && impact.invited > 0 ? (
             <p className="text-sm text-app-hint">
-              👥 {impact.invited} ta do'st · ⭐ ular {impact.friends_points.toLocaleString('uz-UZ')} ball to'pladi · sizga +
+              <Icon name="users" size={13} className="inline align-[-2px]" /> {impact.invited} ta do'st ·{' '}
+              <Icon name="star" size={13} className="inline align-[-2px]" /> ular {impact.friends_points.toLocaleString('uz-UZ')} ball to'pladi · sizga +
               {impact.earned_points} ball
             </p>
           ) : (
@@ -32,9 +34,7 @@ export function BenefitCard() {
             </p>
           )}
         </div>
-        <span aria-hidden className="text-app-hint">
-          ›
-        </span>
+        <Icon name="chevron-right" size={18} className="shrink-0 self-center text-app-hint" />
       </Card>
     </button>
   )
