@@ -172,9 +172,7 @@ async def test_saved_quotes_are_private_to_the_reading_diary(client: httpx.Async
 
     # the standalone quote box and its public-sharing paths are gone for good
     assert (await client.get("/api/v1/me/quotes/options", headers=headers)).status_code in (404, 405)
-    gone = await client.post(
-        "/api/v1/community/from-box", json={"saved_quote_id": saved.json()["id"]}, headers=headers
-    )
+    gone = await client.post("/api/v1/community/from-box", json={"saved_quote_id": saved.json()["id"]}, headers=headers)
     assert gone.status_code in (404, 405)
 
     # removing a quote is the member's own action

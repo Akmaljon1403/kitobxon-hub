@@ -134,9 +134,7 @@ async def share_event_comment(callback: CallbackQuery, db: AsyncSession, member:
         select(EventFeedback.comment).where(EventFeedback.event_id == event_id, EventFeedback.user_id == member.id)
     )
     try:
-        item = await community.submit(
-            db, member, kind=ContributionKind.EVENT, text=comment or "", event_id=event_id
-        )
+        item = await community.submit(db, member, kind=ContributionKind.EVENT, text=comment or "", event_id=event_id)
     except AppError as exc:
         await callback.answer(exc.message, show_alert=True)
         return
