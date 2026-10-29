@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -69,7 +70,7 @@ export function HelpPage() {
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="🔎 Savolni qidiring: davomat, sertifikat, to'lov..."
+        placeholder="Savolni qidiring: davomat, sertifikat, to'lov..."
         aria-label="Savollarni qidirish"
         className="w-full rounded-xl bg-app-section px-3 py-2.5 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50"
       />
@@ -101,10 +102,15 @@ export function HelpPage() {
         </div>
       ))}
       {faq.state.status === 'success' && found.length === 0 && (
-        <Card className="py-6 text-center text-sm text-app-hint">Bunday savol topilmadi — pastda bizga yozing 👇</Card>
+        <Card className="py-6 text-center text-sm text-app-hint">Bunday savol topilmadi — pastda bizga yozing.</Card>
       )}
 
-      <SectionTitle>✉️ Adminga yozish</SectionTitle>
+      <SectionTitle>
+        <span className="flex items-center gap-1.5">
+          <Icon name="mail" size={13} />
+          Adminga yozish
+        </span>
+      </SectionTitle>
       <Card className="flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-1.5 text-sm">
           {(['general', 'payment'] as const).map((value) => (
@@ -112,9 +118,10 @@ export function HelpPage() {
               key={value}
               type="button"
               onClick={() => setTopic(value)}
-              className={`rounded-xl px-3 py-2 ${topic === value ? 'bg-brand-500/10 ring-1 ring-brand-500' : 'bg-app-surface'}`}
+              className={`flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 ${topic === value ? 'bg-brand-500/10 ring-1 ring-brand-500' : 'bg-app-surface'}`}
             >
-              {value === 'general' ? '💬 Umumiy savol' : "💳 To'lov bo'yicha"}
+              <Icon name={value === 'general' ? 'message-square' : 'credit-card'} size={15} />
+              {value === 'general' ? 'Umumiy savol' : "To'lov bo'yicha"}
             </button>
           ))}
         </div>

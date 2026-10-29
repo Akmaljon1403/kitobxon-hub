@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Button, Card, PageTitle } from '../components/ui'
 import { useBackButton } from '../hooks/useBackButton'
@@ -66,7 +67,7 @@ export function ReadingCardPage() {
       )}
       {notice && <p className={`text-center text-sm ${notice.error ? 'text-app-danger' : 'text-app-link'}`}>{notice.text}</p>}
       <Button loading={busy} disabled={!src} onClick={() => void send()}>
-        📤 Botga yuborish va ulashish
+        <Icon name="send" size={18} />Botga yuborish va ulashish
       </Button>
       <Card className="text-sm text-app-hint">
         Karta har safar yangi raqamlar bilan chiziladi. Botda <b>/kartam</b> deb yozsangiz ham keladi.

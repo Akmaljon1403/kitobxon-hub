@@ -2,6 +2,7 @@ import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { MemberGiveaways, PublicGiveaway } from '../types/api'
 import { formatEventDate } from '../utils/format'
+import { Icon } from './Icon'
 import { Card, SectionTitle } from './ui'
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
@@ -38,7 +39,12 @@ export function Giveaways() {
     <>
       {upcoming.length > 0 && (
         <>
-          <SectionTitle>🎲 Yaqindagi sovg'a o'yinlari</SectionTitle>
+          <SectionTitle>
+            <span className="flex items-center gap-1.5">
+              <Icon name="gift" size={13} />
+              Yaqindagi sovg'a o'yinlari
+            </span>
+          </SectionTitle>
           {upcoming.map((giveaway) => (
             <Card key={giveaway.id} className="flex flex-col gap-1 bg-gradient-to-br from-gold-400/10 to-transparent">
               <p className="font-semibold">{giveaway.title}</p>
@@ -49,15 +55,30 @@ export function Giveaways() {
                 {how(giveaway)} · {giveaway.period}
               </p>
               {AUDIENCE[giveaway.audience] && <p className="text-xs text-app-hint">{AUDIENCE[giveaway.audience]}</p>}
-              {giveaway.premium_bonus && <p className="text-xs text-app-link">💎 Premium a'zolarda imkoniyat ikki baravar</p>}
-              {giveaway.scheduled_at && <p className="text-xs text-app-hint">🗓 G'oliblar: {formatEventDate(giveaway.scheduled_at)}</p>}
+              {giveaway.premium_bonus && (
+                <p className="flex items-center gap-1 text-xs text-app-link">
+                  <Icon name="gem" size={12} />
+                  Premium a'zolarda imkoniyat ikki baravar
+                </p>
+              )}
+              {giveaway.scheduled_at && (
+                <p className="flex items-center gap-1 text-xs text-app-hint">
+                  <Icon name="calendar" size={12} />
+                  G'oliblar: {formatEventDate(giveaway.scheduled_at)}
+                </p>
+              )}
             </Card>
           ))}
         </>
       )}
       {recent.length > 0 && (
         <>
-          <SectionTitle>🏅 So'nggi g'oliblar</SectionTitle>
+          <SectionTitle>
+            <span className="flex items-center gap-1.5">
+              <Icon name="medal" size={13} />
+              So'nggi g'oliblar
+            </span>
+          </SectionTitle>
           {recent.map((giveaway) => (
             <Card key={giveaway.id} className="flex flex-col gap-1.5">
               <p className="font-semibold">
@@ -66,8 +87,12 @@ export function Giveaways() {
               <ul className="flex flex-col gap-1 text-sm">
                 {giveaway.winners.map((winner, index) => (
                   <li key={`${winner.name}-${index}`} className="flex gap-2">
-                    <span aria-hidden>
-                      {giveaway.rule !== 'RANDOM' && giveaway.rule !== 'NEW_MEMBERS' && winner.place ? (MEDALS[winner.place] ?? '🎁') : '🎁'}
+                    <span aria-hidden className="shrink-0">
+                      {giveaway.rule !== 'RANDOM' && giveaway.rule !== 'NEW_MEMBERS' && winner.place && MEDALS[winner.place] ? (
+                        MEDALS[winner.place]
+                      ) : (
+                        <Icon name="gift" size={16} className="inline align-[-2px] text-gold-500 dark:text-gold-300" />
+                      )}
                     </span>
                     <span>
                       <b className="font-medium">{winner.name}</b> <span className="text-app-hint">— {winner.reason}</span>

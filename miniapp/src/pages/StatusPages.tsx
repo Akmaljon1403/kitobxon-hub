@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { Icon, type IconName } from '../components/Icon'
 import { Button, Card } from '../components/ui'
 import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
@@ -8,16 +9,16 @@ import { haptic, openBot, openTelegramLink } from '../utils/telegram'
 
 const LOGO = `${import.meta.env.BASE_URL}brand/logo-badge.png`
 
-/** `icon` is an emoji, or «logo» for the club's badge. */
-function Shell({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
+/** `icon` is a Lucide icon name, or «logo» for the club's badge. */
+function Shell({ icon, title, children }: { icon: IconName | 'logo'; title: string; children: React.ReactNode }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 p-4">
       <Card className="flex flex-col items-center gap-3 py-8 text-center">
         {icon === 'logo' ? (
           <img src={LOGO} alt="" className="size-24" />
         ) : (
-          <span aria-hidden className="text-5xl">
-            {icon}
+          <span className="grid size-16 place-items-center rounded-3xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+            <Icon name={icon} size={36} />
           </span>
         )}
         <h1 className="text-xl font-semibold">{title}</h1>
@@ -65,7 +66,7 @@ export function SubscribePage({ channels }: { channels: SubscriptionChannel[] })
   }
 
   return (
-    <Shell icon="📢" title="Bir qadam qoldi!">
+    <Shell icon="megaphone" title="Bir qadam qoldi!">
       <p className="text-sm text-app-hint">
         Kitobxon Hub'dan foydalanish uchun klubimiz kanaliga obuna bo'ling: yangi kitoblar, tadbirlar, test natijalari va sovg'alar haqidagi
         xabarlar avval o'sha yerda chiqadi.
@@ -73,11 +74,11 @@ export function SubscribePage({ channels }: { channels: SubscriptionChannel[] })
       <div className="flex w-full flex-col gap-2">
         {channels.map((channel) => (
           <Button key={channel.url} variant="secondary" onClick={() => openTelegramLink(channel.url)}>
-            📢 {channel.title}
+            <Icon name="megaphone" size={18} />{channel.title}
           </Button>
         ))}
         <Button loading={busy} onClick={() => void check()}>
-          ✅ Obuna bo'ldim
+          <Icon name="check" size={18} />Obuna bo'ldim
         </Button>
       </div>
       {message && (
@@ -104,11 +105,11 @@ export function OutsideTelegramPage() {
 export function AccountProblemPage({ message }: { message: string }) {
   const { meta } = useAuth()
   return (
-    <Shell icon="🔒" title="Kirish cheklangan">
+    <Shell icon="lock" title="Kirish cheklangan">
       <p className="text-sm text-app-hint">{message}</p>
       {meta?.bot_username && (
         <Button variant="secondary" onClick={() => openBot(meta.bot_username, 'support')}>
-          ✉️ Adminga yozish
+          <Icon name="mail" size={18} />Adminga yozish
         </Button>
       )}
     </Shell>
@@ -118,7 +119,7 @@ export function AccountProblemPage({ message }: { message: string }) {
 export function StartupErrorPage({ message }: { message: string }) {
   const { retry } = useAuth()
   return (
-    <Shell icon="⚠️" title="Ulanib bo'lmadi">
+    <Shell icon="alert-triangle" title="Ulanib bo'lmadi">
       <p className="text-sm text-app-hint">{message}</p>
       <Button onClick={retry}>Qayta urinish</Button>
     </Shell>
@@ -128,8 +129,8 @@ export function StartupErrorPage({ message }: { message: string }) {
 export function NotFoundPage() {
   return (
     <Card className="flex flex-col items-center gap-2 py-10 text-center">
-      <span aria-hidden className="text-5xl">
-        🧭
+      <span className="grid size-16 place-items-center rounded-3xl bg-app-surface text-app-hint">
+        <Icon name="compass" size={36} />
       </span>
       <h1 className="text-lg font-semibold">Sahifa topilmadi</h1>
       <p className="text-sm text-app-hint">Pastdagi menyudan bo'lim tanlang.</p>
