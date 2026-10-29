@@ -122,9 +122,11 @@ export function HomePage() {
       {/* Hero: greeting + points. Navy-on-brand with the mark's gold four-point star and a gold points
           badge — a distinctive, premium first impression. */}
       <section className="relative overflow-hidden rounded-3xl bg-brand-gradient p-4 text-white shadow-[var(--shadow-brand)] ring-1 ring-white/10">
+        {/* Layered brand depth: a faint gold four-point star and a soft gold glow behind the content. */}
         <span aria-hidden className="pointer-events-none absolute -right-3 -top-6 select-none text-[6.5rem] leading-none text-gold-400/15">
           ✦
         </span>
+        <span aria-hidden className="pointer-events-none absolute -bottom-12 -left-10 size-40 rounded-full bg-gold-400/10 blur-3xl" />
         <div className="relative flex items-center gap-3">
           <span className="rounded-full ring-2 ring-gold-400/40">
             <Avatar me={me} size="size-12" />
@@ -137,9 +139,13 @@ export function HomePage() {
             <button
               type="button"
               onClick={() => go('/results')}
-              className="flex flex-col items-center rounded-2xl bg-white/10 px-3.5 py-2 ring-1 ring-white/15 backdrop-blur active:scale-95"
+              aria-label={`${points.total} ball, ${points.rank}-o‘rin — natijalarim`}
+              className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-white/15 to-white/5 px-3.5 py-2 ring-1 ring-gold-400/30 backdrop-blur transition active:scale-95"
             >
-              <span className="text-xl font-bold leading-none tabular-nums text-gold-300">{points.total}</span>
+              <span className="flex items-center gap-1 text-xl font-bold leading-none tabular-nums text-gold-300">
+                <Icon name="trophy" size={15} className="text-gold-300/90" />
+                {points.total}
+              </span>
               <span className="mt-0.5 text-[11px] text-white/75">ball · {points.rank}-o‘rin</span>
             </button>
           )}
