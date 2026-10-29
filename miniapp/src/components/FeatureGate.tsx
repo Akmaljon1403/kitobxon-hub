@@ -18,7 +18,6 @@ const TITLES: Record<string, string> = {
   certificate_pdf: 'Sertifikat PDF',
   portfolio: 'Kitobxonlik portfoliosi',
   shelf: 'Javonim',
-  quote_box: "Iqtiboslar sandig'i",
   missions: 'Missiyalar',
   reading_card: 'Kitobxonlik kartam',
   faculty_league: 'Fakultetlar ligasi',

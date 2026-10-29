@@ -733,7 +733,6 @@ CHAT_PAYMENTS_LOST = (
 # ---- My reading: /oqidim, /javonim, /kartam ----
 BTN_SHELF_APP = "📚 Javonim"
 BTN_MISSIONS_APP = "🎯 Missiyalar"
-BTN_QUOTES_APP = "💬 Iqtiboslarim"
 READ_NO_BOOK = (
     "📚 Hozir «O'qiyapman» javoningizda kitob yo'q.\n\n"
     "Ilovada <b>📚 Javonim</b> → kitob qo'shing (klub kitobi yoki o'zingizniki) va «O'qiyapman» deb belgilang. "
@@ -792,10 +791,9 @@ COMMUNITY_ASK_SOURCE = (
 BTN_SKIP = "O'tkazib yuborish"
 COMMUNITY_TEXT_ONLY = "Iltimos, matn yozing yoki /cancel"
 COMMUNITY_SENT_PENDING = (
-    "✅ Rahmat! Yuborildi. Admin ko'rib chiqqach «💬 A'zolar fikrlari» lentasida chiqadi va sizga xabar beramiz.{box}"
+    "✅ Rahmat! Yuborildi. Admin ko'rib chiqqach «💬 A'zolar fikrlari» lentasida chiqadi va sizga xabar beramiz."
 )
-COMMUNITY_SENT_LIVE = "✅ Rahmat! «💬 A'zolar fikrlari» lentasiga qo'shildi.{box}"
-COMMUNITY_SENT_BOX = "\n💬 Nusxasi «Iqtiboslar sandig'i»ngizda ham saqlandi."
+COMMUNITY_SENT_LIVE = "✅ Rahmat! «💬 A'zolar fikrlari» lentasiga qo'shildi."
 BTN_COMMUNITY_CARD = "🖼 Kartochkasini olish"
 COMMUNITY_CARD_CAPTION = "💬 Kartochka tayyor — do'stlaringizga ulashing (rasmni bosib turing → «Ulashish»)."
 COMMUNITY_EVENT_OFFER = (

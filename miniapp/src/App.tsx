@@ -15,7 +15,6 @@ import { HomePage } from './pages/HomePage'
 import { InvitePage } from './pages/InvitePage'
 import { LeaguePage } from './pages/LeaguePage'
 import { MissionsPage } from './pages/MissionsPage'
-import { QuotesPage } from './pages/QuotesPage'
 import { ReadingCardPage } from './pages/ReadingCardPage'
 import { ShelfItemPage } from './pages/ShelfItemPage'
 import { ShelfPage } from './pages/ShelfPage'
@@ -62,7 +61,6 @@ function Routes() {
   else if (section === 'invite' || section === 'referal') page = <InvitePage />
   else if (section === 'shelf' && id) page = <FeatureGate code="shelf"><ShelfItemPage itemId={id} /></FeatureGate>
   else if (section === 'shelf') page = <FeatureGate code="shelf"><ShelfPage /></FeatureGate>
-  else if (section === 'quotes') page = <FeatureGate code="quote_box"><QuotesPage /></FeatureGate>
   else if (section === 'community' && id === 'new') page = <FeatureGate code="community"><CommunityNewPage /></FeatureGate>
   else if (section === 'community') page = <FeatureGate code="community"><CommunityPage /></FeatureGate>
   else if (section === 'missions') page = <FeatureGate code="missions"><MissionsPage /></FeatureGate>

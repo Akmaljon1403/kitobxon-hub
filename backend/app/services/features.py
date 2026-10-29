@@ -107,13 +107,6 @@ FEATURES: tuple[Feature, ...] = (
         "shelf",
     ),
     Feature(
-        "quote_box",
-        "💬 Iqtiboslar sandig'i",
-        "yoqqan iqtiboslarni saqlash, izoh yozish va chiroyli kartochka qilib do'stlarga ulashish",
-        FeatureMode.ALL,
-        "quotes",
-    ),
-    Feature(
         "missions",
         "🎯 Shaxsiy missiyalar",
         "«7 kunda 100 bet», «5 kun ketma-ket o'qish» kabi kichik maqsadlar — bajarganga ball",

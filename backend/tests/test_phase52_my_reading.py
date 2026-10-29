@@ -212,34 +212,24 @@ async def test_the_quote_box_and_shareable_cards(
     empty = await client.post("/api/v1/me/quotes", json={"text": "   "}, headers=headers)
     assert empty.status_code == 400
 
-    detail = (await client.get(f"/api/v1/books/{book.id}", headers=headers)).json()
-    assert detail["quotes"][0]["saved"] is True
-    found = (await client.get("/api/v1/me/quotes", params={"search": "sodiq"}, headers=headers)).json()
-    assert [quote["text"] for quote in found] == ["Kitob — eng sodiq do'st."]
-
-    card = await client.get(f"/api/v1/me/quotes/{typed.json()['id']}/card.png", headers=headers)
-    assert card.status_code == 200 and card.headers["content-type"] == "image/png"
-    assert card.content.startswith(b"\x89PNG")
+    # the saved lines live on the book's page in «📚 Javonim» (the reading diary)
+    detail = (await client.get(f"/api/v1/me/shelf/{item['id']}", headers=headers)).json()
+    assert "Kitob — eng sodiq do'st." in [quote["text"] for quote in detail["quotes"]]
 
     session = FakeTelegramSession()
     bot = Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     monkeypatch.setattr("app.services.delivery.runtime_bot", lambda: bot)
-    sent = await client.post(f"/api/v1/me/quotes/{typed.json()['id']}/send", headers=headers)
-    assert sent.json() == {"sent": True}
-    photo = next(request for request in session.requests if isinstance(request, SendPhoto))
-    assert photo.chat_id == member.telegram_id and "kartochkasi" in photo.caption
-
     my_card = await client.get("/api/v1/me/reading-card.png", headers=headers)
     assert my_card.status_code == 200 and my_card.content.startswith(b"\x89PNG")
     await client.post("/api/v1/me/reading-card/send", headers=headers)
-    assert sum(isinstance(request, SendPhoto) for request in session.requests) == 2
+    assert any(isinstance(request, SendPhoto) for request in session.requests)
 
     removed = await client.delete(f"/api/v1/me/quotes/{saved.json()['id']}", headers=headers)
     assert removed.status_code == 204
     stranger = await create_user(db, telegram_id=next(_ids))
     await db.commit()
-    foreign = await client.get(f"/api/v1/me/quotes/{typed.json()['id']}/card.png", headers=member_headers(stranger))
-    assert foreign.status_code == 404  # nobody sees another member's quotes
+    foreign = await client.get(f"/api/v1/me/shelf/{item['id']}", headers=member_headers(stranger))
+    assert foreign.status_code == 404  # nobody sees another member's shelf or its quotes
 
 
 async def test_personal_missions_count_real_activity(client: httpx.AsyncClient, db: AsyncSession) -> None:

@@ -6,18 +6,17 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated
 
 from aiogram.types import BufferedInputFile
 from fastapi import APIRouter, Query, Response, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUserDep, DbSession, feature_required
-from app.core.errors import ConflictError
 from app.models import SavedQuote
 from app.models.enums import MissionMetric, ShelfStatus, UserMissionStatus
 from app.security.rate_limit import RateLimit, enforce
-from app.services import community, delivery, missions, reading_journal, share_cards
+from app.services import delivery, missions, reading_journal, share_cards
 from app.services.settings import get_setting
 
 router = APIRouter(prefix="/me", tags=["my reading"])
@@ -122,21 +121,6 @@ class QuoteIn(BaseModel):
     page: int | None = Field(default=None, gt=0, le=20000)
     note: str | None = Field(default=None, max_length=500)
     source: str | None = Field(default=None, max_length=255, description="«Muallif — Kitob» for a typed quote")
-    visibility: Literal["PERSONAL", "COMMON"] | None = Field(
-        default=None, description="COMMON also puts it into the common pool; empty = the club's default"
-    )
-    show_name: bool = True
-
-
-class VisibilityIn(BaseModel):
-    visibility: Literal["PERSONAL", "COMMON"]
-    show_name: bool = True
-
-
-class QuoteBoxOptionsOut(BaseModel):
-    default: Literal["PERSONAL", "COMMON"]
-    common_allowed: bool
-    auto_publish: bool
 
 
 class QuoteOut(BaseModel):
@@ -148,8 +132,6 @@ class QuoteOut(BaseModel):
     shelf_item_id: uuid.UUID | None
     book_quote_id: uuid.UUID | None
     created_at: datetime
-    # in the common pool: PENDING (the admins look first) / APPROVED / HIDDEN; empty — only in my box
-    shared: str | None = None
 
 
 class ShelfItemDetailOut(ShelfItemOut):
@@ -202,7 +184,7 @@ class MissionOptionsOut(BaseModel):
     metrics: list[MissionOptionOut]
 
 
-def _quote_out(quote: SavedQuote, shared: str | None = None) -> QuoteOut:
+def _quote_out(quote: SavedQuote) -> QuoteOut:
     return QuoteOut(
         id=quote.id,
         text=quote.text,
@@ -212,13 +194,11 @@ def _quote_out(quote: SavedQuote, shared: str | None = None) -> QuoteOut:
         shelf_item_id=quote.shelf_item_id,
         book_quote_id=quote.book_quote_id,
         created_at=quote.created_at,
-        shared=shared,
     )
 
 
-async def _quotes_out(db: DbSession, quotes: list[SavedQuote]) -> list[QuoteOut]:
-    states = await community.box_states(db, [quote.id for quote in quotes])
-    return [_quote_out(quote, states[quote.id].status.value if quote.id in states else None) for quote in quotes]
+def _quotes_out(quotes: list[SavedQuote]) -> list[QuoteOut]:
+    return [_quote_out(quote) for quote in quotes]
 
 
 async def _item_out(db: DbSession, current: CurrentUserDep, item_id: uuid.UUID) -> ShelfItemOut:
@@ -261,7 +241,7 @@ async def shelf_item(item_id: uuid.UUID, current: CurrentUserDep, db: DbSession)
         )
         if reflection
         else None,
-        quotes=await _quotes_out(db, await reading_journal.quotes(db, current.user, item_id=item_id)),
+        quotes=_quotes_out(await reading_journal.quotes(db, current.user, item_id=item_id)),
     )
 
 
@@ -318,103 +298,23 @@ async def save_reflection(
     )
 
 
-# ---------------------------------------------------------------------------- the quote box
-
-quotes_router = APIRouter(dependencies=[feature_required("quote_box")])
-
-
-@quotes_router.get("/quotes", response_model=list[QuoteOut], summary="«💬 Iqtiboslar sandig'i»")
-async def my_quotes(
-    current: CurrentUserDep, db: DbSession, search: Annotated[str | None, Query(max_length=100)] = None
-) -> list[QuoteOut]:
-    return await _quotes_out(db, await reading_journal.quotes(db, current.user, search=search))
+# ---------------------------------------------------------------------------- saved quotes (in the reading diary)
+# Lines the member keeps while reading — typed, or a club quote saved with one tap. They live on the book's
+# page in «📚 Javonim»; the public feed is «💬 A'zolar fikrlari» (see the community endpoints).
 
 
-async def _common_allowed(db: DbSession, current: CurrentUserDep) -> bool:
-    from app.services import features
-
-    if not await get_setting(db, "community.quote_box_common"):
-        return False
-    return await features.allowed(db, current.user, "community") == "on"
-
-
-@quotes_router.get("/quotes/options", response_model=QuoteBoxOptionsOut, summary="Personal or common: the choices")
-async def quote_box_options(current: CurrentUserDep, db: DbSession) -> QuoteBoxOptionsOut:
-    common = await _common_allowed(db, current)
-    default = str(await get_setting(db, "community.quote_box_default"))
-    return QuoteBoxOptionsOut(
-        default="COMMON" if common and default == "COMMON" else "PERSONAL",
-        common_allowed=common,
-        auto_publish=bool(await get_setting(db, "community.auto_publish")),
-    )
-
-
-@quotes_router.post(
+@shelf_router.post(
     "/quotes", response_model=QuoteOut, status_code=status.HTTP_201_CREATED, summary="Save a quote (typed or club)"
 )
 async def save_quote(payload: QuoteIn, current: CurrentUserDep, db: DbSession) -> QuoteOut:
-    common_ok = await _common_allowed(db, current)
-    if payload.visibility == "COMMON" and not common_ok:  # refused before anything is saved
-        raise ConflictError("COMMON_OFF", "Iqtiboslarni umumiy qilish hozircha yopiq.")
-    visibility = payload.visibility or str(await get_setting(db, "community.quote_box_default"))
-    quote = await reading_journal.save_quote(
-        db, current.user, **payload.model_dump(exclude={"visibility", "show_name"})
-    )
-    shared = None
-    if visibility == "COMMON" and common_ok and quote.book_quote_id is None:
-        item = await community.set_box_visibility(db, current.user, quote.id, "COMMON", show_name=payload.show_name)
-        shared = item.status.value if item else None
-    return _quote_out(quote, shared)
+    quote = await reading_journal.save_quote(db, current.user, **payload.model_dump())
+    return _quote_out(quote)
 
 
-@quotes_router.post("/quotes/{quote_id}/visibility", response_model=QuoteOut, summary="«🌍 Umumiy» or «🔒 Shaxsiy»")
-async def quote_visibility(
-    quote_id: uuid.UUID, payload: VisibilityIn, current: CurrentUserDep, db: DbSession
-) -> QuoteOut:
-    quote = await reading_journal.get_quote(db, current.user, quote_id)
-    if quote.book_quote_id is not None:
-        raise ConflictError("CLUB_QUOTE", "Bu iqtibos klubning o'zidan — u allaqachon hammaga ma'lum.")
-    item = await community.set_box_visibility(
-        db, current.user, quote.id, payload.visibility, show_name=payload.show_name
-    )
-    return _quote_out(quote, item.status.value if item else None)
-
-
-@quotes_router.delete("/quotes/{quote_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Remove a saved quote")
+@shelf_router.delete("/quotes/{quote_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Remove a saved quote")
 async def delete_quote(quote_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> Response:
     await reading_journal.delete_quote(db, current.user, quote_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-async def _quote_png(db: DbSession, current: CurrentUserDep, quote_id: uuid.UUID) -> bytes:
-    from app.bot.setup import resolve_bot_username
-
-    quote = await reading_journal.get_quote(db, current.user, quote_id)
-    footer = share_cards.footer_text(await resolve_bot_username())
-    return await asyncio.to_thread(
-        share_cards.quote_card, quote.text, quote.source, share_cards.display(current.user), footer
-    )
-
-
-@quotes_router.get(
-    "/quotes/{quote_id}/card.png", response_class=Response, responses=PNG, summary="The quote as a picture"
-)
-async def quote_card(quote_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> Response:
-    return Response(content=await _quote_png(db, current, quote_id), media_type="image/png")
-
-
-@quotes_router.post("/quotes/{quote_id}/send", response_model=dict[str, bool], summary="The bot sends me the card")
-async def send_quote_card(quote_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> dict[str, bool]:
-    image = await _quote_png(db, current, quote_id)
-    bot = delivery.runtime_bot()
-    await delivery.explain_failures(
-        bot.send_photo(
-            current.user.telegram_id,
-            BufferedInputFile(image, filename=share_cards.quote_filename(quote_id)),
-            caption="💬 Iqtibosingiz kartochkasi — do'stlaringizga ulashing (rasmni bosib turing → «Ulashish»).",
-        )
-    )
-    return {"sent": True}
 
 
 # ---------------------------------------------------------------------------- personal missions
@@ -497,6 +397,5 @@ async def send_reading_card(current: CurrentUserDep, db: DbSession) -> dict[str,
 
 
 router.include_router(shelf_router)
-router.include_router(quotes_router)
 router.include_router(missions_router)
 router.include_router(card_router)

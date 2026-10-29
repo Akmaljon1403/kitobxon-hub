@@ -31,7 +31,6 @@ const GROUPS: Group[] = [
       { route: 'books', icon: 'book', label: 'Klub kitoblari' },
       { route: 'shelf', icon: 'bookmark', label: 'Javonim', feature: 'shelf' },
       { route: 'missions', icon: 'target', label: 'Missiyalar', feature: 'missions' },
-      { route: 'quotes', icon: 'quote', label: 'Iqtiboslar sandig‘i', feature: 'quote_box' },
     ],
   },
   {

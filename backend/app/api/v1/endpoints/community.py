@@ -27,13 +27,6 @@ class ContributionIn(BaseModel):
     event_id: uuid.UUID | None = None
     show_name: bool = True
     style: str | None = Field(default=None, max_length=16)
-    save_to_box: bool = Field(default=True, description="Quotes and thoughts are also kept in «💬 Iqtiboslar sandig'i»")
-
-
-class ShareBoxIn(BaseModel):
-    saved_quote_id: uuid.UUID
-    show_name: bool = True
-    style: str | None = Field(default=None, max_length=16)
 
 
 class ContributionOut(BaseModel):
@@ -87,16 +80,6 @@ async def options(current: CurrentUserDep, db: DbSession) -> dict:
 @router.post("", response_model=ContributionOut, status_code=status.HTTP_201_CREATED, summary="Send a text")
 async def submit(payload: ContributionIn, current: CurrentUserDep, db: DbSession) -> dict:
     item = await community.submit(db, current.user, **payload.model_dump())
-    return community.describe(item, current.user, None)
-
-
-@router.post(
-    "/from-box", response_model=ContributionOut, status_code=status.HTTP_201_CREATED, summary="Share a saved quote"
-)
-async def from_box(payload: ShareBoxIn, current: CurrentUserDep, db: DbSession) -> dict:
-    item = await community.share_from_box(
-        db, current.user, payload.saved_quote_id, show_name=payload.show_name, style=payload.style
-    )
     return community.describe(item, current.user, None)
 
 

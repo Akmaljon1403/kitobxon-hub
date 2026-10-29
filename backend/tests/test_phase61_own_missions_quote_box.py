@@ -10,8 +10,7 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Contribution, Mission, ScoreTransaction
-from app.models.enums import ContributionStatus
+from app.models import Mission, ScoreTransaction
 from app.services import membership
 from app.services.settings import update_setting
 from tests.factories import create_user
@@ -151,56 +150,33 @@ async def test_the_monthly_cap_and_the_admins_view(client: httpx.AsyncClient, db
     assert await db.scalar(select(func.count()).select_from(Mission).where(Mission.owner_id == member.id)) == 0
 
 
-async def test_the_quote_box_asks_personal_or_common(client: httpx.AsyncClient, db: AsyncSession) -> None:
-    boss = await create_user(db, telegram_id=next(_ids))
+async def test_saved_quotes_are_private_to_the_reading_diary(client: httpx.AsyncClient, db: AsyncSession) -> None:
     member = await create_user(db, telegram_id=next(_ids))
+    reader = await create_user(db, telegram_id=next(_ids))
     await db.commit()
-    await grant_role(db, boss, "SUPER_ADMIN")
     headers = member_headers(member)
+    item = (await client.post("/api/v1/me/shelf", json={"title": "Mehrobdan chayon"}, headers=headers)).json()
 
-    options = (await client.get("/api/v1/me/quotes/options", headers=headers)).json()
-    assert options == {"default": "PERSONAL", "common_allowed": True, "auto_publish": False}
-
-    personal = await client.post("/api/v1/me/quotes", json={"text": "Faqat menga kerakli jumla."}, headers=headers)
-    assert personal.status_code == 201 and personal.json()["shared"] is None
-    common = await client.post(
+    saved = await client.post(
         "/api/v1/me/quotes",
-        json={"text": "Kitob — eng sodiq do'st.", "source": "Xalq maqoli", "visibility": "COMMON"},
+        json={"text": "Faqat menga kerakli jumla.", "shelf_item_id": item["id"]},
         headers=headers,
     )
-    assert common.json()["shared"] == "PENDING"  # the admins look first
-    item = await db.scalar(select(Contribution).where(Contribution.saved_quote_id == common.json()["id"]))
-    assert item.text == "Kitob — eng sodiq do'st." and item.status == ContributionStatus.PENDING
+    assert saved.status_code == 201 and "shared" not in saved.json()
 
-    # the box shows which ones are common; the admin panel can list exactly these
-    box = (await client.get("/api/v1/me/quotes", headers=headers)).json()
-    assert {quote["text"]: quote["shared"] for quote in box} == {
-        "Faqat menga kerakli jumla.": None,
-        "Kitob — eng sodiq do'st.": "PENDING",
-    }
-    listed = (await client.get("/api/v1/admin/community?status=PENDING&origin=BOX", headers=admin_headers(boss))).json()
-    assert [row["text"] for row in listed["items"]] == ["Kitob — eng sodiq do'st."]
+    # a saved line lives only on its book's page in «📚 Javonim» — never in the public «A'zolar fikrlari» feed
+    detail = (await client.get(f"/api/v1/me/shelf/{item['id']}", headers=headers)).json()
+    assert [quote["text"] for quote in detail["quotes"]] == ["Faqat menga kerakli jumla."]
+    feed = (await client.get("/api/v1/community", headers=member_headers(reader))).json()
+    assert feed == []
 
-    # changed later both ways; the quote itself always stays in the box
-    made = await client.post(
-        f"/api/v1/me/quotes/{personal.json()['id']}/visibility", json={"visibility": "COMMON"}, headers=headers
+    # the standalone quote box and its public-sharing paths are gone for good
+    assert (await client.get("/api/v1/me/quotes/options", headers=headers)).status_code in (404, 405)
+    gone = await client.post(
+        "/api/v1/community/from-box", json={"saved_quote_id": saved.json()["id"]}, headers=headers
     )
-    assert made.json()["shared"] == "PENDING"
-    back = await client.post(
-        f"/api/v1/me/quotes/{common.json()['id']}/visibility", json={"visibility": "PERSONAL"}, headers=headers
-    )
-    assert back.json()["shared"] is None
-    assert await db.scalar(select(Contribution).where(Contribution.saved_quote_id == common.json()["id"])) is None
+    assert gone.status_code in (404, 405)
 
-    # the club decides the starting choice, or closes the common pool
-    await update_setting(db, key="community.quote_box_default", value="COMMON", actor_id=boss.id)
-    auto = await client.post("/api/v1/me/quotes", json={"text": "Oldindan umumiy bo'lgan jumla."}, headers=headers)
-    assert auto.json()["shared"] == "PENDING"
-    await update_setting(db, key="community.quote_box_common", value=False, actor_id=boss.id)
-    assert (await client.get("/api/v1/me/quotes/options", headers=headers)).json()["common_allowed"] is False
-    quiet = await client.post("/api/v1/me/quotes", json={"text": "Endi faqat shaxsiy bo'ladi."}, headers=headers)
-    assert quiet.status_code == 201 and quiet.json()["shared"] is None
-    refused = await client.post(
-        "/api/v1/me/quotes", json={"text": "Umumiy qilmoqchiman.", "visibility": "COMMON"}, headers=headers
-    )
-    assert refused.status_code == 409
+    # removing a quote is the member's own action
+    removed = await client.delete(f"/api/v1/me/quotes/{saved.json()['id']}", headers=headers)
+    assert removed.status_code == 204

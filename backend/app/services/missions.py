@@ -107,8 +107,8 @@ DEFAULTS: tuple[dict[str, Any], ...] = (
         "reward_points": 25,
     },
     {
-        "title": "Iqtiboslar sandig'i: 5 ta iqtibos",
-        "description": "Ikki hafta ichida yoqqan 5 ta iqtibosni saqlang.",
+        "title": "5 ta iqtibos saqlang",
+        "description": "Ikki hafta ichida «📚 Javonim»da yoqqan 5 ta iqtibosni saqlang.",
         "icon": "💬",
         "metric": MissionMetric.QUOTES,
         "target": 5,

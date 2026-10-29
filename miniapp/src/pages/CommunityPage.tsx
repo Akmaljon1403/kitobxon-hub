@@ -87,7 +87,7 @@ function ContributionCard({ item, mine = false, onChange }: { item: Contribution
   }
 
   async function remove() {
-    if (!(await confirmAction('Lentadan olib tashlansinmi? (Iqtiboslar sandig‘ingizda qoladi)'))) return
+    if (!(await confirmAction('Lentadan olib tashlansinmi?'))) return
     await api(`/api/v1/community/${item.id}`, { method: 'DELETE' })
     onChange()
   }
@@ -334,7 +334,7 @@ export function CommunityNewPage() {
     <div className="flex flex-col gap-3">
       <div>
         <PageTitle icon="pencil">Fikr yozish</PageTitle>
-        <p className="px-1 text-sm text-app-hint">Iqtibos va fikrlaringiz «Iqtiboslar sandig‘i»ngizda ham saqlanadi.</p>
+        <p className="px-1 text-sm text-app-hint">Iqtibos, fikr yoki taassurotingizni klub bilan ulashing.</p>
       </div>
       <Card className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-1.5">

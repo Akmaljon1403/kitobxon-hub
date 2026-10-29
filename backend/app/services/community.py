@@ -31,7 +31,6 @@ from app.models import (
     ContributionLike,
     Event,
     Faculty,
-    SavedQuote,
     User,
 )
 from app.models.enums import (
@@ -62,7 +61,6 @@ KINDS: dict[ContributionKind, tuple[str, str, str]] = {
     ContributionKind.EVENT: ("📅 Tadbir haqida taassurot", "Tadbir taassuroti", "taassurot"),
     ContributionKind.CLUB: ("🌟 Klub haqida e'tirof", "Klub haqida e'tirof", "e'tirof"),
 }
-BOX_KINDS = (ContributionKind.QUOTE, ContributionKind.THOUGHT)  # also kept in the member's quote box
 USES = {
     "channel": "📣 Kanalda",
     "members": "📢 A'zolarga yuborilgan",
@@ -120,8 +118,6 @@ async def submit(
     event_id: uuid.UUID | None = None,
     show_name: bool = True,
     style: str | None = None,
-    save_to_box: bool = True,
-    saved_quote_id: uuid.UUID | None = None,
 ) -> Contribution:
     clean = _clean(text, MAX_TEXT + 1)
     if not clean or len(clean) < MIN_TEXT:
@@ -165,20 +161,6 @@ async def submit(
     if kind == ContributionKind.EVENT and event_id is None:
         raise BadRequestError("EVENT_REQUIRED", "Qaysi tadbir haqida yozayotganingizni tanlang.")
 
-    if save_to_box and kind in BOX_KINDS and saved_quote_id is None:
-        from app.services import reading_journal
-
-        kept = await reading_journal.save_quote(
-            session, user, text=clean, source=source or ("O'z fikrim" if kind == ContributionKind.THOUGHT else None)
-        )
-        saved_quote_id = kept.id
-    elif saved_quote_id is not None:
-        owned = await session.scalar(
-            select(SavedQuote.id).where(SavedQuote.id == saved_quote_id, SavedQuote.user_id == user.id)
-        )
-        if owned is None:
-            raise NotFoundError("QUOTE_NOT_FOUND", "Iqtibos topilmadi.")
-
     auto = bool(await get_setting(session, "community.auto_publish"))
     item = Contribution(
         user_id=user.id,
@@ -187,7 +169,6 @@ async def submit(
         source=source,
         book_id=book_id,
         event_id=event_id,
-        saved_quote_id=saved_quote_id,
         show_name=show_name,
         style=share_cards.style_of(style).code,
         status=ContributionStatus.APPROVED if auto else ContributionStatus.PENDING,
@@ -202,67 +183,6 @@ async def submit(
     await session.commit()
     await session.refresh(item)
     return item
-
-
-async def share_from_box(
-    session: AsyncSession, user: User, saved_quote_id: uuid.UUID, *, show_name: bool = True, style: str | None = None
-) -> Contribution:
-    """A quote already in the member's own box goes to the common pool too."""
-    quote = await session.scalar(
-        select(SavedQuote).where(SavedQuote.id == saved_quote_id, SavedQuote.user_id == user.id)
-    )
-    if quote is None:
-        raise NotFoundError("QUOTE_NOT_FOUND", "Iqtibos topilmadi.")
-    if quote.book_quote_id is not None:
-        raise ConflictError("CLUB_QUOTE", "Bu iqtibos klubning o'zidan — u allaqachon hammaga ma'lum.")
-    known = await session.scalar(select(Contribution).where(Contribution.saved_quote_id == quote.id))
-    if known is not None:
-        return known
-    return await submit(
-        session,
-        user,
-        kind=ContributionKind.QUOTE if quote.source and quote.source != "O'z fikrim" else ContributionKind.THOUGHT,
-        text=quote.text,
-        source=None if quote.source == "O'z fikrim" else quote.source,
-        show_name=show_name,
-        style=style,
-        save_to_box=False,
-        saved_quote_id=quote.id,
-    )
-
-
-async def box_states(session: AsyncSession, quote_ids: list[uuid.UUID]) -> dict[uuid.UUID, Contribution]:
-    """For «💬 Iqtiboslar sandig'i»: which saved quotes are in the common pool (and how they are doing)."""
-    if not quote_ids:
-        return {}
-    rows = await session.scalars(select(Contribution).where(Contribution.saved_quote_id.in_(quote_ids)))
-    return {row.saved_quote_id: row for row in rows if row.saved_quote_id is not None}
-
-
-async def set_box_visibility(
-    session: AsyncSession, user: User, saved_quote_id: uuid.UUID, visibility: str, *, show_name: bool = True
-) -> Contribution | None:
-    """«🌍 Umumiy» puts a saved quote into the common pool (as the admins' rules say — straight away or after
-    a look); «🔒 Shaxsiy» takes it back. The quote itself always stays in the member's box."""
-    from app.services import features
-    from app.services.settings import get_setting
-
-    if visibility == "COMMON":
-        if not await get_setting(session, "community.quote_box_common"):
-            raise ConflictError("COMMON_OFF", "Iqtiboslarni umumiy qilish hozircha yopiq.")
-        if await features.allowed(session, user, "community") != "on":
-            raise ConflictError("COMMUNITY_OFF", "«A'zolar fikrlari» bo'limi hozircha yopiq.")
-        return await share_from_box(session, user, saved_quote_id, show_name=show_name)
-    quote = await session.scalar(
-        select(SavedQuote).where(SavedQuote.id == saved_quote_id, SavedQuote.user_id == user.id)
-    )
-    if quote is None:
-        raise NotFoundError("QUOTE_NOT_FOUND", "Iqtibos topilmadi.")
-    await session.execute(
-        delete(Contribution).where(Contribution.saved_quote_id == quote.id, Contribution.user_id == user.id)
-    )
-    await session.commit()
-    return None
 
 
 async def delete_own(session: AsyncSession, user: User, contribution_id: uuid.UUID) -> None:
@@ -572,11 +492,8 @@ async def admin_list(
     q: str | None = None,
     limit: int = 50,
     offset: int = 0,
-    origin: str | None = None,
 ) -> list[dict[str, Any]]:
     query = _with_author()
-    if origin == "BOX":  # made common from members' quote boxes
-        query = query.where(Contribution.saved_quote_id.is_not(None))
     if status == "FEATURED":
         query = query.where(Contribution.featured.is_(True))
     elif status:
