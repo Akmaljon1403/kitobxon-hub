@@ -652,7 +652,7 @@ NUDGES_MIDDLE = (
     "🔖 <b>Kitobxonlar, qayerga yetdik?</b>\n\n«{title}» ni o'qish davom etmoqda. Muddat: {deadline}.\n"
     "Hali boshlamagan bo'lsangiz ham kech emas! 📖",
     "☕ <b>Yo'lning yarmi!</b>\n\n«{title}» — {author}\nMuddat: {deadline}. Eng yoqqan jumlangizni "
-    "«Iqtiboslar sandig'i»ga saqlang 💬",
+    "«📚 Javonim»da saqlab qo'ying 💬",
     "📖 <b>«{title}» qanday ketyapti?</b>\n\nMuddat: {deadline}. Mutolaa kundaligiga betlarni yozib "
     "boring — seriyangiz o'ssin 🔥",
     "🤔 <b>Savol: «{title}»da sizni nima hayratga soldi?</b>\n\n{author} asarini o'qish davom etmoqda "
@@ -722,8 +722,8 @@ INVITES = (
     "{members} nafar talaba allaqachon biz bilan. Navbat sizda 👇",
     "🪪 <b>O'z Kitobxon pasportingizni oling!</b>\n\nBotda ro'yxatdan o'ting — rasmli a'zolik kartasi, "
     "natijalaringiz va yutuqlaringiz bir joyda.\nTadbirlar, testlar, reyting va sovg'alar sizni kutmoqda 👇",
-    "📖 <b>Kitob o'qiysizmi? Unda siz bizniki!</b>\n\nJavoningiz, mutolaa kundaligingiz, iqtiboslar "
-    "sandig'ingiz va shaxsiy missiyalaringiz — barchasi bitta botda.\n{members} kitobxon allaqachon shu yerda 👇",
+    "📖 <b>Kitob o'qiysizmi? Unda siz bizniki!</b>\n\nJavoningiz, mutolaa kundaligingiz va shaxsiy "
+    "missiyalaringiz — barchasi bitta botda.\n{members} kitobxon allaqachon shu yerda 👇",
     "🏆 <b>Bu hafta kim yetakchi bo'ladi?</b>\n\nTadbirlarga keling, testlarni yeching, kitoblarni o'qib "
     "tugating — har biri ball. Eng faollar sertifikat va sovg'a oladi 🎁\n{members} nafar a'zo kutmoqda 👇",
     "💬 <b>Fikringiz bilan bo'lishing!</b>\n\nKlub a'zolari iqtibos va taassurotlarini yozadi, eng "

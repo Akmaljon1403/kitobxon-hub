@@ -309,14 +309,9 @@ export function ShelfPage() {
         <p className="px-1 text-sm text-app-hint">Kitoblaringiz, mutolaa kundaligi va seriyangiz</p>
       </div>
       <StatsCard stats={stats} />
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant="secondary" onClick={() => navigate('/missions')}>
-          <Icon name="target" size={18} />Missiyalar
-        </Button>
-        <Button variant="secondary" onClick={() => navigate('/quotes')}>
-          <Icon name="quote" size={18} />Iqtiboslarim ({stats.quotes})
-        </Button>
-      </div>
+      <Button variant="secondary" onClick={() => navigate('/missions')}>
+        <Icon name="target" size={18} />Missiyalar
+      </Button>
       <div className="flex gap-1 overflow-x-auto pb-1">
         {TABS.map((status) => (
           <button

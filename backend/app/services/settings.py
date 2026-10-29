@@ -345,20 +345,6 @@ SETTING_DEFINITIONS: tuple[SettingDefinition, ...] = (
     ),
     # ---- «💬 A'zolar fikrlari» ----
     SettingDefinition(
-        "community.quote_box_default",
-        "PERSONAL",
-        str,
-        "Iqtiboslar sandig'iga yangi iqtibos saqlanayotganda oldindan tanlangan variant: PERSONAL — «🔒 Faqat "
-        "o'zim uchun», COMMON — «🌍 Umumiy» (hammaga ko'rinadi; a'zo saqlashdan oldin o'zgartira oladi)",
-        choices=("PERSONAL", "COMMON"),
-    ),
-    SettingDefinition(
-        "community.quote_box_common",
-        True,
-        bool,
-        "A'zolar sandiqdagi iqtibosini «🌍 Umumiy» qila oladimi (o'chiq — sandiq faqat shaxsiy bo'ladi)",
-    ),
-    SettingDefinition(
         "community.auto_publish",
         False,
         bool,

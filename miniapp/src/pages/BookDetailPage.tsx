@@ -22,8 +22,6 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
   const goBack = useCallback(() => navigate('/books'), [])
   useBackButton(goBack)
   const shelfOn = useFeature('shelf') === 'on'
-  const quotesOn = useFeature('quote_box') === 'on'
-  const [savedNow, setSavedNow] = useState<Set<string>>(new Set())
 
   /** The book on «📚 Javonim» (added first when it is not there yet), then its page. */
   async function openOnShelf() {
@@ -38,16 +36,6 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
       setActionError(error instanceof ApiError ? error.message : "Ochib bo'lmadi.")
     } finally {
       setSaving(false)
-    }
-  }
-
-  async function saveQuote(quoteId: string) {
-    try {
-      await api('/api/v1/me/quotes', { method: 'POST', body: { book_quote_id: quoteId } })
-      haptic('success')
-      setSavedNow((current) => new Set(current).add(quoteId))
-    } catch (error) {
-      setActionError(error instanceof ApiError ? error.message : "Saqlab bo'lmadi.")
     }
   }
 
@@ -175,19 +163,6 @@ export function BookDetailPage({ bookId }: { bookId: string }) {
                 — {quote.author ?? book.author}
                 {quote.source ? `, ${quote.source}` : ''}
               </p>
-              {quotesOn && (
-                <div className="mt-2 flex justify-end">
-                  {quote.saved || savedNow.has(quote.id) ? (
-                    <button type="button" className="inline-flex items-center gap-1 text-sm text-app-link" onClick={() => navigate('/quotes')}>
-                      <Icon name="check" size={14} />Sandiqda
-                    </button>
-                  ) : (
-                    <button type="button" className="inline-flex items-center gap-1 text-sm text-app-link" onClick={() => void saveQuote(quote.id)}>
-                      <Icon name="save" size={14} />Saqlash
-                    </button>
-                  )}
-                </div>
-              )}
             </Card>
           ))}
         </>

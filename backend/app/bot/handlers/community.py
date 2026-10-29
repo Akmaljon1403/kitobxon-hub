@@ -64,9 +64,8 @@ async def _send(message: Message, state: FSMContext, db: AsyncSession, member: U
     except AppError as exc:
         await message.answer(exc.message)
         return
-    box = texts.COMMUNITY_SENT_BOX if item.saved_quote_id else ""
     template = texts.COMMUNITY_SENT_LIVE if item.status == ContributionStatus.APPROVED else texts.COMMUNITY_SENT_PENDING
-    await message.answer(template.format(box=box), reply_markup=keyboards.community_sent(item.id.hex))
+    await message.answer(template, reply_markup=keyboards.community_sent(item.id.hex))
 
 
 @router.message(StateFilter(CommunityWrite.text), F.text, ~F.text.startswith("/"))
@@ -135,9 +134,7 @@ async def share_event_comment(callback: CallbackQuery, db: AsyncSession, member:
         select(EventFeedback.comment).where(EventFeedback.event_id == event_id, EventFeedback.user_id == member.id)
     )
     try:
-        item = await community.submit(
-            db, member, kind=ContributionKind.EVENT, text=comment or "", event_id=event_id, save_to_box=False
-        )
+        item = await community.submit(db, member, kind=ContributionKind.EVENT, text=comment or "", event_id=event_id)
     except AppError as exc:
         await callback.answer(exc.message, show_alert=True)
         return

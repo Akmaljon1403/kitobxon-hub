@@ -616,15 +616,6 @@ export interface SavedQuote {
   shelf_item_id: string | null
   book_quote_id: string | null
   created_at: string
-  shared: 'PENDING' | 'APPROVED' | 'HIDDEN' | null
-}
-
-export type QuoteVisibility = 'PERSONAL' | 'COMMON'
-
-export interface QuoteBoxOptions {
-  default: QuoteVisibility
-  common_allowed: boolean
-  auto_publish: boolean
 }
 
 export interface ShelfItemDetail extends ShelfItem {

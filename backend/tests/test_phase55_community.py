@@ -24,7 +24,6 @@ from app.models import (
     EventFeedback,
     Faculty,
     Notification,
-    SavedQuote,
     ScoreTransaction,
 )
 from app.models.enums import (
@@ -85,9 +84,6 @@ async def test_members_write_and_the_club_approves(client: httpx.AsyncClient, db
     assert sent.status_code == 201, sent.text
     item = sent.json()
     assert item["status"] == "PENDING" and item["style"] == "paper"
-    # also kept in the member's own quote box, with its source
-    kept = await db.scalar(select(SavedQuote).where(SavedQuote.user_id == author.id))
-    assert kept.text == "Ilm — aql chirog'idir." and kept.source == "Alisher Navoiy — Mahbub ul-qulub"
     # the moderators are told, with buttons to decide in the chat
     alert = await db.scalar(
         select(Notification).where(Notification.dedup_key == f"contribution-new:{item['id']}:{moderator.id}")
@@ -170,7 +166,6 @@ async def test_members_write_and_the_club_approves(client: httpx.AsyncClient, db
     assert fixed.json()["text"] == "Ilm — aql chirog'idir!"
     gone = await client.delete(f"/api/v1/community/{item['id']}", headers=headers)
     assert gone.status_code == 204
-    assert await db.scalar(select(func.count()).select_from(SavedQuote).where(SavedQuote.user_id == author.id)) == 1
 
 
 async def test_the_club_uses_a_text_anywhere(client: httpx.AsyncClient, db: AsyncSession, monkeypatch) -> None:
@@ -255,7 +250,7 @@ async def test_the_bot_the_shelf_and_events_invite_texts(db: AsyncSession) -> No
     await harness.send("Kitob o'qigan odam ming umr ko'radi.")
     assert harness.last_text() == texts.COMMUNITY_ASK_SOURCE
     await harness.press("cmw:skip")
-    assert "Yuborildi" in harness.last_text() and "Iqtiboslar sandig'i" in harness.last_text()
+    assert "Yuborildi" in harness.last_text() and "A'zolar fikrlari" in harness.last_text()
     item = await db.scalar(select(Contribution).where(Contribution.user_id == author.id))
     assert item.kind == ContributionKind.QUOTE and item.source is None
 
@@ -305,25 +300,17 @@ async def test_the_bot_the_shelf_and_events_invite_texts(db: AsyncSession) -> No
     assert await db.scalar(select(func.count()).select_from(Contribution).where(Contribution.user_id == author.id)) == 0
 
 
-async def test_published_at_once_and_shared_from_the_box(client: httpx.AsyncClient, db: AsyncSession) -> None:
+async def test_published_at_once_and_event_attendance_rule(client: httpx.AsyncClient, db: AsyncSession) -> None:
     club = await _club(db)
     author = club["author"]
     await update_setting(db, key="community.auto_publish", value=True, actor_id=None)
     headers = member_headers(author)
-    saved = await client.post(
-        "/api/v1/me/quotes",
-        json={"text": "Sabr — kitobxonning eng yaxshi do'sti.", "source": "O'z fikrim"},
+    shared = await client.post(
+        "/api/v1/community",
+        json={"kind": "THOUGHT", "text": "Sabr — kitobxonning eng yaxshi do'sti."},
         headers=headers,
     )
-    shared = await client.post(
-        "/api/v1/community/from-box", json={"saved_quote_id": saved.json()["id"]}, headers=headers
-    )
     assert shared.status_code == 201 and shared.json()["status"] == "APPROVED" and shared.json()["kind"] == "THOUGHT"
-    twice = await client.post(
-        "/api/v1/community/from-box", json={"saved_quote_id": saved.json()["id"]}, headers=headers
-    )
-    assert twice.json()["id"] == shared.json()["id"]
-    assert await db.scalar(select(func.count()).select_from(SavedQuote).where(SavedQuote.user_id == author.id)) == 1
     feed = (await client.get("/api/v1/community?kind=THOUGHT", headers=member_headers(club["reader"]))).json()
     assert len(feed) == 1
 

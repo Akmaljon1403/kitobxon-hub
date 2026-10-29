@@ -17,7 +17,7 @@ interface Tab {
 // The five sections of the app. Everything else lives inside one of them or in «Barcha xizmatlar».
 const TABS: Tab[] = [
   { route: '', icon: 'home', label: 'Asosiy' },
-  { route: 'books', icon: 'book-open', label: 'Mutolaa', also: ['shelf', 'books', 'quotes', 'missions', 'community'] },
+  { route: 'books', icon: 'book-open', label: 'Mutolaa', also: ['shelf', 'books', 'missions', 'community'] },
   { route: 'events', icon: 'calendar', label: 'Tadbirlar', also: ['checkin'] },
   { route: 'ranking', icon: 'trophy', label: 'Reyting', feature: 'ranking', also: ['league', 'results', 'stats', 'achievements'] },
   {
