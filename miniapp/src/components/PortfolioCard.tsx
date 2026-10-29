@@ -6,6 +6,7 @@ import { saveDocument } from '../utils/files'
 import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
 import { TrialBadge, useFeature } from './FeatureGate'
+import { Icon } from './Icon'
 import { Button, Card } from './ui'
 
 /** «Kitobxonlik portfoliosi»: books, certificates, tests, events and achievements in one PDF. */
@@ -55,8 +56,8 @@ export function PortfolioCard() {
   return (
     <Card className="flex flex-col gap-2">
       <div className="flex items-start gap-3">
-        <span aria-hidden className="text-3xl">
-          🗂
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
+          <Icon name="folder" size={22} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-1.5 font-semibold">
@@ -69,11 +70,11 @@ export function PortfolioCard() {
       </div>
       {access === 'on' ? (
         <Button loading={busy} disabled={busy} onClick={() => void save()}>
-          📥 Botga yuborish (PDF + Word)
+          <Icon name="send" size={18} />Botga yuborish (PDF + Word)
         </Button>
       ) : (
         <Button variant="secondary" onClick={() => navigate('/premium')}>
-          💎 Premium bilan ochiladi
+          <Icon name="gem" size={18} />Premium bilan ochiladi
         </Button>
       )}
       <StatementButtons busy={busy} onPick={(format) => void statement(format)} />
@@ -90,16 +91,19 @@ export function PortfolioCard() {
 function StatementButtons({ busy, onPick }: { busy: boolean; onPick: (format: 'pdf' | 'docx') => void }) {
   return (
     <div className="flex flex-col gap-1.5 border-t border-app-hint/15 pt-2">
-      <p className="text-sm">
-        📄 <b>Faoliyat ma'lumotnomasi</b> — o'quv yili davomidagi tadbir, test, kitob va ballaringiz; QR kod bilan (institutga topshirish
-        uchun).
+      <p className="flex items-start gap-1.5 text-sm">
+        <Icon name="file-text" size={15} className="mt-0.5 shrink-0" />
+        <span>
+          <b>Faoliyat ma'lumotnomasi</b> — o'quv yili davomidagi tadbir, test, kitob va ballaringiz; QR kod bilan (institutga topshirish
+          uchun).
+        </span>
       </p>
       <div className="grid grid-cols-2 gap-2">
         <Button variant="secondary" disabled={busy} onClick={() => onPick('pdf')}>
-          📕 PDF
+          <Icon name="file-text" size={16} />PDF
         </Button>
         <Button variant="secondary" disabled={busy} onClick={() => onPick('docx')}>
-          📝 Word
+          <Icon name="file-text" size={16} />Word
         </Button>
       </div>
     </div>
