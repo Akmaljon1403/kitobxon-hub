@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { Avatar } from '../components/Avatar'
-import { Icon } from '../components/Icon'
+import { Icon, type IconName } from '../components/Icon'
 import { FeatureLocked } from '../components/FeatureGate'
 import { PassportCard } from '../components/PassportCard'
 import { InviteCard } from '../components/InviteCard'
@@ -18,13 +18,13 @@ import { navigate } from '../utils/router'
 import { BenefitCard } from '../components/BenefitCard'
 import { haptic } from '../utils/telegram'
 
-const NOTIFICATION_LABELS: Record<keyof NotificationSettings, string> = {
-  event_reminders: '📅 Tadbir eslatmalari',
-  test_reminders: '📝 Test eslatmalari',
-  reading_reminders: "📖 O'qish muddati eslatmalari",
-  quote_of_day: '💬 Kun iqtibosi',
-  ranking_updates: '🏆 Reyting yangiliklari',
-  achievement_alerts: '🏅 Yutuqlar haqida',
+const NOTIFICATION_LABELS: Record<keyof NotificationSettings, { icon: IconName; text: string }> = {
+  event_reminders: { icon: 'calendar', text: 'Tadbir eslatmalari' },
+  test_reminders: { icon: 'file-text', text: 'Test eslatmalari' },
+  reading_reminders: { icon: 'book-open', text: "O'qish muddati eslatmalari" },
+  quote_of_day: { icon: 'quote', text: 'Kun iqtibosi' },
+  ranking_updates: { icon: 'trophy', text: 'Reyting yangiliklari' },
+  achievement_alerts: { icon: 'medal', text: 'Yutuqlar haqida' },
 }
 
 function ProfileEditor({ me, onDone }: { me: Me; onDone: () => void }) {
@@ -139,7 +139,8 @@ function NotificationsCard() {
       {(Object.keys(NOTIFICATION_LABELS) as (keyof NotificationSettings)[]).map((field) => (
         <Toggle
           key={field}
-          label={NOTIFICATION_LABELS[field]}
+          label={NOTIFICATION_LABELS[field].text}
+          icon={NOTIFICATION_LABELS[field].icon}
           checked={settings[field]}
           disabled={busy}
           onChange={(value) => change(field, value)}
@@ -200,7 +201,7 @@ export function ProfilePage() {
       ) : (
         <Card className="flex flex-col gap-2 text-[15px]">
           <Row label="Fakultet" value={me.faculty?.name ?? 'Tanlanmagan'} />
-          <Row label="Kurs" value={me.graduated ? '🎓 Bitiruvchi' : me.course ? `${me.course}-kurs` : '—'} />
+          <Row label="Kurs" value={me.graduated ? 'Bitiruvchi' : me.course ? `${me.course}-kurs` : '—'} icon={me.graduated ? 'graduation-cap' : undefined} />
           <Row label="Guruh" value={me.group_name ?? '—'} />
           <Row label="A'zo bo'lgan" value={formatDate(me.registered_at)} />
           <Button variant="ghost" onClick={() => setEditing(true)}>
@@ -240,11 +241,14 @@ export function ProfilePage() {
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, icon }: { label: string; value: string; icon?: IconName }) {
   return (
     <div className="flex justify-between gap-3">
       <span className="text-app-hint">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="flex items-center gap-1.5 text-right font-medium">
+        {icon && <Icon name={icon} size={15} className="shrink-0 text-app-hint" />}
+        {value}
+      </span>
     </div>
   )
 }

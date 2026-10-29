@@ -201,16 +201,21 @@ export function Toggle({
   checked,
   onChange,
   label,
+  icon,
   disabled = false,
 }: {
   checked: boolean
   onChange: (value: boolean) => void
   label: string
+  icon?: IconName
   disabled?: boolean
 }) {
   return (
     <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 py-1">
-      <span className="text-[15px]">{label}</span>
+      <span className="flex items-center gap-2 text-[15px]">
+        {icon && <Icon name={icon} size={17} className="shrink-0 text-app-hint" />}
+        {label}
+      </span>
       <button
         type="button"
         role="switch"

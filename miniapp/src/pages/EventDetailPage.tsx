@@ -132,9 +132,9 @@ function FeedbackCard({ eventId }: { eventId: string }) {
             aria-label={`${n} baho`}
             disabled={saving}
             onClick={() => void save(n)}
-            className={`text-3xl transition-transform active:scale-90 ${n <= current ? '' : 'opacity-30 grayscale'}`}
+            className={`text-3xl leading-none transition-transform active:scale-90 ${n <= current ? 'text-gold-400' : 'text-app-hint/30'}`}
           >
-            ⭐
+            ★
           </button>
         ))}
       </div>

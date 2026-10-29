@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
@@ -6,26 +6,39 @@ import { useAuth } from '../store/auth'
 import type { CardPayment } from '../types/api'
 import { formatDate } from '../utils/format'
 import { haptic } from '../utils/telegram'
+import { Icon, type IconName } from './Icon'
 import { Button, Card } from './ui'
 
 export function formatUzs(amount: number): string {
   return `${amount.toLocaleString('ru-RU').replace(/,/g, ' ')} so'm`
 }
 
-const STATUS: Record<CardPayment['status'], string> = {
-  PENDING: '⏳ Tekshirilmoqda',
-  APPROVED: '✅ Tasdiqlandi',
-  REJECTED: '❌ Rad etildi',
+const STATUS: Record<CardPayment['status'], { icon: IconName; text: string }> = {
+  PENDING: { icon: 'hourglass', text: 'Tekshirilmoqda' },
+  APPROVED: { icon: 'check-circle', text: 'Tasdiqlandi' },
+  REJECTED: { icon: 'x', text: 'Rad etildi' },
 }
 
-function itemTitle(item: CardPayment): string {
+/** A small inline chip: a Lucide icon then a word. */
+function chip(icon: IconName, text: string, className = ''): ReactNode {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Icon name={icon} size={13} className={className} />
+      {text}
+    </span>
+  )
+}
+
+function itemTitle(item: CardPayment): ReactNode {
+  // Telegram Stars keep their own ⭐ symbol (Telegram's currency).
   if (item.kind === 'STARS') return `⭐ ${item.stars} Stars`
-  return item.plan_title ? `💎 ${item.plan_title}` : '❤️ Hissa'
+  return item.plan_title ? chip('gem', item.plan_title) : chip('heart', 'Hissa', 'text-rose-500')
 }
 
-function itemStatus(item: CardPayment): string {
-  if (item.kind === 'STARS' && item.status === 'APPROVED') return item.delivered_at ? '⭐ Yuborildi' : '✅ Tasdiqlandi, yuborilmoqda'
-  return STATUS[item.status]
+function itemStatus(item: CardPayment): ReactNode {
+  if (item.kind === 'STARS' && item.status === 'APPROVED') return item.delivered_at ? '⭐ Yuborildi' : chip('check', 'Tasdiqlandi, yuborilmoqda')
+  const s = STATUS[item.status]
+  return chip(s.icon, s.text)
 }
 
 export const PENDING_TEXT =
@@ -51,7 +64,10 @@ export function CardNumber({ card, label }: { card: { number: string; holder: st
       {label && <span className="text-xs text-app-hint">{label}</span>}
       <button type="button" onClick={() => void copy()} className="flex items-center justify-between gap-2 text-left">
         <span className="font-mono text-lg tracking-wider">{card.number}</span>
-        <span className="shrink-0 text-sm text-app-link">{copied ? '✓ Nusxalandi' : '📋 Nusxa'}</span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm text-app-link">
+          <Icon name={copied ? 'check' : 'copy'} size={14} />
+          {copied ? 'Nusxalandi' : 'Nusxa'}
+        </span>
       </button>
       {card.holder && <span className="text-sm text-app-hint">Egasi: {card.holder}</span>}
     </div>
@@ -104,7 +120,7 @@ export function CardCheckout({
     <div className="flex flex-col gap-3">
       <CardNumber card={card} label={`1) ${what}: ${formatUzs(price)} ni shu kartaga o'tkazing (Click, Payme yoki bank ilovasi)`} />
       <Button loading={busy} disabled={busy} onClick={() => fileInput.current?.click()}>
-        🧾 2) To'lov chekini (skrinshot) yuborish
+        <Icon name="file-text" size={18} /> 2) To'lov chekini (skrinshot) yuborish
       </Button>
       <input
         ref={fileInput}
