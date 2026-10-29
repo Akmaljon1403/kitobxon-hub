@@ -29,6 +29,8 @@
 }
 
 :root {
+  /* Form controls (caret, spinners, autofill, the keyboard) follow the Telegram theme. */
+  color-scheme: light;
   /* ---- Telegram-driven neutral theme (warm light fallbacks that echo the cream paper) ---- */
   --app-bg: var(--tg-theme-bg-color, #ffffff);
   --app-bg-secondary: var(--tg-theme-secondary-bg-color, #f1efe9);
@@ -98,6 +100,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --app-bg: var(--tg-theme-bg-color, #0e1826);
     --app-bg-secondary: var(--tg-theme-secondary-bg-color, #0a131f);
     --app-text: var(--tg-theme-text-color, #f3f5f8);
@@ -115,6 +118,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --app-bg: var(--tg-theme-bg-color, #0e1826);
   --app-bg-secondary: var(--tg-theme-secondary-bg-color, #0a131f);
   --app-text: var(--tg-theme-text-color, #f3f5f8);
@@ -194,6 +198,39 @@ body {
   /* Respect device notches and Telegram's own header/footer areas. */
   padding-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
   padding-bottom: calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px));
+}
+
+/* Form controls do not inherit colour or font by default, so on some Telegram themes the typed
+ * text and caret came out invisible (dark text on a dark field). Force them to the app's ink and
+ * font everywhere, keep the caret and placeholder visible, and stop the number spinners and
+ * autofill from repainting the field. */
+input,
+textarea,
+select {
+  color: var(--app-text);
+  font: inherit;
+  caret-color: var(--app-text);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--app-hint);
+  opacity: 1;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--app-text);
+  caret-color: var(--app-text);
+  /* Hold off the UA's yellow autofill wash so the field keeps the app background. */
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 /* Dark styles follow Telegram's theme (data-theme), not only the operating system. */
