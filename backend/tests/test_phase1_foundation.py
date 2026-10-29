@@ -127,13 +127,16 @@ async def test_app_error_format(error_app: FastAPI) -> None:
 
 
 async def test_validation_error_does_not_echo_input(error_app: FastAPI) -> None:
-    response = await _call(error_app, "POST", "/validate", json={"phone": "+998901234567", "course": "abc"})
+    # The invalid value must contain non-hex characters: the response carries a
+    # random hex request_id, so an all-hex sentinel like "abc" could coincidentally
+    # appear inside it and fail the "not echoed" check by chance (a flaky test).
+    response = await _call(error_app, "POST", "/validate", json={"phone": "+998901234567", "course": "not-an-integer"})
     assert response.status_code == 422
     body = response.json()
     assert body["error"]["code"] == "VALIDATION_ERROR"
     assert body["error"]["details"][0]["field"] == "course"
     assert "+998901234567" not in response.text
-    assert "abc" not in response.text
+    assert "not-an-integer" not in response.text
 
 
 def test_redaction_of_secrets() -> None:
