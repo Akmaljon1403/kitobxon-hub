@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { FeatureLocked, TrialBadge, useFeature } from '../components/FeatureGate'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Card } from '../components/ui'
+import { Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { FacultyRanking, Ranking, RankingRow } from '../types/api'
@@ -110,7 +110,7 @@ function Leaderboard({ period, scope }: { period: Period; scope: Exclude<Scope, 
         </div>
       </Card>
       {items.length === 0 ? (
-        <EmptyState icon="🏆" title="Hali ball to'plaganlar yo'q">
+        <EmptyState icon="trophy" title="Hali ball to'plaganlar yo'q">
           Tadbirlarda qatnashing va testlarni ishlang — ismingiz shu yerda chiqadi.
         </EmptyState>
       ) : (
@@ -174,9 +174,9 @@ export function RankingPage() {
   const isFree = period === 'week' && scope === 'all'
   return (
     <>
-      <h1 className="flex items-center gap-2 px-1 pt-1 font-serif text-2xl font-bold">
-        🏆 Reyting <TrialBadge code="ranking_full" />
-      </h1>
+      <PageTitle icon="trophy" action={<TrialBadge code="ranking_full" />}>
+        Reyting
+      </PageTitle>
       {periods.length > 1 && (
         <Segmented options={periods} value={period} onChange={setPeriod} locked={full === 'premium' ? ['month', 'all'] : []} />
       )}

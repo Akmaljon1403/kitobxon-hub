@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, SectionTitle } from '../components/ui'
+import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -257,9 +257,9 @@ export function MissionsPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">🎯 Shaxsiy missiyalar</h1>
-        <p className="text-sm text-app-hint">
+      <div>
+        <PageTitle icon="target">Shaxsiy missiyalar</PageTitle>
+        <p className="px-1 text-sm text-app-hint">
           Klub missiyasini boshlang yoki o‘zingizga maqsad qo‘ying — natija kundalik, javon, tadbir va testlardagi haqiqiy
           faolligingizdan o‘zi hisoblanadi.
         </p>
@@ -273,7 +273,7 @@ export function MissionsPage() {
       )}
       {missions.length === 0 && (
         <Card>
-          <EmptyState icon="🎯" title="Hozircha missiya yo‘q">
+          <EmptyState icon="target" title="Hozircha missiya yo‘q">
             Tez orada yangilari qo‘shiladi.
           </EmptyState>
         </Card>

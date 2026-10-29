@@ -1,6 +1,6 @@
 import { BookCover } from '../components/BookCover'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Card } from '../components/ui'
+import { Badge, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { Book, Page } from '../types/api'
@@ -25,7 +25,7 @@ export function BooksPage() {
   return (
     <>
       {shelf && <LibrarySwitch current="books" />}
-      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">{shelf ? '🏛 Klub kitoblari' : '📚 Kitoblar'}</h1>
+      <PageTitle icon={shelf ? 'landmark' : 'book'}>{shelf ? 'Klub kitoblari' : 'Kitoblar'}</PageTitle>
       {shelf && (
         <p className="-mt-2 px-1 text-sm text-app-hint">Klub tavsiya qilgan kitoblar — yoqqanini «Javonim»ga qo‘shing.</p>
       )}

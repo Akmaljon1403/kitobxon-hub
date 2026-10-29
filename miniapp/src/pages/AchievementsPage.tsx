@@ -1,3 +1,4 @@
+import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Card, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -48,7 +49,10 @@ export function AchievementsPage() {
     <>
       <div className="flex items-start justify-between gap-2 px-1 pt-1">
         <div>
-          <h1 className="font-serif text-2xl font-bold">🏅 Yutuqlar</h1>
+          <h1 className="flex items-center gap-2.5 font-serif text-2xl font-bold">
+            <Icon name="medal" size={24} className="shrink-0 text-brand-600 dark:text-brand-300" />
+            Yutuqlar
+          </h1>
           <p className="text-sm text-app-hint">
             {unlocked.length} / {state.data.length} ta yutuq qo'lga kiritildi
           </p>
@@ -61,7 +65,7 @@ export function AchievementsPage() {
           🎓 Sertifikatlarim
         </button>
       </div>
-      {state.data.length === 0 && <EmptyState icon="🏅" title="Hozircha yutuqlar yo'q" />}
+      {state.data.length === 0 && <EmptyState icon="medal" title="Hozircha yutuqlar yo'q" />}
       {unlocked.length > 0 && (
         <>
           <SectionTitle>Qo'lga kiritilgan</SectionTitle>

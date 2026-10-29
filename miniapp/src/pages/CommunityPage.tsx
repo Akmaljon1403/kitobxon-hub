@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, Toggle } from '../components/ui'
+import { Badge, Button, Card, PageTitle, Toggle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -147,9 +147,9 @@ export function CommunityPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">💬 A‘zolar fikrlari</h1>
-        <p className="text-sm text-app-hint">
+      <div>
+        <PageTitle icon="message-square">A‘zolar fikrlari</PageTitle>
+        <p className="px-1 text-sm text-app-hint">
           Kitobxonlarimizning iqtiboslari, fikrlari va taassurotlari. Eng yaxshilari klub kanalida chiroyli kartochka bo‘lib chiqadi.
         </p>
       </div>
@@ -190,7 +190,7 @@ export function CommunityPage() {
       {state.status === 'error' && <ErrorState message={state.error.message} onRetry={reload} />}
       {state.status === 'success' && state.data.length === 0 && (
         <Card>
-          <EmptyState icon="💬" title={tab === 'mine' ? 'Hali hech narsa yozmagansiz' : 'Lenta hozircha bo‘sh'}>
+          <EmptyState icon="message-square" title={tab === 'mine' ? 'Hali hech narsa yozmagansiz' : 'Lenta hozircha bo‘sh'}>
             Birinchi bo‘lib yozing — yoqqan iqtibosingiz yoki fikringiz boshqalarni ilhomlantiradi.
           </EmptyState>
         </Card>
@@ -322,9 +322,9 @@ export function CommunityNewPage() {
   const tooShort = text.trim().length < 8
   return (
     <div className="flex flex-col gap-3">
-      <div className="px-1">
-        <h1 className="font-serif text-2xl font-bold">✍️ Fikr yozish</h1>
-        <p className="text-sm text-app-hint">Iqtibos va fikrlaringiz «Iqtiboslar sandig‘i»ngizda ham saqlanadi.</p>
+      <div>
+        <PageTitle icon="pencil">Fikr yozish</PageTitle>
+        <p className="px-1 text-sm text-app-hint">Iqtibos va fikrlaringiz «Iqtiboslar sandig‘i»ngizda ham saqlanadi.</p>
       </div>
       <Card className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-1.5">

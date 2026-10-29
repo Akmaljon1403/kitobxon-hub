@@ -1,5 +1,5 @@
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Card, SectionTitle } from '../components/ui'
+import { Card, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useFeature } from '../components/FeatureGate'
 import { useAuth } from '../store/auth'
@@ -61,7 +61,7 @@ export function ResultsPage() {
 
   return (
     <>
-      <h1 className="px-1 pt-1 font-serif text-2xl font-bold">📊 Natijalarim</h1>
+      <PageTitle icon="bar-chart">Natijalarim</PageTitle>
       <Card className="flex flex-col items-center gap-1 border-0 bg-brand-gradient py-6 text-center text-white shadow-[var(--shadow-brand)] ring-1 ring-white/10">
         <p className="text-sm text-white/75">Jami ball</p>
         <p className="font-serif text-4xl font-bold tabular-nums text-gold-300">{data.total}</p>
@@ -113,7 +113,7 @@ export function ResultsPage() {
 
       <SectionTitle>Ballar tarixi</SectionTitle>
       {data.history.length === 0 ? (
-        <EmptyState icon="📊" title="Hali ball yo'q">
+        <EmptyState icon="bar-chart" title="Hali ball yo'q">
           Tadbirlarda qatnashing, testlarni ishlang va kitoblarni o'qing.
         </EmptyState>
       ) : (
