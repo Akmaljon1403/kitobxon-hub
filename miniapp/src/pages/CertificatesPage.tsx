@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, PageTitle, SectionTitle } from '../components/ui'
+import { Badge, Button, Card, FeatureTile, PageTitle, SectionTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { API_BASE, ApiError } from '../services/api'
@@ -32,9 +32,7 @@ function CertificateRow({ certificate }: { certificate: Certificate }) {
         {certificate.place && MEDALS[certificate.place] ? (
           <span aria-hidden className="text-4xl leading-none">{MEDALS[certificate.place]}</span>
         ) : (
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-            <Icon name="graduation-cap" size={24} />
-          </span>
+          <FeatureTile icon="graduation-cap" tone="brand" />
         )}
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold leading-snug">{certificate.title}</h2>

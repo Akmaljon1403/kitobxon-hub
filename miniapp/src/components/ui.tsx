@@ -130,6 +130,47 @@ export function IconBadge({ children, tone = 'brand', className = '' }: { childr
   )
 }
 
+/* ------------------------------------------------------------------ dimensional tile */
+
+export type TileTone = 'brand' | 'gold' | 'green' | 'hint'
+
+/**
+ * Soft gradient tiles that carry an entity icon — the app's lightweight «dimensional» icon
+ * language (a raised, 3D-ish look with no 3D engine and no new assets). Used wherever an icon
+ * should feel elevated rather than flat: quick actions, list rows, feature cards.
+ */
+const TILE: Record<TileTone, string> = {
+  brand: 'bg-gradient-to-br from-brand-400/25 to-brand-600/10 text-brand-600 ring-1 ring-brand-500/15 dark:text-brand-300',
+  gold: 'bg-gradient-to-br from-gold-300/35 to-gold-500/15 text-gold-500 ring-1 ring-gold-400/25 dark:text-gold-300',
+  green: 'bg-gradient-to-br from-green-300/30 to-green-500/12 text-green-700 ring-1 ring-green-500/15 dark:text-green-300',
+  hint: 'bg-app-surface text-app-hint ring-1 ring-app-hint/15',
+}
+
+const TILE_SIZE = {
+  sm: { box: 'size-9', glyph: 18 },
+  md: { box: 'size-11', glyph: 22 },
+  lg: { box: 'size-14', glyph: 28 },
+} as const
+
+export function FeatureTile({
+  icon,
+  tone = 'brand',
+  size = 'md',
+  className = '',
+}: {
+  icon: IconName
+  tone?: TileTone
+  size?: keyof typeof TILE_SIZE
+  className?: string
+}) {
+  const dims = TILE_SIZE[size]
+  return (
+    <span aria-hidden className={`grid ${dims.box} shrink-0 place-items-center rounded-xl ${TILE[tone]} ${className}`}>
+      <Icon name={icon} size={dims.glyph} />
+    </span>
+  )
+}
+
 /* ------------------------------------------------------------------ progress */
 
 export function Progress({ value, max = 100, tone = 'brand' }: { value: number; max?: number; tone?: 'brand' | 'gold' }) {

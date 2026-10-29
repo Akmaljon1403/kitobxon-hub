@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import { Giveaways } from '../components/Giveaways'
 import { Icon, type IconName } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, PageTitle } from '../components/ui'
+import { Badge, Button, Card, FeatureTile, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useBackButton } from '../hooks/useBackButton'
 import { ApiError } from '../services/api'
@@ -56,9 +56,7 @@ function RewardCard({ reward, onChanged }: { reward: MemberReward; onChanged: ()
   return (
     <Card className={`flex flex-col gap-2 ${used ? 'opacity-70' : ''}`}>
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-          <Icon name={ICONS[reward.type]} size={22} />
-        </span>
+        <FeatureTile icon={ICONS[reward.type]} tone="brand" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{reward.title}</p>
           {reward.value && <p className="text-sm text-app-link">{reward.value}</p>}

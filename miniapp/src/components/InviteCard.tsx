@@ -6,7 +6,7 @@ import type { Referrals } from '../types/api'
 import { navigate } from '../utils/router'
 import { getWebApp, haptic } from '../utils/telegram'
 import { Icon } from './Icon'
-import { Button, Card } from './ui'
+import { Button, Card, FeatureTile } from './ui'
 
 const SHARE_TEXT = "Kitobxonlar klubiga qo'shil! Tadbirlar, testlar, sertifikatlar va sovg'alar 📚"
 
@@ -46,9 +46,7 @@ export function InviteCard() {
   return (
     <Card className="flex flex-col gap-2">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-          <Icon name="users" size={22} />
-        </span>
+        <FeatureTile icon="users" tone="brand" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">Do'stni taklif qilish</p>
           <p className="text-sm text-app-hint">

@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 
 import { Icon, type IconName } from '../components/Icon'
-import { Card, SectionTitle } from '../components/ui'
+import { Card, FeatureTile, SectionTitle, type TileTone } from '../components/ui'
 import { useBackButton } from '../hooks/useBackButton'
 import { useAuth } from '../store/auth'
 import { navigate } from '../utils/router'
@@ -17,13 +17,16 @@ interface Service {
 
 interface Group {
   title: string
+  tone: TileTone
   items: Service[]
 }
 
-// Every service that used to crowd the home screen, now grouped by what it is for.
+// Every service that used to crowd the home screen, now grouped by what it is for. Each group has
+// its own tile colour so the whole catalogue reads as one dimensional icon family.
 const GROUPS: Group[] = [
   {
     title: 'Mutolaa',
+    tone: 'brand',
     items: [
       { route: 'books', icon: 'book', label: 'Klub kitoblari' },
       { route: 'shelf', icon: 'bookmark', label: 'Javonim', feature: 'shelf' },
@@ -33,6 +36,7 @@ const GROUPS: Group[] = [
   },
   {
     title: 'Natija va reyting',
+    tone: 'gold',
     items: [
       { route: 'results', icon: 'bar-chart', label: 'Natijalarim' },
       { route: 'stats', icon: 'bar-chart', label: 'Statistikam', feature: 'personal_stats' },
@@ -44,6 +48,7 @@ const GROUPS: Group[] = [
   },
   {
     title: 'Tadbirlar va hamjamiyat',
+    tone: 'green',
     items: [
       { route: 'events', icon: 'calendar', label: 'Tadbirlar' },
       { route: 'checkin', icon: 'check-circle', label: 'Davomat' },
@@ -54,6 +59,7 @@ const GROUPS: Group[] = [
   },
   {
     title: 'Kabinet',
+    tone: 'brand',
     items: [
       { route: 'card', icon: 'id-card', label: 'Kitobxonlik kartam', feature: 'reading_card' },
       { route: 'rewards', icon: 'gift', label: 'Sovg‘alarim', feature: 'rewards' },
@@ -94,9 +100,7 @@ export function AllServicesPage() {
                     onClick={() => go(item.route)}
                     className="flex items-center gap-3 px-3.5 py-3 text-left transition-colors active:bg-app-surface"
                   >
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-                      <Icon name={item.icon} size={20} />
-                    </span>
+                    <FeatureTile icon={item.icon} tone={group.tone} size="sm" />
                     <span className="flex-1 font-medium">{item.label}</span>
                     {(premiumLocked || trial) && (
                       <span

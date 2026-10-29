@@ -7,7 +7,7 @@ import { navigate } from '../utils/router'
 import { haptic } from '../utils/telegram'
 import { TrialBadge, useFeature } from './FeatureGate'
 import { Icon } from './Icon'
-import { Button, Card } from './ui'
+import { Button, Card, FeatureTile } from './ui'
 
 /** «Kitobxonlik portfoliosi»: books, certificates, tests, events and achievements in one PDF. */
 export function PortfolioCard() {
@@ -56,9 +56,7 @@ export function PortfolioCard() {
   return (
     <Card className="flex flex-col gap-2">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-          <Icon name="folder" size={22} />
-        </span>
+        <FeatureTile icon="folder" tone="brand" />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-1.5 font-semibold">
             Kitobxonlik portfoliosi <TrialBadge code="portfolio" />

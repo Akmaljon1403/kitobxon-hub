@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { FeatureLocked, TrialBadge, useFeature } from '../components/FeatureGate'
 import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Card, PageTitle } from '../components/ui'
+import { Card, FeatureTile, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { FacultyRanking, Ranking, RankingRow } from '../types/api'
@@ -191,9 +191,7 @@ export function RankingPage() {
       {league === 'on' && (
         <button type="button" onClick={() => navigate('/league')} className="text-left">
           <Card className="flex items-center gap-3 py-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-              <Icon name="landmark" size={20} />
-            </span>
+            <FeatureTile icon="landmark" tone="brand" />
             <span className="min-w-0 flex-1 text-sm">
               <b>Fakultetlar ligasi</b> — fakultetingiz bilan birga bellashing: ball, betlar, kitoblar va tadbirlar
             </span>

@@ -3,7 +3,7 @@ import { useAuth } from '../store/auth'
 import type { ReferralBrief } from '../types/api'
 import { navigate } from '../utils/router'
 import { Icon } from './Icon'
-import { Card } from './ui'
+import { Card, FeatureTile } from './ui'
 
 /** «🎁 Sizning foydangiz» in short (home and profile pages): friends invited, their points, my reward. */
 export function BenefitCard() {
@@ -14,9 +14,7 @@ export function BenefitCard() {
   return (
     <button type="button" className="text-left" onClick={() => navigate('/invite')}>
       <Card className="flex items-center gap-3 border border-app-button/30">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-gold-400/15 text-gold-500 dark:text-gold-300">
-          <Icon name="gift" size={22} />
-        </span>
+        <FeatureTile icon="gift" tone="gold" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">Sizning foydangiz</p>
           {impact && impact.invited > 0 ? (

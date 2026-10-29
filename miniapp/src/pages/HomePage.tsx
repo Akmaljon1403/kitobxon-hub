@@ -3,7 +3,7 @@ import { BenefitCard } from '../components/BenefitCard'
 import { BookCover } from '../components/BookCover'
 import { Icon, type IconName } from '../components/Icon'
 import { CardListSkeleton, ErrorState } from '../components/StateViews'
-import { Badge, Card, IconBadge, SectionTitle } from '../components/ui'
+import { Badge, Card, FeatureTile, SectionTitle, type TileTone } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useAuth } from '../store/auth'
 import type { Book, ClubEvent, ClubTest, MyRanking, Shelf } from '../types/api'
@@ -93,10 +93,10 @@ function ReadingMomentum({ stats }: { stats: Shelf['stats'] }) {
   )
 }
 
-const QUICK: { route: string; icon: IconName; label: string }[] = [
-  { route: 'tests', icon: 'file-text', label: 'Testlar' },
-  { route: 'checkin', icon: 'check-circle', label: 'Davomat' },
-  { route: 'results', icon: 'bar-chart', label: 'Natijalarim' },
+const QUICK: { route: string; icon: IconName; label: string; tone: TileTone }[] = [
+  { route: 'tests', icon: 'file-text', label: 'Testlar', tone: 'brand' },
+  { route: 'checkin', icon: 'check-circle', label: 'Davomat', tone: 'green' },
+  { route: 'results', icon: 'bar-chart', label: 'Natijalarim', tone: 'gold' },
 ]
 
 export function HomePage() {
@@ -150,9 +150,7 @@ export function HomePage() {
       {liveAttendance && (
         <button type="button" className="w-full text-left" onClick={() => go('/checkin?scan=1')}>
           <Card interactive tone="brand" className="flex items-center gap-3">
-            <IconBadge tone="brand">
-              <Icon name="check-circle" />
-            </IconBadge>
+            <FeatureTile icon="check-circle" tone="brand" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold">Davomat ochiq!</p>
               <p className="truncate text-sm text-app-hint">«{liveAttendance.title}» — bosing va QR kodni skanerlang</p>
@@ -179,9 +177,7 @@ export function HomePage() {
           <SectionTitle>Ochiq test</SectionTitle>
           <button type="button" className="w-full text-left" onClick={() => go(`/tests/${openTest.id}`)}>
             <Card interactive className="flex items-center gap-3">
-              <IconBadge tone="gold">
-                <Icon name="file-text" />
-              </IconBadge>
+              <FeatureTile icon="file-text" tone="gold" />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{openTest.title}</p>
                 <p className="truncate text-sm text-app-hint">
@@ -211,9 +207,7 @@ export function HomePage() {
             onClick={() => go(`/${item.route}`)}
             className="flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-2xl border border-[color:var(--hairline)] bg-app-bg px-2 py-3 text-center text-xs font-medium shadow-[var(--shadow-card)] transition-transform active:scale-95"
           >
-            <span className="grid size-10 place-items-center rounded-xl bg-brand-500/10 text-brand-600 dark:bg-white/10 dark:text-brand-300">
-              <Icon name={item.icon} size={20} />
-            </span>
+            <FeatureTile icon={item.icon} tone={item.tone} />
             {item.label}
           </button>
         ))}
@@ -221,9 +215,7 @@ export function HomePage() {
 
       <button type="button" className="w-full text-left" onClick={() => go('/services')}>
         <Card interactive className="flex items-center gap-3">
-          <IconBadge tone="neutral">
-            <Icon name="grid" />
-          </IconBadge>
+          <FeatureTile icon="grid" tone="hint" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">Barcha xizmatlar</p>
             <p className="truncate text-sm text-app-hint">Javon, missiyalar, yutuqlar, sovg‘alar, premium va boshqalar</p>
