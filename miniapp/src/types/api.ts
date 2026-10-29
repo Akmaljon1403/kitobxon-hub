@@ -176,6 +176,8 @@ export interface MyScores {
   breakdown: Record<string, number>
   season: { name: string | null; total: number } | null
   history: ScoreEntry[]
+  /** Grand total number of score transactions; `history` may be capped by the request limit. */
+  history_count: number
 }
 
 export interface RankingRow {
