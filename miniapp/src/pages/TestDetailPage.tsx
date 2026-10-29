@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 
+import { Icon } from '../components/Icon'
 import { QuestionImage } from '../components/QuestionImage'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, ProgressRing, SectionTitle, Stat } from '../components/ui'
@@ -26,7 +27,13 @@ function ResultCard({ result, test }: { result: AttemptResult; test: ClubTest })
         </div>
       </ProgressRing>
       <div>
-        <p className="font-serif text-lg font-bold">{result.passed ? '🎉 Tabriklaymiz!' : '📘 Yakunlandi'}</p>
+        <p className="flex items-center justify-center gap-1.5 font-serif text-lg font-bold">
+          {result.passed ? (
+            <><Icon name="sparkles" size={18} className="text-gold-500 dark:text-gold-300" />Tabriklaymiz!</>
+          ) : (
+            <><Icon name="check-circle" size={18} />Yakunlandi</>
+          )}
+        </p>
         <p className="text-sm text-app-hint">
           {result.correct_count} ta to'g'ri javob ({result.question_count} tadan)
         </p>
@@ -52,7 +59,12 @@ function Standings({ testId }: { testId: string }) {
   const table = state.data
   return (
     <>
-      <SectionTitle>🏆 O'rinlar</SectionTitle>
+      <SectionTitle>
+        <span className="flex items-center gap-1.5">
+          <Icon name="trophy" size={13} />
+          O'rinlar
+        </span>
+      </SectionTitle>
       <Card className="flex flex-col gap-1.5">
         {table.rows.map((row) => (
           <div key={`${row.place}-${row.name}`} className={`flex items-center justify-between gap-2 text-sm ${row.me ? 'font-semibold' : ''}`}>
@@ -107,7 +119,13 @@ function Review({ testId }: { testId: string }) {
       {review.questions.map((question, index) => (
         <Card key={question.id} className="flex flex-col gap-2">
           <p className="text-xs text-app-hint">
-            {index + 1}-savol · {question.is_correct ? `✅ +${question.points_awarded}` : '❌ 0'} ball
+            {index + 1}-savol ·{' '}
+            {question.is_correct ? (
+              <><Icon name="check" size={13} className="inline align-[-2px] text-green-600 dark:text-green-300" /> +{question.points_awarded}</>
+            ) : (
+              <><Icon name="x" size={13} className="inline align-[-2px] text-app-danger" /> 0</>
+            )}{' '}
+            ball
           </p>
           <p className="whitespace-pre-line font-medium">{question.text}</p>
           {question.has_image && <QuestionImage testId={review.test_id} questionId={question.id} />}
@@ -123,13 +141,22 @@ function Review({ testId }: { testId: string }) {
                       : 'bg-app-surface'
                 }`}
               >
-                {option.is_correct ? '✓ ' : option.selected ? '✗ ' : ''}
+                {option.is_correct ? (
+                  <Icon name="check" size={14} className="mr-1 inline align-[-2px]" />
+                ) : option.selected ? (
+                  <Icon name="x" size={14} className="mr-1 inline align-[-2px]" />
+                ) : null}
                 {option.text}
                 {option.selected && <span className="text-xs opacity-70"> — sizning javobingiz</span>}
               </li>
             ))}
           </ul>
-          {question.explanation && <p className="text-sm text-app-hint">💡 {question.explanation}</p>}
+          {question.explanation && (
+            <p className="flex items-start gap-1.5 text-sm text-app-hint">
+              <Icon name="lightbulb" size={14} className="mt-0.5 shrink-0" />
+              {question.explanation}
+            </p>
+          )}
         </Card>
       ))}
     </>
@@ -166,10 +193,11 @@ function Overview({
           {test.book_title && (
             <button
               type="button"
-              className="text-left text-sm font-medium text-app-link"
+              className="flex items-center gap-1.5 text-left text-sm font-medium text-app-link"
               onClick={() => navigate(`/books/${test.book_id}`)}
             >
-              📚 {test.book_title}
+              <Icon name="book" size={14} className="shrink-0" />
+              {test.book_title}
             </button>
           )}
         </div>
@@ -180,17 +208,26 @@ function Overview({
           <Stat label="urinish" value={`${used}/${test.attempts_allowed}`} />
         </div>
         <div className="flex flex-col gap-1 text-sm text-app-hint">
-          <span>
-            🗓 {formatEventDate(test.starts_at)} — {formatEventDate(test.ends_at)}
+          <span className="flex items-center gap-1.5">
+            <Icon name="calendar" size={14} className="shrink-0" />
+            {formatEventDate(test.starts_at)} — {formatEventDate(test.ends_at)}
           </span>
-          {test.passing_score > 0 && <span>🎯 O'tish bali: {test.passing_score} ball</span>}
+          {test.passing_score > 0 && (
+            <span className="flex items-center gap-1.5">
+              <Icon name="target" size={14} className="shrink-0" />
+              O'tish bali: {test.passing_score} ball
+            </span>
+          )}
         </div>
         {test.description && <p className="whitespace-pre-line pt-1 text-[15px]">{test.description}</p>}
       </Card>
 
       {notice && (
         <Card className="text-center text-sm">
-          <p className="font-medium">⏰ {notice}</p>
+          <p className="flex items-center justify-center gap-1.5 font-medium">
+            <Icon name="clock" size={15} className="shrink-0" />
+            {notice}
+          </p>
         </Card>
       )}
       {result && <ResultCard result={result} test={test} />}
@@ -206,7 +243,7 @@ function Overview({
             </ul>
           )}
           <Button loading={starting} onClick={onStart}>
-            {test.in_progress ? '▶️ Davom ettirish' : used > 0 ? '🔁 Qayta urinish' : '▶️ Testni boshlash'}
+            {test.in_progress ? 'Davom ettirish' : used > 0 ? 'Qayta urinish' : 'Testni boshlash'}
           </Button>
           {error && (
             <p role="alert" className="text-center text-sm text-app-danger">
@@ -234,7 +271,8 @@ function Overview({
                   {attempt.score ?? 0}/{test.max_score}
                   <span className="font-normal text-app-hint">
                     {' '}
-                    · {attempt.correct_count ?? 0}/{attempt.question_count} ✓
+                    · {attempt.correct_count ?? 0}/{attempt.question_count}{' '}
+                    <Icon name="check" size={12} className="inline align-[-1px]" />
                   </span>
                 </span>
               </li>
@@ -251,7 +289,7 @@ function Overview({
           </>
         ) : (
           <Button variant="secondary" onClick={() => setShowReview(true)}>
-            📖 To'g'ri javoblarni ko'rish
+            <Icon name="book-open" size={18} />To'g'ri javoblarni ko'rish
           </Button>
         ))}
       {test.state === 'CLOSED' && finished.length === 0 && (

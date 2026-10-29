@@ -1,4 +1,5 @@
 import { BookCover } from '../components/BookCover'
+import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
@@ -11,9 +12,9 @@ import { LibrarySwitch } from './ShelfPage'
 
 export function ReadingBadge({ book }: { book: Book }) {
   if (!book.my_reading) return null
-  if (book.my_reading.status === 'READING') return <Badge tone="info">📖 O'qiyapman</Badge>
-  if (book.my_reading.verified) return <Badge tone="success">✅ Tasdiqlangan</Badge>
-  return <Badge tone="success">✓ O'qib tugatdim</Badge>
+  if (book.my_reading.status === 'READING') return <Badge tone="info"><Icon name="book-open" size={13} />O'qiyapman</Badge>
+  if (book.my_reading.verified) return <Badge tone="success"><Icon name="check" size={13} />Tasdiqlangan</Badge>
+  return <Badge tone="success"><Icon name="check" size={13} />O'qib tugatdim</Badge>
 }
 
 export function BooksPage() {
