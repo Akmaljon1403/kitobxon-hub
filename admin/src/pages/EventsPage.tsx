@@ -119,6 +119,11 @@ export function EventsPage() {
                       ⏹ Yakunlash
                     </Button>
                   )}
+                  {can('EVENT_VIEW') && (
+                    <Button variant="ghost" onClick={() => navigate(`/events/${event.id}/rsvp`)}>
+                      Javoblar
+                    </Button>
+                  )}
                   {can('ATTENDANCE_VIEW') && (
                     <Button variant="ghost" onClick={() => navigate(`/events/${event.id}/attendance`)}>
                       Davomat

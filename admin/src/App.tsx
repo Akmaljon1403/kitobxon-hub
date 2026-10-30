@@ -16,6 +16,7 @@ import { MembersPage } from './pages/MembersPage'
 import { MessagingPage } from './pages/MessagingPage'
 import { CommunityHubPage } from './pages/CommunityHubPage'
 import { RentalsPage } from './pages/RentalsPage'
+import { RsvpPage } from './pages/RsvpPage'
 import { PremiumHubPage } from './pages/PremiumHubPage'
 import { DocumentsHubPage } from './pages/DocumentsHubPage'
 import { ReportEditorPage } from './pages/ReportsPage'
@@ -79,6 +80,17 @@ function Router() {
           <AttendancePage eventId={entityId} />
         ) : (
           <Card className="p-6 text-sm text-app-hint">Davomatni ko'rish uchun ruxsatingiz yo'q.</Card>
+        )}
+      </AdminLayout>
+    )
+  }
+  if (section === 'events' && entityId && subPage === 'rsvp') {
+    return (
+      <AdminLayout section="events">
+        {can('EVENT_VIEW') ? (
+          <RsvpPage eventId={entityId} />
+        ) : (
+          <Card className="p-6 text-sm text-app-hint">Javoblarni ko'rish uchun ruxsatingiz yo'q.</Card>
         )}
       </AdminLayout>
     )
