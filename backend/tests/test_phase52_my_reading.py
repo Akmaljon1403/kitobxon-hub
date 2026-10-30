@@ -339,6 +339,24 @@ async def test_the_bot_diary_shelf_and_card(db: AsyncSession) -> None:
     assert "Kitobxonlik kartangiz" in photo.caption
 
 
+async def test_oqidim_rejects_junk_page_counts_without_crashing(db: AsyncSession) -> None:
+    member = await create_user(db, telegram_id=next(_ids), first_name="Jahongir")
+    await db.commit()
+    await reading_journal.add(
+        db, member, title="Mehrobdan chayon", pages_total=100, status=reading_journal.ShelfStatus.READING
+    )
+    harness = BotHarness(member.telegram_id)
+
+    # "²" passes str.isdigit() but int() rejects it — this used to crash the handler.
+    await harness.send("/oqidim ²")
+    assert "Mehrobdan chayon" in harness.last_text() and "/oqidim 25" in harness.last_text()
+    # Zero / negative / words also fall back to the help instead of logging a bogus entry.
+    for junk in ("0", "-5", "ko'p", "25.5"):
+        await harness.send(f"/oqidim {junk}")
+        assert "/oqidim 25" in harness.last_text()
+    assert await db.scalar(select(func.count()).select_from(ReadingLog).where(ReadingLog.user_id == member.id)) == 0
+
+
 async def test_unread_own_books_do_not_finish_a_mission(client: httpx.AsyncClient, db: AsyncSession) -> None:
     member = await create_user(db, telegram_id=next(_ids))
     await db.commit()
