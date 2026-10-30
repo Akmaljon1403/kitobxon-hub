@@ -53,6 +53,15 @@ brauzerda a'zo va admin yo'llari, zaxira nusxadan tiklash sinovi. Yashil ✅ bel
 
 ## Hujjatlar
 
+### 📦 Topshirish hujjatlari (handoff — ishga tushirish va keyingi egalar uchun)
+
+* [docs/DEPLOYMENT_GUIDE_UZ.md](docs/DEPLOYMENT_GUIDE_UZ.md) — ishga tushirish: Render+Neon yoki institut serveri, muhit o'zgaruvchilari
+* [docs/DATABASE_MIGRATION_GUIDE_UZ.md](docs/DATABASE_MIGRATION_GUIDE_UZ.md) — baza migratsiyalari (Alembic): yangilash, yozish, xavfsizlik qoidalari
+* [docs/BACKUP_RESTORE_GUIDE_UZ.md](docs/BACKUP_RESTORE_GUIDE_UZ.md) — zaxira nusxa (avtomatik + qo'lda) va bazani tiklash tartibi
+* [docs/PRODUCTION_HANDOFF_CHECKLIST_UZ.md](docs/PRODUCTION_HANDOFF_CHECKLIST_UZ.md) — ishga tushirishdan oldingi tekshiruv ro'yxati
+
+### Boshqa qo'llanmalar
+
 * [docs/TEST_HOSTING.md](docs/TEST_HOSTING.md) — botni bepul serverga joylab sinash (egasi uchun)
 * [docs/ISHGA_TUSHIRISH.md](docs/ISHGA_TUSHIRISH.md) — doimiy ishga tushirish: zaxira, fayllar, kuzatuv (egasi uchun)
 * [docs/BOSHQARUV_QOLLANMA.md](docs/BOSHQARUV_QOLLANMA.md) — to'liq qo'llanma (egasi uchun): a'zo nigohida bot va ilova, «Mening mutolaam», boshqaruvning har bir bo'limi, to'lovlar va Stars jarayoni, stiker va premium emoji, avtomatik ishlar, savol-javob, sozlamalar/huquqlar/imkoniyatlar jadvallari
