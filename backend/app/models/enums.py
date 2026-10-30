@@ -34,6 +34,17 @@ class CampaignStatus(StrEnum):
     ARCHIVED = "ARCHIVED"
 
 
+class BackupKind(StrEnum):
+    DAILY = "DAILY"  # automatic, every night
+    MONTHLY = "MONTHLY"  # automatic, kept longer
+    MANUAL = "MANUAL"  # a super admin pressed «Hozir zaxira olish»
+
+
+class BackupStatus(StrEnum):
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+
+
 class BookStatus(StrEnum):
     SUGGESTED = "SUGGESTED"  # a member proposed this book; waits for admin moderation
     DRAFT = "DRAFT"

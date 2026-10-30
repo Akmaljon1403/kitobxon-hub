@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     admin_access,
     admin_achievements,
     admin_analytics,
+    admin_backups,
     admin_books,
     admin_certificates,
     admin_channel,
@@ -89,6 +90,7 @@ for module in (
     admin_community,
     admin_rentals,
     admin_texts,
+    admin_backups,
 ):
     api_router.include_router(module.router)
 api_router.include_router(admin_analytics.trust_router)

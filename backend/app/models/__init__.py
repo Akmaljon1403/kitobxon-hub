@@ -3,6 +3,7 @@
 from app.models.achievement import Achievement, UserAchievement
 from app.models.attendance import AttendanceRecord, AttendanceSession, AttendanceToken
 from app.models.audit import AuditLog
+from app.models.backup import Backup
 from app.models.base import Base
 from app.models.book import Book, BookQuote, BookRead
 from app.models.bot import BotFsmState, TextOverride
@@ -31,6 +32,7 @@ __all__ = [
     "AttendanceSession",
     "AttendanceToken",
     "AuditLog",
+    "Backup",
     "Base",
     "Book",
     "BookQuote",

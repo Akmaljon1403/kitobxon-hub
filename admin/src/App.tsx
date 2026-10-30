@@ -5,6 +5,7 @@ import { AdminsPage } from './pages/AdminsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
+import { BackupsPage } from './pages/BackupsPage'
 import { BooksPage } from './pages/BooksPage'
 import { CertificatesPage } from './pages/CertificatesPage'
 import { CertificateDesignerPage } from './pages/CertificateDesignerPage'
@@ -51,6 +52,7 @@ const PAGES: Partial<Record<string, () => React.ReactElement>> = {
   analytics: AnalyticsPage,
   settings: SettingsHubPage,
   admins: AdminsPage,
+  backups: BackupsPage,
   audit: AuditPage,
   trust: TrustPage,
 }

@@ -125,6 +125,13 @@ class Settings(BaseSettings):
     storage_secret_key: SecretStr | None = None
     storage_bucket: str | None = None
 
+    # ---- Database backups (pg_dump custom-format dumps, kept through the configured file storage) ----
+    backups_enabled: bool = True
+    pg_dump_path: str = "pg_dump"
+    pg_restore_path: str = "pg_restore"
+    backup_retention_daily: int = Field(default=14, ge=1, le=365, description="How many daily backups to keep")
+    backup_retention_monthly: int = Field(default=12, ge=1, le=120, description="How many monthly backups to keep")
+
     # ---- Licence (only for copies rented to other organisations; the club's own server needs none) ----
     licence_required: bool = False
     licence_key: SecretStr | None = None

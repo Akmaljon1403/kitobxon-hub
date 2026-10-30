@@ -44,6 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
   { route: 'settings', icon: '⚙️', label: 'Sozlamalar', visible: () => true },
   { route: 'premium', icon: '💎', label: 'Premium va imkoniyatlar', visible: (_, isSuper) => isSuper },
   { route: 'admins', icon: '🛡', label: 'Adminlar', visible: (_, isSuper) => isSuper },
+  { route: 'backups', icon: '💾', label: 'Zaxira nusxa', visible: (_, isSuper) => isSuper },
   { route: 'rentals', icon: '🏢', label: 'Ijara (tashkilotlar)', visible: (_, isSuper) => isSuper },
   { route: 'trust', icon: '🛡', label: 'Ishonch markazi', visible: (can) => can('AUDIT_LOG_VIEW') },
   { route: 'audit', icon: '🧾', label: 'Audit jurnali', visible: (can) => can('AUDIT_LOG_VIEW') },

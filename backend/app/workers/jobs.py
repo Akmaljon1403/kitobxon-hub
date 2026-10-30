@@ -21,6 +21,7 @@ from app.services import (
     payments_chat,
 )
 from app.services import attendance as attendance_service
+from app.services import backups as backup_service
 from app.services import certificates as certificate_service
 from app.services import contests as contest_service
 from app.services import events as event_service
@@ -80,11 +81,14 @@ JOBS: tuple[tuple[str, Job], ...] = (
     ("payments_weekly_summary", daily_at(9, payments_chat.weekly_summary)),
     ("payments_pending_reminder", payments_chat.remind_pending),
     ("personal_missions", missions.check_running),
+    ("database_backup", backup_service.run_scheduled),
 )
 
 
 # While a rented copy's licence has ended, only these run (nothing is sent to members).
-HOUSEKEEPING = frozenset({"close_ended_tests", "complete_events", "erase_left_members", "cleanup_old_records"})
+HOUSEKEEPING = frozenset(
+    {"close_ended_tests", "complete_events", "erase_left_members", "cleanup_old_records", "database_backup"}
+)
 
 
 async def run_scheduled_jobs(session_factory: async_sessionmaker[AsyncSession]) -> dict[str, int]:
