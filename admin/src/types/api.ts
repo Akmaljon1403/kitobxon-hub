@@ -720,9 +720,19 @@ export interface Backup {
 export interface BackupSummary {
   enabled: boolean
   encryption_enabled: boolean
+  restore_live_enabled: boolean
   retention_daily: number
   retention_monthly: number
   last_success_at: string | null
   total: number
   backups: Backup[]
+}
+
+export interface RestoreResult {
+  validated: boolean
+  entries: number
+  pre_restore_backup_id: string
+  live_restored: boolean
+  live_available: boolean
+  message: string
 }

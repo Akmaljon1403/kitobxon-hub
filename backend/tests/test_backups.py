@@ -65,6 +65,54 @@ async def test_backups_are_super_admin_only(client: httpx.AsyncClient, db: Async
     await grant_role(db, ordinary, "ADMIN")
     denied = await client.get("/api/v1/admin/backups", headers=admin_headers(ordinary))
     assert denied.status_code == 403 and denied.json()["error"]["code"] == "SUPER_ADMIN_REQUIRED"
+    # The restore endpoint is super-admin-only too.
+    restore = await client.post(
+        f"/api/v1/admin/backups/{uuid.uuid4()}/restore",
+        headers=admin_headers(ordinary),
+        json={"confirm": backup_service.RESTORE_CONFIRM_PHRASE, "live": False},
+    )
+    assert restore.status_code == 403 and restore.json()["error"]["code"] == "SUPER_ADMIN_REQUIRED"
+
+
+async def test_restore_validates_and_takes_a_pre_restore_backup_live_off_by_default(
+    client: httpx.AsyncClient, db: AsyncSession
+) -> None:
+    boss = await _super_admin(db)
+    headers = admin_headers(boss)
+    created = await client.post("/api/v1/admin/backups", headers=headers)
+    backup_id = created.json()["id"]
+
+    # Even with live=True, the live overwrite stays OFF unless ALLOW_IN_APP_RESTORE is set.
+    ok = await client.post(
+        f"/api/v1/admin/backups/{backup_id}/restore",
+        headers=headers,
+        json={"confirm": backup_service.RESTORE_CONFIRM_PHRASE, "live": True},
+    )
+    assert ok.status_code == 200, ok.text
+    result = ok.json()
+    assert result["validated"] is True and result["entries"] > 0
+    assert result["live_restored"] is False and result["live_available"] is False
+    # A pre-restore safety backup was taken, so there are now at least two backups.
+    summary = (await client.get("/api/v1/admin/backups", headers=headers)).json()
+    assert summary["total"] >= 2 and summary["restore_live_enabled"] is False
+
+
+async def test_restore_requires_the_typed_confirmation(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    boss = await _super_admin(db)
+    headers = admin_headers(boss)
+    created = await client.post("/api/v1/admin/backups", headers=headers)
+    backup_id = created.json()["id"]
+    before = (await client.get("/api/v1/admin/backups", headers=headers)).json()["total"]
+
+    bad = await client.post(
+        f"/api/v1/admin/backups/{backup_id}/restore",
+        headers=headers,
+        json={"confirm": "ha, tiklang", "live": True},
+    )
+    assert bad.status_code == 400 and bad.json()["error"]["code"] == "RESTORE_NOT_CONFIRMED"
+    # A rejected restore takes no pre-restore backup either.
+    after = (await client.get("/api/v1/admin/backups", headers=headers)).json()["total"]
+    assert after == before
 
 
 async def test_prune_keeps_newest_and_removes_older(db: AsyncSession, monkeypatch) -> None:

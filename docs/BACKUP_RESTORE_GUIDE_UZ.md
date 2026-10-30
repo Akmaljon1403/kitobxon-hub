@@ -119,6 +119,28 @@ dropdb kitobxon_restore_test
 > Agar biror narsa noto'g'ri ketsa — 4.1 da olingan `pre_restore.dump` orqali
 > eski holatга qaytasiz.
 
+### 4.4. Admin paneldan tiklash (ilova ichida, xavfsiz)
+
+Admin paneldagi «Zaxira nusxa» bo'limida har bir nusxa yonida **♻️ Tiklash** tugmasi
+bor. Bu tugma bosilganda tizim quyidagi **xavfsiz** tartibni bajaradi:
+
+1. Bosh admin tasdiqlash uchun aniq matn (`TIKLASHNI TASDIQLAYMAN`) yozishi kerak.
+2. Tizim **avtomatik ravishda hozirgi holatning «tiklashdan oldingi» zaxirasini**
+   oladi (agar u muvaffaqiyatsiz bo'lsa — tiklash to'xtaydi).
+3. Tanlangan nusxa **tekshiriladi** (shifrlangan bo'lsa, avval `BACKUP_ENCRYPTION_KEY`
+   bilan ochiladi; keyin `pg_restore --list` orqali fayl butunligi tasdiqlanadi) —
+   bu bosqich hech qanday bazaga tegmaydi.
+4. **Jonli bazani almashtirish** esa faqat `ALLOW_IN_APP_RESTORE=true` bo'lsa va
+   admin «Jonli bazani almashtirish» katagini belgilagan taqdirda bajariladi. U
+   `pg_restore --single-transaction` bilan ishlaydi — ya'ni to'liq o'tadi yoki
+   umuman o'tmaydi (yarim-tiklash bo'lmaydi).
+
+> ⚠️ **Standart holatda jonli almashtirish O'CHIRILGAN.** Shunda tugma faqat zaxirani
+> tekshiradi va xavfsizlik nusxasini oladi — bu eng xavfsiz holat. Jonli bazani ilova
+> ichidan almashtirishni yoqmoqchi bo'lsangiz, buni **kam yuklamali/texnik vaqtda**
+> qiling va **tiklashdan so'ng ilovani (web + worker) qayta ishga tushiring**. Katta
+> yoki muhim bazalarda 4.1–4.3 dagi server orqali tiklash hamon eng ishonchli yo'l.
+
 ---
 
 ## 5. Zaxira fayllarini shifrlash (ixtiyoriy, lekin tavsiya etiladi)
@@ -168,6 +190,8 @@ BACKUP_RETENTION_DAILY=14
 BACKUP_RETENTION_MONTHLY=12
 # Shifrlash (ixtiyoriy) — berilsa zaxiralar AES-256-GCM bilan shifrlanadi:
 # BACKUP_ENCRYPTION_KEY=<python -c "import secrets; print(secrets.token_urlsafe(48))">
+# Admin paneldan JONLI bazani almashtirishga ruxsat (standart: false — faqat tekshirish):
+# ALLOW_IN_APP_RESTORE=false
 # pg_dump / pg_restore PATH da bo'lmasa, to'liq yo'lni ko'rsating:
 # PG_DUMP_PATH=/usr/lib/postgresql/16/bin/pg_dump
 # PG_RESTORE_PATH=/usr/lib/postgresql/16/bin/pg_restore
@@ -188,9 +212,10 @@ BACKUP_RETENTION_MONTHLY=12
   Google Drive’ga qo'shimcha nusxa kerak bo'lsa, Google xizmat hisobi (service
   account) kaliti kerak — bu maxfiy ma'lumot hech qachon kodga yoki hisobotga
   yozilmaydi, alohida (sir sifatida) beriladi.
-- **Admin paneldan tiklash tugmasi:** ishchi bazani ilova ichidan almashtirish
-  xavfli bo'lgani uchun u faqat qattiq tasdiq (tasdiq matnini yozish) va avtomatik
-  «tiklashdan oldingi» zaxira bilan qo'shiladi.
+- **Admin paneldan tiklash tugmasi ✅ (tayyor):** 4.4-bo'limga qarang. Tugma har doim
+  tasdiq matnini so'raydi, avtomatik «tiklashdan oldingi» zaxira oladi va faylni
+  tekshiradi; jonli bazani almashtirish esa faqat `ALLOW_IN_APP_RESTORE=true` bo'lsa
+  ishlaydi (standart — o'chirilgan).
 
 ---
 

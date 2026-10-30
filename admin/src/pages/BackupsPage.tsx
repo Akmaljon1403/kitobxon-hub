@@ -1,11 +1,11 @@
 import { useState } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Button, Card, EmptyRow, InlineError, PageHeader, Table } from '../components/ui'
+import { Badge, Button, Card, EmptyRow, InlineError, Input, Modal, PageHeader, Table } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { Backup, BackupStatus, BackupSummary } from '../types/api'
+import type { Backup, BackupStatus, BackupSummary, RestoreResult } from '../types/api'
 import { formatDateTime } from '../utils/format'
 
 const KIND_LABELS: Record<string, string> = {
@@ -14,6 +14,8 @@ const KIND_LABELS: Record<string, string> = {
   MANUAL: "Qo'lda",
 }
 const STATUS_TONE: Record<BackupStatus, 'success' | 'danger'> = { SUCCESS: 'success', FAILED: 'danger' }
+// The super admin must type this exact phrase to confirm a restore (mirrors the backend).
+const RESTORE_PHRASE = 'TIKLASHNI TASDIQLAYMAN'
 
 function humanSize(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -26,6 +28,40 @@ export function BackupsPage() {
   const { state, reload } = useAsync((signal) => api<BackupSummary>('/api/v1/admin/backups', { signal }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Restore dialog
+  const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null)
+  const [confirmText, setConfirmText] = useState('')
+  const [restoreLive, setRestoreLive] = useState(false)
+  const [restoreBusy, setRestoreBusy] = useState(false)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null)
+
+  function openRestore(backup: Backup) {
+    setRestoreTarget(backup)
+    setConfirmText('')
+    setRestoreLive(false)
+    setRestoreError(null)
+    setRestoreResult(null)
+  }
+
+  async function doRestore() {
+    if (!restoreTarget) return
+    setRestoreBusy(true)
+    setRestoreError(null)
+    try {
+      const result = await api<RestoreResult>(`/api/v1/admin/backups/${restoreTarget.id}/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ confirm: confirmText.trim(), live: restoreLive }),
+      })
+      setRestoreResult(result)
+      reload() // the pre-restore safety backup now shows in the list
+    } catch (err) {
+      setRestoreError(err instanceof ApiError ? err.message : "Tiklab bo'lmadi.")
+    } finally {
+      setRestoreBusy(false)
+    }
+  }
 
   async function takeNow() {
     setBusy(true)
@@ -102,8 +138,14 @@ export function BackupsPage() {
             {summary.last_success_at && <> Oxirgi muvaffaqiyatli nusxa: {formatDateTime(summary.last_success_at)}.</>}
           </p>
           <p className="text-app-hint">
-            ⚠️ Bazani tiklash — bu yerda tugma orqali emas, server orqali bajariladigan ehtiyotkor amal.
-            Tartib: <code>BACKUP_RESTORE_GUIDE_UZ.md</code> qo'llanmasida.
+            ♻️ <b>Tiklash</b> — har bir nusxa yonidagi «Tiklash» tugmasi orqali. Tugma avval zaxirani
+            tekshiradi va <b>tiklashdan oldingi xavfsizlik nusxasini</b> oladi.{' '}
+            {summary.restore_live_enabled ? (
+              <span className="text-app-danger">Jonli bazani almashtirish YOQILGAN — ehtiyot bo'ling.</span>
+            ) : (
+              <>Jonli bazani almashtirish xavfsizlik uchun o'chirilgan (<code>ALLOW_IN_APP_RESTORE</code>).</>
+            )}{' '}
+            Batafsil: <code>BACKUP_RESTORE_GUIDE_UZ.md</code>.
           </p>
         </Card>
       )}
@@ -133,9 +175,14 @@ export function BackupsPage() {
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5 text-right">
                   {backup.status === 'SUCCESS' && (
-                    <Button variant="ghost" onClick={() => void downloadBackup(backup)}>
-                      ⬇ Yuklab olish
-                    </Button>
+                    <>
+                      <Button variant="ghost" onClick={() => void downloadBackup(backup)}>
+                        ⬇ Yuklab olish
+                      </Button>
+                      <Button variant="ghost" onClick={() => openRestore(backup)}>
+                        ♻️ Tiklash
+                      </Button>
+                    </>
                   )}
                   <Button variant="ghost" className="text-app-danger" onClick={() => void remove(backup)}>
                     O'chirish
@@ -146,6 +193,78 @@ export function BackupsPage() {
           </Table>
         )}
       </Card>
+
+      {restoreTarget && (
+        <Modal
+          title="Zaxiradan tiklash"
+          onClose={() => setRestoreTarget(null)}
+          footer={
+            restoreResult ? (
+              <Button onClick={() => setRestoreTarget(null)}>Yopish</Button>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => setRestoreTarget(null)}>
+                  Bekor qilish
+                </Button>
+                <Button
+                  className={restoreLive ? 'bg-app-danger' : ''}
+                  loading={restoreBusy}
+                  disabled={confirmText.trim() !== RESTORE_PHRASE}
+                  onClick={() => void doRestore()}
+                >
+                  {restoreLive ? 'Jonli bazani tiklash' : 'Tekshirish + xavfsizlik nusxasi'}
+                </Button>
+              </>
+            )
+          }
+        >
+          {restoreResult ? (
+            <div className="flex flex-col gap-2 text-sm">
+              <p className={restoreResult.live_restored ? 'font-semibold text-emerald-600 dark:text-emerald-400' : ''}>
+                {restoreResult.message}
+              </p>
+              <p className="text-app-hint">Tekshirilgan yozuvlar: {restoreResult.entries} ta.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 text-sm">
+              <p>
+                Tanlangan nusxa: <b>{formatDateTime(restoreTarget.created_at)}</b>{' '}
+                ({KIND_LABELS[restoreTarget.kind] ?? restoreTarget.kind}).
+              </p>
+              <p className="text-app-hint">
+                Tiklashdan oldin tizim avtomatik ravishda hozirgi holatning <b>xavfsizlik nusxasini</b> oladi va
+                zaxira faylini tekshiradi. Shundan keyingina {restoreLive ? 'jonli baza almashtiriladi' : 'natija ko‘rsatiladi'}.
+              </p>
+              {summary?.restore_live_enabled ? (
+                <label className="flex items-start gap-2 rounded-lg bg-app-danger/10 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={restoreLive}
+                    onChange={(e) => setRestoreLive(e.target.checked)}
+                  />
+                  <span>
+                    <b className="text-app-danger">Jonli bazani almashtirish.</b> Hozirgi barcha ma'lumotlar ushbu
+                    zaxiradagi holat bilan almashtiriladi. Tiklashdan so'ng ilovani qayta ishga tushiring.
+                  </span>
+                </label>
+              ) : (
+                <p className="rounded-lg bg-app-muted/40 p-3 text-app-hint">
+                  Jonli bazani almashtirish bu serverda o'chirilgan (<code>ALLOW_IN_APP_RESTORE</code>). Tugma faqat
+                  tekshiradi va xavfsizlik nusxasini oladi.
+                </p>
+              )}
+              <div>
+                <p className="mb-1">
+                  Tasdiqlash uchun <b>{RESTORE_PHRASE}</b> deb yozing:
+                </p>
+                <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={RESTORE_PHRASE} />
+              </div>
+              <InlineError message={restoreError} />
+            </div>
+          )}
+        </Modal>
+      )}
     </>
   )
 }
