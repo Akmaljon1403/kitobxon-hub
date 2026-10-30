@@ -460,3 +460,32 @@ async def test_bot_deep_link_for_unregistered_person(client: httpx.AsyncClient, 
     await harness.send(f"/start att_{token['token']}")
     assert "avval ro'yxatdan o'ting" in harness.all_text()
     assert await db.scalar(select(func.count()).select_from(AttendanceRecord)) == 0
+
+
+async def test_rsvp_decline_is_recorded_and_switchable(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    member = await create_user(db)
+    event = await create_event(db, starts_at=datetime.now(UTC) + timedelta(days=1))
+    await db.commit()
+    reg = f"/api/v1/events/{event.id}/register"
+    dec = f"/api/v1/events/{event.id}/decline"
+    headers = member_headers(member)
+
+    # «Bu safar bora olmayman» — a recorded answer, not counted as coming
+    declined = await client.post(dec, headers=headers)
+    assert declined.status_code == 200
+    body = declined.json()
+    assert body["my_answer"] == "declined" and body["is_registered"] is False and body["registered_count"] == 0
+
+    # switch to «Qatnashaman» — only the last answer counts
+    coming = await client.post(reg, headers=headers)
+    assert coming.json()["my_answer"] == "coming" and coming.json()["registered_count"] == 1
+
+    # switch back to declined — the seat is freed again
+    again = await client.post(dec, headers=headers)
+    assert again.json()["my_answer"] == "declined" and again.json()["registered_count"] == 0
+
+    # someone who never answered has no recorded answer
+    other = await create_user(db)
+    await db.commit()
+    detail = await client.get(f"/api/v1/events/{event.id}", headers=member_headers(other))
+    assert detail.json()["my_answer"] is None

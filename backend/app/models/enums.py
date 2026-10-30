@@ -67,8 +67,9 @@ class EventStatus(StrEnum):
 
 
 class RegistrationStatus(StrEnum):
-    REGISTERED = "REGISTERED"
-    CANCELLED = "CANCELLED"
+    REGISTERED = "REGISTERED"  # «✅ Qatnashaman»
+    DECLINED = "DECLINED"  # «✖️ Bu safar bora olmayman» — a recorded answer, not just an absence
+    CANCELLED = "CANCELLED"  # withdrew after registering (legacy; kept for history)
 
 
 class AttendanceSessionStatus(StrEnum):

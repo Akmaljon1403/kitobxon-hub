@@ -477,6 +477,37 @@ async def cancel_registration(session: AsyncSession, *, user_id: uuid.UUID, even
         await session.commit()
 
 
+async def decline(
+    session: AsyncSession, *, user_id: uuid.UUID, event_id: uuid.UUID, shift_id: uuid.UUID | None = None
+) -> EventRegistration:
+    """«✖️ Bu safar bora olmayman» — a recorded answer. The member may switch back to
+    «Qatnashaman» any time before the event ends; only the last answer counts. Declining
+    never takes a seat, so there is no capacity check."""
+    event = await session.scalar(
+        select(Event).where(Event.id == event_id, Event.deleted_at.is_(None)).with_for_update()
+    )
+    if event is None or event.status not in MEMBER_VISIBLE:
+        raise NotFoundError("EVENT_NOT_FOUND", "Tadbir topilmadi.")
+    if event.status != EventStatus.PUBLISHED or event.ends_at < datetime.now(UTC):
+        raise BadRequestError("REGISTRATION_CLOSED", "Bu tadbirga javob berish yopilgan.")
+    now = datetime.now(UTC)
+    registration = await session.scalar(
+        select(EventRegistration).where(EventRegistration.event_id == event_id, EventRegistration.user_id == user_id)
+    )
+    if registration is None:
+        registration = EventRegistration(
+            event_id=event_id, user_id=user_id, registered_at=now, status=RegistrationStatus.DECLINED, shift_id=shift_id
+        )
+        session.add(registration)
+    else:
+        registration.status = RegistrationStatus.DECLINED
+        registration.cancelled_at = now
+        if shift_id is not None:
+            registration.shift_id = shift_id
+    await session.commit()
+    return registration
+
+
 # ---------------------------------------------------------------------------- the end of an event
 
 

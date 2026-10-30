@@ -36,6 +36,13 @@ async def member_events_out(
     for event, registration, record in rows:
         registered, attended = counts[event.id]
         is_registered = registration is not None and registration.status == RegistrationStatus.REGISTERED
+        my_answer = (
+            "coming"
+            if is_registered
+            else "declined"
+            if registration is not None and registration.status == RegistrationStatus.DECLINED
+            else None
+        )
         items.append(
             EventOut(
                 id=event.id,
@@ -60,6 +67,7 @@ async def member_events_out(
                     for shift in shifts[event.id]
                 ],
                 is_registered=is_registered,
+                my_answer=my_answer,
                 my_shift_id=registration.shift_id if is_registered and registration else None,
                 my_attendance=record.status if record and record.status in event_service.COUNTED else None,
             )
@@ -111,6 +119,20 @@ async def register(
 async def cancel_registration(event_id: uuid.UUID, current: CurrentUserDep, db: DbSession) -> Response:
     await event_service.cancel_registration(db, user_id=current.user.id, event_id=event_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/events/{event_id}/decline",
+    response_model=EventOut,
+    summary="«Bu safar bora olmayman» — a recorded answer that can be changed back",
+)
+async def decline(
+    event_id: uuid.UUID, current: CurrentUserDep, db: DbSession, payload: RegisterIn | None = None
+) -> EventOut:
+    await event_service.decline(
+        db, user_id=current.user.id, event_id=event_id, shift_id=payload.shift_id if payload else None
+    )
+    return await get_event(event_id, current, db)
 
 
 async def _check_in_rate_limit(current: Annotated[CurrentUser, Depends(get_current_user)]) -> CurrentUser:
