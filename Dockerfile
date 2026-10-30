@@ -27,11 +27,24 @@ WORKDIR /srv/backend
 
 # Pango/HarfBuzz render the official PDF reports (WeasyPrint); Liberation Serif is a
 # Times-compatible font with full Uzbek Latin support, DejaVu is the fallback.
-# Pango/HarfBuzz render the PDF reports; postgresql-client gives pg_dump/pg_restore for backups.
+#
+# pg_dump / pg_restore (database backups) MUST be >= the database server's major version —
+# otherwise pg_dump aborts with "server version mismatch". Debian's own postgresql-client is
+# too old for newer servers, so we install the client from the official PostgreSQL (PGDG) repo.
+# Set PG_MAJOR to match (or exceed) your server's PostgreSQL major version, e.g. 18 for server 18.x.
+ARG PG_MAJOR=18
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-liberation2 fonts-dejavu-core \
-        postgresql-client \
+        curl ca-certificates \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+        -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends "postgresql-client-${PG_MAJOR}" \
+    && apt-get purge -y --auto-remove curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .
