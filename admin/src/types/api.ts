@@ -742,12 +742,27 @@ export interface BackupSummary {
   enabled: boolean
   encryption_enabled: boolean
   gdrive_enabled: boolean
+  gdrive_configured: boolean
+  gdrive_folder_id: string | null
+  gdrive_source: string | null
   restore_live_enabled: boolean
   retention_daily: number
   retention_monthly: number
   last_success_at: string | null
   total: number
   backups: Backup[]
+}
+
+export interface GdriveStatus {
+  configured: boolean
+  enabled: boolean
+  folder_id: string | null
+  source: string | null
+}
+
+export interface GdriveTestResult {
+  ok: boolean
+  message: string
 }
 
 export interface RestoreResult {

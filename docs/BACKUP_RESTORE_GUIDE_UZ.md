@@ -194,7 +194,12 @@ shifrlangan bo'ladi (xuddi shu baytlar yuboriladi).
 2. Drive'da bitta papka oching va uni service account'ning e-mailiga (`...@...iam.gserviceaccount.com`)
    **ulashing** (Editor huquqi bilan) — shunda u papkaga fayl yuklay oladi.
 3. Papkaning ID'sini oling (papka URL'idagi `folders/` dan keyingi qism).
-4. Muhit o'zgaruvchilarini bering:
+4. **Eng oson yo'l — admin panel:** bosh admin **«Zaxira nusxa» → «☁️ Google Drive nusxa»**
+   bo'limida papka ID va service account JSON faylini joylashtiradi, «Yoqilgan» belgisini
+   qo'yib **Saqlash**ni bosadi, so'ng **«Ulanishni tekshirish»** bilan ulanishni sinab
+   ko'radi. Env o'zgaruvchilari bilan ovora bo'lish shart emas. (Panel sozlamasi env'dan
+   ustun turadi.)
+5. **Muqobil — muhit o'zgaruvchilari** (panelga kira olmasangiz):
 
    ```
    BACKUP_GDRIVE_ENABLED=true
@@ -202,10 +207,11 @@ shifrlangan bo'ladi (xuddi shu baytlar yuboriladi).
    BACKUP_GDRIVE_SERVICE_ACCOUNT=<service account JSON faylining to'liq matni>
    ```
 
-> Service account JSON — bu **maxfiy** ma'lumot (ichida xususiy kalit bor). U faqat
-> server sozlamasida (sir sifatida) beriladi; hech qachon kodga, hisobotga yoki
-> zaxira fayliga yozilmaydi. Og'ir Google kutubxonasi ishlatilmaydi — faqat
-> `httpx` + `PyJWT` orqali Drive REST API'ga murojaat qilinadi.
+> Service account JSON — bu **maxfiy** ma'lumot (ichida xususiy kalit bor). Panel orqali
+> saqlansa, u bazada **shifrlangan** holda (AES-256-GCM, SECRET_KEY bilan) saqlanadi va
+> hech qachon brauzerga qaytarilmaydi; kodga, hisobotga yoki zaxira fayliga yozilmaydi.
+> Og'ir Google kutubxonasi ishlatilmaydi — faqat `httpx` + `PyJWT` orqali Drive REST
+> API'ga murojaat qilinadi.
 
 Drive nusxasi **ixtiyoriy va «best-effort»**: Drive'ga yuklash muvaffaqiyatsiz bo'lsa
 ham, asosiy zaxira (S3/local) baribir olinadi — zaxira olish to'xtamaydi. Zaxira

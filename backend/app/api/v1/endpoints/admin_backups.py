@@ -12,7 +12,15 @@ from app.api.deps import DbSession, SuperAdminDep
 from app.core.config import get_settings
 from app.models import User
 from app.models.enums import BackupKind, BackupStatus
-from app.schemas.backup import BackupOut, BackupSummaryOut, RestoreIn, RestoreResultOut
+from app.schemas.backup import (
+    BackupOut,
+    BackupSummaryOut,
+    GdriveConfigIn,
+    GdriveStatusOut,
+    GdriveTestOut,
+    RestoreIn,
+    RestoreResultOut,
+)
 from app.services import backups as backup_service
 from app.services import gdrive
 
@@ -48,10 +56,14 @@ async def list_backups(_: SuperAdminDep, db: DbSession) -> BackupSummaryOut:
     rows = await backup_service.list_backups(db, limit=100)
     names = await _names(db, {b.created_by for b in rows if b.created_by})
     last_success = next((b.created_at for b in rows if b.status == BackupStatus.SUCCESS), None)
+    gdrive_status = await gdrive.status(db)
     return BackupSummaryOut(
         enabled=settings.backups_enabled,
         encryption_enabled=settings.backup_encryption_key is not None,
-        gdrive_enabled=gdrive.enabled(),
+        gdrive_enabled=gdrive_status["enabled"],
+        gdrive_configured=gdrive_status["configured"],
+        gdrive_folder_id=gdrive_status["folder_id"],
+        gdrive_source=gdrive_status["source"],
         restore_live_enabled=settings.allow_in_app_restore,
         retention_daily=settings.backup_retention_daily,
         retention_monthly=settings.backup_retention_monthly,
@@ -59,6 +71,50 @@ async def list_backups(_: SuperAdminDep, db: DbSession) -> BackupSummaryOut:
         total=len(rows),
         backups=[_out(b, names) for b in rows],
     )
+
+
+# --- Google Drive backup config (super admin; declared before /{backup_id} to avoid path clashes) ---
+
+
+@router.get("/gdrive", response_model=GdriveStatusOut, summary="Google Drive backup config status")
+async def gdrive_config_status(_: SuperAdminDep, db: DbSession) -> GdriveStatusOut:
+    return GdriveStatusOut(**await gdrive.status(db))
+
+
+@router.post("/gdrive", response_model=GdriveStatusOut, summary="Save Google Drive backup config")
+async def gdrive_config_save(body: GdriveConfigIn, current: SuperAdminDep, db: DbSession) -> GdriveStatusOut:
+    await gdrive.save_config(
+        db,
+        actor_id=current.user.id,
+        enabled=body.enabled,
+        folder_id=body.folder_id,
+        service_account=body.service_account,
+    )
+    return GdriveStatusOut(**await gdrive.status(db))
+
+
+@router.post("/gdrive/test", response_model=GdriveTestOut, summary="Test the Google Drive connection")
+async def gdrive_config_test(_: SuperAdminDep, db: DbSession) -> GdriveTestOut:
+    config = await gdrive.load_config(db)
+    if config is None:
+        return GdriveTestOut(ok=False, message="Avval papka ID va service account faylini saqlang.")
+    try:
+        await gdrive.test_config(config)
+    except Exception:
+        return GdriveTestOut(
+            ok=False,
+            message=(
+                "Ulanib bo'lmadi — service account yoki papka ID noto'g'ri, "
+                "yoki papka service account bilan ulashilmagan."
+            ),
+        )
+    return GdriveTestOut(ok=True, message="Ulanish muvaffaqiyatli — Google Drive tayyor.")
+
+
+@router.delete("/gdrive", status_code=status.HTTP_204_NO_CONTENT, summary="Clear Google Drive backup config")
+async def gdrive_config_clear(current: SuperAdminDep, db: DbSession) -> Response:
+    await gdrive.clear_config(db, actor_id=current.user.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("", response_model=BackupOut, status_code=status.HTTP_201_CREATED, summary="Take a backup now")

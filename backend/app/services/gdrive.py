@@ -4,9 +4,11 @@ A second, off-site copy of each backup, on top of the primary file storage (S3/R
 It talks to Google's REST API directly with a service-account JWT — no heavy Google SDK — so
 the only dependencies are ``httpx`` and ``PyJWT`` (already used elsewhere).
 
-It is OFF unless ``backup_gdrive_enabled`` is true and both the service-account JSON and the target
-folder id are set. The service-account JSON is a secret and is never written to code, logs or reports;
-the owner shares the Drive folder with the service account's e-mail so it may upload into it.
+The configuration (enabled flag, target folder id, service-account JSON) is set by a super admin
+from the Admin Panel and stored in ``system_settings`` under ``backup.gdrive``; the service-account
+JSON is a secret and is kept **encrypted at rest** (AES-256-GCM via SECRET_KEY) and never returned
+to the browser. If nothing is set in the panel, the BACKUP_GDRIVE_* environment variables are used
+as a fallback. It is OFF unless enabled with both a folder id and a valid service account.
 """
 
 from __future__ import annotations
@@ -15,11 +17,19 @@ import json
 import logging
 import secrets
 import time
+from dataclasses import dataclass
 
 import httpx
 import jwt
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.models import SystemSetting
+from app.security.crypto import decrypt_secret, encrypt_secret
+from app.services.audit import record_audit
 
 logger = logging.getLogger(__name__)
 
@@ -27,23 +37,139 @@ _SCOPE = "https://www.googleapis.com/auth/drive.file"
 _OAUTH_URL = "https://oauth2.googleapis.com/token"
 _UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 _FILES_URL = "https://www.googleapis.com/drive/v3/files"
+_SETTING_KEY = "backup.gdrive"  # a private key: NOT in the public settings registry
+_ENC_PURPOSE = "backup-gdrive"
 
 
-def _creds() -> dict | None:
-    """Parse the service-account JSON from settings, or None when it is unset/invalid."""
-    raw = get_settings().backup_gdrive_service_account
-    if not raw:
+@dataclass(frozen=True)
+class GdriveConfig:
+    enabled: bool
+    folder_id: str
+    creds: dict
+
+
+def _valid_creds(data: object) -> bool:
+    return isinstance(data, dict) and bool(data.get("client_email")) and bool(data.get("private_key"))
+
+
+async def _stored(session: AsyncSession) -> dict | None:
+    value = await session.scalar(select(SystemSetting.value).where(SystemSetting.key == _SETTING_KEY))
+    return value if isinstance(value, dict) else None
+
+
+def _env_config() -> GdriveConfig | None:
+    """Fallback configuration from the BACKUP_GDRIVE_* environment variables."""
+    settings = get_settings()
+    folder = (settings.backup_gdrive_folder_id or "").strip()
+    raw = settings.backup_gdrive_service_account
+    if not folder or not raw:
         return None
     try:
-        data = json.loads(raw.get_secret_value())
+        creds = json.loads(raw.get_secret_value())
     except (ValueError, TypeError):
         return None
-    return data if isinstance(data, dict) and data.get("client_email") and data.get("private_key") else None
+    if not _valid_creds(creds):
+        return None
+    return GdriveConfig(enabled=bool(settings.backup_gdrive_enabled), folder_id=folder, creds=creds)
 
 
-def enabled() -> bool:
-    settings = get_settings()
-    return bool(settings.backup_gdrive_enabled and settings.backup_gdrive_folder_id and _creds())
+async def load_config(session: AsyncSession) -> GdriveConfig | None:
+    """The usable Drive configuration (panel first, then env), or None when not configured.
+
+    The returned config may be ``enabled=False``: the upload path checks that, the delete path does
+    not (so a copy can still be cleaned up after Drive is turned off).
+    """
+    row = await _stored(session)
+    if row is not None:
+        enc = row.get("service_account_enc")
+        folder = (row.get("folder_id") or "").strip()
+        if not enc or not folder:
+            return None
+        try:
+            creds = json.loads(decrypt_secret(_ENC_PURPOSE, enc))
+        except Exception:
+            logger.warning("Stored Google Drive credentials could not be decrypted")
+            return None
+        if not _valid_creds(creds):
+            return None
+        return GdriveConfig(enabled=bool(row.get("enabled")), folder_id=folder, creds=creds)
+    return _env_config()
+
+
+async def status(session: AsyncSession) -> dict:
+    """What the Admin Panel shows — never the secret itself."""
+    row = await _stored(session)
+    if row is not None:
+        folder = (row.get("folder_id") or "").strip()
+        return {
+            "configured": bool(row.get("service_account_enc")) and bool(folder),
+            "enabled": bool(row.get("enabled")),
+            "folder_id": folder or None,
+            "source": "panel",
+        }
+    env = _env_config()
+    if env is not None:
+        return {"configured": True, "enabled": env.enabled, "folder_id": env.folder_id, "source": "env"}
+    return {"configured": False, "enabled": False, "folder_id": None, "source": None}
+
+
+async def save_config(
+    session: AsyncSession, *, actor_id, enabled: bool, folder_id: str, service_account: str | None
+) -> None:
+    """Store the Drive config from the panel. ``service_account`` None/empty keeps the existing key."""
+    from app.core.errors import ValidationFailedError
+
+    folder = (folder_id or "").strip()
+    existing = await _stored(session)
+    enc = existing.get("service_account_enc") if existing else None
+    provided = (service_account or "").strip()
+    if provided:
+        try:
+            data = json.loads(provided)
+        except (ValueError, TypeError) as exc:
+            raise ValidationFailedError(
+                "GDRIVE_BAD_JSON", "Service account fayli noto'g'ri — faylning to'liq matnini joylashtiring."
+            ) from exc
+        if not _valid_creds(data):
+            raise ValidationFailedError(
+                "GDRIVE_BAD_JSON", "Service account faylida client_email yoki private_key topilmadi."
+            )
+        enc = encrypt_secret(_ENC_PURPOSE, provided)
+    if enabled and (not folder or not enc):
+        raise ValidationFailedError(
+            "GDRIVE_INCOMPLETE", "Yoqishdan oldin papka ID va service account faylini kiriting."
+        )
+    value = {"enabled": bool(enabled), "folder_id": folder, "service_account_enc": enc}
+    statement = pg_insert(SystemSetting).values(
+        key=_SETTING_KEY, value=value, description="Google Drive backup configuration", updated_by=actor_id
+    )
+    await session.execute(
+        statement.on_conflict_do_update(
+            index_elements=[SystemSetting.key], set_={"value": value, "updated_by": actor_id}
+        )
+    )
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="GDRIVE_CONFIG",
+        entity_type="setting",
+        entity_id=_SETTING_KEY,
+        after={"enabled": value["enabled"], "folder_set": bool(folder), "key_set": bool(enc)},
+    )
+    await session.commit()
+
+
+async def clear_config(session: AsyncSession, *, actor_id) -> None:
+    await session.execute(sa_delete(SystemSetting).where(SystemSetting.key == _SETTING_KEY))
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="GDRIVE_CONFIG",
+        entity_type="setting",
+        entity_id=_SETTING_KEY,
+        after={"cleared": True},
+    )
+    await session.commit()
 
 
 def _client(timeout: float) -> httpx.AsyncClient:
@@ -75,14 +201,17 @@ async def _access_token(creds: dict) -> str:
         return resp.json()["access_token"]
 
 
-async def upload_backup(filename: str, data: bytes, content_type: str = "application/octet-stream") -> str:
+async def test_config(config: GdriveConfig) -> None:
+    """Raise if the credentials cannot obtain an access token (used by the «Test» button)."""
+    await _access_token(config.creds)
+
+
+async def upload_backup(
+    config: GdriveConfig, filename: str, data: bytes, content_type: str = "application/octet-stream"
+) -> str:
     """Upload one backup blob into the configured Drive folder; return the Drive file id."""
-    creds = _creds()
-    if creds is None:  # pragma: no cover - guarded by enabled() at the call site
-        raise RuntimeError("Google Drive is not configured")
-    folder_id = get_settings().backup_gdrive_folder_id
-    token = await _access_token(creds)
-    metadata = {"name": filename, "parents": [folder_id]}
+    token = await _access_token(config.creds)
+    metadata = {"name": filename, "parents": [config.folder_id]}
     # Google Drive wants a multipart/related body (metadata part, then the file part).
     boundary = f"kitobxon-{secrets.token_hex(16)}"
     body = (
@@ -104,11 +233,8 @@ async def upload_backup(filename: str, data: bytes, content_type: str = "applica
         return resp.json()["id"]
 
 
-async def delete_backup_file(file_id: str) -> None:
-    creds = _creds()
-    if creds is None:  # pragma: no cover - guarded by enabled() at the call site
-        raise RuntimeError("Google Drive is not configured")
-    token = await _access_token(creds)
+async def delete_backup_file(config: GdriveConfig, file_id: str) -> None:
+    token = await _access_token(config.creds)
     async with _client(30) as client:
         resp = await client.delete(
             f"{_FILES_URL}/{file_id}",
