@@ -32,6 +32,7 @@ def _out(backup, names: dict[uuid.UUID, str]) -> BackupOut:
         status=backup.status,
         size_bytes=backup.size_bytes,
         sha256=backup.sha256,
+        encrypted=backup.encrypted,
         db_name=backup.db_name,
         error=backup.error,
         created_at=backup.created_at,
@@ -47,6 +48,7 @@ async def list_backups(_: SuperAdminDep, db: DbSession) -> BackupSummaryOut:
     last_success = next((b.created_at for b in rows if b.status == BackupStatus.SUCCESS), None)
     return BackupSummaryOut(
         enabled=settings.backups_enabled,
+        encryption_enabled=settings.backup_encryption_key is not None,
         retention_daily=settings.backup_retention_daily,
         retention_monthly=settings.backup_retention_monthly,
         last_success_at=last_success,

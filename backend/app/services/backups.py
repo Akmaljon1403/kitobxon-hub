@@ -39,6 +39,39 @@ logger = logging.getLogger(__name__)
 _PGDUMP_TIMEOUT = 600  # seconds; a club database is small, but a slow network link needs room
 _URL_IN_TEXT = re.compile(r"postgres(?:ql)?(?:\+\w+)?://\S+")
 
+# AES-256-GCM at-rest encryption for the stored dump. The 32-byte key is derived from
+# BACKUP_ENCRYPTION_KEY so the owner can set any strong passphrase; the nonce is prepended
+# to the ciphertext. The dump is useless to anyone holding the storage but not this key.
+_BACKUP_AAD = b"kitobxon-backup"
+_BACKUP_NONCE_BYTES = 12
+
+
+def _encryption_key() -> str | None:
+    key = get_settings().backup_encryption_key
+    value = key.get_secret_value().strip() if key else ""
+    return value or None
+
+
+def _derive_backup_key(passphrase: str) -> bytes:
+    return hashlib.sha256(f"kitobxon-backup:{passphrase}".encode()).digest()
+
+
+def _encrypt(data: bytes, passphrase: str) -> bytes:
+    import secrets
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce = secrets.token_bytes(_BACKUP_NONCE_BYTES)
+    ciphertext = AESGCM(_derive_backup_key(passphrase)).encrypt(nonce, data, _BACKUP_AAD)
+    return nonce + ciphertext
+
+
+def _decrypt(blob: bytes, passphrase: str) -> bytes:
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce, ciphertext = blob[:_BACKUP_NONCE_BYTES], blob[_BACKUP_NONCE_BYTES:]
+    return AESGCM(_derive_backup_key(passphrase)).decrypt(nonce, ciphertext, _BACKUP_AAD)
+
 
 def _libpq_url() -> str:
     """The database URL in libpq form (no SQLAlchemy ``+driver``) for pg_dump / pg_restore."""
@@ -102,19 +135,25 @@ async def create_backup(
         return existing
     db_name = _db_name()
     stamp = now.astimezone(local_tz()).strftime("%Y%m%d-%H%M%S")
-    key = f"backups/{kind.value.lower()}/kitobxon_{db_name}_{stamp}_{uuid.uuid4().hex[:8]}.dump"
+    passphrase = _encryption_key()
+    suffix = ".dump.enc" if passphrase else ".dump"
+    key = f"backups/{kind.value.lower()}/kitobxon_{db_name}_{stamp}_{uuid.uuid4().hex[:8]}{suffix}"
     try:
         with tempfile.TemporaryDirectory(prefix="kitobxon-backup-") as tmp:
             target = Path(tmp) / "dump"
             await _run_pg_dump(target)
             data = target.read_bytes()
-        await get_storage().put(key, data, "application/octet-stream")
+        # sha256 is of the plaintext dump, so integrity is verified after decryption on restore.
+        checksum = hashlib.sha256(data).hexdigest()
+        stored = _encrypt(data, passphrase) if passphrase else data
+        await get_storage().put(key, stored, "application/octet-stream")
         backup = Backup(
             kind=kind,
             status=BackupStatus.SUCCESS,
             storage_key=key,
             size_bytes=len(data),
-            sha256=hashlib.sha256(data).hexdigest(),
+            sha256=checksum,
+            encrypted=bool(passphrase),
             db_name=db_name,
             created_by=actor_id,
         )
@@ -158,8 +197,34 @@ async def download(session: AsyncSession, backup_id: uuid.UUID) -> tuple[str, by
         from app.core.errors import BadRequestError
 
         raise BadRequestError("BACKUP_UNAVAILABLE", "Bu zaxira nusxa fayli mavjud emas.")
-    data = await get_storage().get(backup.storage_key)
-    return backup.storage_key.rsplit("/", 1)[-1], data
+    stored = await get_storage().get(backup.storage_key)
+    data = await _plaintext(backup, stored)
+    # The downloaded file is always a ready-to-restore .dump (decrypted); drop the .enc marker.
+    filename = backup.storage_key.rsplit("/", 1)[-1].removesuffix(".enc")
+    return filename, data
+
+
+async def _plaintext(backup: Backup, stored: bytes) -> bytes:
+    """Return the restorable dump bytes: decrypt if the backup was encrypted and verify its checksum."""
+    from app.core.errors import BadRequestError
+
+    if backup.encrypted:
+        passphrase = _encryption_key()
+        if not passphrase:
+            raise BadRequestError(
+                "BACKUP_KEY_MISSING", "Bu zaxira nusxa shifrlangan — BACKUP_ENCRYPTION_KEY sozlanmagan."
+            )
+        try:
+            data = _decrypt(stored, passphrase)
+        except Exception as exc:  # wrong key or a corrupted file
+            raise BadRequestError(
+                "BACKUP_DECRYPT_FAILED", "Zaxira nusxani ochib bo'lmadi — shifrlash kaliti noto'g'ri."
+            ) from exc
+    else:
+        data = stored
+    if backup.sha256 and hashlib.sha256(data).hexdigest() != backup.sha256:
+        raise BadRequestError("BACKUP_CORRUPTED", "Zaxira nusxa fayli buzilgan (nazorat summasi mos kelmadi).")
+    return data
 
 
 async def delete_backup(session: AsyncSession, *, actor_id: uuid.UUID, backup_id: uuid.UUID) -> None:

@@ -14,6 +14,7 @@ class BackupOut(BaseModel):
     status: BackupStatus
     size_bytes: int
     sha256: str | None
+    encrypted: bool = False
     db_name: str | None
     error: str | None
     created_at: datetime
@@ -22,6 +23,7 @@ class BackupOut(BaseModel):
 
 class BackupSummaryOut(BaseModel):
     enabled: bool
+    encryption_enabled: bool
     retention_daily: int
     retention_monthly: int
     last_success_at: datetime | None

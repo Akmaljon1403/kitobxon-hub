@@ -131,6 +131,11 @@ class Settings(BaseSettings):
     pg_restore_path: str = "pg_restore"
     backup_retention_daily: int = Field(default=14, ge=1, le=365, description="How many daily backups to keep")
     backup_retention_monthly: int = Field(default=12, ge=1, le=120, description="How many monthly backups to keep")
+    # When set, every backup is encrypted at rest with AES-256-GCM (a key derived from this value).
+    # Keep this OUTSIDE the backup storage — a backup file is useless to anyone without it, and anyone
+    # who loses it can no longer restore. Generate one with:
+    #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+    backup_encryption_key: SecretStr | None = None
 
     # ---- Licence (only for copies rented to other organisations; the club's own server needs none) ----
     licence_required: bool = False

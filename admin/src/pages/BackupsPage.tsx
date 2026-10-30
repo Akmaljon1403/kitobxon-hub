@@ -87,6 +87,11 @@ export function BackupsPage() {
             ) : (
               <Badge tone="warning">Avtomatik zaxira o'chirilgan</Badge>
             )}
+            {summary.encryption_enabled ? (
+              <Badge tone="success">🔒 Shifrlash yoqilgan</Badge>
+            ) : (
+              <Badge tone="neutral">Shifrlash o'chirilgan</Badge>
+            )}
             <span className="text-app-hint">
               Har kecha soat 23:00 (Toshkent) da kunlik, oyning 1-sanasida oylik nusxa olinadi.
             </span>
@@ -118,6 +123,7 @@ export function BackupsPage() {
                 <td className="px-4 py-2.5">{KIND_LABELS[backup.kind] ?? backup.kind}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">
                   {backup.status === 'SUCCESS' ? humanSize(backup.size_bytes) : '—'}
+                  {backup.encrypted && <span title="Shifrlangan"> 🔒</span>}
                 </td>
                 <td className="px-4 py-2.5">
                   <Badge tone={STATUS_TONE[backup.status]}>{backup.status === 'SUCCESS' ? 'Tayyor' : 'Xatolik'}</Badge>

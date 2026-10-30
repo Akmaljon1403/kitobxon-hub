@@ -710,6 +710,7 @@ export interface Backup {
   status: BackupStatus
   size_bytes: number
   sha256: string | null
+  encrypted: boolean
   db_name: string | null
   error: string | null
   created_at: string
@@ -718,6 +719,7 @@ export interface Backup {
 
 export interface BackupSummary {
   enabled: boolean
+  encryption_enabled: boolean
   retention_daily: number
   retention_monthly: number
   last_success_at: string | null

@@ -121,7 +121,44 @@ dropdb kitobxon_restore_test
 
 ---
 
-## 5. Sozlash (server)
+## 5. Zaxira fayllarini shifrlash (ixtiyoriy, lekin tavsiya etiladi)
+
+`BACKUP_ENCRYPTION_KEY` berilsa, **har bir zaxira fayli saqlashdan oldin
+AES-256-GCM bilan shifrlanadi**. Shunda S3/R2/Google Drive’da yotgan fayl kalitsiz
+hech kimga foydasiz — uni faqat shu kalit bilan ochib bo'ladi.
+
+**Kalitni qanday yaratish:**
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Chiqqan satrni muhit o'zgaruvchisiga qo'ying:
+
+```
+BACKUP_ENCRYPTION_KEY=<yuqoridagi tasodifiy satr>
+```
+
+**Juda muhim qoidalar:**
+
+- Kalitni **zaxiralardan alohida** joyda saqlang (zaxira qaysi diskda/bulutda yotsa,
+  kalit o'sha yerda bo'lmasin). Masalan: parol menejeri yoki sejf.
+- Kalit **yo'qolsa — shifrlangan zaxiralarni tiklab bo'lmaydi.** Nusxasini ishonchli
+  joyda saqlang.
+- Kalit **o'zgartirilsa**, eski kalit bilan olingan nusxalar o'sha eski kalitnigina
+  talab qiladi — eski kalitni ham saqlab turing.
+- Kalit hech qachon kodga, hisobotga yoki zaxira faylining ichiga yozilmaydi.
+
+Admin paneldagi **⬇ Yuklab olish** tugmasi faylni **avtomatik ochib** (deshifrlab)
+beradi — ya'ni yuklangan `.dump` to'g'ridan-to'g'ri `pg_restore`’ga tayyor. Faqat
+xotiradan to'g'ridan-to'g'ri olingan `.dump.enc` fayli shifrlangan bo'ladi.
+
+Shifrlash yoqilgani admin panelda «🔒 Shifrlash yoqilgan» belgisi bilan ko'rinadi,
+har bir shifrlangan nusxa yonida 🔒 turadi.
+
+---
+
+## 6. Sozlash (server)
 
 Muhit o'zgaruvchilari (`.env` yoki Render/Compose sozlamalari):
 
@@ -129,6 +166,8 @@ Muhit o'zgaruvchilari (`.env` yoki Render/Compose sozlamalari):
 BACKUPS_ENABLED=true
 BACKUP_RETENTION_DAILY=14
 BACKUP_RETENTION_MONTHLY=12
+# Shifrlash (ixtiyoriy) — berilsa zaxiralar AES-256-GCM bilan shifrlanadi:
+# BACKUP_ENCRYPTION_KEY=<python -c "import secrets; print(secrets.token_urlsafe(48))">
 # pg_dump / pg_restore PATH da bo'lmasa, to'liq yo'lni ko'rsating:
 # PG_DUMP_PATH=/usr/lib/postgresql/16/bin/pg_dump
 # PG_RESTORE_PATH=/usr/lib/postgresql/16/bin/pg_restore
@@ -140,20 +179,18 @@ BACKUP_RETENTION_MONTHLY=12
 
 ---
 
-## 6. Egasi hal qiladigan masalalar (ixtiyoriy kelgusi bosqich)
+## 7. Egasi hal qiladigan masalalar
 
-Quyidagilar maxfiy kalit/hisob talab qilgani uchun egasining qaroriga qoldirilgan:
-
-- **Tashqi nusxa (Google Drive va b.):** hozircha zaxiralar tizim fayl xotirasida
-  (S3/local) saqlanadi. Google Drive’ga qo'shimcha nusxa kerak bo'lsa, Google xizmat
-  hisobi (service account) kaliti kerak — bu maxfiy ma'lumot hech qachon kodga yoki
-  hisobotga yozilmaydi, alohida (sir sifatida) beriladi.
-- **Shifrlash:** zaxira fayllarini shifrlash kerak bo'lsa, shifrlash kaliti
-  zaxiralardan **alohida** joyda saqlanishi shart.
-- **Admin paneldan tiklash tugmasi:** ishchi bazani ilova ichidan bir tugma bilan
-  almashtirish xavfli bo'lgani uchun ataylab qilinmagan. Agar baribir kerak bo'lsa,
-  u faqat qattiq tasdiq (bosh admin paroli/tasdiq matni) va avtomatik «tiklashdan
-  oldingi» zaxira bilan qo'shiladi.
+- **Shifrlash ✅ (tayyor):** `BACKUP_ENCRYPTION_KEY` berilsa zaxiralar AES-256-GCM
+  bilan shifrlanadi (5-bo'limga qarang). Kalit zaxiralardan alohida saqlanadi.
+- **Tashqi nusxa (Google Drive va b.):** zaxiralar tizim fayl xotirasida (S3/local)
+  saqlanadi; `STORAGE_BACKEND=s3` bo'lsa, ular allaqachon tashqi doimiy xotirada.
+  Google Drive’ga qo'shimcha nusxa kerak bo'lsa, Google xizmat hisobi (service
+  account) kaliti kerak — bu maxfiy ma'lumot hech qachon kodga yoki hisobotga
+  yozilmaydi, alohida (sir sifatida) beriladi.
+- **Admin paneldan tiklash tugmasi:** ishchi bazani ilova ichidan almashtirish
+  xavfli bo'lgani uchun u faqat qattiq tasdiq (tasdiq matnini yozish) va avtomatik
+  «tiklashdan oldingi» zaxira bilan qo'shiladi.
 
 ---
 

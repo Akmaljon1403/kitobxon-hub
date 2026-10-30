@@ -37,6 +37,7 @@ async def test_super_admin_takes_lists_downloads_and_deletes_a_backup(
     assert body["kind"] == "MANUAL"
     assert body["status"] == "SUCCESS", body.get("error")
     assert body["size_bytes"] > 0 and len(body["sha256"]) == 64
+    assert body["encrypted"] is False  # no BACKUP_ENCRYPTION_KEY set in tests
     backup_id = body["id"]
 
     # It appears in the list with the settings summary.
@@ -44,6 +45,7 @@ async def test_super_admin_takes_lists_downloads_and_deletes_a_backup(
     assert listing.status_code == 200
     summary = listing.json()
     assert summary["enabled"] is True and summary["total"] >= 1
+    assert summary["encryption_enabled"] is False
     assert any(b["id"] == backup_id for b in summary["backups"])
 
     # The dump file can be downloaded (custom-format dumps start with the "PGDMP" magic).
@@ -94,3 +96,47 @@ async def test_download_and_delete_guard_missing_backup(client: httpx.AsyncClien
     missing = uuid.uuid4()
     gone = await client.get(f"/api/v1/admin/backups/{missing}/download", headers=admin_headers(boss))
     assert gone.status_code == 404 and gone.json()["error"]["code"] == "BACKUP_NOT_FOUND"
+
+
+async def test_backup_is_encrypted_at_rest_and_decrypts_on_download(
+    client: httpx.AsyncClient, db: AsyncSession, monkeypatch
+) -> None:
+    boss = await _super_admin(db)
+    headers = admin_headers(boss)
+    # Pretend BACKUP_ENCRYPTION_KEY is set (isolates the key from the real settings used for pg_dump).
+    monkeypatch.setattr(backup_service, "_encryption_key", lambda: "a-strong-test-passphrase")
+
+    created = await client.post("/api/v1/admin/backups", headers=headers)
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["status"] == "SUCCESS", body.get("error")
+    assert body["encrypted"] is True
+    backup_id = body["id"]
+
+    # The blob actually stored is ciphertext — not a readable pg_dump — and keeps a .enc marker.
+    backup = await db.scalar(select(Backup).where(Backup.id == uuid.UUID(backup_id)))
+    assert backup is not None and backup.storage_key.endswith(".dump.enc")
+    stored = await backup_service.get_storage().get(backup.storage_key)
+    assert stored[:5] != b"PGDMP"
+
+    # Downloading returns the decrypted, restorable dump (PGDMP magic); the filename drops .enc.
+    download = await client.get(f"/api/v1/admin/backups/{backup_id}/download", headers=headers)
+    assert download.status_code == 200
+    assert download.content[:5] == b"PGDMP"
+    assert ".enc" not in download.headers["content-disposition"]
+
+
+async def test_encrypted_backup_needs_the_key_to_download(
+    client: httpx.AsyncClient, db: AsyncSession, monkeypatch
+) -> None:
+    boss = await _super_admin(db)
+    headers = admin_headers(boss)
+    monkeypatch.setattr(backup_service, "_encryption_key", lambda: "a-strong-test-passphrase")
+    created = await client.post("/api/v1/admin/backups", headers=headers)
+    assert created.status_code == 201, created.text
+    backup_id = created.json()["id"]
+
+    # The key is now gone — the encrypted dump can no longer be opened.
+    monkeypatch.setattr(backup_service, "_encryption_key", lambda: None)
+    blocked = await client.get(f"/api/v1/admin/backups/{backup_id}/download", headers=headers)
+    assert blocked.status_code == 400 and blocked.json()["error"]["code"] == "BACKUP_KEY_MISSING"
