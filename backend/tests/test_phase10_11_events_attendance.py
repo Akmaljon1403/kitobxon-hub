@@ -528,3 +528,34 @@ async def test_admin_rsvp_summary_counts_and_registrations(client: httpx.AsyncCl
     assert export.status_code == 200
     assert export.headers["content-type"].startswith("text/csv")
     assert coming_member.last_name in export.text and "Falsafa" in export.text
+
+
+async def test_event_analytics_planned_vs_actual(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    from app.models.enums import AttendanceMethod, AttendanceStatus
+
+    admin = await _admin(db, Perm.EVENT_VIEW)
+    coming1, coming2, decliner = await create_user(db), await create_user(db), await create_user(db)
+    event = await create_event(db, starts_at=datetime.now(UTC) + timedelta(days=1))
+    await db.commit()
+
+    await client.post(f"/api/v1/events/{event.id}/register", headers=member_headers(coming1))
+    await client.post(f"/api/v1/events/{event.id}/register", headers=member_headers(coming2))
+    await client.post(f"/api/v1/events/{event.id}/decline", headers=member_headers(decliner))
+    # Only one of the two who said they'd come actually checks in (verified).
+    db.add(
+        AttendanceRecord(
+            event_id=event.id, user_id=coming1.id, method=AttendanceMethod.MANUAL, status=AttendanceStatus.VERIFIED
+        )
+    )
+    await db.commit()
+
+    analytics = await client.get(f"/api/v1/admin/events/{event.id}/analytics", headers=admin_headers(admin))
+    assert analytics.status_code == 200, analytics.text
+    data = analytics.json()
+    assert data["coming"] == 2 and data["declined"] == 1
+    assert data["registered"] == 2 and data["attended"] == 1
+    assert data["attendance_rate"] == 50  # 1 of 2 planned actually came
+
+    export = await client.get(f"/api/v1/admin/events/{event.id}/analytics.csv", headers=admin_headers(admin))
+    assert export.status_code == 200 and export.headers["content-type"].startswith("text/csv")
+    assert "Qatnashish darajasi" in export.text

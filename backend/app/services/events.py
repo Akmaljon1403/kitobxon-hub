@@ -425,11 +425,93 @@ async def rsvp_summary(session: AsyncSession, event_id: uuid.UUID) -> dict[str, 
     }
 
 
+async def attendance_analytics(session: AsyncSession, event_id: uuid.UUID) -> dict[str, Any]:
+    """«Reja va amal» (planned vs actual) for an event: who said they'd come (RSVP) against who
+    actually checked in (verified attendance), for the whole event and per shift. Real data only."""
+    rsvp = await rsvp_summary(session, event_id)
+    registered, attended = (await counts(session, [event_id]))[event_id]
+    shifts = await shifts_of(session, event_id)
+    attended_by_shift: dict[uuid.UUID, int] = {}
+    if shifts:
+        rows = await session.execute(
+            select(EventRegistration.shift_id, func.count())
+            .join(
+                AttendanceRecord,
+                and_(
+                    AttendanceRecord.event_id == EventRegistration.event_id,
+                    AttendanceRecord.user_id == EventRegistration.user_id,
+                ),
+            )
+            .where(
+                EventRegistration.event_id == event_id,
+                EventRegistration.shift_id.is_not(None),
+                AttendanceRecord.status.in_(COUNTED),
+            )
+            .group_by(EventRegistration.shift_id)
+        )
+        attended_by_shift = {shift_id: int(count) for shift_id, count in rows}
+
+    def _rate(actual: int, planned: int) -> int:
+        return round(actual / planned * 100) if planned else 0
+
+    by_position = {item["shift_id"]: item for item in rsvp["shifts"]}
+    return {
+        "event_id": event_id,
+        "coming": rsvp["coming"],
+        "declined": rsvp["declined"],
+        "no_answer": rsvp["no_answer"],
+        "registered": registered,
+        "attended": attended,
+        "attendance_rate": _rate(attended, registered),
+        "shifts": [
+            {
+                "position": shift.position,
+                "starts_at": shift.starts_at,
+                "coming": (coming := by_position.get(shift.id, {}).get("coming", 0)),
+                "declined": by_position.get(shift.id, {}).get("declined", 0),
+                "attended": (shift_attended := attended_by_shift.get(shift.id, 0)),
+                "attendance_rate": _rate(shift_attended, coming),
+            }
+            for shift in shifts
+        ],
+    }
+
+
 _RSVP_LABELS = {
     RegistrationStatus.REGISTERED: "Qatnashaman",
     RegistrationStatus.DECLINED: "Bora olmayman",
     RegistrationStatus.CANCELLED: "Bekor qilindi",
 }
+
+
+async def export_analytics_csv(session: AsyncSession, event_id: uuid.UUID) -> tuple[str, str]:
+    """(file name, CSV with BOM) of the event's planned-vs-actual analytics, per event and shift."""
+    event = await get_event(session, event_id)
+    data = await attendance_analytics(session, event_id)
+    buffer = io.StringIO()
+    writer = excel_writer(buffer)
+    writer.writerow(["Ko'rsatkich", "Qiymat"])
+    writer.writerow(["Qatnashaman (RSVP)", data["coming"]])
+    writer.writerow(["Bora olmayman", data["declined"]])
+    writer.writerow(["Javob bermagan", data["no_answer"]])
+    writer.writerow(["Ro'yxatdan o'tgan (reja)", data["registered"]])
+    writer.writerow(["Qatnashdi (amal)", data["attended"]])
+    writer.writerow(["Qatnashish darajasi (%)", data["attendance_rate"]])
+    if data["shifts"]:
+        writer.writerow([])
+        writer.writerow(["Smena", "Qatnashaman", "Bora olmayman", "Qatnashdi", "Daraja (%)"])
+        for shift in data["shifts"]:
+            writer.writerow(
+                [
+                    f"{shift['position']}-smena",
+                    shift["coming"],
+                    shift["declined"],
+                    shift["attended"],
+                    shift["attendance_rate"],
+                ]
+            )
+    safe_title = "".join(ch if ch.isalnum() else "_" for ch in event.title)[:40] or "tadbir"
+    return f"tahlil_{safe_title}.csv", "﻿" + buffer.getvalue()
 
 
 async def export_registrations_csv(session: AsyncSession, event_id: uuid.UUID) -> tuple[str, str]:

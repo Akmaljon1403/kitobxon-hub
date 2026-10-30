@@ -66,19 +66,21 @@ export function RsvpPage({ eventId }: { eventId: string }) {
     })
   }, [rows, search, answer, faculty, course, group])
 
-  async function downloadCsv() {
+  async function downloadFile(path: string, prefix: string) {
     setError(null)
     try {
-      const blob = await download(`/api/v1/admin/events/${eventId}/registrations.csv`)
+      const blob = await download(path)
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = `javoblar_${event.state.status === 'success' ? event.state.data.title : 'tadbir'}.csv`
+      link.download = `${prefix}_${event.state.status === 'success' ? event.state.data.title : 'tadbir'}.csv`
       link.click()
       URL.revokeObjectURL(link.href)
     } catch {
       setError("Faylni yuklab bo'lmadi.")
     }
   }
+  const downloadCsv = () => downloadFile(`/api/v1/admin/events/${eventId}/registrations.csv`, 'javoblar')
+  const downloadAnalytics = () => downloadFile(`/api/v1/admin/events/${eventId}/analytics.csv`, 'tahlil')
 
   const data = summary.state.status === 'success' ? summary.state.data : null
 
@@ -96,7 +98,10 @@ export function RsvpPage({ eventId }: { eventId: string }) {
               Davomat
             </Button>
             <Button variant="secondary" onClick={() => void downloadCsv()} disabled={rows.length === 0}>
-              ⬇ Excel (CSV)
+              ⬇ Javoblar (CSV)
+            </Button>
+            <Button variant="secondary" onClick={() => void downloadAnalytics()}>
+              📊 Tahlil (CSV)
             </Button>
           </>
         }
