@@ -136,6 +136,10 @@ class Settings(BaseSettings):
     # who loses it can no longer restore. Generate one with:
     #   python -c "import secrets; print(secrets.token_urlsafe(48))"
     backup_encryption_key: SecretStr | None = None
+    # Safety interlock for the in-app restore button. OFF by default: the button then only validates the
+    # dump and takes a pre-restore safety backup. Set to true to ALSO let a super admin overwrite the live
+    # database from the panel (do this only during maintenance; restart the app afterwards).
+    allow_in_app_restore: bool = False
 
     # ---- Licence (only for copies rented to other organisations; the club's own server needs none) ----
     licence_required: bool = False

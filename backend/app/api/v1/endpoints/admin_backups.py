@@ -12,7 +12,7 @@ from app.api.deps import DbSession, SuperAdminDep
 from app.core.config import get_settings
 from app.models import User
 from app.models.enums import BackupKind, BackupStatus
-from app.schemas.backup import BackupOut, BackupSummaryOut
+from app.schemas.backup import BackupOut, BackupSummaryOut, RestoreIn, RestoreResultOut
 from app.services import backups as backup_service
 
 router = APIRouter(prefix="/admin/backups", tags=["admin: backups"])
@@ -49,6 +49,7 @@ async def list_backups(_: SuperAdminDep, db: DbSession) -> BackupSummaryOut:
     return BackupSummaryOut(
         enabled=settings.backups_enabled,
         encryption_enabled=settings.backup_encryption_key is not None,
+        restore_live_enabled=settings.allow_in_app_restore,
         retention_daily=settings.backup_retention_daily,
         retention_monthly=settings.backup_retention_monthly,
         last_success_at=last_success,
@@ -72,6 +73,16 @@ async def download_backup(backup_id: uuid.UUID, _: SuperAdminDep, db: DbSession)
         media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
     )
+
+
+@router.post("/{backup_id}/restore", response_model=RestoreResultOut, summary="Restore from a backup (safe)")
+async def restore_backup(
+    backup_id: uuid.UUID, body: RestoreIn, current: SuperAdminDep, db: DbSession
+) -> RestoreResultOut:
+    result = await backup_service.restore_backup(
+        db, actor_id=current.user.id, backup_id=backup_id, confirm=body.confirm, live=body.live
+    )
+    return RestoreResultOut(**result)
 
 
 @router.delete("/{backup_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a backup")

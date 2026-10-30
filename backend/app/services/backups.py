@@ -227,6 +227,118 @@ async def _plaintext(backup: Backup, stored: bytes) -> bytes:
     return data
 
 
+# The super admin must type this exact phrase to confirm a restore (shown in the panel).
+RESTORE_CONFIRM_PHRASE = "TIKLASHNI TASDIQLAYMAN"
+
+
+async def _pg_restore_list(dump_path: Path) -> int:
+    """Validate a dump WITHOUT touching any database: read its archive table of contents.
+
+    Proves the file is an intact, restorable custom-format dump. Returns the number of entries.
+    """
+    settings = get_settings()
+    process = await asyncio.create_subprocess_exec(
+        settings.pg_restore_path,
+        "--list",
+        str(dump_path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=_PGDUMP_TIMEOUT)
+    if process.returncode != 0:
+        raise RuntimeError(_scrub(stderr.decode("utf-8", "replace")) or "pg_restore --list failed")
+    return sum(1 for line in stdout.decode("utf-8", "replace").splitlines() if line and not line.startswith(";"))
+
+
+async def _pg_restore_live(dump_path: Path) -> None:  # pragma: no cover - destructive; verified by operators
+    """Overwrite the live database from the dump, atomically (all-or-nothing)."""
+    settings = get_settings()
+    process = await asyncio.create_subprocess_exec(
+        settings.pg_restore_path,
+        "--clean",
+        "--if-exists",
+        "--no-owner",
+        "--no-privileges",
+        "--single-transaction",  # the whole restore is one transaction: on any error nothing is changed
+        "--dbname",
+        _libpq_url(),
+        str(dump_path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    _, stderr = await asyncio.wait_for(process.communicate(), timeout=_PGDUMP_TIMEOUT)
+    if process.returncode != 0:
+        raise RuntimeError(_scrub(stderr.decode("utf-8", "replace")) or "pg_restore failed")
+
+
+async def restore_backup(
+    session: AsyncSession, *, actor_id: uuid.UUID, backup_id: uuid.UUID, confirm: str, live: bool
+) -> dict:
+    """Safely restore from a backup.
+
+    Always: verify the typed confirmation, decrypt and checksum the dump, take a fresh pre-restore
+    safety backup, and validate the dump (read-only). The live overwrite runs only when the operator
+    has armed ``allow_in_app_restore`` AND ``live`` is requested — and it is the very last step.
+    """
+    from app.core.errors import BadRequestError
+
+    if confirm.strip() != RESTORE_CONFIRM_PHRASE:
+        raise BadRequestError(
+            "RESTORE_NOT_CONFIRMED", f"Tiklashni tasdiqlash uchun «{RESTORE_CONFIRM_PHRASE}» deb yozing."
+        )
+    backup = await get_backup(session, backup_id)
+    if backup.status != BackupStatus.SUCCESS or not backup.storage_key:
+        raise BadRequestError("BACKUP_UNAVAILABLE", "Bu zaxira nusxa fayli mavjud emas.")
+
+    # Decrypt (if needed) and verify the checksum before we rely on this dump.
+    stored = await get_storage().get(backup.storage_key)
+    data = await _plaintext(backup, stored)
+
+    # Safety net first: a pre-restore backup of the current state. Never restore without one.
+    pre = await create_backup(session, kind=BackupKind.MANUAL, actor_id=actor_id)
+    if pre.status != BackupStatus.SUCCESS:
+        raise BadRequestError(
+            "RESTORE_PRECHECK_FAILED", "Tiklashdan oldingi xavfsizlik nusxasi olinmadi — tiklash to'xtatildi."
+        )
+
+    settings = get_settings()
+    live_available = settings.allow_in_app_restore
+    with tempfile.TemporaryDirectory(prefix="kitobxon-restore-") as tmp:
+        dump_path = Path(tmp) / "restore.dump"
+        dump_path.write_bytes(data)
+        entries = await _pg_restore_list(dump_path)  # read-only validation; no database is touched
+
+        do_live = live and live_available
+        # Record the intent and commit it BEFORE the destructive step, so the audit survives the overwrite.
+        record_audit(
+            session,
+            actor_id=actor_id,
+            action="BACKUP_RESTORE",
+            entity_type="backup",
+            entity_id=backup.id,
+            after={"entries": entries, "pre_restore_backup": str(pre.id), "live": do_live},
+        )
+        await session.commit()
+        if do_live:
+            await _pg_restore_live(dump_path)  # the last thing we do; restart the app afterwards
+
+    if do_live:
+        message = "Baza muvaffaqiyatli tiklandi. Iltimos, ilovani (web + worker) qayta ishga tushiring."
+    else:
+        message = (
+            f"Zaxira nusxa tekshirildi ({entries} ta yozuv) va tiklashdan oldingi xavfsizlik nusxasi olindi. "
+            "Jonli bazani almashtirish xavfsizlik uchun o'chirilgan (ALLOW_IN_APP_RESTORE)."
+        )
+    return {
+        "validated": True,
+        "entries": entries,
+        "pre_restore_backup_id": pre.id,
+        "live_restored": do_live,
+        "live_available": live_available,
+        "message": message,
+    }
+
+
 async def delete_backup(session: AsyncSession, *, actor_id: uuid.UUID, backup_id: uuid.UUID) -> None:
     backup = await get_backup(session, backup_id)
     if backup.storage_key:
