@@ -35,10 +35,12 @@ class CampaignStatus(StrEnum):
 
 
 class BookStatus(StrEnum):
+    SUGGESTED = "SUGGESTED"  # a member proposed this book; waits for admin moderation
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
     COMPLETED = "COMPLETED"
     ARCHIVED = "ARCHIVED"
+    REJECTED = "REJECTED"  # a member's suggestion the admins declined (kept, not shown in the catalog)
 
 
 class ReadingStatus(StrEnum):

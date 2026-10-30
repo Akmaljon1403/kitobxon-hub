@@ -9,7 +9,16 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUserDep, DbSession
 from app.models import Book, BookRead
-from app.schemas.book import BookDetailOut, BookOut, MyReading, QuoteOut, ReadingActionIn
+from app.schemas.book import (
+    BookDetailOut,
+    BookOut,
+    BookSuggestIn,
+    MyBookSuggestionOut,
+    MyReading,
+    QuoteOut,
+    ReadingActionIn,
+    plain,
+)
 from app.schemas.common import Page
 from app.services import books as book_service
 from app.services import reading_journal
@@ -60,6 +69,34 @@ async def list_books(
     required = await get_setting(db, "score.book_completion_requires_verification")
     items = [book_out(book, read, counts.get(book.id, (0, 0)), required) for book, read in rows]
     return Page[BookOut](items=items, total=total, limit=limit, offset=offset)
+
+
+def _suggestion_out(book: Book) -> MyBookSuggestionOut:
+    return MyBookSuggestionOut(
+        id=book.id,
+        title=book.title,
+        author=book.author,
+        cover_url=book_service.cover_image(book),
+        status=book.status,
+        created_at=book.created_at,
+    )
+
+
+# Declared before GET /{book_id} so "/books/suggestions" is not parsed as a book id.
+@router.get("/suggestions", response_model=list[MyBookSuggestionOut], summary="Books I suggested")
+async def my_suggestions(current: CurrentUserDep, db: DbSession) -> list[MyBookSuggestionOut]:
+    return [_suggestion_out(book) for book in await book_service.list_my_suggestions(db, current.user.id)]
+
+
+@router.post(
+    "/suggestions",
+    response_model=MyBookSuggestionOut,
+    status_code=201,
+    summary="Suggest a book for the club library",
+)
+async def suggest_book(payload: BookSuggestIn, current: CurrentUserDep, db: DbSession) -> MyBookSuggestionOut:
+    book = await book_service.suggest_book(db, user_id=current.user.id, data=plain(payload.model_dump()))
+    return _suggestion_out(book)
 
 
 @router.get("/{book_id}", response_model=BookDetailOut, summary="Book details with quotes")

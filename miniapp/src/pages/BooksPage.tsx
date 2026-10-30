@@ -1,14 +1,115 @@
+import { useState } from 'react'
+
 import { BookCover } from '../components/BookCover'
 import { Icon } from '../components/Icon'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
-import { Badge, Card, PageTitle } from '../components/ui'
+import { Badge, Button, Card, PageTitle } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
+import { ApiError } from '../services/api'
 import { useAuth } from '../store/auth'
-import type { Book, Page } from '../types/api'
+import type { Book, MyBookSuggestion, Page } from '../types/api'
 import { formatDate } from '../utils/format'
 import { useHomeBackButton } from '../hooks/useBackButton'
 import { navigate } from '../utils/router'
 import { LibrarySwitch } from './ShelfPage'
+
+const inputClass = 'rounded-xl bg-app-surface px-3 py-2 text-[15px] outline-none transition focus:ring-2 focus:ring-brand-400/50'
+const SUGGESTION_BADGE: Record<string, { label: string; tone: 'info' | 'success' | 'danger' | 'neutral' }> = {
+  SUGGESTED: { label: 'Ko‘rib chiqilmoqda', tone: 'info' },
+  ACTIVE: { label: 'Qo‘shildi', tone: 'success' },
+  COMPLETED: { label: 'Qo‘shildi', tone: 'success' },
+  REJECTED: { label: 'Qo‘shilmadi', tone: 'danger' },
+}
+
+/** Members propose a book for the club library; an admin then publishes or rejects it. */
+function SuggestBook({ onChanged }: { onChanged: () => void }) {
+  const { api } = useAuth()
+  const mine = useAsync((signal) => api<MyBookSuggestion[]>('/api/v1/books/suggestions', { signal }))
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [author, setAuthor] = useState('')
+  const [source, setSource] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api('/api/v1/books/suggestions', {
+        method: 'POST',
+        body: { title: title.trim(), author: author.trim(), source_url: source.trim() || null },
+      })
+      setTitle('')
+      setAuthor('')
+      setSource('')
+      setOpen(false)
+      mine.reload()
+      onChanged()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Yuborib bo'lmadi")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const suggestions = mine.state.status === 'success' ? mine.state.data : []
+  return (
+    <Card className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 font-semibold">
+          <Icon name="lightbulb" size={16} />Kitob taklif qilish
+        </p>
+        {!open && (
+          <Button variant="secondary" className="w-auto shrink-0 px-3 py-1.5 text-sm" onClick={() => setOpen(true)}>
+            <Icon name="plus" size={16} />Taklif
+          </Button>
+        )}
+      </div>
+      {!open && (
+        <p className="text-sm text-app-hint">Klub kutubxonasiga qo‘shilishini istagan kitobingizni taklif qiling — adminlar ko‘rib chiqadi.</p>
+      )}
+      {open && (
+        <>
+          <input className={inputClass} placeholder="Kitob nomi" value={title} maxLength={255} onChange={(e) => setTitle(e.target.value)} />
+          <input className={inputClass} placeholder="Muallif" value={author} maxLength={255} onChange={(e) => setAuthor(e.target.value)} />
+          <input
+            className={inputClass}
+            placeholder="Havola (ixtiyoriy): https://…"
+            value={source}
+            inputMode="url"
+            onChange={(e) => setSource(e.target.value)}
+          />
+          {error && <p className="text-sm text-app-danger">{error}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Bekor
+            </Button>
+            <Button loading={busy} disabled={!title.trim() || !author.trim()} onClick={() => void submit()}>
+              Yuborish
+            </Button>
+          </div>
+        </>
+      )}
+      {suggestions.length > 0 && (
+        <div className="flex flex-col gap-1.5 border-t border-app-border pt-2">
+          <p className="text-xs font-medium text-app-hint">Mening takliflarim</p>
+          {suggestions.map((s) => {
+            const badge = SUGGESTION_BADGE[s.status] ?? SUGGESTION_BADGE.SUGGESTED
+            return (
+              <div key={s.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate">
+                  {s.title} <span className="text-app-hint">— {s.author}</span>
+                </span>
+                <Badge tone={badge.tone}>{badge.label}</Badge>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Card>
+  )
+}
 
 export function ReadingBadge({ book }: { book: Book }) {
   if (!book.my_reading) return null
@@ -35,6 +136,7 @@ export function BooksPage() {
       {state.status === 'success' && state.data.items.length === 0 && (
         <EmptyState title="Hozircha kitob yo'q">Klub rahbariyati yangi kitob qo'shganda shu yerda ko'rinadi.</EmptyState>
       )}
+      <SuggestBook onChanged={reload} />
       {state.status === 'success' &&
         state.data.items.map((book) => (
           <button key={book.id} type="button" className="text-left" onClick={() => navigate(`/books/${book.id}`)}>

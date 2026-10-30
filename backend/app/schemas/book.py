@@ -39,6 +39,51 @@ class BookCreateIn(BookFields):
     pass
 
 
+class BookSuggestIn(BaseModel):
+    """What a member fills in to propose a book for the club library."""
+
+    title: str = Field(min_length=1, max_length=255)
+    author: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    cover_url: Url | None = None
+    source_url: Url | None = Field(default=None, description="External link where the book can be read or bought")
+    language: str = Field(default="uz", min_length=2, max_length=16)
+    pages: int | None = Field(default=None, ge=1, le=10_000)
+
+
+class MyBookSuggestionOut(BaseModel):
+    """A book the member proposed, as they see it: pending / published / rejected."""
+
+    id: uuid.UUID
+    title: str
+    author: str
+    cover_url: str | None
+    status: BookStatus
+    created_at: datetime
+
+
+class BookSuggestionOut(BaseModel):
+    """A pending suggestion in the admin moderation queue, with who proposed it."""
+
+    id: uuid.UUID
+    title: str
+    author: str
+    description: str | None
+    cover_url: str | None
+    source_url: str | None
+    language: str
+    pages: int | None
+    created_at: datetime
+    suggested_by: str
+    faculty_name: str | None
+    course: int | None
+    group_name: str | None
+
+
+class RejectBookIn(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000, description="Shown to the member who suggested it")
+
+
 class BookUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     author: str | None = Field(default=None, min_length=1, max_length=255)

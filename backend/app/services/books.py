@@ -19,6 +19,7 @@ from app.core.errors import BadRequestError, NotFoundError
 from app.models import Book, BookQuote, BookRead, Faculty, User
 from app.models.enums import (
     BookStatus,
+    NotificationType,
     QuoteStatus,
     ReadingStatus,
     ReadingVerification,
@@ -31,6 +32,10 @@ from app.services.settings import get_setting
 from app.utils.timezone import local_tz
 
 MEMBER_VISIBLE_STATUSES = (BookStatus.ACTIVE, BookStatus.COMPLETED)
+# What a member may fill in when suggesting a book (no dates, no status — the admin sets those).
+_SUGGEST_FIELDS = ("title", "author", "description", "cover_url", "source_url", "language", "pages")
+# A member may not pile up more than this many un-moderated suggestions (anti-spam).
+MAX_PENDING_SUGGESTIONS = 10
 _BOOK_FIELDS = (
     "title",
     "author",
@@ -148,6 +153,126 @@ async def delete_book(session: AsyncSession, *, actor_id: uuid.UUID, book_id: uu
         session, actor_id=actor_id, action="BOOK_DELETE", entity_type="book", entity_id=book.id, before=_snapshot(book)
     )
     await session.commit()
+
+
+# ---------------------------------------------------------------------------- member book suggestions
+
+
+async def suggest_book(session: AsyncSession, *, user_id: uuid.UUID, data: dict[str, Any]) -> Book:
+    """A member proposes a book for the club library; it waits as SUGGESTED for an admin."""
+    pending = await session.scalar(
+        select(func.count())
+        .select_from(Book)
+        .where(Book.created_by == user_id, Book.status == BookStatus.SUGGESTED, Book.deleted_at.is_(None))
+    )
+    if pending and pending >= MAX_PENDING_SUGGESTIONS:
+        raise BadRequestError(
+            "TOO_MANY_SUGGESTIONS",
+            "Sizda hali ko'rib chiqilmagan takliflar ko'p. Avval ular ko'rib chiqilishini kuting.",
+        )
+    book = Book(
+        **{key: value for key, value in data.items() if key in _SUGGEST_FIELDS},
+        status=BookStatus.SUGGESTED,
+        created_by=user_id,
+    )
+    session.add(book)
+    await session.flush()
+    record_audit(
+        session, actor_id=user_id, action="BOOK_SUGGEST", entity_type="book", entity_id=book.id, after=_snapshot(book)
+    )
+    await session.commit()
+    return book
+
+
+async def list_my_suggestions(session: AsyncSession, user_id: uuid.UUID) -> list[Book]:
+    """The books this member proposed, with their current state (pending / published / rejected)."""
+    rows = await session.scalars(
+        select(Book)
+        .where(
+            Book.created_by == user_id,
+            Book.deleted_at.is_(None),
+            Book.status.in_((BookStatus.SUGGESTED, BookStatus.REJECTED, BookStatus.ACTIVE, BookStatus.COMPLETED)),
+        )
+        .order_by(Book.created_at.desc())
+    )
+    return list(rows)
+
+
+async def list_suggestions(session: AsyncSession) -> list[tuple[Book, User, str | None]]:
+    """Admin moderation queue: books members proposed, oldest first, with the suggester and faculty."""
+    rows = await session.execute(
+        select(Book, User, Faculty.name)
+        .join(User, User.id == Book.created_by)
+        .outerjoin(Faculty, Faculty.id == User.faculty_id)
+        .where(Book.status == BookStatus.SUGGESTED, Book.deleted_at.is_(None))
+        .order_by(Book.created_at.asc())
+    )
+    return [(book, user, faculty) for book, user, faculty in rows]
+
+
+async def _notify_suggester(session: AsyncSession, book: Book, text: str, kind: str) -> None:
+    if book.created_by is None:
+        return
+    from app.services import notifications
+
+    await notifications.enqueue_notification(
+        session,
+        user_id=book.created_by,
+        type_=NotificationType.SYSTEM,
+        text=text,
+        dedup_key=f"book-suggest-{kind}:{book.id}",
+    )
+
+
+async def publish_suggestion(session: AsyncSession, *, actor_id: uuid.UUID, book_id: uuid.UUID) -> Book:
+    """Admin accepts a member's suggestion: it becomes an ACTIVE club book and the member is told."""
+    book = await get_book(session, book_id)
+    if book.status != BookStatus.SUGGESTED:
+        raise BadRequestError("NOT_SUGGESTED", "Bu kitob taklif holatida emas.")
+    before = _snapshot(book)
+    book.status = BookStatus.ACTIVE
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="BOOK_SUGGESTION_PUBLISH",
+        entity_type="book",
+        entity_id=book.id,
+        before=before,
+        after=_snapshot(book),
+    )
+    await announcements.book_published(session, book)
+    await _notify_suggester(
+        session, book, f"📚 Siz taklif qilgan «{book.title}» kitobi klub kutubxonasiga qo'shildi. Rahmat!", "published"
+    )
+    await session.commit()
+    return book
+
+
+async def reject_suggestion(
+    session: AsyncSession, *, actor_id: uuid.UUID, book_id: uuid.UUID, reason: str | None = None
+) -> Book:
+    """Admin declines a member's suggestion (kept as REJECTED for history; the member is told why)."""
+    book = await get_book(session, book_id)
+    if book.status != BookStatus.SUGGESTED:
+        raise BadRequestError("NOT_SUGGESTED", "Bu kitob taklif holatida emas.")
+    before = _snapshot(book)
+    book.status = BookStatus.REJECTED
+    record_audit(
+        session,
+        actor_id=actor_id,
+        action="BOOK_SUGGESTION_REJECT",
+        entity_type="book",
+        entity_id=book.id,
+        before=before,
+        after=_snapshot(book),
+        reason=reason,
+    )
+    tail = f"\n\nSabab: {reason}" if reason else ""
+    await _notify_suggester(
+        session, book, f"📚 Siz taklif qilgan «{book.title}» kitobi hozircha qo'shilmadi.{tail}", "rejected"
+    )
+    await session.commit()
+    return book
 
 
 async def list_readers(session: AsyncSession, book_id: uuid.UUID) -> list[tuple[BookRead, User, str | None]]:
