@@ -15,6 +15,7 @@ class BackupOut(BaseModel):
     size_bytes: int
     sha256: str | None
     encrypted: bool = False
+    in_drive: bool = False  # a copy also exists on Google Drive
     db_name: str | None
     error: str | None
     created_at: datetime
@@ -24,6 +25,7 @@ class BackupOut(BaseModel):
 class BackupSummaryOut(BaseModel):
     enabled: bool
     encryption_enabled: bool
+    gdrive_enabled: bool  # a second copy of each backup is also sent to Google Drive
     # Whether a super admin may overwrite the live database from the panel (ALLOW_IN_APP_RESTORE).
     restore_live_enabled: bool
     retention_daily: int

@@ -128,6 +128,7 @@ export function BackupsPage() {
             ) : (
               <Badge tone="neutral">Shifrlash o'chirilgan</Badge>
             )}
+            {summary.gdrive_enabled && <Badge tone="success">☁️ Google Drive nusxa</Badge>}
             <span className="text-app-hint">
               Har kecha soat 23:00 (Toshkent) da kunlik, oyning 1-sanasida oylik nusxa olinadi.
             </span>
@@ -166,6 +167,7 @@ export function BackupsPage() {
                 <td className="whitespace-nowrap px-4 py-2.5 tabular-nums">
                   {backup.status === 'SUCCESS' ? humanSize(backup.size_bytes) : '—'}
                   {backup.encrypted && <span title="Shifrlangan"> 🔒</span>}
+                  {backup.in_drive && <span title="Google Drive'da nusxasi bor"> ☁️</span>}
                 </td>
                 <td className="px-4 py-2.5">
                   <Badge tone={STATUS_TONE[backup.status]}>{backup.status === 'SUCCESS' ? 'Tayyor' : 'Xatolik'}</Badge>

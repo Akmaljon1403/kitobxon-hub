@@ -140,6 +140,12 @@ class Settings(BaseSettings):
     # dump and takes a pre-restore safety backup. Set to true to ALSO let a super admin overwrite the live
     # database from the panel (do this only during maintenance; restart the app afterwards).
     allow_in_app_restore: bool = False
+    # Optional second copy of each backup to Google Drive (on top of the primary S3/local storage).
+    # OFF unless all three are set. The service-account JSON is a secret (never written to code/reports);
+    # share the target Drive folder with the service account's e-mail so it can upload into it.
+    backup_gdrive_enabled: bool = False
+    backup_gdrive_service_account: SecretStr | None = None  # the full service-account JSON (as a string)
+    backup_gdrive_folder_id: str | None = None
 
     # ---- Licence (only for copies rented to other organisations; the club's own server needs none) ----
     licence_required: bool = False

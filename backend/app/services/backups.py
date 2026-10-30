@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.models import Backup
 from app.models.enums import BackupKind, BackupStatus
+from app.services import gdrive
 from app.services.audit import record_audit
 from app.services.storage import get_storage
 from app.utils.timezone import local_tz
@@ -147,6 +148,14 @@ async def create_backup(
         checksum = hashlib.sha256(data).hexdigest()
         stored = _encrypt(data, passphrase) if passphrase else data
         await get_storage().put(key, stored, "application/octet-stream")
+        # Best-effort off-site copy to Google Drive (same bytes, so an encrypted dump stays encrypted).
+        # A Drive failure must never fail the backup — the primary storage copy already succeeded.
+        gdrive_file_id: str | None = None
+        if gdrive.enabled():
+            try:
+                gdrive_file_id = await gdrive.upload_backup(key.rsplit("/", 1)[-1], stored)
+            except Exception:
+                logger.exception("Google Drive copy failed for a %s backup", kind.value)
         backup = Backup(
             kind=kind,
             status=BackupStatus.SUCCESS,
@@ -154,6 +163,7 @@ async def create_backup(
             size_bytes=len(data),
             sha256=checksum,
             encrypted=bool(passphrase),
+            gdrive_file_id=gdrive_file_id,
             db_name=db_name,
             created_by=actor_id,
         )
@@ -346,6 +356,7 @@ async def delete_backup(session: AsyncSession, *, actor_id: uuid.UUID, backup_id
             await get_storage().delete(backup.storage_key)
         except Exception:  # an orphaned file is harmless; the row still goes
             logger.info("A backup file could not be removed from storage")
+    await _remove_drive_copy(backup)
     record_audit(
         session,
         actor_id=actor_id,
@@ -356,6 +367,15 @@ async def delete_backup(session: AsyncSession, *, actor_id: uuid.UUID, backup_id
     )
     await session.delete(backup)
     await session.commit()
+
+
+async def _remove_drive_copy(backup: Backup) -> None:
+    """Best-effort removal of a backup's Google Drive copy (an orphaned Drive file is harmless)."""
+    if backup.gdrive_file_id and gdrive.enabled():
+        try:
+            await gdrive.delete_backup_file(backup.gdrive_file_id)
+        except Exception:
+            logger.info("A backup's Google Drive copy could not be removed")
 
 
 async def prune(session: AsyncSession) -> int:
@@ -380,6 +400,7 @@ async def prune(session: AsyncSession) -> int:
                     await get_storage().delete(backup.storage_key)
                 except Exception:
                     logger.info("An old backup file could not be removed from storage")
+            await _remove_drive_copy(backup)
             await session.delete(backup)
             removed += 1
     if removed:
