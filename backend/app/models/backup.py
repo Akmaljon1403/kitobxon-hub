@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import BigInteger, ForeignKey, Index, String, Text, text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, enum_column
@@ -21,6 +21,8 @@ class Backup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     storage_key: Mapped[str | None] = mapped_column(String(512))
     size_bytes: Mapped[int] = mapped_column(BigInteger, default=0, server_default=text("0"))
     sha256: Mapped[str | None] = mapped_column(String(64))  # integrity check for the stored file
+    # Whether the stored dump is AES-256-GCM encrypted (needs BACKUP_ENCRYPTION_KEY to restore).
+    encrypted: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     db_name: Mapped[str | None] = mapped_column(String(128))
     # A short, secret-free reason when a backup failed (never the connection string).
     error: Mapped[str | None] = mapped_column(Text)
