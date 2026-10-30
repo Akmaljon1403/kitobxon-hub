@@ -102,6 +102,8 @@ class EventAdminOut(EventBaseOut):
 
 class EventOut(EventBaseOut):
     is_registered: bool
+    # The member's recorded RSVP answer: «coming», «declined», or none (not answered yet).
+    my_answer: Literal["coming", "declined"] | None = None
     my_attendance: AttendanceStatus | None
     my_shift_id: uuid.UUID | None = None
 

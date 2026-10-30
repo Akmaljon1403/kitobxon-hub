@@ -197,6 +197,22 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
     }
   }
 
+  /** «Bu safar bora olmayman» — a recorded answer; the member can switch back to «Qatnashaman» later. */
+  async function decline(event: ClubEvent) {
+    setBusy(true)
+    setError(null)
+    try {
+      await api(`/api/v1/events/${event.id}/decline`, { method: 'POST' })
+      haptic('success')
+      reload()
+    } catch (err) {
+      haptic('error')
+      setError(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (state.status === 'loading') return <LoadingState />
   if (state.status === 'error') return <ErrorState message={state.error.message} onRetry={reload} />
   const event = state.data
@@ -329,6 +345,17 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
               )}
             </Button>
           )}
+          {!started &&
+            (event.my_answer === 'declined' ? (
+              <p className="flex items-center justify-center gap-1.5 text-center text-sm text-app-hint">
+                <Icon name="x" size={14} />
+                Siz «bu safar bora olmayman» dedingiz. Fikringiz o'zgarsa, yuqoridan «Qatnashaman»ni bosing.
+              </p>
+            ) : (
+              <Button variant="ghost" loading={busy} onClick={() => void decline(event)}>
+                <Icon name="x" size={16} />Bu safar bora olmayman
+              </Button>
+            ))}
           <p className="text-center text-xs text-app-hint">
             Ro'yxatdan o'tsangiz, joylarni shunga qarab tayyorlaymiz va sizga tadbir oldidan hamda davomat ochilganda eslatma yuboramiz. Davomat
             tadbirda QR kod orqali qayd etiladi.

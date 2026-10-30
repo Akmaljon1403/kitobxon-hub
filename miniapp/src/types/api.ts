@@ -138,6 +138,7 @@ export interface ClubEvent {
   registered_count: number
   attended_count: number
   is_registered: boolean
+  my_answer: 'coming' | 'declined' | null
   my_attendance: AttendanceStatus | null
   my_shift_id: string | null
   shifts: EventShift[]
