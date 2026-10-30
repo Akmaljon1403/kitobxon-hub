@@ -5,14 +5,16 @@ import { Badge, Button, Card, EmptyRow, Field, InlineError, Input, Modal, PageHe
 import { useAsync } from '../hooks/useAsync'
 import { API_BASE, ApiError } from '../services/api'
 import { useSession } from '../store/session'
-import type { Book, BookStatus, Page, Reader } from '../types/api'
+import type { Book, BookStatus, BookSuggestion, Page, Reader } from '../types/api'
 import { BOOK_STATUS_LABELS, formatDate } from '../utils/format'
 
-const STATUS_TONE: Record<BookStatus, 'success' | 'info' | 'neutral' | 'warning'> = {
+const STATUS_TONE: Record<BookStatus, 'success' | 'info' | 'neutral' | 'warning' | 'danger'> = {
+  SUGGESTED: 'info',
   ACTIVE: 'success',
   DRAFT: 'warning',
   COMPLETED: 'info',
   ARCHIVED: 'neutral',
+  REJECTED: 'danger',
 }
 
 type BookForm = {
@@ -86,6 +88,7 @@ export function BooksPage() {
         subtitle="Qoralama kitoblarni a'zolar ko'rmaydi. «Faol» holatiga o'tkazilganda Mini App'da paydo bo'ladi."
         actions={can('BOOK_CREATE') && <Button onClick={() => setEditing('new')}>+ Yangi kitob</Button>}
       />
+      {can('BOOK_EDIT') && <BookSuggestions onChanged={reload} />}
       <Card>
         <div className="border-b border-app-border p-4">
           <Select value={status} onChange={(e) => setStatus(e.target.value)} className="max-w-xs" aria-label="Holat">
@@ -146,6 +149,81 @@ export function BooksPage() {
       )}
       {readersOf && <ReadersModal book={readersOf} onClose={() => setReadersOf(null)} onChanged={reload} />}
     </>
+  )
+}
+
+/** Members' book suggestions awaiting review; the admin publishes or rejects each one. */
+function BookSuggestions({ onChanged }: { onChanged: () => void }) {
+  const { api } = useSession()
+  const { state, reload } = useAsync((signal) => api<BookSuggestion[]>('/api/v1/admin/book-suggestions', { signal }))
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  async function act(suggestion: BookSuggestion, action: 'publish' | 'reject') {
+    let body: Record<string, unknown> | undefined
+    if (action === 'reject') {
+      const reason = window.prompt(`«${suggestion.title}» taklifini rad etasizmi?\n\nSabab (ixtiyoriy, a'zoga ko'rinadi):`)
+      if (reason === null) return
+      body = { reason: reason.trim() || null }
+    }
+    setBusyId(suggestion.id)
+    try {
+      await api(`/api/v1/admin/books/${suggestion.id}/${action}`, { method: 'POST', body })
+      reload()
+      onChanged()
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Xatolik yuz berdi.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  if (state.status !== 'success' || state.data.length === 0) return null
+  return (
+    <Card className="mb-4">
+      <div className="flex items-center gap-2 border-b border-app-border px-4 py-3">
+        <h2 className="font-semibold">📥 A'zolar takliflari</h2>
+        <Badge tone="info">{state.data.length}</Badge>
+        <span className="text-xs text-app-hint">A'zolar klub kutubxonasiga taklif qilgan kitoblar</span>
+      </div>
+      <Table head={['Kitob', 'Kim taklif qildi', '']}>
+        {state.data.map((s) => (
+          <tr key={s.id}>
+            <td className="px-4 py-2.5">
+              <p className="font-medium">{s.title}</p>
+              <p className="text-xs text-app-hint">
+                {s.author}
+                {s.pages ? ` · ${s.pages} bet` : ''}
+                {s.source_url ? (
+                  <>
+                    {' · '}
+                    <a href={s.source_url} target="_blank" rel="noreferrer" className="text-app-link hover:underline">
+                      havola
+                    </a>
+                  </>
+                ) : (
+                  ''
+                )}
+              </p>
+              {s.description && <p className="mt-1 max-w-prose text-xs text-app-hint">{s.description}</p>}
+            </td>
+            <td className="px-4 py-2.5">
+              {s.suggested_by}
+              <p className="text-xs text-app-hint">
+                {s.faculty_name ?? ''} {s.course ? `· ${s.course}-kurs` : ''} {s.group_name ?? ''} · {formatDate(s.created_at)}
+              </p>
+            </td>
+            <td className="whitespace-nowrap px-4 py-2.5 text-right">
+              <Button loading={busyId === s.id} onClick={() => void act(s, 'publish')}>
+                ✅ E'lon qilish
+              </Button>
+              <Button variant="ghost" className="text-app-danger" disabled={busyId === s.id} onClick={() => void act(s, 'reject')}>
+                Rad etish
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </Table>
+    </Card>
   )
 }
 

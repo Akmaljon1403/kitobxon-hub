@@ -1,7 +1,23 @@
 // Response types of the Kitobxon Hub admin API (see /api/docs on the server).
 
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'BLOCKED' | 'INACTIVE' | 'LEFT'
-export type BookStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
+export type BookStatus = 'SUGGESTED' | 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'REJECTED'
+
+export interface BookSuggestion {
+  id: string
+  title: string
+  author: string
+  description: string | null
+  cover_url: string | null
+  source_url: string | null
+  language: string
+  pages: number | null
+  created_at: string
+  suggested_by: string
+  faculty_name: string | null
+  course: number | null
+  group_name: string | null
+}
 export type QuoteStatus = 'DRAFT' | 'SCHEDULED' | 'SENT' | 'ARCHIVED'
 
 export interface Page<T> {

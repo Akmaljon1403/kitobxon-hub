@@ -1,7 +1,16 @@
 // Response types of the Kitobxon Hub API used by the Mini App (see /api/docs on the server).
 
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'BLOCKED' | 'INACTIVE'
-export type BookStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
+export type BookStatus = 'SUGGESTED' | 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' | 'REJECTED'
+
+export interface MyBookSuggestion {
+  id: string
+  title: string
+  author: string
+  cover_url: string | null
+  status: BookStatus
+  created_at: string
+}
 export type ReadingStatus = 'READING' | 'COMPLETED'
 
 export interface Page<T> {

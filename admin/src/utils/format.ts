@@ -103,10 +103,12 @@ export const USER_STATUS_LABELS: Record<string, string> = {
 }
 
 export const BOOK_STATUS_LABELS: Record<string, string> = {
+  SUGGESTED: 'Taklif qilingan',
   DRAFT: 'Qoralama',
   ACTIVE: "Faol (o'qilmoqda)",
   COMPLETED: 'Yakunlangan',
   ARCHIVED: 'Arxivlangan',
+  REJECTED: 'Rad etilgan',
 }
 
 export const QUOTE_STATUS_LABELS: Record<string, string> = {

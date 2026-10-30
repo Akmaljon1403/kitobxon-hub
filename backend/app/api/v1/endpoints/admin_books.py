@@ -13,10 +13,12 @@ from app.models.enums import BookStatus
 from app.schemas.book import (
     BookAdminOut,
     BookCreateIn,
+    BookSuggestionOut,
     BookUpdateIn,
     QuoteAdminOut,
     QuoteUpdateIn,
     ReaderOut,
+    RejectBookIn,
     plain,
 )
 from app.schemas.common import Page
@@ -112,6 +114,44 @@ async def remove_cover(book_id: uuid.UUID, current: BookEditor, db: DbSession) -
 async def delete_book(book_id: uuid.UUID, current: BookDeleter, db: DbSession) -> Response:
     await book_service.delete_book(db, actor_id=current.user.id, book_id=book_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/book-suggestions", response_model=list[BookSuggestionOut], summary="Members' book suggestions awaiting review"
+)
+async def book_suggestions(_: BookViewer, db: DbSession) -> list[BookSuggestionOut]:
+    return [
+        BookSuggestionOut(
+            id=book.id,
+            title=book.title,
+            author=book.author,
+            description=book.description,
+            cover_url=book_service.cover_image(book),
+            source_url=book.source_url,
+            language=book.language,
+            pages=book.pages,
+            created_at=book.created_at,
+            suggested_by=f"{user.first_name} {user.last_name}".strip(),
+            faculty_name=faculty,
+            course=user.course,
+            group_name=user.group_name,
+        )
+        for book, user, faculty in await book_service.list_suggestions(db)
+    ]
+
+
+@router.post("/books/{book_id}/publish", response_model=BookAdminOut, summary="Publish a member's suggestion")
+async def publish_suggestion(book_id: uuid.UUID, current: BookEditor, db: DbSession) -> BookAdminOut:
+    book = await book_service.publish_suggestion(db, actor_id=current.user.id, book_id=book_id)
+    return await _with_counts(db, book)
+
+
+@router.post("/books/{book_id}/reject", response_model=BookAdminOut, summary="Reject a member's suggestion")
+async def reject_suggestion(
+    book_id: uuid.UUID, payload: RejectBookIn, current: BookEditor, db: DbSession
+) -> BookAdminOut:
+    book = await book_service.reject_suggestion(db, actor_id=current.user.id, book_id=book_id, reason=payload.reason)
+    return await _with_counts(db, book)
 
 
 @router.get("/books/{book_id}/readers", response_model=list[ReaderOut], summary="Who is reading / finished")

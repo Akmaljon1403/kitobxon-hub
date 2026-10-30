@@ -535,3 +535,55 @@ async def test_member_score_history_shows_the_reason_for_each_point(
 
     missing = await client.get(f"/api/v1/admin/users/{uuid.uuid4()}/score-history", headers=admin_headers(viewer))
     assert missing.status_code == 404
+
+
+async def test_member_book_suggestion_moderation_flow(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    member = await create_user(db, first_name="Laylo")
+    await db.commit()
+    headers = member_headers(member)
+    editor = await _admin(db, Perm.BOOK_VIEW, Perm.BOOK_EDIT)
+
+    # A member proposes a book — it is stored as a pending suggestion, not shown in the catalogue.
+    created = await client.post(
+        "/api/v1/books/suggestions",
+        json={"title": "Sarob", "author": "Abdulla Qahhor", "pages": 320},
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["status"] == "SUGGESTED"
+    catalog = await client.get("/api/v1/books", headers=headers)
+    assert all(item["title"] != "Sarob" for item in catalog.json()["items"])
+    mine = await client.get("/api/v1/books/suggestions", headers=headers)
+    assert [(b["title"], b["status"]) for b in mine.json()] == [("Sarob", "SUGGESTED")]
+
+    # The admin sees it in the moderation queue with the suggester's name, then publishes it.
+    queue = await client.get("/api/v1/admin/book-suggestions", headers=admin_headers(editor))
+    assert queue.status_code == 200
+    row = next(item for item in queue.json() if item["title"] == "Sarob")
+    assert row["suggested_by"] == "Laylo Familiya1" or row["suggested_by"].startswith("Laylo")
+    published = await client.post(f"/api/v1/admin/books/{row['id']}/publish", headers=admin_headers(editor))
+    assert published.status_code == 200 and published.json()["status"] == "ACTIVE"
+
+    # Now it is a real club book, visible to members, and the suggester sees it as published.
+    catalog = await client.get("/api/v1/books", headers=headers)
+    assert any(item["title"] == "Sarob" for item in catalog.json()["items"])
+    mine = (await client.get("/api/v1/books/suggestions", headers=headers)).json()
+    assert next(b for b in mine)["status"] == "ACTIVE"
+
+    # A second suggestion is rejected with a reason; it leaves the queue and keeps its history.
+    second = await client.post(
+        "/api/v1/books/suggestions", json={"title": "Shubha", "author": "Noma'lum"}, headers=headers
+    )
+    sid = second.json()["id"]
+    rejected = await client.post(
+        f"/api/v1/admin/books/{sid}/reject", json={"reason": "Mavjud kitob"}, headers=admin_headers(editor)
+    )
+    assert rejected.status_code == 200 and rejected.json()["status"] == "REJECTED"
+    queue = (await client.get("/api/v1/admin/book-suggestions", headers=admin_headers(editor))).json()
+    assert all(item["id"] != sid for item in queue)
+    mine = (await client.get("/api/v1/books/suggestions", headers=headers)).json()
+    assert next(b for b in mine if b["id"] == sid)["status"] == "REJECTED"
+
+    # Publishing something that is not a pending suggestion is rejected.
+    again = await client.post(f"/api/v1/admin/books/{sid}/publish", headers=admin_headers(editor))
+    assert again.status_code == 400 and again.json()["error"]["code"] == "NOT_SUGGESTED"
