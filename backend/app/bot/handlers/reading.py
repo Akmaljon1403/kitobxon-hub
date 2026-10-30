@@ -48,7 +48,15 @@ async def log_today(
     item, book = await reading_journal.get_item(db, member, current.id)
     title = html.escape(book.title if book else item.title or "—")
     parts = (command.args or "").split(maxsplit=1)
-    if not parts or not parts[0].isdigit():
+    # `str.isdigit()` is true for Unicode oddities like "²" that int() rejects, so parse
+    # defensively instead: anything that isn't a plain positive page count shows the help.
+    pages = None
+    if parts:
+        try:
+            pages = int(parts[0])
+        except ValueError:
+            pages = None
+    if pages is None or pages <= 0:
         stats = await reading_journal.stats(db, member)
         await message.answer(
             texts.READ_HOW.format(title=title, today=stats["today_pages"], streak=stats["streak"]),
@@ -56,9 +64,7 @@ async def log_today(
         )
         return
     try:
-        await reading_journal.log_pages(
-            db, member, item.id, pages=int(parts[0]), note=parts[1] if len(parts) > 1 else None
-        )
+        await reading_journal.log_pages(db, member, item.id, pages=pages, note=parts[1] if len(parts) > 1 else None)
     except AppError as exc:
         await message.answer(exc.message)
         return
@@ -67,7 +73,7 @@ async def log_today(
     stats = await reading_journal.stats(db, member)
     text = texts.READ_LOGGED.format(
         title=title,
-        pages=int(parts[0]),
+        pages=pages,
         progress=_progress(described),
         today=stats["today_pages"],
         streak=stats["streak"],
