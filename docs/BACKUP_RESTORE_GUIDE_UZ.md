@@ -235,9 +235,16 @@ BACKUP_RETENTION_MONTHLY=12
 # PG_RESTORE_PATH=/usr/lib/postgresql/16/bin/pg_restore
 ```
 
-- Docker tasviriga `postgresql-client` (pg_dump/pg_restore) allaqachon qo'shilган.
-- `pg_dump` versiyasi baza serveri versiyasidan **past bo'lmasligi** kerak. Neon
-  PostgreSQL 16/17 ishlatsa, konteynerda ham mos `postgresql-client` bo'lsin.
+- Docker tasviriga `pg_dump`/`pg_restore` **PostgreSQL 18** mijozi (rasmiy PGDG
+  ombori orqali) qo'shilган.
+- ⚠️ **Muhim:** `pg_dump` versiyasi baza serveri versiyasidan **past bo'lmasligi**
+  shart — aks holda `server version mismatch` xatosi chiqadi. Standart tasvir 18-versiya
+  mijozini o'rnatadi (server 18.x uchun). Agar serveringiz boshqa (masalan 19) bo'lsa,
+  tasvirni mos versiya bilan quring:
+
+  ```bash
+  docker build --build-arg PG_MAJOR=19 -t kitobxon-hub .
+  ```
 
 ---
 
