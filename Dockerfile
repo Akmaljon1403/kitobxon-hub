@@ -27,9 +27,11 @@ WORKDIR /srv/backend
 
 # Pango/HarfBuzz render the official PDF reports (WeasyPrint); Liberation Serif is a
 # Times-compatible font with full Uzbek Latin support, DejaVu is the fallback.
+# Pango/HarfBuzz render the PDF reports; postgresql-client gives pg_dump/pg_restore for backups.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-liberation2 fonts-dejavu-core \
+        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt .

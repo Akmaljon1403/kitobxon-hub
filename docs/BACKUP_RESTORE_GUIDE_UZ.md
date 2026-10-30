@@ -1,0 +1,161 @@
+# Zaxira nusxa va tiklash qo'llanmasi
+
+Bu hujjat Kitobxon Hub ma'lumotlar bazasining zaxira nusxalarini olish va kerak
+bo'lganda tiklash tartibini tushuntiradi. Qo'llanma **bosh administrator** (super
+admin) va serverni boshqaradigan texnik xodim uchun.
+
+> Qisqacha: tizim har kecha avtomatik zaxira oladi. Bazani **tiklash** esa — bu
+> ehtiyotkor, qo'lda bajariladigan amal: avval yangi zaxira olinadi, so'ng
+> `pg_restore` orqali tiklanadi. Admin paneldagi tugma orqali bazani «bosib
+> yozib» bo'lmaydi — bu xavfsizlik uchun ataylab shunday qilingan.
+
+---
+
+## 1. Zaxira nusxa nima va qayerda saqlanadi
+
+Har bir zaxira nusxa — `pg_dump` yordamida olingan, siqilgan (`custom format`,
+`-Fc`) to'liq nusxa. U `pg_restore` bilan to'liq tiklanadi.
+
+Fayl **tizim sozlamalaridagi fayl xotirasida** saqlanadi (muqova va sertifikatlar
+qayerda saqlansa — o'sha yerda):
+
+- **Bulutda (Render + Neon va h.k.):** `STORAGE_BACKEND=s3` bo'lsa, nusxalar S3/R2
+  kabi doimiy obyekt xotirasiga tushadi. ⚠️ **Bu majburiy:** Render konteynerining
+  diski vaqtinchalik (ephemeral), shuning uchun `local` xotira bilan zaxira nusxalar
+  qayta ishga tushirishdan keyin yo'qoladi. Bulutda albatta S3 sozlang.
+- **Institut serverida:** `STORAGE_BACKEND=local` bo'lsa, nusxalar doimiy diskdagi
+  `STORAGE_LOCAL_PATH` papkasida (`backups/…`) saqlanadi. Bu diskni ham muntazam
+  (masalan, tashqi disk yoki tarmoq diskiga) nusxalab turish tavsiya etiladi.
+
+Har bir nusxa uchun `backups` jadvalida yozuv qoladi: turi, vaqti, hajmi, SHA-256
+nazorat yig'indisi, holati (muvaffaqiyatli/xato). Yozuvda hech qachon parol yoki
+ulanish satri saqlanmaydi.
+
+---
+
+## 2. Avtomatik zaxira (hech narsa qilish shart emas)
+
+Fon ishchi (worker) jadval bo'yicha:
+
+- **Har kecha soat 23:00 (Asia/Tashkent)** — kunlik zaxira (`DAILY`).
+- **Har oyning 1-sanasida** — qo'shimcha oylik zaxira (`MONTHLY`), u uzoqroq saqlanadi.
+
+Saqlash muddati (sozlamalardan o'zgartiriladi):
+
+| Sozlama | Standart | Ma'nosi |
+|---|---|---|
+| `BACKUP_RETENTION_DAILY` | 14 | Oxirgi 14 ta kunlik nusxa saqlanadi |
+| `BACKUP_RETENTION_MONTHLY` | 12 | Oxirgi 12 ta oylik nusxa saqlanadi |
+| `BACKUPS_ENABLED` | `true` | Avtomatik zaxirani butunlay o'chirish uchun `false` |
+
+Muddatdan oshgan **avtomatik** nusxalar o'zi o'chiriladi. **Qo'lda** olingan nusxalar
+hech qachon avtomatik o'chmaydi — ularni faqat bosh admin o'zi o'chiradi.
+
+> Eslatma: worker 23:00 soati ichida ishga tushganda zaxira oladi va o'sha kecha
+> uchun takroran olmaydi (idempotent). Agar server kechasi o'chiq tursa, o'sha kungi
+> avtomatik nusxa olinmaydi — bunday hollarda admin paneldan qo'lda nusxa oling.
+
+---
+
+## 3. Admin panel: «Zaxira nusxa» bo'limi
+
+Faqat **bosh administrator** ko'radi (chap menyuda 💾 **Zaxira nusxa**).
+
+- **+ Hozir zaxira olish** — shu zahoti qo'lda nusxa oladi.
+- **⬇ Yuklab olish** — nusxa faylini kompyuteringizga yuklab oladi (`.dump`).
+  Muhim nusxani serverdan tashqarida (masalan, tashkilot diskida yoki ishonchli
+  bulutda) ham saqlab qo'ying.
+- **O'chirish** — keraksiz nusxani o'chiradi.
+- Yuqorida avtomatik zaxira holati, jadvali va oxirgi muvaffaqiyatli nusxa vaqti
+  ko'rsatiladi.
+
+---
+
+## 4. Bazani tiklash (qo'lda, ehtiyotkorlik bilan)
+
+Tiklash — bazani **almashtiradigan** amal, shuning uchun uni admin paneldagi tugma
+qilmaydi. Quyidagi tartib server (SSH) kirishiga ega texnik xodim tomonidan, bosh
+administrator **aniq ruxsati** bilan bajariladi.
+
+### 4.1. Avval — yangi («tiklashdan oldingi») zaxira
+
+Hozirgi holatni yo'qotmaslik uchun, tiklashdan oldin albatta yangi nusxa oling:
+
+```bash
+pg_dump --no-owner --no-privileges -Fc "$DATABASE_URL" -f pre_restore.dump
+```
+
+(Yoki admin paneldan «Hozir zaxira olish»ni bosing va faylni yuklab oling.)
+
+### 4.2. Avval test bazaga tiklab ko'ring (tavsiya etiladi)
+
+To'g'ridan-to'g'ri ishchi bazaga tiklashdan oldin, nusxaning soz ekanini bo'sh
+test bazada tekshiring:
+
+```bash
+createdb kitobxon_restore_test
+pg_restore --no-owner --no-privileges --clean --if-exists \
+    -d "postgresql://USER:PASSWORD@HOST:5432/kitobxon_restore_test" nusxa.dump
+# jadvallar va yozuvlar sonini tekshiring, so'ng test bazani o'chiring:
+dropdb kitobxon_restore_test
+```
+
+### 4.3. Ishchi bazaga tiklash
+
+1. Ilovani (web + worker) to'xtating, hech kim bazaga yozmasin.
+2. Bosh administratordan **yozma/aniq ruxsat** oling.
+3. Tiklang:
+
+   ```bash
+   pg_restore --no-owner --no-privileges --clean --if-exists \
+       -d "$DATABASE_URL" nusxa.dump
+   ```
+
+4. Migratsiyalar eng so'nggi holatda ekanini tekshiring (`alembic upgrade head` —
+   `DATABASE_MIGRATION_GUIDE`ga qarang).
+5. Ilovani qayta ishga tushiring va asosiy amallarni (kirish, ro'yxat, davomat)
+   tekshiring.
+
+> Agar biror narsa noto'g'ri ketsa — 4.1 da olingan `pre_restore.dump` orqali
+> eski holatга qaytasiz.
+
+---
+
+## 5. Sozlash (server)
+
+Muhit o'zgaruvchilari (`.env` yoki Render/Compose sozlamalari):
+
+```
+BACKUPS_ENABLED=true
+BACKUP_RETENTION_DAILY=14
+BACKUP_RETENTION_MONTHLY=12
+# pg_dump / pg_restore PATH da bo'lmasa, to'liq yo'lni ko'rsating:
+# PG_DUMP_PATH=/usr/lib/postgresql/16/bin/pg_dump
+# PG_RESTORE_PATH=/usr/lib/postgresql/16/bin/pg_restore
+```
+
+- Docker tasviriga `postgresql-client` (pg_dump/pg_restore) allaqachon qo'shilган.
+- `pg_dump` versiyasi baza serveri versiyasidan **past bo'lmasligi** kerak. Neon
+  PostgreSQL 16/17 ishlatsa, konteynerda ham mos `postgresql-client` bo'lsin.
+
+---
+
+## 6. Egasi hal qiladigan masalalar (ixtiyoriy kelgusi bosqich)
+
+Quyidagilar maxfiy kalit/hisob talab qilgani uchun egasining qaroriga qoldirilgan:
+
+- **Tashqi nusxa (Google Drive va b.):** hozircha zaxiralar tizim fayl xotirasida
+  (S3/local) saqlanadi. Google Drive’ga qo'shimcha nusxa kerak bo'lsa, Google xizmat
+  hisobi (service account) kaliti kerak — bu maxfiy ma'lumot hech qachon kodga yoki
+  hisobotga yozilmaydi, alohida (sir sifatida) beriladi.
+- **Shifrlash:** zaxira fayllarini shifrlash kerak bo'lsa, shifrlash kaliti
+  zaxiralardan **alohida** joyda saqlanishi shart.
+- **Admin paneldan tiklash tugmasi:** ishchi bazani ilova ichidan bir tugma bilan
+  almashtirish xavfli bo'lgani uchun ataylab qilinmagan. Agar baribir kerak bo'lsa,
+  u faqat qattiq tasdiq (bosh admin paroli/tasdiq matni) va avtomatik «tiklashdan
+  oldingi» zaxira bilan qo'shiladi.
+
+---
+
+**Bog'liq hujjatlar:** `DEPLOYMENT_GUIDE_UZ.md`, `DATABASE_MIGRATION_GUIDE_UZ.md`,
+`PRODUCTION_HANDOFF_CHECKLIST_UZ.md`.
