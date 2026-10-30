@@ -35,6 +35,12 @@ belgilang. Har bir band — bir martalik tekshiruv.
       bir marta sinab ko'rildi va fayl yuklab olindi.
 - [ ] Tiklash tartibi o'qib chiqildi: [`BACKUP_RESTORE_GUIDE_UZ.md`](BACKUP_RESTORE_GUIDE_UZ.md).
 - [ ] Muhim zaxira nusxasi serverdan tashqarida ham saqlanadigan joy belgilangan.
+- [ ] (Ixtiyoriy) Shifrlash kerak bo'lsa: `BACKUP_ENCRYPTION_KEY` berildi va kalit
+      zaxiralardan **alohida** xavfsiz joyda saqlanadi (yo'qolsa tiklab bo'lmaydi).
+- [ ] (Ixtiyoriy) Google Drive nusxa kerak bo'lsa: `BACKUP_GDRIVE_*` sozlandi va
+      Drive papkasi service account e-mailiga ulashildi.
+- [ ] Jonli bazani ilovadan tiklash standart holatda **o'chiq** (`ALLOW_IN_APP_RESTORE`
+      berilmagan) — faqat kerak bo'lganda, texnik vaqtda yoqiladi.
 
 ## 5. Adminlar va ruxsatlar
 

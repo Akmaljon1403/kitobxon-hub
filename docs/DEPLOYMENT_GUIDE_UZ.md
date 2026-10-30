@@ -61,6 +61,18 @@ Fayl xotirasi (muqova, sertifikat, **zaxira nusxalar** shu yerда saqlanadi):
 Zaxira sozlamalari: `BACKUPS_ENABLED`, `BACKUP_RETENTION_DAILY`,
 `BACKUP_RETENTION_MONTHLY`, `PG_DUMP_PATH`, `PG_RESTORE_PATH`.
 
+Qo'shimcha zaxira imkoniyatlari (hammasi **ixtiyoriy**, berilmasa o'chiq turadi —
+ilovaga xalal bermaydi):
+
+| O'zgaruvchi | Ma'nosi |
+|---|---|
+| `BACKUP_ENCRYPTION_KEY` | Berilsa, zaxiralar AES-256-GCM bilan shifrlanadi. Kalit zaxiralardan **alohida** saqlanadi |
+| `ALLOW_IN_APP_RESTORE` | `true` bo'lsa, bosh admin paneldan jonli bazani tiklay oladi (standart `false` — faqat tekshirish) |
+| `BACKUP_GDRIVE_ENABLED` / `BACKUP_GDRIVE_FOLDER_ID` / `BACKUP_GDRIVE_SERVICE_ACCOUNT` | Google Drive'ga qo'shimcha nusxa |
+
+> Batafsil (kalit yaratish, service account sozlash, tiklash tartibi):
+> [`BACKUP_RESTORE_GUIDE_UZ.md`](BACKUP_RESTORE_GUIDE_UZ.md).
+
 Ixtiyoriy: `REDIS_URL` (kesh/rate-limit), `AI_API_KEY` + `AI_MODEL` (hisobot
 qoralamasi), `STARS_API_BASE_URL` + `STARS_API_KEY` (Stars avtomatik), `LICENCE_*`
 (faqat boshqa tashkilotlarга ijaraga berilgan nusxalar uchun).
