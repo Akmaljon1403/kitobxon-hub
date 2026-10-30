@@ -180,7 +180,41 @@ har bir shifrlangan nusxa yonida 🔒 turadi.
 
 ---
 
-## 6. Sozlash (server)
+## 6. Google Drive'ga qo'shimcha nusxa (ixtiyoriy)
+
+Asosiy nusxa doim tizim fayl xotirasida (S3/R2/lokal disk) saqlanadi. Qo'shimcha
+ravishda **har bir zaxirani Google Drive'ga ham** yuborish mumkin — bu mutlaqo boshqa
+joydagi (off-site) ikkinchi nusxa. Shifrlash yoqilgan bo'lsa, Drive'dagi nusxa ham
+shifrlangan bo'ladi (xuddi shu baytlar yuboriladi).
+
+**Sozlash (bir marta):**
+
+1. Google Cloud'da **service account** (xizmat hisobi) yarating va unga **JSON kalit**
+   oling.
+2. Drive'da bitta papka oching va uni service account'ning e-mailiga (`...@...iam.gserviceaccount.com`)
+   **ulashing** (Editor huquqi bilan) — shunda u papkaga fayl yuklay oladi.
+3. Papkaning ID'sini oling (papka URL'idagi `folders/` dan keyingi qism).
+4. Muhit o'zgaruvchilarini bering:
+
+   ```
+   BACKUP_GDRIVE_ENABLED=true
+   BACKUP_GDRIVE_FOLDER_ID=<papka ID>
+   BACKUP_GDRIVE_SERVICE_ACCOUNT=<service account JSON faylining to'liq matni>
+   ```
+
+> Service account JSON — bu **maxfiy** ma'lumot (ichida xususiy kalit bor). U faqat
+> server sozlamasida (sir sifatida) beriladi; hech qachon kodga, hisobotga yoki
+> zaxira fayliga yozilmaydi. Og'ir Google kutubxonasi ishlatilmaydi — faqat
+> `httpx` + `PyJWT` orqali Drive REST API'ga murojaat qilinadi.
+
+Drive nusxasi **ixtiyoriy va «best-effort»**: Drive'ga yuklash muvaffaqiyatsiz bo'lsa
+ham, asosiy zaxira (S3/local) baribir olinadi — zaxira olish to'xtamaydi. Zaxira
+o'chirilganda yoki muddati o'tib avtomatik tozalanganda, Drive'dagi nusxasi ham
+o'chiriladi. Drive nusxasi bor nusxa admin panelda ☁️ belgisi bilan ko'rinadi.
+
+---
+
+## 7. Sozlash (server)
 
 Muhit o'zgaruvchilari (`.env` yoki Render/Compose sozlamalari):
 
@@ -192,6 +226,10 @@ BACKUP_RETENTION_MONTHLY=12
 # BACKUP_ENCRYPTION_KEY=<python -c "import secrets; print(secrets.token_urlsafe(48))">
 # Admin paneldan JONLI bazani almashtirishga ruxsat (standart: false — faqat tekshirish):
 # ALLOW_IN_APP_RESTORE=false
+# Google Drive'ga qo'shimcha nusxa (ixtiyoriy — 6-bo'limga qarang):
+# BACKUP_GDRIVE_ENABLED=false
+# BACKUP_GDRIVE_FOLDER_ID=<Drive papka ID>
+# BACKUP_GDRIVE_SERVICE_ACCOUNT=<service account JSON matni>
 # pg_dump / pg_restore PATH da bo'lmasa, to'liq yo'lni ko'rsating:
 # PG_DUMP_PATH=/usr/lib/postgresql/16/bin/pg_dump
 # PG_RESTORE_PATH=/usr/lib/postgresql/16/bin/pg_restore
@@ -203,15 +241,14 @@ BACKUP_RETENTION_MONTHLY=12
 
 ---
 
-## 7. Egasi hal qiladigan masalalar
+## 8. Egasi hal qiladigan masalalar
 
 - **Shifrlash ✅ (tayyor):** `BACKUP_ENCRYPTION_KEY` berilsa zaxiralar AES-256-GCM
   bilan shifrlanadi (5-bo'limga qarang). Kalit zaxiralardan alohida saqlanadi.
-- **Tashqi nusxa (Google Drive va b.):** zaxiralar tizim fayl xotirasida (S3/local)
-  saqlanadi; `STORAGE_BACKEND=s3` bo'lsa, ular allaqachon tashqi doimiy xotirada.
-  Google Drive’ga qo'shimcha nusxa kerak bo'lsa, Google xizmat hisobi (service
-  account) kaliti kerak — bu maxfiy ma'lumot hech qachon kodga yoki hisobotga
-  yozilmaydi, alohida (sir sifatida) beriladi.
+- **Google Drive nusxa ✅ (tayyor):** `BACKUP_GDRIVE_*` berilsa, har bir zaxira
+  Google Drive'ga ham yuboriladi (6-bo'limga qarang). Service account JSON maxfiy
+  ma'lumot — alohida (sir sifatida) beriladi, hech qachon kodga yozilmaydi. Shuningdek
+  `STORAGE_BACKEND=s3` bo'lsa, asosiy nusxa allaqachon tashqi doimiy xotirada bo'ladi.
 - **Admin paneldan tiklash tugmasi ✅ (tayyor):** 4.4-bo'limga qarang. Tugma har doim
   tasdiq matnini so'raydi, avtomatik «tiklashdan oldingi» zaxira oladi va faylni
   tekshiradi; jonli bazani almashtirish esa faqat `ALLOW_IN_APP_RESTORE=true` bo'lsa

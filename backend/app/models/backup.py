@@ -24,6 +24,8 @@ class Backup(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Whether the stored dump is AES-256-GCM encrypted (needs BACKUP_ENCRYPTION_KEY to restore).
     encrypted: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     db_name: Mapped[str | None] = mapped_column(String(128))
+    # The Google Drive file id of the off-site copy, when a Drive copy was made (else None).
+    gdrive_file_id: Mapped[str | None] = mapped_column(String(128))
     # A short, secret-free reason when a backup failed (never the connection string).
     error: Mapped[str | None] = mapped_column(Text)
     # The super admin who pressed «Hozir zaxira olish» (None for the automatic nightly/monthly ones).

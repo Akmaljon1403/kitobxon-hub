@@ -14,6 +14,7 @@ from app.models import User
 from app.models.enums import BackupKind, BackupStatus
 from app.schemas.backup import BackupOut, BackupSummaryOut, RestoreIn, RestoreResultOut
 from app.services import backups as backup_service
+from app.services import gdrive
 
 router = APIRouter(prefix="/admin/backups", tags=["admin: backups"])
 
@@ -33,6 +34,7 @@ def _out(backup, names: dict[uuid.UUID, str]) -> BackupOut:
         size_bytes=backup.size_bytes,
         sha256=backup.sha256,
         encrypted=backup.encrypted,
+        in_drive=backup.gdrive_file_id is not None,
         db_name=backup.db_name,
         error=backup.error,
         created_at=backup.created_at,
@@ -49,6 +51,7 @@ async def list_backups(_: SuperAdminDep, db: DbSession) -> BackupSummaryOut:
     return BackupSummaryOut(
         enabled=settings.backups_enabled,
         encryption_enabled=settings.backup_encryption_key is not None,
+        gdrive_enabled=gdrive.enabled(),
         restore_live_enabled=settings.allow_in_app_restore,
         retention_daily=settings.backup_retention_daily,
         retention_monthly=settings.backup_retention_monthly,

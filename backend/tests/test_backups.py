@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Backup
 from app.models.enums import BackupKind, BackupStatus
 from app.services import backups as backup_service
+from app.services import gdrive
 from tests.factories import create_user
 from tests.helpers import admin_headers, grant_role
 
@@ -38,6 +39,7 @@ async def test_super_admin_takes_lists_downloads_and_deletes_a_backup(
     assert body["status"] == "SUCCESS", body.get("error")
     assert body["size_bytes"] > 0 and len(body["sha256"]) == 64
     assert body["encrypted"] is False  # no BACKUP_ENCRYPTION_KEY set in tests
+    assert body["in_drive"] is False  # Google Drive copy is off by default
     backup_id = body["id"]
 
     # It appears in the list with the settings summary.
@@ -45,7 +47,7 @@ async def test_super_admin_takes_lists_downloads_and_deletes_a_backup(
     assert listing.status_code == 200
     summary = listing.json()
     assert summary["enabled"] is True and summary["total"] >= 1
-    assert summary["encryption_enabled"] is False
+    assert summary["encryption_enabled"] is False and summary["gdrive_enabled"] is False
     assert any(b["id"] == backup_id for b in summary["backups"])
 
     # The dump file can be downloaded (custom-format dumps start with the "PGDMP" magic).
@@ -113,6 +115,91 @@ async def test_restore_requires_the_typed_confirmation(client: httpx.AsyncClient
     # A rejected restore takes no pre-restore backup either.
     after = (await client.get("/api/v1/admin/backups", headers=headers)).json()["total"]
     assert after == before
+
+
+async def test_backup_also_copied_to_google_drive_when_enabled(
+    client: httpx.AsyncClient, db: AsyncSession, monkeypatch
+) -> None:
+    boss = await _super_admin(db)
+    headers = admin_headers(boss)
+    uploaded: dict = {}
+    deleted: list[str] = []
+
+    async def fake_upload(filename: str, data: bytes, content_type: str = "application/octet-stream") -> str:
+        uploaded["filename"] = filename
+        return "drive-file-1"
+
+    async def fake_delete(file_id: str) -> None:
+        deleted.append(file_id)
+
+    monkeypatch.setattr(gdrive, "enabled", lambda: True)
+    monkeypatch.setattr(gdrive, "upload_backup", fake_upload)
+    monkeypatch.setattr(gdrive, "delete_backup_file", fake_delete)
+
+    created = await client.post("/api/v1/admin/backups", headers=headers)
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["in_drive"] is True and uploaded["filename"].endswith(".dump")
+    backup_id = body["id"]
+
+    summary = (await client.get("/api/v1/admin/backups", headers=headers)).json()
+    assert summary["gdrive_enabled"] is True
+
+    # Deleting the backup also removes its Google Drive copy.
+    assert (await client.delete(f"/api/v1/admin/backups/{backup_id}", headers=headers)).status_code == 204
+    assert deleted == ["drive-file-1"]
+
+
+async def test_gdrive_jwt_and_rest_flow(monkeypatch) -> None:
+    import types as _types
+
+    import jwt as pyjwt
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_pem = key.private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+    ).decode()
+    creds = {"client_email": "svc@proj.iam.gserviceaccount.com", "private_key": private_pem}
+
+    # The signed assertion carries the expected claims and verifies with the public key.
+    assertion = gdrive._build_signed_jwt(creds, now=1_700_000_000)
+    public_pem = key.public_key().public_bytes(
+        serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    claims = pyjwt.decode(
+        assertion,
+        public_pem,
+        algorithms=["RS256"],
+        audience=gdrive._OAUTH_URL,
+        options={"verify_exp": False},  # fixed iat in the past; we only check the claims here
+    )
+    assert claims["iss"] == creds["client_email"] and claims["scope"] == gdrive._SCOPE
+    assert claims["exp"] == claims["iat"] + 3600
+
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "oauth2.googleapis.com":
+            return httpx.Response(200, json={"access_token": "ya29.fake"})
+        if "/upload/" in request.url.path:
+            captured["auth"] = request.headers["authorization"]
+            captured["ctype"] = request.headers["content-type"]
+            return httpx.Response(200, json={"id": "driveid-xyz"})
+        return httpx.Response(204)  # delete
+
+    monkeypatch.setattr(gdrive, "_creds", lambda: creds)
+    monkeypatch.setattr(gdrive, "get_settings", lambda: _types.SimpleNamespace(backup_gdrive_folder_id="folder123"))
+    monkeypatch.setattr(
+        gdrive, "_client", lambda timeout: httpx.AsyncClient(transport=httpx.MockTransport(handler), timeout=timeout)
+    )
+
+    file_id = await gdrive.upload_backup("kitobxon.dump", b"the-bytes")
+    assert file_id == "driveid-xyz"
+    assert captured["auth"] == "Bearer ya29.fake"
+    assert captured["ctype"].startswith("multipart/related")
+    await gdrive.delete_backup_file("driveid-xyz")  # must not raise
 
 
 async def test_prune_keeps_newest_and_removes_older(db: AsyncSession, monkeypatch) -> None:

@@ -711,6 +711,7 @@ export interface Backup {
   size_bytes: number
   sha256: string | null
   encrypted: boolean
+  in_drive: boolean
   db_name: string | null
   error: string | null
   created_at: string
@@ -720,6 +721,7 @@ export interface Backup {
 export interface BackupSummary {
   enabled: boolean
   encryption_enabled: boolean
+  gdrive_enabled: boolean
   restore_live_enabled: boolean
   retention_daily: number
   retention_monthly: number
