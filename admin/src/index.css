@@ -53,6 +53,9 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Never let a stray wide element scroll the whole page sideways on phones.
+     `clip` (not `hidden`) avoids creating a scroll container, so sticky headers keep working. */
+  overflow-x: clip;
 }
 
 /* A gentle pop for dialogs/modals when they open. */

@@ -94,6 +94,14 @@ export function AdminLayout({ section, children }: { section: string; children: 
     (item) => item.visible(can, Boolean(admin?.is_super_admin)) && !(item.route === 'rentals' && rented),
   )
 
+  // Close the mobile menu with Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setMenuOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
+
   const nav = (
     <nav aria-label="Bo'limlar" className="flex flex-col gap-0.5 p-3">
       {items.map((item) => {
@@ -164,7 +172,26 @@ export function AdminLayout({ section, children }: { section: string; children: 
             </button>
           </div>
         </header>
-        {menuOpen && <div className="border-b border-app-border bg-app-bg lg:hidden">{nav}</div>}
+        {menuOpen && (
+          <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Bo'limlar menyusi">
+            <button
+              type="button"
+              aria-label="Menyuni yopish"
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="app-pop absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col overflow-y-auto border-r border-app-border bg-app-bg shadow-2xl">
+              <div className="flex items-center gap-3 border-b border-app-border px-5 py-4">
+                <img src={`${import.meta.env.BASE_URL}brand/logo-badge.png`} alt="" className="size-9" />
+                <div>
+                  <p className="font-semibold">Kitobxon Hub</p>
+                  <p className="text-xs text-app-hint">Admin panel</p>
+                </div>
+              </div>
+              {nav}
+            </div>
+          </div>
+        )}
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 sm:p-6">{children}</main>
       </div>
     </div>
