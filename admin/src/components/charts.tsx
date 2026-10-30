@@ -212,6 +212,39 @@ export function BarList({ rows, unit = '' }: { rows: { label: string; sublabel?:
   )
 }
 
+/** Planned vs actual, one row per item: a faint bar = planned, a solid bar = actual, both to one scale.
+ * Single hue (the actual sits inside the planned), so it reads as «of the planned, this much came». */
+export function PlannedVsActual({ rows }: { rows: { label: string; planned: number; actual: number; rate: number }[] }) {
+  const max = Math.max(...rows.map((row) => Math.max(row.planned, row.actual)), 1)
+  return (
+    <ul className="flex flex-col gap-2.5">
+      {rows.map((row) => (
+        <li
+          key={row.label}
+          className="grid grid-cols-[minmax(0,8rem)_1fr_auto] items-center gap-3 text-sm"
+          tabIndex={0}
+          title={`${row.label}: keldi ${formatNumber(row.actual)} / rejada ${formatNumber(row.planned)} (${row.rate}%)`}
+        >
+          <span className="truncate">{row.label}</span>
+          <span className="relative h-3 overflow-hidden rounded-full" style={{ background: 'var(--viz-track)' }}>
+            <span
+              className="absolute inset-y-0 left-0 rounded-full opacity-40"
+              style={{ width: `${(row.planned / max) * 100}%`, background: 'var(--viz-series)' }}
+            />
+            <span
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{ width: `${(Math.min(row.actual, max) / max) * 100}%`, background: 'var(--viz-series)' }}
+            />
+          </span>
+          <span className="whitespace-nowrap text-xs tabular-nums text-app-hint">
+            <span className="font-semibold text-app-text">{formatNumber(row.actual)}</span> / {formatNumber(row.planned)} · {row.rate}%
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 /** A ratio against 100%: same-ramp track, value as text beside it. */
 export function Meter({ value, label }: { value: number; label?: string }) {
   const clamped = Math.max(0, Math.min(100, value))

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 
+import { ChartCard, formatNumber, PlannedVsActual, StatTile } from '../components/charts'
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, EmptyRow, Input, PageHeader, Select, Table } from '../components/ui'
 import { useAsync } from '../hooks/useAsync'
 import { useSession } from '../store/session'
-import type { AdminEvent, EventRegistration, RsvpStatus, RsvpSummary } from '../types/api'
+import type { AdminEvent, EventAnalytics, EventRegistration, RsvpStatus, RsvpSummary } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { navigate } from '../utils/router'
 
@@ -39,6 +40,7 @@ export function RsvpPage({ eventId }: { eventId: string }) {
     (signal) => api<EventRegistration[]>(`/api/v1/admin/events/${eventId}/registrations`, { signal }),
     [eventId],
   )
+  const analytics = useAsync((signal) => api<EventAnalytics>(`/api/v1/admin/events/${eventId}/analytics`, { signal }), [eventId])
 
   const [search, setSearch] = useState('')
   const [faculty, setFaculty] = useState('')
@@ -83,6 +85,12 @@ export function RsvpPage({ eventId }: { eventId: string }) {
   const downloadAnalytics = () => downloadFile(`/api/v1/admin/events/${eventId}/analytics.csv`, 'tahlil')
 
   const data = summary.state.status === 'success' ? summary.state.data : null
+  const stats = analytics.state.status === 'success' ? analytics.state.data : null
+  const analyticsRows = stats
+    ? stats.shifts.length > 0
+      ? stats.shifts.map((s) => ({ label: `${s.position}-smena`, planned: s.coming, actual: s.attended, rate: s.attendance_rate }))
+      : [{ label: 'Tadbir', planned: stats.coming, actual: stats.attended, rate: stats.attendance_rate }]
+    : []
 
   return (
     <>
@@ -203,6 +211,30 @@ export function RsvpPage({ eventId }: { eventId: string }) {
               ))}
             </Table>
           </Card>
+        </div>
+      )}
+
+      {stats && (stats.coming > 0 || stats.attended > 0) && (
+        <div className="mt-4">
+          <ChartCard
+            title="Reja va amal (davomat)"
+            subtitle="«Qatnashaman» deganlar (reja) va haqiqatda kelganlar (amal)"
+            table={{
+              head: ['Smena', 'Qatnashaman', 'Keldi', 'Davomat'],
+              rows: [
+                ...stats.shifts.map((s) => [`${s.position}-smena`, s.coming, s.attended, `${s.attendance_rate}%`]),
+                ['Jami', stats.coming, stats.attended, `${stats.attendance_rate}%`],
+              ],
+            }}
+          >
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatTile label="Qatnashaman" value={formatNumber(stats.coming)} />
+              <StatTile label="Keldi" value={formatNumber(stats.attended)} />
+              <StatTile label="Bora olmayman" value={formatNumber(stats.declined)} />
+              <StatTile label="Davomat darajasi" value={`${stats.attendance_rate}%`} />
+            </div>
+            <PlannedVsActual rows={analyticsRows} />
+          </ChartCard>
         </div>
       )}
     </>

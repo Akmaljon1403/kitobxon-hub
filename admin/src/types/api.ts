@@ -245,6 +245,26 @@ export interface RsvpSummary {
   shifts: RsvpShift[]
 }
 
+export interface AnalyticsShift {
+  position: number
+  starts_at: string
+  coming: number
+  declined: number
+  attended: number
+  attendance_rate: number
+}
+
+export interface EventAnalytics {
+  event_id: string
+  coming: number
+  declined: number
+  no_answer: number
+  registered: number
+  attended: number
+  attendance_rate: number
+  shifts: AnalyticsShift[]
+}
+
 export interface AttendanceRecord {
   id: string
   user_id: string
