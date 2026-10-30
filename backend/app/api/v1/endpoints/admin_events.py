@@ -22,6 +22,7 @@ from app.schemas.event import (
     AttendanceTokenOut,
     CertificateChoiceIn,
     EventAdminOut,
+    EventAnalyticsOut,
     EventCreateIn,
     EventUpdateIn,
     ManualCheckInIn,
@@ -195,6 +196,25 @@ async def rsvp_summary(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> Rs
 @router.get("/events/{event_id}/registrations.csv", summary="Download RSVP answers as CSV (Excel)")
 async def export_registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> Response:
     filename, content = await event_service.export_registrations_csv(db, event_id)
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+    )
+
+
+@router.get(
+    "/events/{event_id}/analytics",
+    response_model=EventAnalyticsOut,
+    summary="Planned vs actual: RSVP intent vs verified attendance",
+)
+async def event_analytics(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> EventAnalyticsOut:
+    return EventAnalyticsOut(**await event_service.attendance_analytics(db, event_id))
+
+
+@router.get("/events/{event_id}/analytics.csv", summary="Download the planned-vs-actual analytics (Excel)")
+async def export_analytics(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> Response:
+    filename, content = await event_service.export_analytics_csv(db, event_id)
     return Response(
         content=content.encode("utf-8"),
         media_type="text/csv; charset=utf-8",

@@ -151,6 +151,28 @@ class RsvpSummaryOut(BaseModel):
     shifts: list[RsvpShiftOut] = []
 
 
+class AnalyticsShiftOut(BaseModel):
+    position: int
+    starts_at: datetime
+    coming: int
+    declined: int
+    attended: int
+    attendance_rate: int  # attended / coming, as a percentage
+
+
+class EventAnalyticsOut(BaseModel):
+    """Planned vs actual: RSVP intent against verified attendance, for the event and per shift."""
+
+    event_id: uuid.UUID
+    coming: int
+    declined: int
+    no_answer: int
+    registered: int
+    attended: int
+    attendance_rate: int
+    shifts: list[AnalyticsShiftOut] = []
+
+
 class CheckInIn(BaseModel):
     token: str | None = Field(default=None, max_length=300, description="Scanned QR content or token")
     code: str | None = Field(default=None, min_length=6, max_length=6, pattern=r"^[A-Za-z0-9]{6}$")
