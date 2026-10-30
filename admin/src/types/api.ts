@@ -198,6 +198,37 @@ export interface AdminEvent {
   certificate_template_id: string | null
 }
 
+export type RsvpStatus = 'REGISTERED' | 'DECLINED' | 'CANCELLED'
+
+export interface EventRegistration {
+  user_id: string
+  first_name: string
+  last_name: string
+  faculty_name: string | null
+  course: number | null
+  group_name: string | null
+  status: RsvpStatus
+  registered_at: string
+  shift: number | null
+}
+
+export interface RsvpShift {
+  shift_id: string
+  position: number
+  starts_at: string
+  coming: number
+  declined: number
+}
+
+export interface RsvpSummary {
+  event_id: string
+  coming: number
+  declined: number
+  no_answer: number
+  active_members: number
+  shifts: RsvpShift[]
+}
+
 export interface AttendanceRecord {
   id: string
   user_id: string

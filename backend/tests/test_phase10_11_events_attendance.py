@@ -489,3 +489,42 @@ async def test_rsvp_decline_is_recorded_and_switchable(client: httpx.AsyncClient
     await db.commit()
     detail = await client.get(f"/api/v1/events/{event.id}", headers=member_headers(other))
     assert detail.json()["my_answer"] is None
+
+
+async def test_admin_rsvp_summary_counts_and_registrations(client: httpx.AsyncClient, db: AsyncSession) -> None:
+    from app.models import Faculty
+
+    faculty = Faculty(name="Falsafa", sort_order=1)
+    db.add(faculty)
+    await db.flush()
+    admin = await _admin(db, Perm.EVENT_VIEW)
+    coming_member = await create_user(db, faculty_id=faculty.id, course=3, group_name="305")
+    declined_member = await create_user(db)
+    await create_user(db)  # never answers
+    event = await create_event(db, starts_at=datetime.now(UTC) + timedelta(days=1))
+    await db.commit()
+
+    await client.post(f"/api/v1/events/{event.id}/register", headers=member_headers(coming_member))
+    await client.post(f"/api/v1/events/{event.id}/decline", headers=member_headers(declined_member))
+
+    summary = await client.get(f"/api/v1/admin/events/{event.id}/rsvp-summary", headers=admin_headers(admin))
+    assert summary.status_code == 200, summary.text
+    data = summary.json()
+    assert data["coming"] == 1
+    assert data["declined"] == 1
+    # «Javob bermagan» = every active member who has not answered (here: the admin + the silent member)
+    assert data["no_answer"] >= 1
+    assert data["active_members"] == data["coming"] + data["declined"] + data["no_answer"]
+
+    registrations = await client.get(f"/api/v1/admin/events/{event.id}/registrations", headers=admin_headers(admin))
+    assert registrations.status_code == 200, registrations.text
+    rows = {row["user_id"]: row for row in registrations.json()}
+    assert rows[str(coming_member.id)]["status"] == "REGISTERED"
+    assert rows[str(coming_member.id)]["faculty_name"] == "Falsafa"
+    assert rows[str(coming_member.id)]["course"] == 3
+    assert rows[str(declined_member.id)]["status"] == "DECLINED"
+
+    export = await client.get(f"/api/v1/admin/events/{event.id}/registrations.csv", headers=admin_headers(admin))
+    assert export.status_code == 200
+    assert export.headers["content-type"].startswith("text/csv")
+    assert coming_member.last_name in export.text and "Falsafa" in export.text

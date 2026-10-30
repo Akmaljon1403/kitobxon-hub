@@ -10,6 +10,7 @@ window, a member registers for the shift that suits them and still checks in onc
 
 from __future__ import annotations
 
+import io
 import itertools
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -19,11 +20,13 @@ from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import BadRequestError, ConflictError, NotFoundError
-from app.models import AttendanceRecord, AttendanceSession, Book, Event, EventRegistration, EventShift, User
-from app.models.enums import AttendanceSessionStatus, AttendanceStatus, EventStatus, RegistrationStatus
+from app.models import AttendanceRecord, AttendanceSession, Book, Event, EventRegistration, EventShift, Faculty, User
+from app.models.enums import AttendanceSessionStatus, AttendanceStatus, EventStatus, RegistrationStatus, UserStatus
 from app.services import announcements
 from app.services.audit import record_audit
 from app.services.settings import get_setting
+from app.utils.spreadsheet import excel_writer
+from app.utils.timezone import format_datetime
 
 MEMBER_VISIBLE = (EventStatus.PUBLISHED, EventStatus.COMPLETED, EventStatus.CANCELLED)
 COUNTED = (AttendanceStatus.VERIFIED, AttendanceStatus.SUSPICIOUS)  # PENDING waits for approval
@@ -341,15 +344,118 @@ async def delete_event(session: AsyncSession, *, actor_id: uuid.UUID, event_id: 
     await session.commit()
 
 
-async def list_registrations(session: AsyncSession, event_id: uuid.UUID) -> list[tuple[EventRegistration, User]]:
+async def list_registrations(
+    session: AsyncSession, event_id: uuid.UUID
+) -> list[tuple[EventRegistration, User, str | None]]:
+    """Every recorded answer (REGISTERED / DECLINED / CANCELLED) with the member and faculty name."""
     await get_event(session, event_id)
     rows = await session.execute(
-        select(EventRegistration, User)
+        select(EventRegistration, User, Faculty.name)
         .join(User, User.id == EventRegistration.user_id)
+        .outerjoin(Faculty, Faculty.id == User.faculty_id)
         .where(EventRegistration.event_id == event_id, User.deleted_at.is_(None))
         .order_by(EventRegistration.registered_at)
     )
-    return [(registration, user) for registration, user in rows]
+    return [(registration, user, faculty) for registration, user, faculty in rows]
+
+
+async def rsvp_summary(session: AsyncSession, event_id: uuid.UUID) -> dict[str, Any]:
+    """Who answered how for an event: «Qatnashaman» (coming), «Bu safar bora olmayman»
+    (declined) and «Javob bermagan» (active members with no answer yet), with a per-shift
+    breakdown. Only the member's one current answer counts, so the three never overlap."""
+    await get_event(session, event_id)
+    answers = dict(
+        (
+            await session.execute(
+                select(EventRegistration.status, func.count())
+                .join(User, User.id == EventRegistration.user_id)
+                .where(EventRegistration.event_id == event_id, User.deleted_at.is_(None))
+                .group_by(EventRegistration.status)
+            )
+        ).all()
+    )
+    coming = int(answers.get(RegistrationStatus.REGISTERED, 0))
+    declined = int(answers.get(RegistrationStatus.DECLINED, 0))
+    # «Javob bermagan» = active members who have not answered this event at all.
+    answered_users = select(EventRegistration.user_id).where(EventRegistration.event_id == event_id)
+    no_answer = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(User)
+            .where(
+                User.deleted_at.is_(None),
+                User.status == UserStatus.ACTIVE,
+                User.id.not_in(answered_users),
+            )
+        )
+        or 0
+    )
+    shifts = await shifts_of(session, event_id)
+    per_shift_answers: dict[uuid.UUID, dict[str, int]] = {}
+    if shifts:
+        rows = await session.execute(
+            select(EventRegistration.shift_id, EventRegistration.status, func.count())
+            .join(User, User.id == EventRegistration.user_id)
+            .where(
+                EventRegistration.event_id == event_id,
+                EventRegistration.shift_id.is_not(None),
+                User.deleted_at.is_(None),
+            )
+            .group_by(EventRegistration.shift_id, EventRegistration.status)
+        )
+        for shift_id, status_value, count in rows:
+            bucket = per_shift_answers.setdefault(shift_id, {})
+            bucket[status_value] = int(count)
+    return {
+        "event_id": event_id,
+        "coming": coming,
+        "declined": declined,
+        "no_answer": no_answer,
+        "active_members": coming + declined + no_answer,
+        "shifts": [
+            {
+                "shift_id": shift.id,
+                "position": shift.position,
+                "starts_at": shift.starts_at,
+                "coming": per_shift_answers.get(shift.id, {}).get(RegistrationStatus.REGISTERED, 0),
+                "declined": per_shift_answers.get(shift.id, {}).get(RegistrationStatus.DECLINED, 0),
+            }
+            for shift in shifts
+        ],
+    }
+
+
+_RSVP_LABELS = {
+    RegistrationStatus.REGISTERED: "Qatnashaman",
+    RegistrationStatus.DECLINED: "Bora olmayman",
+    RegistrationStatus.CANCELLED: "Bekor qilindi",
+}
+
+
+async def export_registrations_csv(session: AsyncSession, event_id: uuid.UUID) -> tuple[str, str]:
+    """(file name, CSV text with BOM so Excel opens Uzbek letters correctly) of every RSVP answer."""
+    event = await get_event(session, event_id)
+    positions = {shift.id: shift.position for shift in await shifts_of(session, event_id)}
+    buffer = io.StringIO()
+    writer = excel_writer(buffer)
+    writer.writerow(["№", "Familiya", "Ism", "Fakultet", "Kurs", "Guruh", "Javob", "Smena", "Javob vaqti"])
+    for index, (registration, user, faculty) in enumerate(await list_registrations(session, event_id), start=1):
+        shift_position = positions.get(registration.shift_id) if registration.shift_id else None
+        writer.writerow(
+            [
+                index,
+                user.last_name,
+                user.first_name,
+                faculty or "",
+                user.course or "",
+                user.group_name or "",
+                _RSVP_LABELS.get(registration.status, registration.status.value),
+                shift_position or "",
+                format_datetime(registration.registered_at),
+            ]
+        )
+    safe_title = "".join(ch if ch.isalnum() else "_" for ch in event.title)[:40] or "tadbir"
+    return f"javoblar_{safe_title}.csv", "﻿" + buffer.getvalue()
 
 
 # ---------------------------------------------------------------------------- members

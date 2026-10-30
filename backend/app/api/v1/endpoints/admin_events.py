@@ -28,6 +28,7 @@ from app.schemas.event import (
     RecordStatusIn,
     RegistrationOut,
     RejectIn,
+    RsvpSummaryOut,
     ShiftOut,
     TopEventOut,
 )
@@ -163,7 +164,7 @@ async def delete_event(event_id: uuid.UUID, current: EventDeleter, db: DbSession
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/events/{event_id}/registrations", response_model=list[RegistrationOut], summary="Registered members")
+@router.get("/events/{event_id}/registrations", response_model=list[RegistrationOut], summary="Members' RSVP answers")
 async def registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> list[RegistrationOut]:
     positions = {shift.id: shift.position for shift in await event_service.shifts_of(db, event_id)}
     return [
@@ -171,13 +172,34 @@ async def registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> l
             user_id=user.id,
             first_name=user.first_name,
             last_name=user.last_name,
+            faculty_name=faculty,
+            course=user.course,
             group_name=user.group_name,
             status=registration.status.value,
             registered_at=registration.registered_at,
             shift=positions.get(registration.shift_id) if registration.shift_id else None,
         )
-        for registration, user in await event_service.list_registrations(db, event_id)
+        for registration, user, faculty in await event_service.list_registrations(db, event_id)
     ]
+
+
+@router.get(
+    "/events/{event_id}/rsvp-summary",
+    response_model=RsvpSummaryOut,
+    summary="RSVP counts: coming / not coming / no answer",
+)
+async def rsvp_summary(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> RsvpSummaryOut:
+    return RsvpSummaryOut(**await event_service.rsvp_summary(db, event_id))
+
+
+@router.get("/events/{event_id}/registrations.csv", summary="Download RSVP answers as CSV (Excel)")
+async def export_registrations(event_id: uuid.UUID, _: EventViewer, db: DbSession) -> Response:
+    filename, content = await event_service.export_registrations_csv(db, event_id)
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
+    )
 
 
 # ---------------------------------------------------------------------------- attendance

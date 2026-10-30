@@ -124,10 +124,31 @@ class RegistrationOut(BaseModel):
     user_id: uuid.UUID
     first_name: str
     last_name: str
+    faculty_name: str | None = None
+    course: int | None = None
     group_name: str | None
     status: str
     registered_at: datetime
     shift: int | None = None
+
+
+class RsvpShiftOut(BaseModel):
+    shift_id: uuid.UUID
+    position: int
+    starts_at: datetime
+    coming: int
+    declined: int
+
+
+class RsvpSummaryOut(BaseModel):
+    """How the members answered: «Qatnashaman», «Bu safar bora olmayman», «Javob bermagan»."""
+
+    event_id: uuid.UUID
+    coming: int
+    declined: int
+    no_answer: int
+    active_members: int
+    shifts: list[RsvpShiftOut] = []
 
 
 class CheckInIn(BaseModel):
