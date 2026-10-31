@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 
 import { ErrorState, LoadingState } from '../components/StateViews'
 import { Badge, Button, Card, EmptyRow, InlineError, Input, Modal, PageHeader, Table, Textarea } from '../components/ui'
@@ -29,9 +29,26 @@ function GdriveConfig({ summary, reload }: { summary: BackupSummary; reload: () 
   const [enabled, setEnabled] = useState(summary.gdrive_enabled)
   const [folderId, setFolderId] = useState(summary.gdrive_folder_id ?? '')
   const [serviceAccount, setServiceAccount] = useState('')
+  const [fileName, setFileName] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
+
+  // Let the owner pick the downloaded .json file directly instead of copy-pasting its text.
+  function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // so re-selecting the same file fires change again
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setServiceAccount(typeof reader.result === 'string' ? reader.result : '')
+      setFileName(file.name)
+      setError(null)
+      setNote('Fayl o‘qildi — endi «Saqlash» tugmasini bosing.')
+    }
+    reader.onerror = () => setError("Faylni o'qib bo'lmadi.")
+    reader.readAsText(file)
+  }
 
   async function save() {
     setBusy(true)
@@ -43,6 +60,7 @@ function GdriveConfig({ summary, reload }: { summary: BackupSummary; reload: () 
         body: JSON.stringify({ enabled, folder_id: folderId.trim(), service_account: serviceAccount.trim() || null }),
       })
       setServiceAccount('')
+      setFileName(null)
       setNote('Saqlandi.')
       reload()
     } catch (err) {
@@ -77,6 +95,7 @@ function GdriveConfig({ summary, reload }: { summary: BackupSummary; reload: () 
       setEnabled(false)
       setFolderId('')
       setServiceAccount('')
+      setFileName(null)
       reload()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "O'chirib bo'lmadi.")
@@ -105,17 +124,31 @@ function GdriveConfig({ summary, reload }: { summary: BackupSummary; reload: () 
         Google Drive nusxa yoqilgan
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Drive papka ID</span>
+        <span className="font-medium">Drive papka ID (majburiy)</span>
         <Input value={folderId} onChange={(e) => setFolderId(e.target.value)} placeholder="masalan: 1A2b3C4d5E..." />
+        <span className="text-xs text-app-hint">
+          Papka havolasidagi oxirgi qism: drive.google.com/drive/folders/<b>SHU_QISM</b>
+        </span>
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">
           Service account JSON{' '}
           {summary.gdrive_configured && <span className="font-normal text-app-hint">(saqlangan — o'zgartirish uchun yangisini joylang)</span>}
         </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-app-border bg-app-surface px-3 py-1.5 text-sm font-medium hover:border-app-button">
+            <input type="file" accept=".json,application/json" className="hidden" onChange={onPickFile} />
+            📄 Fayl tanlash (.json)
+          </label>
+          {fileName && <span className="text-xs text-app-hint">Tanlandi: {fileName}</span>}
+        </div>
+        <span className="text-xs text-app-hint">yoki fayl matnini quyiga qo'lda joylashtiring:</span>
         <Textarea
           value={serviceAccount}
-          onChange={(e) => setServiceAccount(e.target.value)}
+          onChange={(e) => {
+            setServiceAccount(e.target.value)
+            setFileName(null)
+          }}
           rows={4}
           placeholder={summary.gdrive_configured ? "•••••• (saqlangan — ko'rsatilmaydi)" : '{ "type": "service_account", ... }'}
         />
