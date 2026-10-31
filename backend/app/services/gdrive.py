@@ -34,7 +34,11 @@ from app.services.audit import record_audit
 
 logger = logging.getLogger(__name__)
 
-_SCOPE = "https://www.googleapis.com/auth/drive.file"
+# Full Drive scope: the narrower drive.file scope only reaches files the app itself created, so it
+# gets "File not found" (404) when writing into a folder the owner shared with the service account
+# through the Drive UI — which is exactly how this feature is set up. A dedicated service account only
+# ever sees folders explicitly shared with it, so this scope stays limited to the backup folder.
+_SCOPE = "https://www.googleapis.com/auth/drive"
 _OAUTH_URL = "https://oauth2.googleapis.com/token"
 _UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 _FILES_URL = "https://www.googleapis.com/drive/v3/files"
@@ -223,8 +227,19 @@ async def _access_token(creds: dict) -> str:
 
 
 async def test_config(config: GdriveConfig) -> None:
-    """Raise if the credentials cannot obtain an access token (used by the «Test» button)."""
-    await _access_token(config.creds)
+    """Raise if the credentials fail OR the target folder is not reachable (the «Test» button).
+
+    Checking the folder itself — not just that a token can be obtained — is what catches the common
+    case where the Drive folder was never shared with the service account, or the wrong id was given.
+    """
+    token = await _access_token(config.creds)
+    async with _client(30) as client:
+        resp = await client.get(
+            f"{_FILES_URL}/{config.folder_id}",
+            params={"fields": "id", "supportsAllDrives": "true"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        resp.raise_for_status()
 
 
 async def upload_backup(
