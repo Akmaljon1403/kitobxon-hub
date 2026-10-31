@@ -134,13 +134,15 @@ async def _app_error_handler(_: Request, exc: Exception) -> JSONResponse:
     return _response(exc.status_code, exc.code, exc.message, exc.details, headers)
 
 
-async def _validation_error_handler(_: Request, exc: Exception) -> JSONResponse:
+async def _validation_error_handler(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
     # Report where and why validation failed, but never echo the submitted values back.
     details = [
         {"field": ".".join(str(p) for p in err.get("loc", ()) if p != "body"), "reason": err.get("msg", "")}
         for err in exc.errors()
     ]
+    # Log the field+reason (never the submitted values) so a 422 is diagnosable from the server log.
+    logger.warning("Request validation failed on %s %s: %s", request.method, request.url.path, details)
     return _response(422, "VALIDATION_ERROR", "Kiritilgan ma'lumotlar noto'g'ri.", details)
 
 
