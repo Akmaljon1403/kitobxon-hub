@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import secrets
 import time
 from dataclasses import dataclass
@@ -39,6 +40,19 @@ _UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 _FILES_URL = "https://www.googleapis.com/drive/v3/files"
 _SETTING_KEY = "backup.gdrive"  # a private key: NOT in the public settings registry
 _ENC_PURPOSE = "backup-gdrive"
+# A Drive folder id is a short url-safe token; the owner may paste the whole folder link instead.
+_FOLDER_URL_RE = re.compile(r"/folders/([A-Za-z0-9_-]+)")
+_FOLDER_ID_RE = re.compile(r"^[A-Za-z0-9_-]{10,255}$")
+
+
+def _normalize_folder_id(raw: str) -> str:
+    """Accept either a bare folder id or a pasted Drive link and return the id."""
+    value = (raw or "").strip()
+    match = _FOLDER_URL_RE.search(value)
+    if match:
+        return match.group(1)
+    # Drop any trailing query/fragment if they pasted ".../<id>?usp=sharing" without "/folders/".
+    return value.split("?", 1)[0].split("#", 1)[0].strip().strip("/")
 
 
 @dataclass(frozen=True)
@@ -119,7 +133,14 @@ async def save_config(
     """Store the Drive config from the panel. ``service_account`` None/empty keeps the existing key."""
     from app.core.errors import ValidationFailedError
 
-    folder = (folder_id or "").strip()
+    folder = _normalize_folder_id(folder_id)
+    if folder and not _FOLDER_ID_RE.match(folder):
+        # Most often the owner pasted the JSON text or something else into the folder-id box.
+        raise ValidationFailedError(
+            "GDRIVE_BAD_FOLDER",
+            "Papka ID noto'g'ri. Papka havolasidagi «/folders/» dan keyingi qisqa kodni kiriting "
+            "(masalan: 1A2b3C4d5E…), yoki papka havolasini to'liq joylashtiring.",
+        )
     existing = await _stored(session)
     enc = existing.get("service_account_enc") if existing else None
     provided = (service_account or "").strip()
