@@ -63,9 +63,11 @@ class GdriveStatusOut(BaseModel):
 
 class GdriveConfigIn(BaseModel):
     enabled: bool = False
-    folder_id: str = Field(default="", max_length=256)
+    # Generous caps only guard against abusive payloads; real content checks (and the friendly
+    # Uzbek messages) live in gdrive.save_config, so a wrong entry never trips the opaque 422.
+    folder_id: str = Field(default="", max_length=4096)
     # The full service-account JSON. Write-only: leave null/empty to keep the stored key unchanged.
-    service_account: str | None = Field(default=None, max_length=20000)
+    service_account: str | None = Field(default=None, max_length=200_000)
 
 
 class GdriveTestOut(BaseModel):

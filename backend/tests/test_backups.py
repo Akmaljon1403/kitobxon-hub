@@ -201,6 +201,36 @@ async def test_gdrive_config_from_the_panel_roundtrips_and_stays_secret(
     assert await gdrive.load_config(db) is None
 
 
+async def test_gdrive_folder_accepts_a_pasted_link_and_rejects_junk(
+    client: httpx.AsyncClient, db: AsyncSession
+) -> None:
+    boss = await _super_admin(db)
+    headers = admin_headers(boss)
+    service_account = json.dumps(
+        {"type": "service_account", "client_email": "svc@proj.iam.gserviceaccount.com", "private_key": "KEY"}
+    )
+    # Pasting the whole Drive folder link (with a sharing query) stores just the id.
+    saved = await client.post(
+        "/api/v1/admin/backups/gdrive",
+        headers=headers,
+        json={
+            "enabled": True,
+            "folder_id": "https://drive.google.com/drive/folders/1A2b3C4d5E6f7G8h?usp=sharing",
+            "service_account": service_account,
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["folder_id"] == "1A2b3C4d5E6f7G8h"
+
+    # Accidentally pasting the JSON (or anything that is not a folder id) gives a clear, specific error.
+    bad = await client.post(
+        "/api/v1/admin/backups/gdrive",
+        headers=headers,
+        json={"enabled": True, "folder_id": service_account, "service_account": None},
+    )
+    assert bad.status_code == 422 and bad.json()["error"]["code"] == "GDRIVE_BAD_FOLDER"
+
+
 async def test_gdrive_jwt_and_rest_flow(monkeypatch) -> None:
     import jwt as pyjwt
     from cryptography.hazmat.primitives import serialization
